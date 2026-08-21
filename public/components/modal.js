@@ -607,8 +607,16 @@ export function openModal({
 
   // Close-Buttons: Header-X und jedes Footer-„Abbrechen" mit data-action="close-modal"
   // (kanonische Abbrechen-API der Modal-Fußzeilen, laeuft durch den Dirty-Guard).
-  activeOverlay.querySelectorAll('[data-action="close-modal"]')
-    .forEach((el) => el.addEventListener('click', () => closeModal()));
+  //
+  // DELEGIERT, NICHT JE KNOTEN GEBUNDEN: Ein querySelectorAll erreicht nur, was
+  // beim Öffnen schon im DOM steht. Der Bearbeiten-Pfad der Detailansicht baut
+  // sein Formular aber erst beim Klick auf „Bearbeiten" (detail-view.js,
+  // switchToForm → edit.mount), und dessen „Abbrechen" bekam deshalb nie einen
+  // Listener - der Klick tat sichtbar nichts (#738). Betroffen war jedes Modul
+  // mit Leseansicht: Aufgaben, Einkauf, Vorrat, Haushalt, Rezepte.
+  activeOverlay.addEventListener('click', (e) => {
+    if (e.target instanceof Element && e.target.closest('[data-action="close-modal"]')) closeModal();
+  });
 
   // Escape (nur einmal binden)
   document.removeEventListener('keydown', onEscape);
@@ -828,8 +836,14 @@ export function selectModal(label, options) {
  * optionale Folgen-Erklärung darunter. Die Trennung erlaubt es, das Objekt der
  * Aktion in der Frage zu benennen („‚SOGo Familie' trennen?") und die Konsequenz
  * separat zu erklären, ohne beides in einen Titel zu pressen.
+ *
+ * `cancelLabel` benennt den ZWEITEN Ausgang, wenn er eine eigene Handlung ist
+ * und kein Abbruch. Beim Abwählen eines synchronisierten Kalenders etwa lauten
+ * die Wege „Behalten" und „Löschen" - beide tun etwas, und „Abbrechen" auf dem
+ * einen Knopf verschwiege, dass die Termine dann bleiben (#732). Ohne die
+ * Angabe steht dort weiterhin „Abbrechen".
  */
-export function confirmModal(message, { confirmLabel, danger = false, detail = null } = {}) {
+export function confirmModal(message, { confirmLabel, cancelLabel, danger = false, detail = null } = {}) {
   return new Promise((resolve) => {
     let resolved = false;
 
@@ -846,7 +860,7 @@ export function confirmModal(message, { confirmLabel, danger = false, detail = n
       content: `
         ${detail ? `<p class="modal-confirm__detail">${esc(detail)}</p>` : ''}
         <div class="modal-actions">
-          <button type="button" class="btn btn--secondary" id="confirm-modal-cancel">${t('common.cancel')}</button>
+          <button type="button" class="btn btn--secondary" id="confirm-modal-cancel">${cancelLabel ?? t('common.cancel')}</button>
           <button type="button" class="btn ${danger ? 'btn--danger' : 'btn--primary'}" id="confirm-modal-ok">
             ${confirmLabel ?? t('common.confirm')}
           </button>

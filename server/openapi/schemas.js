@@ -12,7 +12,7 @@ export const schemas = {
           description: 'A Gotify or ntfy notification channel. Secrets are write-only and never returned.',
           properties: {
             id: { type: 'integer' },
-            provider: { type: 'string', enum: ['gotify', 'ntfy'] },
+            provider: { type: 'string', enum: ['gotify', 'ntfy', 'webhook'] },
             name: { type: 'string' },
             enabled: { type: 'boolean' },
             scope: { type: 'string', enum: ['household', 'user'] },
@@ -30,7 +30,7 @@ export const schemas = {
           type: 'object',
           required: ['provider', 'name', 'config'],
           properties: {
-            provider: { type: 'string', enum: ['gotify', 'ntfy'] },
+            provider: { type: 'string', enum: ['gotify', 'ntfy', 'webhook'] },
             name: { type: 'string' },
             enabled: { type: 'boolean' },
             config: {
@@ -639,6 +639,8 @@ export const schemas = {
             token_prefix: { type: 'string' },
             created_by: { type: 'integer' },
             creator_name: { type: 'string' },
+            subject_user_id: { type: 'integer', description: 'Family member whose identity, role, permissions, and data ownership apply to token requests.' },
+            subject_name: { type: ['string', 'null'] },
             scopes: {
               type: ['array', 'null'],
               items: { type: 'string' },
@@ -649,12 +651,13 @@ export const schemas = {
             last_used_at: { type: ['string', 'null'], format: 'date-time' },
             created_at: { type: 'string', format: 'date-time' },
           },
-          required: ['id', 'name', 'token_prefix', 'created_by', 'created_at'],
+          required: ['id', 'name', 'token_prefix', 'created_by', 'subject_user_id', 'created_at'],
         },
         ApiTokenCreateRequest: {
           type: 'object',
           properties: {
             name: { type: 'string' },
+            subject_user_id: { type: 'integer', minimum: 1, description: 'Optional family-member subject. Defaults to the administrator creating the token. Split-expense guests are not eligible.' },
             scopes: {
               type: ['array', 'null'],
               items: { type: 'string' },

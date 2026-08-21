@@ -4,10 +4,16 @@
  * Abhaengigkeiten: server/db.js
  */
 import * as dbModule from '../db.js';
+import {
+  WEBHOOK_TEMPLATE_PLACEHOLDERS,
+  renderPayloadTemplate,
+  unknownTemplatePlaceholders,
+} from './notification-providers/webhook.js';
 
 export const NOTIFICATION_PROVIDERS = [
   { id: 'gotify', name: 'Gotify' },
   { id: 'ntfy', name: 'ntfy' },
+  { id: 'webhook', name: 'Webhook' },
 ];
 
 const PROVIDER_IDS = new Set(NOTIFICATION_PROVIDERS.map((p) => p.id));
@@ -28,7 +34,12 @@ function toJson(value) {
   return JSON.stringify(value && typeof value === 'object' ? value : {});
 }
 
-function normalizeBaseUrl(value) {
+// `keepPath`: Gotify und ntfy bekommen eine BASIS, an die der Provider seinen
+// eigenen Pfad haengt - da ist ein abschliessender Slash Rauschen und wird
+// entfernt. Beim Webhook ist der Wert der vollstaendige Endpunkt, auf den
+// gepostet wird; ein Empfaenger, der `/hooks/x/` von `/hooks/x` unterscheidet,
+// bekaeme sonst still eine andere Adresse als die eingetragene.
+function normalizeBaseUrl(value, { keepPath = false } = {}) {
   const raw = String(value ?? '').trim();
   if (!raw) throw new Error('A base URL is required.');
   let url;
@@ -40,6 +51,7 @@ function normalizeBaseUrl(value) {
   if (!['http:', 'https:'].includes(url.protocol)) {
     throw new Error('Notification channel URL scheme must be http or https.');
   }
+  if (keepPath) return url.toString();
   url.pathname = url.pathname.replace(/\/+$/, '');
   return url.toString().replace(/\/+$/, '');
 }
@@ -106,6 +118,47 @@ function validateNtfy({ config, secrets, requireSecrets }) {
   }
 }
 
+const MAX_WEBHOOK_TEMPLATE_LENGTH = 4096;
+
+// Probewerte mit genau den Zeichen, an denen eine naive Ersetzung zerbricht:
+// Anfuehrungszeichen, Backslash, Zeilenumbruch. Waeren sie harmlos, ginge die
+// Gegenprobe unten durch und der Fehler kaeme erst bei der ersten Zustellung.
+const WEBHOOK_TEMPLATE_SAMPLE = Object.freeze({
+  title: 'Yuvomi "Test"',
+  body: 'Zeile 1\nZeile 2 \\ Ende',
+  url: '/tasks',
+  tag: 'reminder-1',
+});
+
+function normalizeWebhookConfig(input = {}) {
+  const payloadTemplate = String(input.payloadTemplate ?? '').trim();
+  if (payloadTemplate) {
+    if (payloadTemplate.length > MAX_WEBHOOK_TEMPLATE_LENGTH) {
+      throw new Error(`Webhook payload template must be at most ${MAX_WEBHOOK_TEMPLATE_LENGTH} characters.`);
+    }
+    const unknown = unknownTemplatePlaceholders(payloadTemplate);
+    if (unknown.length) {
+      throw new Error(
+        `Unknown webhook placeholder(s): ${unknown.map((k) => `{{${k}}}`).join(', ')}. `
+        + `Available: ${WEBHOOK_TEMPLATE_PLACEHOLDERS.map((k) => `{{${k}}}`).join(', ')}.`,
+      );
+    }
+    // Gegenprobe beim Speichern statt beim Senden: eine Vorlage, die erst in der
+    // Nacht am fehlenden Komma scheitert, kostet die Benachrichtigung UND die
+    // Diagnose. Der Fehler gehoert an das Formular, in dem sie entstanden ist.
+    try {
+      JSON.parse(renderPayloadTemplate(payloadTemplate, WEBHOOK_TEMPLATE_SAMPLE));
+    } catch {
+      throw new Error('Webhook payload template must produce valid JSON.');
+    }
+  }
+  return { baseUrl: normalizeBaseUrl(input.baseUrl, { keepPath: true }), payloadTemplate };
+}
+
+function normalizeWebhookSecrets(input = {}) {
+  return { token: String(input.token ?? '').trim() };
+}
+
 export function normalizeChannelInput(input = {}, existing = null) {
   const provider = existing?.provider || normalizeProvider(input.provider);
   normalizeProvider(provider);
@@ -122,10 +175,13 @@ export function normalizeChannelInput(input = {}, existing = null) {
     config = normalizeGotifyConfig(mergedConfig);
     secrets = normalizeGotifySecrets(mergedSecrets);
     validateGotify({ secrets, requireSecrets: !existing });
-  } else {
+  } else if (provider === 'ntfy') {
     config = normalizeNtfyConfig(mergedConfig);
     secrets = normalizeNtfySecrets(mergedSecrets);
     validateNtfy({ config, secrets, requireSecrets: !existing || input.secrets !== undefined });
+  } else {
+    config = normalizeWebhookConfig(mergedConfig);
+    secrets = normalizeWebhookSecrets(mergedSecrets);
   }
 
   return {

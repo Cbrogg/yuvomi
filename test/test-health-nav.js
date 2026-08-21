@@ -124,9 +124,16 @@ test('router.js: topLevelSection faltet /health/* auf /health', () => {
   assert.match(src, /path\.startsWith\('\/health'\)\) return '\/health'/);
 });
 
-test('router.js: routeTitle liefert nav.health für /health*', () => {
+// Der Titel kam bis 2026-08-08 aus einer Praefixregel in routeTitle(). Er steht
+// jetzt an der Route selbst - dieselbe Wahrheit, nur nicht mehr in einer
+// zweiten Liste daneben (Audit P1-2; drei Auth-Routen waren dort durchgefallen).
+// Geprueft wird deshalb die Quelle, nicht mehr die Regel.
+test('router.js: jede /health-Route traegt nav.health als Titel', () => {
   const src = read('public/router.js');
-  assert.match(src, /path\.startsWith\('\/health'\)\) return t\('nav\.health'\)/);
+  assert.match(src, /HEALTH_ROUTES\.map\([\s\S]{0,200}?titleKey:\s*'nav\.health'/,
+    'die Health-Routen muessen ihren Titel selbst fuehren');
+  assert.match(src, /ROUTES\.find\(\(route\) => route\.path === path\)\?\.titleKey/,
+    'routeTitle muss den Titel aus ROUTES lesen');
 });
 
 test('router.js: Keyboard-Shortcut g h navigiert ins Gesundheitsmodul', () => {
@@ -135,8 +142,13 @@ test('router.js: Keyboard-Shortcut g h navigiert ins Gesundheitsmodul', () => {
 });
 
 test('router.js: Nav-Eintrag Gesundheit (Sektion home, Icon heart-pulse)', () => {
+  // Der Eintrag steht in der Navigation, sein ZEICHEN in MODULE_ICON: seit
+  // 2026-08-17 schreibt `navItems()` keinen Icon-Namen mehr auf, sondern holt
+  // ihn aus der einen Zuordnung (nav-icons.js). Beides bleibt geprueft, nur
+  // eben dort, wo es jeweils steht.
   const src = read('public/router.js');
-  assert.match(src, /path: '\/health',[\s\S]*icon: 'heart-pulse',[\s\S]*module: 'health',[\s\S]*section: NAV_SECTION\.people/);
+  assert.match(src, /path: '\/health',[\s\S]*module: 'health',[\s\S]*section: NAV_SECTION\.people/);
+  assert.match(read('public/nav-icons.js'), /health:\s+'heart-pulse'/);
 });
 
 // --------------------------------------------------------
@@ -149,8 +161,12 @@ test('Server-Allowlist: health ist ein toggelbares Modul', () => {
 });
 
 test('Settings-Toggle: health in BUILT_IN_MODULES', () => {
-  const src = read('public/settings/pages/modules-navigation.js');
-  assert.match(src, /\{ id: 'health', labelKey: 'nav\.health', icon: 'heart-pulse' \}/);
+  // Die Liste wohnt seit dem Umzug des Haushalts-Schalters (Critique 2026-08-16)
+  // im geteilten module-order.js - zwei Blaetter lesen sie. Ein `icon` fuehrt
+  // sie seit 2026-08-17 nicht mehr: das war die vierte Abschrift der Zuordnung
+  // Modul -> Zeichen, und die Blaetter holen sie sich aus MODULE_ICON.
+  const src = read('public/settings/module-order.js');
+  assert.match(src, /\{ id: 'health', labelKey: 'nav\.health' \}/);
 });
 
 test('Server-Allowlist: rewards ist toggelbar/sortierbar (Backend-Parität zur Nav)', () => {

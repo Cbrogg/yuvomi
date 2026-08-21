@@ -585,6 +585,27 @@ async function sync({ createClient: makeClient } = {}) {
         }
       }
 
+      // Hier angelegte Aufgaben hochladen (#695). Bewusst als LETZTER Schritt:
+      // bis hierher ist der Prune gelaufen, und der sieht eine Aufgabe, die
+      // gerade erst zum Spiegel geworden ist, in diesem Lauf noch nicht auf dem
+      // Server - er würde sie also sofort wieder entfernen. Die Listen stammen
+      // aus dem Abruf oben, es kommt kein zweiter hinzu.
+      try {
+        const taskLists = new Map(
+          enabledLists
+            .filter((s) => s.target_module !== 'shopping')
+            .map((s) => [s.list_url, serverCals.find((c) => c.url === s.list_url)])
+            .filter(([, cal]) => cal)
+        );
+        const created = await todoOutbound.processPendingCreations(
+          client, account.id, 'tasks', taskLists
+        );
+        totalPushed += created;
+        if (created) log.info(`${created} locally created task(s) uploaded to the server.`);
+      } catch (err) {
+        log.error(`Uploading local tasks failed for account ${account.id}:`, err.message);
+      }
+
       db.get().prepare('UPDATE caldav_accounts SET last_sync = ? WHERE id = ?')
         .run(new Date().toISOString(), account.id);
       successfulAccounts++;

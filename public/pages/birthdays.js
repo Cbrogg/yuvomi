@@ -1,12 +1,14 @@
 import { api } from '/api.js';
 import { openModal as openSharedModal, closeModal, advancedSection } from '/components/modal.js';
 import { stagger, scheduleUndoableDelete } from '/utils/ux.js';
+import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { t, formatDate, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { toLocalDateKey } from '/utils/date.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { findPageFab } from '/utils/fab.js';
+import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
 
 let state = {
   birthdays: [],
@@ -84,9 +86,37 @@ function countdownChip(birthday) {
   return { label: t('birthdays.inDays', { days: birthday.days_until }), mod };
 }
 
+/**
+ * DIE PERSON SCHLAEGT DIE LISTE, IN DER SIE STEHT.
+ *
+ * `.birthday-avatar--fallback` verspricht seit 2026-08-18 „wer verknuepft ist,
+ * traegt seine Mitgliedsfarbe" - eingeloest war das nur auf der Uebersichts-
+ * kachel. Auf der Modulseite sass jedes Haushaltsmitglied auf derselben
+ * neutralen Scheibe wie eine Tante ohne Zugang (Identitaetsfarben-Regel,
+ * DESIGN.md).
+ *
+ * Reihenfolge: ein Bild, das FUER DIESEN EINTRAG hinterlegt wurde, ist die
+ * genaueste Auskunft und gewinnt; danach kommt das Profilbild des Mitglieds,
+ * danach seine Farbe mit den Initialen. Wer zu niemandem im Haushalt gehoert,
+ * bleibt neutral - er hat keine Identitaetsfarbe, und genau das soll die
+ * Scheibe sagen.
+ *
+ * Die Tinte kommt aus `getReadableTextColor`: eine Avatarfarbe ist frei
+ * gewaehlt, ihre Helligkeit damit unbestimmt - dieselbe Rechnung wie in den
+ * Kontakten.
+ */
 function photoAvatar(birthday, extraClass = '') {
   if (birthday.photo_data) {
     return `<img class="birthday-avatar ${extraClass}" src="${birthday.photo_data}" alt="${esc(birthday.name)}">`;
+  }
+  if (birthday.family_user_id && birthday.family_avatar_data) {
+    return `<img class="birthday-avatar ${extraClass}" src="${esc(birthday.family_avatar_data)}" alt="${esc(birthday.name)}">`;
+  }
+  if (birthday.family_user_id) {
+    const color = birthday.family_avatar_color || AVATAR_FALLBACK_COLOR;
+    const name = birthday.family_display_name || birthday.name;
+    return `<span class="birthday-avatar birthday-avatar--fallback ${extraClass}"
+      style="background-color:${esc(color)};color:${getReadableTextColor(color)}">${esc(initials(name))}</span>`;
   }
   return `<span class="birthday-avatar birthday-avatar--fallback ${extraClass}">${esc(initials(birthday.name))}</span>`;
 }
@@ -135,18 +165,31 @@ function updateBirthdayBadge() {
 function birthdayItemHtml(birthday) {
   const chip = countdownChip(birthday);
   const isToday = chip.mod === 'today';
+  // Wischbedienung (Redesign Runde 4, C-2): auf Touch tragen die beiden
+  // Richtungen, was bis dahin zwei Icon-Knoepfe in jeder Zeile trugen - in
+  // einer Grouped-Liste die lauteste Stelle des Bildschirms. Auf
+  // Zeigergeraeten bleiben die Knoepfe, dort gibt es keine Geste.
   return `
-    <article class="birthday-item ${isToday ? 'birthday-item--today' : ''}" data-id="${birthday.id}">
+    <div class="swipe-row" data-swipe-id="${birthday.id}">
+      <div class="swipe-reveal swipe-reveal--edit swipe-reveal--leading" aria-hidden="true">
+        <i data-lucide="pencil" class="icon-md"></i>
+        <span>${t('common.edit')}</span>
+      </div>
+      <div class="swipe-reveal swipe-reveal--delete swipe-reveal--trailing" aria-hidden="true">
+        <i data-lucide="trash-2" class="icon-md"></i>
+        <span>${t('common.delete')}</span>
+      </div>
+    <article class="list-row birthday-item ${isToday ? 'birthday-item--today' : ''}" data-id="${birthday.id}">
       <div class="birthday-item__media">${photoAvatar(birthday)}</div>
-      <div class="birthday-item__body">
-        <div class="birthday-item__row">
-          <strong class="birthday-item__name">
-            ${esc(birthday.name)}${isToday ? CAKE_SVG : ''}
-          </strong>
+      <div class="list-row__main">
+        <strong class="list-row__name birthday-item__name">
+          ${esc(birthday.name)}${isToday ? CAKE_SVG : ''}
+        </strong>
+        <div class="list-row__meta birthday-item__meta">
           <span class="birthday-chip birthday-chip--${chip.mod}">${esc(chip.label)}</span>
+          <span class="birthday-item__when">${esc(ageMeta(birthday))}</span>
+          ${birthday.notes ? `<span class="birthday-item__notes">${esc(birthday.notes)}</span>` : ''}
         </div>
-        <div class="birthday-item__meta">${esc(ageMeta(birthday))}</div>
-        ${birthday.notes ? `<div class="birthday-item__notes">${esc(birthday.notes)}</div>` : ''}
       </div>
       <div class="row-actions birthday-item__actions">
         <button class="row-action" type="button" data-action="edit" data-id="${birthday.id}" aria-label="${t('common.edit')}">
@@ -156,7 +199,8 @@ function birthdayItemHtml(birthday) {
           <i data-lucide="trash-2" aria-hidden="true"></i>
         </button>
       </div>
-    </article>`;
+    </article>
+    </div>`;
 }
 
 function emptyStateHtml() {
@@ -201,25 +245,59 @@ function renderList() {
 
   if (window.lucide) window.lucide.createIcons({ el: host });
   stagger(host.querySelectorAll('.birthday-item'));
+  wireBirthdaySwipe(host);
+  maybeShowSwipeHint(host);
+}
+
+/**
+ * Wischbedienung der Liste (Redesign Runde 4, C-2). Dieselben zwei Aktionen,
+ * die auf Zeigergeräten als Knöpfe in der Zeile stehen - zum Zeilenanfang hin
+ * wischen bearbeitet, zum Zeilenende hin löscht.
+ *
+ * Beide federn zurück, statt hinauszufliegen: das Bearbeiten öffnet nur einen
+ * Dialog und die Zeile bleibt, und das Löschen ist über den geteilten
+ * Rückgängig-Weg (`scheduleUndoableDelete`) fünf Sekunden lang widerrufbar -
+ * eine hinausgeflogene Karte hätte behauptet, die Sache sei erledigt.
+ */
+function wireBirthdaySwipe(host) {
+  wireSwipeRows(host, {
+    card: '.birthday-item',
+    trailing: {
+      reveal: '.swipe-reveal--delete',
+      run: (row) => deleteBirthday(Number(row.dataset.swipeId)),
+    },
+    leading: {
+      reveal: '.swipe-reveal--edit',
+      run: (row) => {
+        const birthday = state.birthdays.find((item) => item.id === Number(row.dataset.swipeId));
+        if (birthday) openBirthdayModal({ mode: 'edit', birthday });
+      },
+    },
+  });
 }
 
 function renderPage() {
   _container.replaceChildren();
   _container.insertAdjacentHTML('beforeend', `
-    <div class="birthdays-page">
-      <div class="page-toolbar page-toolbar--wrap birthdays-toolbar">
+    <div class="birthdays-page page-measure--narrow">
+      <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow birthdays-toolbar">
         <h1 class="page-toolbar__title">${t('birthdays.title')}</h1>
         ${renderPageSearch({ id: 'birthdays-search', label: t('birthdays.searchPlaceholder'), placeholder: t('birthdays.searchPlaceholder'), value: state.query, clearLabel: t('common.searchClear'), className: 'birthdays-toolbar__search page-toolbar__center' })}
-        <button class="btn btn--secondary birthdays-toolbar__import" id="birthdays-import-btn" type="button" aria-label="${t('birthdays.importButton')}">
-          <i data-lucide="download" aria-hidden="true"></i><span>${t('birthdays.importButton')}</span>
-        </button>
+        <!-- Der Aktions-Slot des Modulkopfs. Der Import-Knopf stand direkt in der
+             Leiste; die Shell dockt hier auf dem Desktop den Primärknopf an
+             (dockFabIntoToolbar in router.js), und der braucht einen Ort. -->
+        <div class="page-toolbar__actions">
+          <button class="btn btn--secondary birthdays-toolbar__import" id="birthdays-import-btn" type="button" aria-label="${t('birthdays.importButton')}">
+            <i data-lucide="download" aria-hidden="true"></i><span>${t('birthdays.importButton')}</span>
+          </button>
+        </div>
       </div>
 
       <p class="birthdays-hint">${t('birthdays.calendarHint')}</p>
 
-      <div class="birthdays-list" id="birthdays-list"></div>
+      <div class="row-carrier birthdays-list" id="birthdays-list"></div>
 
-      <button class="page-fab" id="fab-new-birthday" aria-label="${t('birthdays.addButton')}">
+      <button class="page-fab" id="fab-new-birthday" aria-label="${t('birthdays.addButton')}" data-dock-label="${t('newLabel.birthdays')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
@@ -452,7 +530,7 @@ async function openImportModal() {
 
   const listHtml = hasCandidates
     ? `<div class="bd-import__list">${withBirthday.map(importCandidateRowHtml).join('')}</div>`
-    : `<div class="bd-import__empty">${t('birthdays.importEmpty')}</div>`;
+    : `<div class="empty-state empty-state--compact"><p class="empty-state__description">${t('birthdays.importEmpty')}</p></div>`;
 
   const withoutHtml = withoutBirthday.length
     ? `<details class="bd-import__without">

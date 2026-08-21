@@ -7,6 +7,8 @@ import {
 import { esc } from '/utils/html.js';
 import { appendCurrencyOptions, persistCurrencySelection } from '/settings/currency.js';
 import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
+import { toggleRowHtml } from '/settings/components.js';
+import { isWallModeEnabled, setWallModeEnabled } from '/utils/wall-mode.js';
 import {
   CUSTOM_REGION,
   REGION_CODES,
@@ -176,6 +178,21 @@ function renderPage(container, preferences, isAdmin) {
           </button>
         </div>
       </div>
+      <!-- DER WAND-MODUS WOHNT HIER UND NICHT IM ANPASSEN-PANEL.
+           Er ist wie Theme und Sprache GERÄTELOKAL (localStorage) - das
+           Anpassen-Panel schreibt dagegen die haushaltweite Widget-Konfiguration
+           auf den Server. Ein gerätelokaler Schalter dort wäre eine zweite
+           Speicher-Semantik im selben Panel; und der Anpassen-Modus bearbeitet
+           das Raster, während dieser Schalter eine Betriebsart wählt. -->
+      <div class="settings-card">
+        ${toggleRowHtml({
+          label: t('settings.wallModeLabel'),
+          checked: isWallModeEnabled(),
+          icon: 'tablet',
+          attrs: { id: 'wall-mode-toggle', 'aria-describedby': 'wall-mode-hint' },
+        })}
+        <p class="form-hint" id="wall-mode-hint">${t('settings.wallModeHint')}</p>
+      </div>
     </section>
 
     <section class="settings-section">
@@ -331,6 +348,20 @@ function bindEvents(container, user) {
       candidate.classList.toggle('theme-toggle__btn--active', active);
       candidate.setAttribute('aria-pressed', String(active));
     });
+  });
+
+  // Gerätelokal wie das Theme darüber: kein Server-Request, keine Preference.
+  // Wirksam wird er auf der Dashboard-Route - der Toast sagt das, statt den
+  // Nutzer wortlos aus den Einstellungen zu werfen.
+  const wallToggle = container.querySelector('#wall-mode-toggle');
+  wallToggle?.addEventListener('change', () => {
+    setWallModeEnabled(wallToggle.checked);
+    window.yuvomi?.showToast(
+      wallToggle.checked
+        ? t('settings.wallModeOn', { page: t('nav.dashboard') })
+        : t('settings.wallModeOff'),
+      'success',
+    );
   });
 
   const localeSelect = container.querySelector('#locale-select');

@@ -12,7 +12,9 @@ import { t, formatDate } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
+import { setBulkPill, clearBulkPill } from '/utils/bulk-pill.js';
 import { parseVCards } from '/utils/vcard.js';
+import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
 import { composeDisplayName, contactSortKey, splitDisplayName } from '/utils/contact-name.js';
 import { getPhoneFormatter, createAsYouType, countryFromRegion } from '/utils/phone.js';
 import '/components/category-manager.js';
@@ -25,7 +27,8 @@ import { findPageFab } from '/utils/fab.js';
 // Kategorien sind seit #357 benutzer-verwaltbar und werden aus
 // /contacts/categories in state.categories geladen. Bestands-Kategorien tragen
 // label_key (i18n) + icon; benutzerdefinierte tragen name + Default-Icon 'tag'.
-// Der stabile key dient zugleich als CSS-Farb-Slug (.contact-group--<key>).
+// Der stabile key bleibt der Bezug auf die Kategorie; ihr Ton steht seit
+// Migration 152 in der Kategorie selbst (siehe catTintStyle unten).
 const FALLBACK_CATEGORY = 'misc';
 
 function catByKey(key) {
@@ -57,14 +60,23 @@ function categoryIcon(key, sizeClass = 'icon-md') {
   return `<i data-lucide="${esc(name)}" class="contact-cat-icon ${sizeClass}" aria-hidden="true"></i>`;
 }
 
-// CSS-Farbton-Klasse aus dem Key. Seed-Keys sind bereits Slugs und matchen
-// .contact-group--<key>; migrierte Freitext-Keys (z. B. aus CardDAV, mit
-// Leerzeichen) werden auf ein EINZELNES gültiges class-Token normalisiert, damit
-// sie die class-Liste nicht spalten — unbekannte Slugs matchen keine Farb-Regel
-// und fallen neutral zurück.
-function catTintClass(key) {
-  const slug = String(key).toLowerCase().replace(/[^a-z0-9_-]+/g, '-').replace(/^-+|-+$/g, '');
-  return slug ? `contact-group--${slug}` : '';
+// DER TON EINER KATEGORIE STEHT IN IHREN DATEN, seit Migration 152.
+//
+// Hier stand `catTintClass()`: aus dem Key wurde ein Klassenname, und
+// contacts.css führte sieben Regeln `.contact-group--<key>`. Das konnte per
+// Konstruktion nur die SEED-Kategorien treffen - eine selbst angelegte
+// Kategorie (seit #357) matchte keine Regel und fiel auf den Modulton zurück,
+// weshalb im Demo-Haushalt „Familie" und „Dienstleistungen" gleich aussahen.
+// Dieselbe Bauart, die die Vollton-Regel schon einmal eingeholt hat: ein
+// Zusammenhang, der über einen Namen läuft, deckt N Namen ab, nicht die Regel.
+//
+// `--cat-ink` begleitet den Ton, weil die Tinte nur auf einer gefüllten Scheibe
+// gilt; ohne Ton bleibt die Marke neutral (contacts.css).
+function catTintStyle(key) {
+  const color = catByKey(key)?.color;
+  return color
+    ? ` style="--cat:${esc(color)};--cat-ink:var(--color-ink-on-vivid)"`
+    : '';
 }
 
 // Initialen aus dem Namen (max. 2 Buchstaben): Vorname + letzter Namensteil.
@@ -76,13 +88,30 @@ function initials(name) {
   return (first + last).toUpperCase();
 }
 
-// Avatar einer Zeile: Familien-/Personen-Kontakte zeigen Initialen im Modul-Ton,
-// alle anderen das Kategorie-Icon im Kategorie-Ton (--cat der Gruppe).
+// Avatar einer Zeile. Zwei Faelle, zwei Sprecher:
+//
+// EIN VERKNUEPFTER KONTAKT IST EIN MENSCH DES HAUSHALTS, und der traegt ueberall
+// SEINE Farbe (Identitaetsfarben-Regel, DESIGN.md) - dasselbe Bild und dieselbe
+// Scheibe wie im Kalender, in den Aufgaben und auf dem Dashboard. Hier stand
+// bis 2026-08-18 der Modul-Ton, also dieselbe rosa Scheibe fuer jedes Mitglied.
+// Die Tinte kommt aus `getReadableTextColor`, weil eine Avatarfarbe frei
+// gewaehlt ist und ihre Helligkeit deshalb unbestimmt.
+//
+// ALLE ANDEREN nennen ihre KATEGORIE, und die traegt ihren kuratierten Ton als
+// Vollton-Scheibe; hat sie keinen (benutzerdefinierte Kategorie), bleibt die
+// Marke neutral. Beides steht in contacts.css an den Kategorie-Toenen.
 function contactAvatar(c) {
-  if (c.family_user_id) {
-    return `<span class="contact-item__icon contact-item__icon--initials" aria-hidden="true">${esc(initials(c.name))}</span>`;
+  if (!c.family_user_id) {
+    return `<span class="contact-item__icon vivid-mark">${categoryIcon(c.category, 'icon-lg')}</span>`;
   }
-  return `<span class="contact-item__icon">${categoryIcon(c.category, 'icon-lg')}</span>`;
+  const color = c.family_avatar_color || AVATAR_FALLBACK_COLOR;
+  const name  = c.family_display_name || c.name;
+  const inner = c.family_avatar_data
+    ? `<img src="${esc(c.family_avatar_data)}" alt="" loading="lazy">`
+    : esc(initials(name));
+  return `<span class="contact-item__icon contact-item__icon--member"
+    style="background-color:${esc(color)};color:${getReadableTextColor(color)}"
+    aria-hidden="true">${inner}</span>`;
 }
 
 // --------------------------------------------------------
@@ -92,6 +121,8 @@ function contactAvatar(c) {
 let state = {
   contacts:       [],
   categories:     [],
+  // Die waehlbaren Kategorie-Toene, wie der Server sie ausliefert.
+  categoryColors: [],
   activeCategory: null,
   searchQuery:    '',
   selectMode:     false,
@@ -112,8 +143,8 @@ export async function render(container, { user }) {
   _container = container;
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="contacts-page">
-      <div class="page-toolbar page-toolbar--wrap contacts-toolbar">
+    <div class="contacts-page page-measure--narrow">
+      <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow contacts-toolbar">
         <h1 class="page-toolbar__title">${t('contacts.title')}</h1>
         ${renderPageSearch({ id: 'contacts-search', label: t('contacts.searchPlaceholder'), placeholder: t('contacts.searchPlaceholder'), value: state.searchQuery, clearLabel: t('common.searchClear'), className: 'contacts-toolbar__search page-toolbar__center' })}
         <div class="page-toolbar__actions">
@@ -129,24 +160,16 @@ export async function render(container, { user }) {
             ${t('contacts.importButton')}
             <input type="file" id="contacts-import-input" accept=".vcf,text/vcard" style="display:none">
           </label>
-          <button class="btn btn--primary toolbar-new-btn" id="contacts-add-btn">
+          <button class="btn btn--primary toolbar-new-btn" id="contacts-add-btn" aria-label="${t('contacts.newContactLabel')}">
             <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>
-            ${t('contacts.addButton')}
+            <span class="toolbar-new-btn__label">${t('newLabel.contacts')}</span>
           </button>
-        </div>
-      </div>
-      <div class="contacts-selectbar" id="contacts-selectbar" role="toolbar" aria-label="${t('contacts.selectButton')}" hidden>
-        <button class="btn btn--secondary" data-action="select-cancel">${t('common.cancel')}</button>
-        <span class="contacts-selectbar__count" id="contacts-select-count" aria-live="polite"></span>
-        <div class="contacts-selectbar__actions">
-          <button class="btn btn--secondary" data-action="select-all">${t('contacts.selectAll')}</button>
-          <button class="btn btn--danger" data-action="select-delete">${t('common.delete')}</button>
         </div>
       </div>
       <div class="contacts-filters" id="contacts-filters" role="group" aria-label="${t('contacts.filterAll')}"></div>
       <div id="contacts-status" class="sr-only" role="status" aria-live="polite"></div>
-      <div id="contacts-list" class="contacts-list" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
-      <button class="page-fab" id="fab-new-contact" aria-label="${t('contacts.newContactLabel')}">
+      <div id="contacts-list" class="contacts-list page-scrollport" aria-busy="true">${renderSkeletonList({ rows: 6, lines: 2 })}</div>
+      <button class="page-fab" id="fab-new-contact" aria-label="${t('contacts.newContactLabel')}" data-dock-label="${t('newLabel.contacts')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
@@ -170,6 +193,7 @@ export async function render(container, { user }) {
       state.activeCategory = null;
       _container.querySelectorAll('.contact-filter-chip').forEach((chip) => {
         const on = chip.dataset.cat === '';
+        chip.classList.toggle('filter-chip--active', on);
         chip.classList.toggle('contact-filter-chip--active', on);
         chip.setAttribute('aria-pressed', on ? 'true' : 'false');
       });
@@ -195,15 +219,19 @@ export async function render(container, { user }) {
     updateSelectUI();
   });
 
-  const [res, catRes, prefsRes] = await Promise.all([
+  const [res, catRes, metaRes, prefsRes] = await Promise.all([
     api.get('/contacts'),
     api.get('/contacts/categories'),
+    // Die waehlbaren Kategorie-Toene kommen vom Server, damit Auswahl und
+    // Annahme dieselbe Liste sind (Begruendung am Endpoint).
+    api.get('/contacts/meta').catch(() => null),
     // Region → Default-Land für die Telefon-Anzeige. Fehlschlag ist unkritisch:
     // ohne Default-Land werden nur +-Vorwahl-Nummern formatiert, Rest bleibt roh.
     api.get('/preferences').catch(() => null),
   ]);
   state.defaultCountry = countryFromRegion(prefsRes?.data?.region);
   state.categories = catRes.data ?? [];
+  state.categoryColors = metaRes?.data?.categoryColors ?? [];
   // Der Server sortiert mit SQLite-NOCASE (ASCII-only); nach jeder lokalen
   // Änderung sortiert die Seite dagegen mit localeCompare. Damit die Reihenfolge
   // nicht zwischen Reload und Bearbeiten springt (Umlaut-Nachnamen), gilt hier
@@ -243,6 +271,7 @@ export async function render(container, { user }) {
     if (!chip) return;
     _container.querySelectorAll('.contact-filter-chip').forEach((c) => {
       const on = c === chip;
+      c.classList.toggle('filter-chip--active', on);
       c.classList.toggle('contact-filter-chip--active', on);
       c.setAttribute('aria-pressed', on ? 'true' : 'false');
     });
@@ -258,11 +287,6 @@ export async function render(container, { user }) {
   // Auswahl-Modus (opt-in): Toggle in der Toolbar + Aktionen in der Auswahl-Leiste.
   _container.querySelector('#contacts-select-btn').addEventListener('click', () => {
     if (state.selectMode) exitSelectMode(); else enterSelectMode();
-  });
-  _container.querySelector('#contacts-selectbar').addEventListener('click', (e) => {
-    if (e.target.closest('[data-action="select-cancel"]')) { exitSelectMode(); return; }
-    if (e.target.closest('[data-action="select-all"]'))    { toggleSelectAll(); return; }
-    if (e.target.closest('[data-action="select-delete"]')) { deleteSelected(); return; }
   });
 
   // vCard-Import: parsen, dann eine Auswahl-Vorstufe zeigen (nichts wird
@@ -321,10 +345,10 @@ function renderCategoryFilters() {
   const bar = _container?.querySelector('#contacts-filters');
   if (!bar) return;
   const active = state.activeCategory;
-  const allChip = `<button class="contact-filter-chip${active ? '' : ' contact-filter-chip--active'}" data-cat="" aria-pressed="${active ? 'false' : 'true'}">${esc(t('contacts.filterAll'))}</button>`;
+  const allChip = `<button class="filter-chip contact-filter-chip${active ? '' : ' filter-chip--active contact-filter-chip--active'}" data-cat="" aria-pressed="${active ? 'false' : 'true'}">${esc(t('contacts.filterAll'))}</button>`;
   const catChips = state.categories.map((c) => {
     const on = active === c.key;
-    return `<button class="contact-filter-chip${on ? ' contact-filter-chip--active' : ''}" data-cat="${esc(c.key)}" aria-pressed="${on ? 'true' : 'false'}">${categoryIcon(c.key)} ${esc(catLabel(c.key))}</button>`;
+    return `<button class="filter-chip contact-filter-chip${on ? ' filter-chip--active contact-filter-chip--active' : ''}" data-cat="${esc(c.key)}" aria-pressed="${on ? 'true' : 'false'}">${categoryIcon(c.key)} ${esc(catLabel(c.key))}</button>`;
   }).join('');
   bar.replaceChildren();
   bar.insertAdjacentHTML('beforeend', allChip + catChips);
@@ -355,6 +379,7 @@ function openContactCategoryManager() {
         titleKey: 'contacts.manageCategories',
         hintKey: 'category.manageHint',
         deleteDetailKey: 'category.deleteConfirmDetail',
+        colors: state.categoryColors,
       });
     },
     onClose: () => manager?.removeEventListener('category-manager-changed', onChanged),
@@ -455,9 +480,9 @@ function renderList({ animate = false } = {}) {
   container.insertAdjacentHTML('beforeend', Object.entries(groups)
     .sort(([a], [b]) => catSortIndex(a) - catSortIndex(b))
     .map(([cat, items]) => `
-      <div class="contact-group ${catTintClass(cat)}">
+      <div class="contact-group"${catTintStyle(cat)}>
         <div class="contact-group__header">${categoryIcon(cat)} ${esc(catLabel(cat))}</div>
-        ${items.map((c) => renderContactItem(c)).join('')}
+        <div class="contact-group__list row-carrier">${items.map((c) => renderContactItem(c)).join('')}</div>
       </div>
     `).join(''));
 
@@ -585,8 +610,8 @@ function renderContactItem(c) {
   if (state.selectMode) {
     const selected = state.selected.has(c.id);
     return `
-      <div class="contact-item contact-item--select${selected ? ' contact-item--selected' : ''}" data-id="${c.id}">
-        <label class="contact-item__open contact-item__select">
+      <div class="list-row list-row--tight contact-item contact-item--select${selected ? ' contact-item--selected' : ''}" data-id="${c.id}">
+        <label class="contact-item__open list-row__main--interactive contact-item__select">
           <input type="checkbox" class="contact-item__checkbox" data-select="${c.id}"${selected ? ' checked' : ''}${c.family_user_id ? ' disabled' : ''} aria-label="${esc(c.name)}">
           ${contactAvatar(c)}
           <span class="contact-item__body">
@@ -624,14 +649,13 @@ function renderContactItem(c) {
   ].join('');
 
   return `
-    <div class="contact-item" data-id="${c.id}">
-      <button type="button" class="contact-item__open" data-open="${c.id}">
+    <div class="list-row list-row--tight contact-item" data-id="${c.id}">
+      <button type="button" class="contact-item__open list-row__main--interactive" data-open="${c.id}">
         ${contactAvatar(c)}
         <span class="contact-item__body">
           <span class="contact-item__name">${esc(c.name)}</span>
           ${renderMeta(c)}
         </span>
-        <i data-lucide="chevron-right" class="contact-item__chevron" aria-hidden="true"></i>
       </button>
       <div class="row-actions contact-item__actions">
         ${callBtn}
@@ -1047,7 +1071,7 @@ function buildContactForm({ mode, contact = null }) {
     <div class="form-group">
       <label class="form-label" for="cm-category">${t('contacts.categoryLabel')}</label>
       <div class="contacts-cat-select">
-        <span class="contacts-cat-select__icon" id="cm-cat-icon" aria-hidden="true">${categoryIcon(isEdit && contact.category ? contact.category : defaultCat, 'icon-lg')}</span>
+        <span class="contacts-cat-select__icon vivid-mark" id="cm-cat-icon" aria-hidden="true">${categoryIcon(isEdit && contact.category ? contact.category : defaultCat, 'icon-lg')}</span>
         <select class="form-input" id="cm-category">${catOpts}</select>
       </div>
     </div>
@@ -1192,11 +1216,34 @@ function buildContactForm({ mode, contact = null }) {
 // Auswahl-Modus (opt-in Bulk)
 // --------------------------------------------------------
 
+/* DIE SAMMELAKTION IST DIE GETEILTE PILLE (Critique 2026-08-13).
+ *
+ * Hier stand eine eigene Auswahlleiste im Fluss der Seite: „Abbrechen" links,
+ * die Zahl in der Mitte, „Alle auswählen" und ein vollflächig rotes „Löschen"
+ * in einer ZWEITEN Zeile. Gemessen bei 390x844 schob sie rund 120px Chrome über
+ * die Liste - zusammen mit Kopf und Filterzeile standen im Auswahlmodus 334 von
+ * 844px als Kopf, bevor der erste Kontakt kam.
+ *
+ * Genau dieser Defekt ist der dokumentierte Anlass der Pille (list-row.css:
+ * „103 von 552px Listenfläche, ausgelöst von einem einzigen abgehakten
+ * Artikel"). Er stand hier unverändert, während seine Lösung eine Datei weiter
+ * lag: die Küche hatte sie bekommen, die Kontakte nicht.
+ *
+ * Was der Umzug MITBRINGT, statt es hier ein zweites Mal zu bauen: die
+ * Rückfrage vor dem Löschen, den Fokus, der danach auf einem lebenden Knopf
+ * landet, die Zahl als Marke, wenn die Pille für den ganzen Satz zu schmal
+ * wird, und Escape. Und er nimmt die zweite destruktive Sprache mit: rot
+ * gefüllt hier gegen rot umrandet auf dem Shell-Material dort.
+ *
+ * Der AUSSTIEG bleibt, wo er war - beim Umschalter im Kopf, der `aria-pressed`
+ * trägt, und auf Escape. Die Pille bekommt ihn nicht als dritte Kapsel: sie
+ * bleibt einzeilig, und ein Auswahlmodus, den man nur unten verlassen kann,
+ * hätte den Knopf oben zur Attrappe gemacht.
+ */
 function enterSelectMode() {
   state.selectMode = true;
   state.selected.clear();
   _container.querySelector('#contacts-select-btn')?.setAttribute('aria-pressed', 'true');
-  _container.querySelector('#contacts-selectbar').hidden = false;
   _container.querySelector('.contacts-page')?.classList.add('is-selecting');
   renderList();
   updateSelectUI();
@@ -1206,17 +1253,33 @@ function exitSelectMode() {
   state.selectMode = false;
   state.selected.clear();
   _container.querySelector('#contacts-select-btn')?.setAttribute('aria-pressed', 'false');
-  _container.querySelector('#contacts-selectbar').hidden = true;
   _container.querySelector('.contacts-page')?.classList.remove('is-selecting');
+  clearBulkPill();
   renderList();
 }
 
 function updateSelectUI() {
+  if (!state.selectMode) { clearBulkPill(); return; }
   const n = state.selected.size;
-  const countEl = _container.querySelector('#contacts-select-count');
-  if (countEl) countEl.textContent = t('contacts.selectCount', { count: n });
-  const delBtn = _container.querySelector('[data-action="select-delete"]');
-  if (delBtn) delBtn.disabled = n === 0;
+  const actions = [{ label: t('contacts.selectAll'), onClick: () => toggleSelectAll() }];
+  // Ohne Auswahl gibt es nichts zu löschen, und die Kapsel steht dann gar nicht
+  // da - dieselbe Sprache wie in der Küche, wo die ganze Pille erst mit dem
+  // ersten Haken erscheint. Ein abgeschalteter Knopf wäre die dritte Antwort
+  // auf „hier ist gerade nichts zu tun", neben Weglassen und Verschwinden.
+  if (n > 0) {
+    actions.push({
+      label: t('common.delete'),
+      ariaLabel: t('contacts.bulkDeleteConfirm', { count: n }),
+      // Die Zahl als Marke: sie wird sichtbar, wo das Subjekt links wegfällt.
+      // „Löschen" ohne genanntes Objekt über einer Kontaktliste ist der Satz,
+      // den man am wenigsten raten möchte.
+      count: n,
+      danger: true,
+      confirm: { question: t('contacts.bulkDeleteConfirm', { count: n }) },
+      onClick: () => deleteSelected(),
+    });
+  }
+  setBulkPill({ label: t('contacts.selectCount', { count: n }), actions });
 }
 
 // Nur nicht-verknüpfte Kontakte sind wählbar (Familien-Kontakte lassen sich

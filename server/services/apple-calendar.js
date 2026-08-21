@@ -10,6 +10,8 @@
  *
  * sync_config-Schlüssel:
  *   apple_last_sync - ISO-8601-Timestamp des letzten Syncs
+ *   apple_last_error    - Fehlermeldung des letzten Laufs, fehlt nach einem sauberen (#820)
+ *   apple_last_error_at - ISO-8601-Timestamp dieses Fehlers
  */
 
 import { createLogger } from '../logger.js';
@@ -17,11 +19,13 @@ const log = createLogger('Apple');
 
 import * as db from '../db.js';
 import { assignDefaultToEvent } from './sync-assignment.js';
-import { pruneDeletedEvents } from './calendar-prune.js';
+import { pruneDeletedEvents, countSourceEvents, deleteSourceEvents } from './calendar-prune.js';
+import { readSyncOutcome, withSyncOutcome } from './sync-outcome.js';
 import { unfoldLines, parseICS, formatICSDate, tzLocalToUTC, applyDuration, normalizeRecurrenceOverrides } from './ics-parser.js';
 import { decodeHtmlEntities } from '../utils/html-entities.js';
 import * as outbound from './calendar-outbound.js';
 import { processPendingDeletions, processPendingUpdates, flushAccount } from './caldav-outbound.js';
+import { rruleLine } from './recurrence.js';
 
 const APPLE_COLOR = '#FC3C44';
 
@@ -94,9 +98,31 @@ function saveCredentials(url, username, password) {
   cfgSet('apple_app_password', password);
 }
 
-function clearCredentials() {
-  ['apple_caldav_url', 'apple_username', 'apple_app_password', 'apple_last_sync'].forEach(cfgDel);
-  log.info('Disconnected.');
+/**
+ * @param {object} [opts]
+ * @param {boolean} [opts.deleteEvents] Gespiegelte Termine mitnehmen (#820).
+ * @returns {{ removed: number }}
+ */
+function clearCredentials({ deleteEvents = false } = {}) {
+  // In einer Transaktion, damit nicht die Termine fallen und die Verbindung
+  // stehen bleibt (oder umgekehrt).
+  return db.get().transaction(() => {
+    const removed = deleteEvents ? clearMirroredEvents() : 0;
+    ['apple_caldav_url', 'apple_username', 'apple_app_password', 'apple_last_sync',
+     // Der Fehlerstand gehoert zur Verbindung (#820).
+     'apple_last_error', 'apple_last_error_at'].forEach(cfgDel);
+    log.info('Disconnected.' + (removed ? ` ${removed} mirrored event(s) removed.` : ''));
+    return { removed };
+  })();
+}
+
+/**
+ * Entfernt die lokal gespiegelten Apple-Termine (#820). Ohne Wirkung nach außen:
+ * der iCloud-Kalender bleibt unberührt, geräumt wird nur die Kopie.
+ * @returns {number} Anzahl gelöschter Termine
+ */
+function clearMirroredEvents() {
+  return deleteSourceEvents(db.get(), 'apple');
 }
 
 // --------------------------------------------------------
@@ -108,7 +134,13 @@ function getStatus() {
   const configured = !!creds;
   const connected  = !!(cfgGet('apple_caldav_url')); // via UI gespeichert
   const lastSync   = cfgGet('apple_last_sync');
-  return { configured, connected, lastSync };
+  // Reist mit dem Status, damit die Rückfrage vor dem Löschen die Zahl sofort
+  // nennen kann - und damit die Einstellungen den Rückstand auch dann noch
+  // zeigen, wenn längst getrennt wurde (#820).
+  const mirroredEvents = countSourceEvents(db.get(), 'apple');
+  // Ein still gescheiterter Lauf sah bisher aus wie ein Kalender, der einfach
+  // aufhoert zu aktualisieren - der Fehler stand nur im Serverlog (#820).
+  return { configured, connected, lastSync, mirroredEvents, ...readSyncOutcome(db.get(), 'apple') };
 }
 
 /**
@@ -176,7 +208,13 @@ function buildICS(event) {
 
   if (event.description) lines.push(`DESCRIPTION:${escapeICS(event.description)}`);
   if (event.location)    lines.push(`LOCATION:${escapeICS(event.location)}`);
-  if (event.recurrence_rule) lines.push(event.recurrence_rule); // z.B. RRULE:FREQ=WEEKLY;BYDAY=MO
+  // Beide Schreibweisen kommen vor: eingelesene Serien tragen die volle
+  // ICS-Zeile, lokal angelegte nur den Regelkörper (#756). Roh übernommen ergab
+  // letzteres eine Zeile ohne Property-Namen - ein VEVENT, das kein Server als
+  // Serie liest. patchICSEvent normalisiert an seiner Stelle genauso.
+  if (event.recurrence_rule) {
+    lines.push(rruleLine(event.recurrence_rule));
+  }
 
   lines.push('END:VEVENT', 'END:VCALENDAR');
   return lines.join('\r\n');
@@ -250,7 +288,15 @@ async function flushOutbound({ makeClient } = {}) {
   }
 }
 
+/**
+ * Ein Lauf, dessen Ausgang den Lauf überlebt (#820). Um runSync() statt in ihm,
+ * damit auch der frühe Ausstieg bei fehlenden Zugangsdaten erfasst wird.
+ */
 async function sync() {
+  return withSyncOutcome(db.get(), 'apple', runSync);
+}
+
+async function runSync() {
   const creds = getCredentials();
   if (!creds) {
     throw new Error('[Apple] No credentials configured (neither in DB nor in .env).');
@@ -479,4 +525,5 @@ async function sync() {
   );
 }
 
-export { sync, flushOutbound, getStatus, saveCredentials, clearCredentials, testConnection };
+export { sync, flushOutbound, getStatus, saveCredentials, clearCredentials,
+         clearMirroredEvents, testConnection };

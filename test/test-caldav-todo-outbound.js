@@ -34,6 +34,7 @@ const {
   markTodoOutbound, queueTodoDeletion, queueTodoDeletions,
   pendingDeletions, pendingDeletionUids, pendingUpdateUids,
   processPendingDeletions, processPendingUpdates, flushOutbound,
+  pendingCreations, processPendingCreations, buildTodoICS, todoUidFor,
 } = await import('../server/services/caldav-todo-outbound.js');
 const { patchICSTodo } = await import('../server/utils/ics-patch.js');
 const { mapVtodoPriority, mapVtodoStatus, splitDue, sync } =
@@ -128,8 +129,8 @@ function reloadTask(id) {
 }
 
 /** Attrappe: sammelt die Aufrufe und beantwortet sie nach Skript. */
-function fakeClient({ objects = [], onUpdate = null, onDelete = null } = {}) {
-  const calls = { updated: [], deleted: [], fetched: [] };
+function fakeClient({ objects = [], onUpdate = null, onDelete = null, onCreate = null } = {}) {
+  const calls = { updated: [], deleted: [], fetched: [], created: [] };
   return {
     calls,
     fetchCalendars: async () => [{ url: LIST_URL, displayName: 'Erinnerungen', components: ['VTODO'] }],
@@ -142,6 +143,11 @@ function fakeClient({ objects = [], onUpdate = null, onDelete = null } = {}) {
     deleteCalendarObject: async (args) => {
       calls.deleted.push(args.calendarObject);
       if (onDelete) return onDelete(args);
+      return {};
+    },
+    createCalendarObject: async (args) => {
+      calls.created.push(args);
+      if (onCreate) return onCreate(args);
       return {};
     },
   };
@@ -660,7 +666,7 @@ test('Ohne offene Arbeit baut flushOutbound keinen Client auf', async () => {
   reset();
   let built = 0;
   const result = await flushOutbound({ createClient: async () => { built++; return fakeClient(); } });
-  assert.deepStrictEqual(result, { deleted: 0, updated: 0 });
+  assert.deepStrictEqual(result, { deleted: 0, updated: 0, created: 0 });
   assert.strictEqual(built, 0);
 });
 
@@ -888,4 +894,166 @@ test('Der Push eines Einkaufspostens fasst CATEGORIES nicht an', () => {
   const fields = icsFieldsForShoppingItem({ id: 1, name: 'Milch', is_checked: 0 });
   assert.ok(!('CATEGORIES' in fields),
     'Ein Feld, das nicht im Patch steht, lässt die Property auf dem Server unberührt');
+});
+
+// ── Anlegen: Yuvomi → Server (#695) ─────────────────────────────────────────────
+
+/** Eine hier entstandene Aufgabe mit gewaehltem Ziel. */
+function insertLocalTask({ accountId, listUrl = LIST_URL, ...fields } = {}) {
+  const f = {
+    title: 'Reifen wechseln', description: null, priority: 'none', status: 'open',
+    due_date: null, due_time: null, parent: null, ...fields,
+  };
+  const r = db.prepare(`
+    INSERT INTO tasks (title, description, priority, status, due_date, due_time, created_by,
+                       parent_task_id, external_source,
+                       target_caldav_account_id, target_caldav_list_url)
+    VALUES (@title, @description, @priority, @status, @due_date, @due_time, 1,
+            @parent, 'local', @accountId, @listUrl)
+  `).run({ ...f, accountId: accountId ?? null, listUrl });
+  return db.prepare('SELECT * FROM tasks WHERE id = ?').get(r.lastInsertRowid);
+}
+
+const listsByUrl = () => new Map([[LIST_URL, { url: LIST_URL, displayName: 'Erinnerungen' }]]);
+
+test('Ein neues VTODO traegt die Felder der Aufgabe, gebaut aus demselben Patcher', () => {
+  // Der Grund fuer das Geruest-plus-Patch-Verfahren: es darf keine zweite
+  // Serialisierung neben icsFieldsForTask geben, sonst laeuft sie beim naechsten
+  // Feld auseinander.
+  const uid = todoUidFor('tasks', 42);
+  const ics = buildTodoICS('tasks', {
+    id: 42, title: 'Reifen wechseln', description: 'Sommerreifen',
+    priority: 'high', status: 'open', due_date: '2026-09-01', due_time: null, tags: ['Auto'],
+  }, uid);
+
+  assert.match(ics, /BEGIN:VTODO/);
+  assert.match(ics, new RegExp(`UID:${uid.replace(/[.@]/g, '\\$&')}`));
+  assert.match(ics, /SUMMARY:Reifen wechseln/);
+  assert.match(ics, /DESCRIPTION:Sommerreifen/);
+  assert.match(ics, /DUE;VALUE=DATE:20260901/);
+  assert.match(ics, /PRIORITY:2/);
+  assert.match(ics, /STATUS:NEEDS-ACTION/);
+  assert.match(ics, /CATEGORIES:Auto/);
+});
+
+test('Die UID einer neuen Aufgabe haengt an ihrer Id, nicht am Zufall', () => {
+  // Scheitert der Schritt NACH dem Upload, nimmt der naechste Lauf dieselbe UID
+  // und ueberschreibt das Objekt. Mit einer Zufalls-UID staende die Aufgabe
+  // danach doppelt auf dem Server.
+  assert.strictEqual(todoUidFor('tasks', 7), todoUidFor('tasks', 7));
+  assert.notStrictEqual(todoUidFor('tasks', 7), todoUidFor('tasks', 8));
+});
+
+test('pendingCreations findet nur lokale Aufgaben mit Ziel - keine Spiegel, keine Unteraufgaben', () => {
+  const accountId = reset();
+  enableList(accountId);
+  const wanted = insertLocalTask({ accountId });
+  insertLocalTask({ accountId, listUrl: null });          // ohne Ziel
+  insertTask({ accountId });                              // bereits gespiegelt
+  const parent = insertLocalTask({ accountId, title: 'Umzug' });
+  insertLocalTask({ accountId, title: 'Kartons', parent: parent.id });
+
+  const rows = pendingCreations(accountId, 'tasks');
+  assert.deepStrictEqual(rows.map((r) => r.title), [wanted.title, parent.title]);
+});
+
+test('Ein Upload macht die Aufgabe zum Spiegel und raeumt ihr Ziel ab', async () => {
+  const accountId = reset();
+  enableList(accountId);
+  const task = insertLocalTask({ accountId, due_date: '2026-09-01' });
+  const client = fakeClient();
+
+  const created = await processPendingCreations(client, accountId, 'tasks', listsByUrl());
+
+  assert.strictEqual(created, 1);
+  assert.strictEqual(client.calls.created.length, 1);
+  assert.match(client.calls.created[0].iCalString, /SUMMARY:Reifen wechseln/);
+
+  const row = reloadTask(task.id);
+  assert.strictEqual(row.external_source, 'caldav');
+  assert.strictEqual(row.external_uid, todoUidFor('tasks', task.id));
+  assert.strictEqual(row.external_account_id, accountId);
+  assert.strictEqual(row.external_object_url, `${LIST_URL}${todoUidFor('tasks', task.id)}.ics`);
+  // Das Ziel ist erledigt und darf nicht als Dauerauftrag stehen bleiben.
+  assert.strictEqual(row.target_caldav_account_id, null);
+  assert.strictEqual(row.target_caldav_list_url, null);
+  // Und ab hier laeuft sie ueber den normalen Aenderungspfad.
+  assert.strictEqual(pendingCreations(accountId, 'tasks').length, 0);
+});
+
+test('Eine verschwundene Zielliste laesst die Aufgabe lokal, statt es ewig zu versuchen', async () => {
+  const accountId = reset();
+  enableList(accountId);
+  const task = insertLocalTask({ accountId, listUrl: 'https://dav.example/dav/u/weg/' });
+  const client = fakeClient();
+
+  const created = await processPendingCreations(client, accountId, 'tasks', listsByUrl());
+
+  assert.strictEqual(created, 0);
+  assert.strictEqual(client.calls.created.length, 0);
+  const row = reloadTask(task.id);
+  assert.strictEqual(row.external_source, 'local');
+  assert.strictEqual(row.target_caldav_list_url, null,
+    'Ohne erreichbares Ziel wird die Aufgabe freigegeben - das ist der Zustand vor #695 und kostet nichts');
+});
+
+test('Ein gescheiterter Upload bleibt vorgemerkt und gibt nicht auf', async () => {
+  // Anders als eine Aenderung hat ein Upload keinen Stand, der veralten koennte.
+  // Er darf deshalb nicht nach N Versuchen verworfen werden - sonst waere die
+  // Aufgabe still fuer immer lokal.
+  const accountId = reset();
+  enableList(accountId);
+  const task = insertLocalTask({ accountId });
+  const client = fakeClient({ onCreate: async () => { throw new Error('503 Service Unavailable'); } });
+
+  const created = await processPendingCreations(client, accountId, 'tasks', listsByUrl());
+
+  assert.strictEqual(created, 0);
+  const row = reloadTask(task.id);
+  assert.strictEqual(row.external_source, 'local');
+  assert.strictEqual(row.target_caldav_account_id, accountId);
+  assert.strictEqual(pendingCreations(accountId, 'tasks').length, 1);
+});
+
+test('Der Sofortversuch laedt neue Aufgaben hoch', async () => {
+  const accountId = reset();
+  enableList(accountId);
+  const task = insertLocalTask({ accountId });
+  const client = fakeClient();
+
+  const result = await flushOutbound({ createClient: async () => client });
+
+  assert.strictEqual(result.created, 1);
+  assert.strictEqual(reloadTask(task.id).external_source, 'caldav');
+});
+
+test('Der Sync-Lauf laedt hoch, ohne dass der Prune die frische Aufgabe gleich wieder entfernt', async () => {
+  // Die Reihenfolge ist der Punkt: der Prune raeumt lokale Spiegel weg, die der
+  // Server nicht mehr fuehrt. Liefe der Upload VOR ihm, saehe er eine Aufgabe,
+  // die in diesem Lauf noch nicht abgerufen wurde - und loeschte sie sofort.
+  const accountId = reset();
+  enableList(accountId);
+  const task = insertLocalTask({ accountId });
+  const client = fakeClient({ objects: [] });
+
+  await sync({ createClient: async () => client });
+
+  const row = reloadTask(task.id);
+  assert.ok(row, 'Die Aufgabe hat den Lauf ueberlebt');
+  assert.strictEqual(row.external_source, 'caldav');
+  assert.strictEqual(client.calls.created.length, 1);
+});
+
+test('Eine Liste, die auf den Einkauf zeigt, nimmt keine Aufgaben an', async () => {
+  // Sonst kaeme die Aufgabe als Einkaufsposten zurueck. Die Route weist das
+  // bereits ab; hier zaehlt der zweite Riegel im Dienst selbst.
+  const accountId = reset();
+  enableList(accountId, 'shopping');
+  const task = insertLocalTask({ accountId });
+  const client = fakeClient();
+
+  await sync({ createClient: async () => client });
+
+  assert.strictEqual(client.calls.created.length, 0);
+  assert.strictEqual(reloadTask(task.id).external_source, 'local');
 });

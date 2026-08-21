@@ -10,6 +10,8 @@
  *   google_sync_token     - Inkrementeller Sync-Token von Google (events.list)
  *   google_last_sync      - ISO-8601-Timestamp des letzten erfolgreichen Syncs
  *   google_calendar_id    - ID des zu synchronisierenden Kalenders (Default: 'primary')
+ *   google_last_error     - Fehlermeldung des letzten Laufs, fehlt nach einem sauberen (#820)
+ *   google_last_error_at  - ISO-8601-Timestamp dieses Fehlers
  */
 
 import { createLogger } from '../logger.js';
@@ -24,6 +26,9 @@ import { nearestColorId } from '../utils/ical-color.js';
 // Fallback-Zone für den Outbound-Sync, wenn Google für den Zielkalender keine liefert.
 import { serverTimeZone } from '../utils/timezone.js';
 import { assignDefaultToEvent } from './sync-assignment.js';
+import { countSourceEvents, deleteSourceEvents } from './calendar-prune.js';
+import { readSyncOutcome, withSyncOutcome } from './sync-outcome.js';
+import { rruleValue } from './recurrence.js';
 
 const GOOGLE_COLOR = '#4285F4';
 
@@ -514,20 +519,49 @@ function getStatus() {
     lastSync,
     selectedCount: enabledCalendarIds().length,
     readonly: isReadonly(),
+    // Reist mit dem Status, damit die Rückfrage vor dem Löschen die Zahl sofort
+    // nennen kann - und damit die Einstellungen den Rückstand auch dann noch
+    // zeigen, wenn längst getrennt wurde (#820).
+    mirroredEvents: countSourceEvents(db.get(), 'google'),
+    // Ein still gescheiterter Lauf sah bisher aus wie ein Kalender, der einfach
+    // aufhoert zu aktualisieren - der Fehler stand nur im Serverlog (#820).
+    ...readSyncOutcome(db.get(), 'google'),
   };
 }
 
 /**
- * Tokens und Sync-State löschen (Verbindung trennen).
+ * Entfernt die lokal gespiegelten Google-Termine (#820). Ohne Wirkung nach außen:
+ * der Google-Kalender bleibt unberührt, geräumt wird nur die Kopie.
+ * @returns {number} Anzahl gelöschter Termine
  */
-function disconnect() {
-  ['google_access_token', 'google_refresh_token', 'google_token_expiry',
-   'google_last_sync', 'google_readonly'].forEach(cfgDel);
-  db.get().prepare('DELETE FROM google_calendar_selection').run();
-  // Offene Löschungen verfallen mit der Verbindung: ohne Token gibt es niemanden
-  // mehr, bei dem gelöscht werden könnte (#593).
-  db.get().prepare(`DELETE FROM calendar_pending_deletions WHERE source = 'google'`).run();
-  log.info('Disconnected.');
+function clearMirroredEvents() {
+  return deleteSourceEvents(db.get(), 'google');
+}
+
+/**
+ * Tokens und Sync-State löschen (Verbindung trennen).
+ * @param {object} [opts]
+ * @param {boolean} [opts.deleteEvents] Gespiegelte Termine mitnehmen (#820).
+ * @returns {{ removed: number }}
+ */
+function disconnect({ deleteEvents = false } = {}) {
+  // Vor dem Trennen: danach ist die Kalenderauswahl fort, und ein Aufräumen nach
+  // Kalender wäre nicht mehr möglich. Beides in einer Transaktion, damit nicht die
+  // Termine fallen und die Verbindung stehen bleibt (oder umgekehrt).
+  return db.get().transaction(() => {
+    const removed = deleteEvents ? clearMirroredEvents() : 0;
+    ['google_access_token', 'google_refresh_token', 'google_token_expiry',
+     'google_last_sync', 'google_readonly',
+     // Der Fehlerstand gehoert zur Verbindung: bliebe er stehen, meldete die
+     // Karte nach dem Trennen einen Ausfall, den es nicht mehr gibt (#820).
+     'google_last_error', 'google_last_error_at'].forEach(cfgDel);
+    db.get().prepare('DELETE FROM google_calendar_selection').run();
+    // Offene Löschungen verfallen mit der Verbindung: ohne Token gibt es niemanden
+    // mehr, bei dem gelöscht werden könnte (#593).
+    db.get().prepare(`DELETE FROM calendar_pending_deletions WHERE source = 'google'`).run();
+    log.info('Disconnected.' + (removed ? ` ${removed} mirrored event(s) removed.` : ''));
+    return { removed };
+  })();
 }
 
 /**
@@ -535,7 +569,16 @@ function disconnect() {
  * Inbound:  Google → lokale DB (Upsert via external_calendar_id)
  * Outbound: lokale Termine (external_source='local', external_calendar_id IS NULL) → Google
  */
+/**
+ * Ein Lauf, dessen Ausgang den Lauf überlebt (#820). Der Wrapper liegt um
+ * runSync() statt in ihm, damit JEDER Ausstieg erfasst wird - auch das frühe
+ * Werfen bei fehlendem Token, das ohne Verbindung der wahrscheinlichste Fall ist.
+ */
 async function sync() {
+  return withSyncOutcome(db.get(), 'google', runSync);
+}
+
+async function runSync() {
   const client   = loadAuthorizedClient();
   const calendar = google.calendar({ version: 'v3', auth: client });
 
@@ -1057,17 +1100,14 @@ function localEventToGoogle(event, colorMap = {}, timeZone = serverTimeZone()) {
   }
 
   if (event.recurrence_rule) {
-    const body = event.recurrence_rule.startsWith('RRULE:')
-      ? event.recurrence_rule.slice('RRULE:'.length)
-      : event.recurrence_rule;
-    gEvent.recurrence = [`RRULE:${normalizeRecurrenceUntil(body, allDay)}`];
+    gEvent.recurrence = [`RRULE:${normalizeRecurrenceUntil(rruleValue(event.recurrence_rule), allDay)}`];
   }
 
   return gEvent;
 }
 
-export { getAuthUrl, handleCallback, getStatus, disconnect, sync, listCalendars,
-         listSelection, setCalendarEnabled, setReadonly, flushOutbound };
+export { getAuthUrl, handleCallback, getStatus, disconnect, clearMirroredEvents, sync,
+         listCalendars, listSelection, setCalendarEnabled, setReadonly, flushOutbound };
 export const __test = {
   localEventToGoogle, googleAllDayEndToInclusive, localAllDayEndToExclusive,
   upsertGoogleEvents, upsertExternalCalendar, setReadonly, isReadonly, isWritableRole,

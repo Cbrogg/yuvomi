@@ -164,6 +164,36 @@ test('PUT dashboard_widgets: ungültige Struktur, doppelte IDs oder zu viele Ein
   }));
   assert.equal((await put({ dashboard_widgets: tooMany })).status, 400);
 });
+// --------------------------------------------------------
+// dashboard_today_glance (#740)
+// --------------------------------------------------------
+test('dashboard_today_glance ist standardmäßig an - der Bestand kennt den Schlüssel nicht', async () => {
+  const res = await get();
+  assert.equal(res.body.data.dashboard_today_glance, true);
+});
+test('PUT dashboard_today_glance: alles ausser Boolean -> 400', async () => {
+  // '0'/'1' waeren die DB-Schreibweise, nicht die der API - wer sie schickt,
+  // meint etwas anderes als er bekaeme.
+  assert.equal((await put({ dashboard_today_glance: '0' })).status, 400);
+  assert.equal((await put({ dashboard_today_glance: 0 })).status, 400);
+  assert.equal((await put({ dashboard_today_glance: null })).status, 400);
+});
+test('dashboard_today_glance haelt beide Richtungen ueber den GET', async () => {
+  assert.equal((await put({ dashboard_today_glance: false })).status, 200);
+  assert.equal((await get()).body.data.dashboard_today_glance, false);
+  assert.equal((await put({ dashboard_today_glance: true })).status, 200);
+  assert.equal((await get()).body.data.dashboard_today_glance, true);
+});
+test('dashboard_today_glance braucht keine Adminrechte - wie die Widgets daneben', async () => {
+  // Die Uebersicht ist eine gemeinsame Seite; wer ihre Kacheln umstellen darf,
+  // darf auch ihr Kopfband abstellen. Waere das eine Admin-Entscheidung, muesste
+  // es dashboard_widgets auch sein.
+  const res = await put({ dashboard_today_glance: false }, { role: 'member', userId: 2 });
+  assert.equal(res.status, 200);
+  assert.equal((await get({ role: 'member', userId: 2 })).body.data.dashboard_today_glance, false);
+  await put({ dashboard_today_glance: true });
+});
+
 test('PUT dashboard_widgets: Teilmenge bleibt beim GET eine Teilmenge', async () => {
   const requested = [{ id: 'notes', visible: false, order: 0, size: '2x1' }];
   const saved = await put({ dashboard_widgets: requested });
@@ -256,6 +286,65 @@ test('PUT health_cycle_enabled: Mitglied -> 403, Admin non-boolean 400, false pe
   assert.equal((await put({ health_cycle_enabled: 'no' }, { role: 'admin' })).status, 400);
   assert.equal((await put({ health_cycle_enabled: false }, { role: 'admin' })).body.data.health_cycle_enabled, false);
 });
+// --------------------------------------------------------
+// Zyklus: haushaltweiter Schalter + persoenliches Opt-out (#760)
+// --------------------------------------------------------
+test('PUT health_cycle_enabled_user: Mitglied darf fuer sich abschalten, kein Admin-Gate (#760)', async () => {
+  // Das Gegenstueck zum Test darueber: derselbe Tab, aber die eigene Sicht -
+  // und die darf ein Mitglied ohne Adminrechte aendern.
+  assert.equal((await put({ health_cycle_enabled_user: 'no' }, { role: 'member' })).status, 400);
+  const res = await put({ health_cycle_enabled_user: false }, { role: 'member', userId: 7 });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.health_cycle_enabled_user, false);
+  assert.equal(res.body.data.health_cycle_effective, false);
+  cfgDelete('health_cycle_enabled:user:7');
+});
+
+test('health_cycle_effective verundet Haushalt und Person, das Opt-out weitet nie (#760)', async () => {
+  cfgDelete('health_cycle_enabled');
+  cfgDelete('health_cycle_enabled:user:7');
+
+  // Beide an (Default): der Tab erscheint.
+  let data = (await get({ role: 'member', userId: 7 })).body.data;
+  assert.deepEqual(
+    [data.health_cycle_enabled, data.health_cycle_enabled_user, data.health_cycle_effective],
+    [true, true, true],
+  );
+
+  // Nur persoenlich aus: der Haushalt bleibt an, meine Sicht nicht.
+  await put({ health_cycle_enabled_user: false }, { role: 'member', userId: 7 });
+  data = (await get({ role: 'member', userId: 7 })).body.data;
+  assert.deepEqual(
+    [data.health_cycle_enabled, data.health_cycle_enabled_user, data.health_cycle_effective],
+    [true, false, false],
+  );
+
+  // Haushalt aus, persoenlich WIEDER an: das Opt-out kann den Admin-Schalter
+  // nicht ueberstimmen - sonst holte sich jeder einen abgeschalteten Tab zurueck.
+  cfgSet('health_cycle_enabled', '0');
+  await put({ health_cycle_enabled_user: true }, { role: 'member', userId: 7 });
+  data = (await get({ role: 'member', userId: 7 })).body.data;
+  assert.deepEqual(
+    [data.health_cycle_enabled, data.health_cycle_enabled_user, data.health_cycle_effective],
+    [false, true, false],
+  );
+
+  cfgDelete('health_cycle_enabled');
+  cfgDelete('health_cycle_enabled:user:7');
+});
+
+test('das Zyklus-Opt-out gilt pro Person, nicht fuer den Haushalt (#760)', async () => {
+  cfgDelete('health_cycle_enabled');
+  await put({ health_cycle_enabled_user: false }, { role: 'member', userId: 7 });
+
+  assert.equal((await get({ role: 'member', userId: 7 })).body.data.health_cycle_effective, false);
+  assert.equal((await get({ role: 'member', userId: 8 })).body.data.health_cycle_effective, true);
+  // Und der haushaltweite Schalter bleibt davon unberuehrt.
+  assert.equal((await get({ role: 'admin' })).body.data.health_cycle_enabled, true);
+
+  cfgDelete('health_cycle_enabled:user:7');
+});
+
 test('PUT rewards_require_approval: Mitglied -> 403, Admin non-boolean 400, false persist', async () => {
   assert.equal((await put({ rewards_require_approval: false }, { role: 'member' })).status, 403);
   assert.equal((await put({ rewards_require_approval: 'no' }, { role: 'admin' })).status, 400);
@@ -432,10 +521,18 @@ test('POST /holidays/sync: Admin ohne konfiguriertes Land -> 200 (netz-freier Ea
 // Defensive Parse-Fallbacks der Lese-Helfer (korrupte sync_config-Werte)
 // --------------------------------------------------------
 test('GET / verkraftet korrupte dashboard_widgets (Fallback auf Default)', async () => {
+  // BEIDE Ablagen, seit die Anordnung persönlich ist (#585): der Haushaltswert
+  // ist nur noch Fallback, und ein persönlicher Wert verdeckt ihn. Wer hier nur
+  // den Haushaltswert korrumpiert, prüft nach dem ersten PUT dieser Datei gar
+  // nichts mehr - die Antwort käme dann aus `dashboard_widgets:user:1`.
+  cfgDelete('dashboard_widgets:user:1');
   cfgSet('dashboard_widgets', '{ kaputt');
-  const widgets = (await get()).body.data.dashboard_widgets;
-  assert.deepEqual(widgets, []); // Client erweitert leer auf seine aktuellen Defaults
+  assert.deepEqual((await get()).body.data.dashboard_widgets, []); // Client erweitert leer auf seine Defaults
   cfgDelete('dashboard_widgets');
+
+  cfgSet('dashboard_widgets:user:1', '{ auch kaputt');
+  assert.deepEqual((await get()).body.data.dashboard_widgets, []);
+  cfgDelete('dashboard_widgets:user:1');
 });
 test('GET / verkraftet korrupte per-user calendar_default_reminders', async () => {
   cfgSet('calendar_default_reminders:user:1', 'nicht-json');

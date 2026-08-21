@@ -18,6 +18,7 @@ import { MIGRATIONS_SQL } from '../server/db-schema-test.js';
 import {
   resolvePermissions,
   buildSessionModuleAccess,
+  moduleAccessVerdict,
   clientPermissions,
   permissionCatalog,
   getSubjectPermissions,
@@ -27,6 +28,7 @@ import {
   PERMISSION_MODULES,
   PERMISSION_WIDGETS,
 } from '../server/permissions.js';
+import { WIDGET_IDS } from '../public/utils/dashboard-widgets.js';
 
 function freshDb() {
   const db = new DatabaseSync(':memory:');
@@ -123,6 +125,33 @@ test('buildSessionModuleAccess: nur Abweichungen, write wird ausgelassen', () =>
 
 // ── Speicherung / Validierung ────────────────────────────────────────────────
 
+// ── Durchsetzung (geteilt von /api/v1 und MCP, #823) ─────────────────────────
+
+test('moduleAccessVerdict: null lässt alles durch (Admin/unbeschränkt)', () => {
+  assert.equal(moduleAccessVerdict(null, 'tasks', 'write'), 'allow');
+  assert.equal(moduleAccessVerdict(undefined, 'tasks', 'write'), 'allow');
+});
+
+test('moduleAccessVerdict: Deny-Liste — nicht gelistete Module bleiben offen', () => {
+  const map = { tasks: 'none' };
+  assert.equal(moduleAccessVerdict(map, 'calendar', 'write'), 'allow');
+  // Auch ein Pfad ohne Modulzuordnung darf nicht stillschweigend zufallen,
+  // sonst wäre die App für eingeschränkte Mitglieder unbedienbar.
+  assert.equal(moduleAccessVerdict(map, null, 'read'), 'allow');
+});
+
+test('moduleAccessVerdict: none sperrt beide Zugriffsarten', () => {
+  const map = { tasks: 'none' };
+  assert.equal(moduleAccessVerdict(map, 'tasks', 'read'), 'none');
+  assert.equal(moduleAccessVerdict(map, 'tasks', 'write'), 'none');
+});
+
+test('moduleAccessVerdict: read erlaubt Lesen, weist Schreiben ab', () => {
+  const map = { tasks: 'read' };
+  assert.equal(moduleAccessVerdict(map, 'tasks', 'read'), 'allow');
+  assert.equal(moduleAccessVerdict(map, 'tasks', 'write'), 'read-only');
+});
+
 test('Sparse: Standard-Werte werden nicht gespeichert', () => {
   const db = freshDb();
   addUser(db, { id: 9, role: 'member', family_role: 'parent' });
@@ -203,10 +232,18 @@ function idsFromSource(relativePath, pattern) {
 }
 
 test('jedes Dashboard-Widget ist sperrbar und in der Rechte-UI benannt', () => {
-  const dashboardIds = idsFromSource('../public/pages/dashboard.js', /const WIDGET_IDS = \[([^\]]+)\]/)
-    .split(',')
-    .map((part) => part.trim().replace(/^'|'$/g, ''))
-    .filter(Boolean);
+  /* AUS DEM MODUL, NICHT AUS SEINEM QUELLTEXT (Etappe 7, 2026-08-13). Diese
+   * Zeile las `WIDGET_IDS` per Regex aus `public/pages/dashboard.js`, und
+   * `af2cac51` hat die Liste nach `utils/dashboard-widgets.js` gezogen: seitdem
+   * fand das Muster nichts und die Suite war rot - auf ganzer Strecke, in einem
+   * `npm test`, das niemand fuhr. Der Commit dort zaehlt sechs gruene Suiten
+   * auf, und diese ist keine davon. Dieselbe Form wie beim Precache-Fund einen
+   * Commit vorher: ein Umzug bricht eine Zusicherung zwei Dateien weiter.
+   *
+   * Der Import kann das nicht wieder passieren lassen - er schlaegt laut fehl,
+   * wo ein Regex still leer zurueckkommt. Das Modul ist dafuer gebaut: es
+   * haengt an nichts und laeuft in node (siehe seinen Kopf). */
+  const dashboardIds = [...WIDGET_IDS];
 
   const labelKeys = idsFromSource(
     '../public/settings/pages/admin-permissions.js',
@@ -221,11 +258,11 @@ test('jedes Dashboard-Widget ist sperrbar und in der Rechte-UI benannt', () => {
   assert.deepEqual(
     [...dashboardIds].sort(),
     [...permissionIds].sort(),
-    'WIDGET_IDS (dashboard.js) und PERMISSION_WIDGETS (server/permissions.js) sind auseinandergelaufen',
+    'WIDGET_IDS (utils/dashboard-widgets.js) und PERMISSION_WIDGETS (server/permissions.js) sind auseinandergelaufen',
   );
   assert.deepEqual(
     [...dashboardIds].sort(),
     [...labelKeys].sort(),
-    'WIDGET_IDS (dashboard.js) und WIDGET_LABEL_KEYS (admin-permissions.js) sind auseinandergelaufen',
+    'WIDGET_IDS (utils/dashboard-widgets.js) und WIDGET_LABEL_KEYS (admin-permissions.js) sind auseinandergelaufen',
   );
 });

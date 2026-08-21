@@ -3,6 +3,7 @@
  * Ausführen: node --experimental-sqlite test-oidc.js
  */
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync, readdirSync } from 'node:fs';
 import { MIGRATIONS_SQL } from '../server/db-schema-test.js';
 
 let passed = 0;
@@ -323,6 +324,113 @@ test('legt Nutzer ohne Name mit preferred_username als display_name an', () => {
 
 // Das app-weite Username-Format aus /setup, /invites und den User-Routen.
 const USERNAME_PATTERN = /^[a-zA-Z0-9._-]{3,64}$/;
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Das Format steht ZEHNMAL von Hand da - und diese Zeile war die elfte
+ *
+ * #653 war kein OIDC-Fehler, sondern ein Drift-Fehler: die OIDC-Anlage schrieb
+ * an einer Kopie des Formats vorbei, und weil der User-PUT den unveraenderten
+ * Bestandsnamen revalidiert, liess sich ein so benanntes Konto danach gar nicht
+ * mehr speichern. Die Guard-Abdeckung fuehrte es mit „fuenfmal in
+ * server/auth.js"; gezaehlt sind es zehn, in sechs Dateien, ueber Backend,
+ * Frontend und Installer.
+ *
+ * WARUM KEINE GETEILTE KONSTANTE: es gibt keine Datei, die alle drei erreichen.
+ * `public/` wird ausgeliefert und darf nichts aus `server/` importieren,
+ * `tools/installer/install.html` steht allein und laeuft vor der ersten
+ * Installation. Eine Konstante wuerde die Kopien also nicht abschaffen, nur
+ * verstecken - und die Zusage ist ohnehin nicht „es gibt eine Stelle", sondern
+ * „alle Stellen sagen dasselbe". Genau das prueft dieser Guard.
+ *
+ * GESUCHT WIRD DIE BAUART, NICHT DER WERT: jedes anker-gebundene
+ * Zeichenklassen-Literal mit Laengenangabe (`/^[...]{n,m}$/`), das auf einer
+ * Zeile steht, die von einem Nutzernamen spricht. Ein Guard, der nach
+ * `{3,64}` sucht, faende genau die Kopien, die den richtigen Wert schon haben -
+ * er waere blind fuer die abweichende, also fuer die einzige, die zaehlt.
+ * Gemessen: zwoelf Literale dieser Bauart im Repo, zehn davon Usernamen; die
+ * zwei anderen (Metrik-Schluessel in health/cycle.js, Laendercode in
+ * weather.js) nennen auf ihrer Zeile keinen Nutzer und fallen richtig heraus.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+const USERNAME_PATTERN_SHAPE = /\/\^\[[^\]]+\]\{\d+,\d+\}\$\//g;
+const SPEAKS_OF_USER = /user/i;
+
+/** Jede Quelldatei unter den drei Baeumen, in denen ein Username validiert wird. */
+function sourceFiles() {
+  const found = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(new URL(dir, import.meta.url), { withFileTypes: true })) {
+      const next = `${dir}${entry.name}`;
+      if (entry.isDirectory()) {
+        if (/node_modules|vendor/.test(entry.name)) continue;
+        walk(`${next}/`);
+      } else if (/\.(js|html)$/.test(entry.name)) {
+        found.push(next);
+      }
+    }
+  };
+  for (const dir of ['../server/', '../public/', '../tools/']) walk(dir);
+  return found;
+}
+
+test('das app-weite Username-Format steht ueberall gleich da', () => {
+  const expected = USERNAME_PATTERN.toString();
+  const sites = [];
+  const findings = [];
+
+  for (const file of sourceFiles()) {
+    const src = readFileSync(new URL(file, import.meta.url), 'utf8');
+    const lines = src.split('\n');
+    lines.forEach((line, index) => {
+      for (const match of line.matchAll(USERNAME_PATTERN_SHAPE)) {
+        if (!SPEAKS_OF_USER.test(line)) continue;
+        const at = `${file.replace(/^\.\.\//, '')}:${index + 1}`;
+        sites.push(at);
+        if (match[0] !== expected) {
+          findings.push(`${at}: ${match[0]} statt ${expected}`);
+        }
+      }
+    });
+  }
+
+  // Ein Guard, der nichts gemessen hat, darf nicht urteilen. Ohne diese
+  // Zusicherung waere eine kaputte Suche von „alle Kopien stimmen" nicht zu
+  // unterscheiden - und das ist hier die wahrscheinlichere Fehlerart, weil der
+  // Guard ueber eine Textform laeuft.
+  assert(sites.length >= 8,
+    `Nur ${sites.length} Fundstellen des Username-Formats gesehen (gemessen: 10 in sechs Dateien). `
+    + 'Die Suche greift nicht mehr - entweder hat sich die Schreibweise geaendert, oder eine '
+    + 'Validierung ist in eine Datei gewandert, die hier nicht durchsucht wird.');
+
+  assert(findings.length === 0,
+    'Eine Kopie des Username-Formats weicht ab. Das ist der Fehler aus #653: die OIDC-Anlage '
+    + 'schrieb an einer Kopie vorbei, und weil der User-PUT den unveraenderten Bestandsnamen '
+    + 'revalidiert, liess sich das entstandene Konto danach gar nicht mehr speichern. Wer das '
+    + 'Format aendert, aendert ALLE Fundstellen - Backend, Frontend und Installer.\n    '
+    + findings.join('\n    '));
+});
+
+test('der OIDC-Bereiniger laesst genau die Zeichen durch, die das Format erlaubt', () => {
+  // Die zweite Haelfte derselben Zusage, und die Stelle, an der #653 wirklich
+  // sass: `sanitizeOidcUsername` filtert ueber eine NEGIERTE Zeichenklasse
+  // (`[^a-zA-Z0-9._-]`). Laeuft die auseinander, erzeugt der Bereiniger genau
+  // die Namen, die die Validierung danach ablehnt - und dieser Fall faellt in
+  // keinem Test auf, der nur die Validierung prueft.
+  const auth = readFileSync(new URL('../server/auth.js', import.meta.url), 'utf8');
+  const classes = [...auth.matchAll(/\[\^([^\]]+)\]\+?/g)]
+    .map((m) => m[1])
+    .filter((cls) => /a-zA-Z0-9/.test(cls));
+  assert(classes.length >= 1,
+    'Keine negierte Zeichenklasse in server/auth.js gefunden - sanitizeOidcUsername '
+    + 'filtert anders als beim Bau dieses Guards, der Guard gehoert nachgezogen.');
+
+  const allowed = USERNAME_PATTERN.source.match(/\[([^\]]+)\]/)[1];
+  const mismatched = classes.filter((cls) => cls !== allowed);
+  assert(mismatched.length === 0,
+    `Der Bereiniger laesst "${mismatched.join('", "')}" durch, das Format erlaubt "${allowed}". `
+    + 'Ein Bereiniger, der mehr durchlaesst als die Validierung annimmt, erzeugt Konten, die '
+    + 'sich nicht mehr speichern lassen (#653).');
+});
 
 test('nutzt die E-Mail NICHT als username-Fallback', () => {
   const db = buildOidcTestDb();

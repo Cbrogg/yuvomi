@@ -15,7 +15,7 @@
  *   → bypassCacheUntil (in-memory + Cache API für SW-Restart-Robustheit)
  */
 
-const APP_RELEASE   = '1.87.0';
+const APP_RELEASE   = '2.25.1';
 const SHELL_CACHE   = `yuvomi-shell-${APP_RELEASE}`;
 const PAGES_CACHE   = `yuvomi-pages-${APP_RELEASE}`;
 const LOCALES_CACHE = `yuvomi-locales-${APP_RELEASE}`;
@@ -43,12 +43,26 @@ const APP_SHELL = [
   '/push.js',
   '/sw-register.js',
   '/lucide.min.js',
+  // Alles, was `index.html` als `<link rel="stylesheet">` eager lädt, gehört
+  // hierher - sonst rendert der allererste Offline-Start ungestylt. Die Regel
+  // hält `test:sw-precache`; sie ist keine Liste, die man von Hand nachträgt.
   '/styles/tokens.css',
   '/styles/reset.css',
   '/styles/pwa.css',
   '/styles/layout.css',
   '/styles/glass.css',
-  '/styles/login.css',
+  '/styles/typography.css',
+  '/styles/filter-chip.css',
+  '/styles/sub-tabs.css',
+  '/styles/page-search.css',
+  '/styles/kitchen-tabs.css',
+  '/styles/list-row.css',
+  '/styles/panel.css',
+  '/styles/user-multi-select.css',
+  '/styles/datepicker.css',
+  '/styles/category-manager.css',
+  '/styles/document-attach.css',
+  '/styles/auth.css',
   '/styles/reminders.css',
   '/styles/dashboard.css',
   '/styles/tasks.css',
@@ -63,7 +77,9 @@ const APP_SHELL = [
   '/styles/settings.css',
   '/styles/recipes.css',
   '/styles/pantry.css',
+  '/styles/inventory.css',
   '/styles/detail-view.css',
+  '/styles/screensaver.css',
   '/components/yuvomi-install-prompt.js',
   // Geteilte Module. Sie werden von Shell UND Seitenmodulen importiert und
   // müssen deshalb zusammen mit der Shell erneuert werden: der Browser bindet
@@ -75,12 +91,18 @@ const APP_SHELL = [
   '/components/detail-view.js',
   '/components/document-attach.js',
   '/components/modal.js',
+  '/components/photo-screensaver.js',
   '/components/user-multi-select.js',
   '/utils/birthday-event.js',
+  '/utils/bulk-pill.js',
   '/utils/category-labels.js',
+  '/utils/chart.js',
   '/utils/color.js',
   '/utils/contact-name.js',
   '/utils/contrast.js',
+  '/utils/countdown.js',
+  '/utils/dashboard-layout-hint.js',
+  '/utils/dashboard-widgets.js',
   '/utils/date.js',
   '/utils/document-preview.js',
   '/utils/empty-state.js',
@@ -93,10 +115,15 @@ const APP_SHELL = [
   '/utils/health-tabs.js',
   '/utils/health-vitals.js',
   '/utils/help.js',
+  '/utils/household.js',
   '/utils/html.js',
   '/utils/ingredient-row.js',
+  '/utils/inventory-warranty.js',
   '/utils/kitchen-tabs.js',
   '/utils/kitchen-transfer.js',
+  '/utils/mentions.js',
+  '/utils/module-accent.js',
+  '/utils/metric-card.js',
   '/utils/money.js',
   '/utils/page-search.js',
   '/utils/pantry-locations.js',
@@ -110,15 +137,24 @@ const APP_SHELL = [
   '/utils/recurrence-scope.js',
   '/utils/reminder-offset.js',
   '/utils/scroll-restore.js',
+  '/utils/seal-pair.js',
   '/utils/shopping-categories.js',
   '/utils/skeleton.js',
   '/utils/sub-tabs.js',
+  '/utils/swipe-row.js',
   '/utils/sync-target.js',
   '/utils/tablist.js',
+  '/utils/toast-surface.js',
   '/utils/ux.js',
   '/utils/vcard.js',
   '/utils/version.js',
+  '/utils/wall-mode.js',
   '/offline.html',
+  // offline.html laedt theme-init.js, damit die Huelle dieselbe Farbwelt
+  // trifft wie die App (gespeicherter Wunsch schlaegt Systemeinstellung).
+  // Ohne Precache waere die Wahl genau dann wirkungslos, wenn die Seite
+  // gebraucht wird - offline.
+  '/theme-init.js',
   '/manifest.json',
   '/favicon.ico',
   '/icons/favicon-32.png',
@@ -174,6 +210,7 @@ const PAGE_MODULES = [
   '/pages/login.js',
   '/pages/recipes.js',
   '/pages/pantry.js',
+  '/pages/inventory.js',
   '/pages/budget-plans.js',
   '/pages/budget-stats.js',
   '/pages/split-expenses.js',
@@ -195,10 +232,19 @@ const PAGE_MODULES = [
   '/settings/preferences-cache.js',
   '/settings/region-presets.js',
   '/settings/weather-location.js',
+  '/settings/family-users.js',
   '/settings/pages/personal-account.js',
+  '/settings/pages/admin-email.js',
+  '/settings/pages/admin-permissions.js',
+  '/settings/pages/personal-calendar-subscriptions.js',
+  '/settings/pages/personal-feeds.js',
+  '/settings/pages/personal-health.js',
+  '/settings/pages/personal-weather.js',
   '/settings/pages/personal-appearance.js',
   '/settings/pages/personal-device.js',
   '/settings/pages/personal-calendar.js',
+  '/settings/pages/personal-tasks.js',
+  '/settings/pages/modules-active.js',
   '/settings/pages/modules-navigation.js',
   '/settings/pages/modules-kitchen.js',
   '/settings/pages/modules-calendar.js',
@@ -214,6 +260,7 @@ const PAGE_MODULES = [
   '/settings/pages/admin-api.js',
   '/settings/pages/admin-backup.js',
   '/settings/pages/admin-weather.js',
+  '/settings/pages/admin-immich.js',
   '/settings/pages/admin-system.js',
 ];
 
@@ -525,14 +572,19 @@ self.addEventListener('push', (event) => {
     icon: '/icons/icon-192.png',
     badge: '/icons/icon-192.png',
     tag: payload.tag || 'yuvomi-push',
-    data: { url: payload.url || '/reminders' },
+    // `/` UND NICHT `/reminders`: diese Route hat es nie gegeben (Critique
+    // 2026-08-10). Der Router kannte sie nicht und fiel still auf die
+    // Uebersicht zurueck - ein Fallback, der wie ein Ziel aussah. Die Uebersicht
+    // ist jetzt der ausgesprochene Fallback; das echte Ziel kommt aus
+    // `payload.url`, das der Server je Herkunft setzt (services/notifications.js).
+    data: { url: payload.url || '/' },
   };
   event.waitUntil(self.registration.showNotification(title, options));
 });
 
 self.addEventListener('notificationclick', (event) => {
   event.notification.close();
-  const targetUrl = (event.notification.data && event.notification.data.url) || '/reminders';
+  const targetUrl = (event.notification.data && event.notification.data.url) || '/';
   event.waitUntil((async () => {
     const all = await clients.matchAll({ type: 'window', includeUncontrolled: true });
     for (const client of all) {

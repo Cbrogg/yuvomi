@@ -9,6 +9,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, readdirSync } from 'node:fs';
+import { withoutHtmlComments } from './source-text.js';
 
 const read = (path) => readFileSync(new URL(path, import.meta.url), 'utf8').replace(/\r/g, '');
 
@@ -22,6 +23,11 @@ const money = read('../public/utils/money.js');
 const layoutCss = read('../public/styles/layout.css');
 const tokensCss = read('../public/styles/tokens.css');
 const budgetCss = read('../public/styles/budget.css');
+// Die geteilten Auswertungs-Bauteile (.panel-head, .segmented, .metric-grid,
+// .metric-card) stehen seit der Namensbereinigung in panel.css - sie sind
+// app-weites Vokabular, kein Budget-Baustein. Die Kompaktstufen, die am
+// Container der Budget-Seite haengen, stehen weiter in budget.css.
+const panelCss = read('../public/styles/panel.css');
 const subscriptionsCss = read('../public/styles/subscriptions.css');
 const splitCss = read('../public/styles/split-expenses.css');
 
@@ -106,10 +112,14 @@ test('hidden greift bei geteilten Bedienelementen trotz display-Klasse', () => {
   // und Deklaration im SELBEN Regelblock stehen - kein `}` und kein zweites `{`
   // dazwischen. Das frühere `[\s\S]{0,120}` maß stattdessen die Länge der
   // Selektorliste und schlug damit bei jeder legitimen Ergänzung an; die Liste ist
-  // aber ausdrücklich zum Wachsen gedacht (bei `.kitchen-bulkbar` war sie 141
+  // aber ausdrücklich zum Wachsen gedacht (bei `.list-bulkbar` war sie 141
   // Zeichen lang und der Guard rot, obwohl die Struktur korrekt war).
   const sameBlock = (selector) => new RegExp(`${selector}[^{}]*\\{\\s*display:\\s*none\\s*!important`);
-  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]', '\\.kitchen-bulkbar\\[hidden\\]']) {
+  // `.list-bulkbar` stand hier, solange sie ein dauerhafter, leerer Knoten im
+  // Seitenfluss war. Seit Etappe 5 wird sie angelegt und entfernt
+  // (utils/bulk-pill.js) und trägt nie `hidden` - ein Eintrag für einen
+  // Zustand, den niemand setzt, prüft nichts.
+  for (const selector of ['\\.page-fab\\[hidden\\]', '\\.btn\\[hidden\\]', '\\.form-group\\[hidden\\]']) {
     assert.match(layoutCss, sameBlock(selector), `${selector} steht nicht im Durchsetzungsblock`);
   }
 });
@@ -119,7 +129,19 @@ test('hidden greift bei geteilten Bedienelementen trotz display-Klasse', () => {
 // --------------------------------------------------------
 
 test('neue Einträge landen im angezeigten Monat, nicht im heutigen', () => {
-  assert.match(budget, /const defaultDate = state\.month === todayMonth \? today : `\$\{state\.month\}-01`/);
+  // GEPRÜFT WIRD DIE HERKUNFT, NICHT DIE SCHREIBWEISE. Die Vorgängerfassung
+  // verlangte die Zeile buchstabengetreu
+  // (`state.month === todayMonth ? today : ...`) und schlug deshalb an, als die
+  // Regel unverändert nach utils/date.js zog - ein Guard, der ein Refactoring
+  // ohne Verhaltensänderung als Verstoß meldet, hat die falsche Ebene.
+  // Verlangt wird jetzt: der Standardwert stammt aus der hausweiten Regel,
+  // angewandt auf den angezeigten Monat.
+  assert.match(budget, /defaultDateInPeriod/,
+    'das Standarddatum kommt nicht mehr aus defaultDateInPeriod() (utils/date.js)');
+  assert.match(budget, /monthPeriodKeys\(state\.month\)/,
+    'der Zeitraum ist nicht mehr der angezeigte Monat');
+  assert.match(budget, /const defaultDate = defaultDateInPeriod\(/,
+    'defaultDate wird nicht mehr aus der Regel abgeleitet');
   // Das Datumsfeld muss den abgeleiteten Wert nutzen, nicht mehr `today`.
   assert.match(budget, /id="bm-date"\s*\n?\s*value="\$\{isEdit \? entry\.date : defaultDate\}"/);
   assert.doesNotMatch(budget, /id="bm-date"[\s\S]{0,80}entry\.date : today\}/);
@@ -177,9 +199,9 @@ test('jede Umschalter-Leiste des Moduls läuft durch die geteilte Verhaltensschi
 test('es gibt genau eine Umschalter-Optik im Modul', () => {
   // Vier Optiken für dieselbe Frage - getönte Kapsel, eckig gefülltes Rechteck,
   // weiße Kachel, umrandete Pille - hießen, dass derselbe Zustand pro Tab anders
-  // aussah. .budget-segmented ist der Baustein; wer eine Leiste baut, greift ihn.
-  assert.ok(/\n\.budget-segmented\s*\{/.test(budgetCss), '.budget-segmented fehlt in budget.css');
-  assert.ok(/\n\.budget-segmented__item\s*\{/.test(budgetCss), '.budget-segmented__item fehlt');
+  // aussah. .segmented ist der Baustein; wer eine Leiste baut, greift ihn.
+  assert.ok(/\n\.segmented\s*\{/.test(panelCss), '.segmented fehlt in panel.css');
+  assert.ok(/\n\.segmented__item\s*\{/.test(panelCss), '.segmented__item fehlt');
 
   for (const [file, src] of BUDGET_PAGES) {
     for (const bar of src.matchAll(/<div class="([^"]+)"([^>]*)role="(tablist|radiogroup)"/g)) {
@@ -189,8 +211,8 @@ test('es gibt genau eine Umschalter-Optik im Modul', () => {
       if (/budget-tabs|budget-scope|budget-color-picker/.test(classes)) continue;
       assert.match(
         classes,
-        /budget-segmented/,
-        `${file}: Leiste "${classes}" baut eine eigene Optik statt .budget-segmented`,
+        /segmented/,
+        `${file}: Leiste "${classes}" baut eine eigene Optik statt .segmented`,
       );
     }
   }
@@ -198,14 +220,14 @@ test('es gibt genau eine Umschalter-Optik im Modul', () => {
   // Und die abgelösten Optiken kommen nicht zurück.
   const liveCss = withoutComments(budgetCss);
   for (const dead of ['budget-loans__filter\\b', 'budget-stats__range\\b']) {
-    assert.doesNotMatch(liveCss, new RegExp(`\\.${dead}`), `.${dead} ist durch .budget-segmented ersetzt`);
+    assert.doesNotMatch(liveCss, new RegExp(`\\.${dead}`), `.${dead} ist durch .segmented ersetzt`);
   }
 });
 
 test('das Touch-Maß der Umschalter kommt aus dem Token, nicht aus der Leiste', () => {
   // Die abgelösten Leisten lagen bei 40px (Zeitraum) und 28px (Nur-Ausgaben).
-  const item = budgetCss.match(/\n\.budget-segmented__item\s*\{([^}]*)\}/);
-  assert.ok(item, '.budget-segmented__item fehlt');
+  const item = panelCss.match(/\n\.segmented__item\s*\{([^}]*)\}/);
+  assert.ok(item, '.segmented__item fehlt');
   assert.match(item[1], /min-height:\s*var\(--target-base\)/);
 });
 
@@ -267,9 +289,157 @@ test('die Datenreihen-Tokens existieren in beiden Themes', () => {
   assert.equal(defs.length, 3, 'Dark-Mode-Variante fehlt in einem der beiden Dark-Blöcke');
 });
 
-test('die Trendkurve beschriftet Skala und Zeitraum', () => {
-  assert.match(stats, /class="budget-stats__axis-max"/);
-  assert.match(stats, /class="budget-stats__axis-x"/);
+/**
+ * Keine Datenreihe darf sich mit dem Modulton der Seite decken, die sie zeigt.
+ *
+ * WARUM DER GUARD DARÜBER NICHT GRIFF: der Nachbar oben („borgt keine
+ * Modul-Akzente") prüft den NAMEN - dass kein `--module-*` in DONUT_COLORS
+ * steht. Genau das war erfüllt, während `--_chart-series-2` seit dem
+ * Familientoene-Umbau BUCHSTÄBLICH derselbe Hexwert war wie `--_family-money`
+ * (#0F766E light, #2DD4BF dark) - der Modulton des Budgets, in dem die Palette
+ * läuft. Ein Konto in „Türkis" war dort nicht vom Chrome zu unterscheiden. Der
+ * Guard war grün und die Regel verletzt, weil er die falsche Ebene maß.
+ * Gemessen wird deshalb der WERT, und zwar wahrnehmungsnah (CIEDE2000), nicht
+ * per Stringvergleich: die nächste Deckung wäre sonst schon mit einem um 1
+ * verschobenen Kanal wieder unsichtbar.
+ *
+ * WARUM ER NUR DIE CHART-NUTZENDEN MODULE PRÜFT: Serie 3 deckt sich mit
+ * --_family-kitchen und Serie 7 mit --_family-work (dE 1.9), beide bewusst
+ * stehengelassen - Küche und Aufgaben haben keine Diagramme, die Deckung ist
+ * dort folgenlos. Das ist die Ausnahme MIT Verfallsdatum an beiden Enden:
+ * bekommt eine Küchen- oder Aufgabenseite ein Diagramm, findet dieser Guard die
+ * Serie im selben Lauf, ohne dass jemand daran denken muss. Guard-Ebene 2
+ * (Struktur, aus deklarativer Quelle: router.js + tokens.css).
+ */
+test('keine Datenreihe deckt sich mit dem Modulton einer Seite, die Diagramme zeigt', () => {
+  // 1. Welche Seiten beziehen die Palette überhaupt? Aus dem Quelltext, nicht
+  //    aus einer Liste hier - eine Liste wäre wieder die Allowlist von oben.
+  const pagesDir = new URL('../public/pages/', import.meta.url);
+  const users = readdirSync(pagesDir)
+    .filter((f) => f.endsWith('.js'))
+    .filter((f) => read(`../public/pages/${f}`).includes('--chart-series-'));
+  assert.ok(
+    users.length >= 2,
+    `Nur ${users.length} Seite(n) beziehen --chart-series-. Hat sich die Schreibweise geändert? `
+    + 'Ein Guard über eine leere Menge sichert nichts zu.',
+  );
+
+  // 2. Modul je Seite aus der deklarativen Routentabelle.
+  const router = read('../public/router.js');
+  const moduleOf = new Map();
+  for (const m of router.matchAll(/page:\s*'\/pages\/([^']+)'[^}]*?module:\s*'([^']+)'/g)) {
+    moduleOf.set(m[1], m[2]);
+  }
+  const modules = [...new Set(users.map((f) => moduleOf.get(f)).filter(Boolean))];
+  assert.ok(
+    modules.length >= 1,
+    `Keine der Chart-Seiten (${users.join(', ')}) fand ein Modul in router.js - der Guard misst dann nichts.`,
+  );
+
+  // 3. Modulton auflösen: --module-<name> zeigt auf eine Familie, die Familie
+  //    trägt den Hexwert. Beide Ebenen kommen aus tokens.css.
+  const familyOf = new Map();
+  for (const m of tokensCss.matchAll(/--module-([\w-]+):\s*var\(--_family-([\w-]+)\)/g)) {
+    familyOf.set(m[1], m[2]);
+  }
+  const valuesOf = (token) => [...tokensCss.matchAll(new RegExp(`${token}:\\s*(#[\\da-fA-F]{6})`, 'g'))].map((x) => x[1]);
+
+  // 4. CIEDE2000 - der Abstand, den ein Auge sieht. Unter 2.3 (Just Noticeable
+  //    Difference) sind zwei Farben derselbe Ton, egal was die Hexwerte sagen.
+  const JND = 2.3;
+  const lab = (value) => {
+    const [r, g, b] = value.match(/[\da-f]{2}/gi)
+      .map((p) => parseInt(p, 16) / 255)
+      .map((c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4));
+    const f = (t) => (t > 0.008856 ? Math.cbrt(t) : 7.787 * t + 16 / 116);
+    const x = f((0.4124 * r + 0.3576 * g + 0.1805 * b) / 0.95047);
+    const y = f(0.2126 * r + 0.7152 * g + 0.0722 * b);
+    const z = f((0.0193 * r + 0.1192 * g + 0.9505 * b) / 1.08883);
+    return [116 * y - 16, 500 * (x - y), 200 * (y - z)];
+  };
+  const deltaE = (one, two) => {
+    const [L1, a1, b1] = lab(one);
+    const [L2, a2, b2] = lab(two);
+    const cBar = (Math.hypot(a1, b1) + Math.hypot(a2, b2)) / 2;
+    const g = 0.5 * (1 - Math.sqrt(cBar ** 7 / (cBar ** 7 + 25 ** 7)));
+    const [A1, A2] = [a1 * (1 + g), a2 * (1 + g)];
+    const [C1, C2] = [Math.hypot(A1, b1), Math.hypot(A2, b2)];
+    const angle = (x, y) => (x === 0 && y === 0 ? 0 : ((Math.atan2(y, x) * 180) / Math.PI + 360) % 360);
+    const [h1, h2] = [angle(A1, b1), angle(A2, b2)];
+    const dL = L2 - L1;
+    const dC = C2 - C1;
+    let dh = 0;
+    if (C1 * C2 !== 0) {
+      dh = h2 - h1;
+      if (dh > 180) dh -= 360;
+      else if (dh < -180) dh += 360;
+    }
+    const dH = 2 * Math.sqrt(C1 * C2) * Math.sin((dh * Math.PI) / 360);
+    const lBar = (L1 + L2) / 2;
+    const cBarP = (C1 + C2) / 2;
+    let hBar = h1 + h2;
+    if (C1 * C2 !== 0 && Math.abs(h1 - h2) > 180) hBar += hBar < 360 ? 360 : -360;
+    if (C1 * C2 !== 0) hBar /= 2;
+    const rad = (deg) => (deg * Math.PI) / 180;
+    const T = 1 - 0.17 * Math.cos(rad(hBar - 30)) + 0.24 * Math.cos(rad(2 * hBar))
+      + 0.32 * Math.cos(rad(3 * hBar + 6)) - 0.20 * Math.cos(rad(4 * hBar - 63));
+    const sL = 1 + (0.015 * (lBar - 50) ** 2) / Math.sqrt(20 + (lBar - 50) ** 2);
+    const sC = 1 + 0.045 * cBarP;
+    const sH = 1 + 0.015 * cBarP * T;
+    const rT = -Math.sin(rad(60 * Math.exp(-(((hBar - 275) / 25) ** 2))))
+      * 2 * Math.sqrt(cBarP ** 7 / (cBarP ** 7 + 25 ** 7));
+    return Math.sqrt((dL / sL) ** 2 + (dC / sC) ** 2 + (dH / sH) ** 2 + rT * (dC / sC) * (dH / sH));
+  };
+
+  // Selbsttest: die Formel muss zwei gleiche Farben auf 0 und zwei klar
+  // verschiedene weit über die Schwelle bringen. Ohne ihn wäre ein deltaE, das
+  // immer 0 liefert, ein grüner Guard ohne Zusicherung.
+  assert.equal(deltaE('#0F766E', '#0F766E'), 0, 'deltaE misst identische Farben nicht als 0');
+  assert.ok(deltaE('#0F766E', '#C2410C') > 20, 'deltaE trennt Teal und Orange nicht');
+
+  let checked = 0;
+  for (const mod of modules) {
+    const family = familyOf.get(mod);
+    assert.ok(family, `--module-${mod} löst in tokens.css auf keinen Familienton auf`);
+    const familyValues = valuesOf(`--_family-${family}`);
+    assert.ok(familyValues.length >= 2, `--_family-${family} fehlt ein Theme-Wert`);
+
+    for (const [themeIndex, theme] of [[0, 'light'], [1, 'dark']]) {
+      for (let i = 1; i <= 7; i++) {
+        const series = valuesOf(`--_chart-series-${i}`)[themeIndex];
+        assert.ok(series, `--_chart-series-${i} fehlt für Theme ${theme}`);
+        const distance = deltaE(series, familyValues[themeIndex]);
+        checked++;
+        assert.ok(
+          distance >= JND,
+          `${theme}: --chart-series-${i} (${series}) liegt ${distance.toFixed(1)} von `
+          + `--_family-${family} (${familyValues[themeIndex]}) - der Modulton von "${mod}", `
+          + `das die Palette selbst zeigt (${users.join(', ')}). Unter ${JND} sieht das Auge `
+          + 'denselben Ton: ein Segment behauptet dann die Zugehörigkeit zum umgebenden Chrome. '
+          + 'Serie verschieben, nicht die Schwelle.',
+        );
+      }
+    }
+  }
+  assert.ok(checked >= 14, `Nur ${checked} Paare gemessen - erwartet werden 7 Serien x 2 Themes je Modul.`);
+});
+
+test('die Trendkurve beschriftet Skala und Zeitraum - IM Bild', () => {
+  // Die Zusage ist dieselbe geblieben, ihr Ort nicht. Hier stand die Pruefung
+  // auf `budget-stats__axis-max` und `__axis-x`, also auf Beschriftung
+  // AUSSERHALB des SVG. Die lag dort, weil `preserveAspectRatio="none"` jeden
+  // Text im Bild verzerrt haette - und genau diese Kausalitaet war verkehrt
+  // herum: ohne feste Raender gibt es keinen Platz fuer eine Achse im Bild.
+  // Draussen verschiebt sie sich gegen ihre eigenen Gitterlinien, sobald das
+  // Diagramm skaliert (gemessen: 600x180-viewBox auf 720x216 gestreckt).
+  //
+  // Seit der Extraktion nach `utils/chart.js` bringt die geteilte Geometrie
+  // ihren linken Gutter mit. Geprueft wird deshalb: die Achse kommt aus der
+  // geteilten Quelle, und das Streckungs-Attribut ist weg.
+  assert.match(stats, /chartGridMarkup\(0, max,/, 'die Werteachse kommt aus der geteilten Geometrie');
+  assert.match(stats, /chartXLabelsMarkup\(/, 'die Zeitachse kommt aus der geteilten Geometrie');
+  assert.doesNotMatch(stats, /preserveAspectRatio="none"/, 'eine Kurve mit Achse darf nicht gestreckt werden - der Text im Bild verzerrt mit');
+  assert.doesNotMatch(stats, /budget-stats__axis-(max|mid|x)/, 'die Achse steht im SVG, nicht als HTML daneben');
 });
 
 test('die Trendkurve macht Einzelwerte ohne Zeigegerät ablesbar', () => {
@@ -355,28 +525,22 @@ const BUDGET_PAGES = [
   ['split-expenses.js', splitExpenses],
 ];
 
-const BUDGET_STYLESHEETS = [
+// Die Stylesheets, in denen die Bauteile dieses Moduls stehen. panel.css ist
+// KEIN Budget-Stylesheet, aber .metric-card und .segmented wohnen dort - waere
+// es nicht in der Liste, waeren die Guards darunter genau fuer die Datei blind,
+// in der der Baustein steht.
+const AUDITED_STYLESHEETS = [
   ['budget.css', budgetCss],
+  ['panel.css', panelCss],
   ['subscriptions.css', subscriptionsCss],
   ['split-expenses.css', splitCss],
 ];
 
-// Einmaliges Ersetzen genuegt nicht: ein Rest wie `<!<!-- x -->->` setzt sich
-// nach dem Schnitt zu einem neuen Kommentar-Delimiter zusammen. Darum bis zum
-// Fixpunkt laufen (CodeQL js/incomplete-multi-character-sanitization).
-// Die Schleife muss den Aufruf direkt umschliessen: CodeQL erkennt den Fixpunkt
-// nur, wenn das Ergebnis des `replace` zu seinem eigenen Receiver zurueckfliesst.
-// In einer `.replace().replace()`-Kette gilt das nur fuer das letzte Glied - der
-// Schnitt gehoert deshalb hierher und nicht zurueck in die Kette unten.
-const withoutHtmlComments = (src) => {
-  let out = src;
-  let previous;
-  do {
-    previous = out;
-    out = out.replace(/<!--[\s\S]*?-->/g, '');
-  } while (out !== previous);
-  return out;
-};
+// Der Schnitt stand hier als lokale Funktion und in test-frontend-audit.js als
+// `.replace().replace()`-Kette OHNE Fixpunkt - zwei Fassungen desselben
+// Gedankens, von denen genau eine richtig war. Er hat jetzt ein Zuhause; die
+// Begruendung (warum ein einzelner Durchlauf ein `<!--` stehen laesst und
+// warum die Schleife den Aufruf direkt umschliessen muss) steht dort.
 
 // Guards, die auf Markup- oder Selektor-Muster prüfen, müssen an Kommentaren
 // vorbeisehen: sonst schlägt jede Erklärung an, die das verbotene Muster nennt -
@@ -630,33 +794,33 @@ test('jede Rolle des Geld-Vokabulars ist in money.js dokumentiert und behandelt'
 
 test('es gibt genau eine Kennzahlkarte im Modul', () => {
   // Fünf Bauarten hießen fünfmal neu lernen, wo die Zahl steht. Wer eine neue
-  // Kennzahl zeigt, nimmt .budget-summary-card - oder dieser Guard schlägt an.
-  for (const [file, css] of BUDGET_STYLESHEETS) {
+  // Kennzahl zeigt, nimmt .metric-card - oder dieser Guard schlägt an.
+  for (const [file, css] of AUDITED_STYLESHEETS) {
     for (const match of css.matchAll(/^\.([a-z-]*summary-card[a-z_-]*)/gm)) {
       assert.ok(
-        match[1].startsWith('budget-summary-card'),
-        `${file}: .${match[1]} ist eine zweite Kennzahlkarte - .budget-summary-card ist der Baustein`,
+        match[1].startsWith('metric-card'),
+        `${file}: .${match[1]} ist eine zweite Kennzahlkarte - .metric-card ist der Baustein`,
       );
     }
   }
   for (const [file, src] of BUDGET_PAGES) {
     for (const match of src.matchAll(/class="([^"]*summary-card[^"]*)"/g)) {
       assert.ok(
-        /budget-summary-card/.test(match[1]),
-        `${file}: Kennzahlkarte "${match[1]}" nutzt nicht .budget-summary-card`,
+        /metric-card/.test(match[1]),
+        `${file}: Kennzahlkarte "${match[1]}" nutzt nicht .metric-card`,
       );
     }
   }
 });
 
 test('Arbeitsflächen des Moduls sind opak, Glass bleibt den Overlays', () => {
-  // budget.css begründet die Regel an .budget-summary-card. Sie galt nur dort,
+  // budget.css begründet die Regel an .metric-card. Sie galt nur dort,
   // während subscriptions.css und split-expenses.css im selben Modul Glass auf
   // Karten, Panels und sogar auf einem Eingabefeld setzten.
   // Overlay-Rollen tragen ihr Rollenwort im Selektor; alles andere ist
   // Arbeitsfläche. Neue Arbeitsflächen fallen damit automatisch durch.
   const OVERLAY_ROLES = /modal|dialog|popover|overlay|picker-panel|form__section|tooltip|menu/;
-  for (const [file, css] of BUDGET_STYLESHEETS) {
+  for (const [file, css] of AUDITED_STYLESHEETS) {
     // Regelblöcke grob zerlegen: Selektorliste bis '{', Body bis '}'.
     for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
       const selector = rule[1].split('*/').pop().trim();
@@ -687,7 +851,7 @@ test('kein Kontrast im Modul hängt an der Datenlage', () => {
   assert.ok(DATA_COLORS.size > 0, 'keine Datenfarben gefunden - der Guard misst nichts');
 
   const varsIn = (decls) => [...decls.matchAll(/var\(\s*(--[a-z0-9-]+)/gi)].map((m) => m[1]);
-  for (const [file, css] of BUDGET_STYLESHEETS) {
+  for (const [file, css] of AUDITED_STYLESHEETS) {
     for (const rule of css.matchAll(/([^{}]+)\{([^}]*)\}/g)) {
       const body = rule[2];
       const fg = [...body.matchAll(/(?:^|;)\s*color\s*:([^;]*)/g)].map((m) => m[1]).join(' ');
@@ -727,8 +891,8 @@ test('Panel-Fläche und Kopfleiste sind geteilt, nicht pro Tab gebaut', () => {
   assert.match(panel[1], /overflow-y:\s*auto/);
   assert.match(panel[1], /padding-block-start:\s*var\(--space/);
 
-  assert.ok(/\n\.budget-panel-head\s*\{/.test(budgetCss), '.budget-panel-head fehlt in budget.css');
-  assert.ok(/\n\.budget-panel-head__title\s*\{/.test(budgetCss), '.budget-panel-head__title fehlt');
+  assert.ok(/\n\.panel-head\s*\{/.test(panelCss), '.panel-head fehlt in panel.css');
+  assert.ok(/\n\.panel-head__title\s*\{/.test(panelCss), '.panel-head__title fehlt');
 
   // Kein Tab setzt Scroll-Achse oder Panel-Padding noch selbst. Ausnahmen sind
   // benannte Modifier (--budget hält seine eigene innere Scroll-Region).
@@ -744,10 +908,16 @@ test('Panel-Fläche und Kopfleiste sind geteilt, nicht pro Tab gebaut', () => {
 });
 
 test('Trendpfeile sind Icons, keine Textglyphen', () => {
+  // Die Pfeil-Entscheidung wohnt seit Block 2 in der geteilten Trend-API
+  // (utils/metric-card.js) - budget.js formatiert nur noch den Text.
+  const metricCard = read('../public/utils/metric-card.js');
   assert.doesNotMatch(budget, /'▲'/);
   assert.doesNotMatch(budget, /'▼'/);
-  assert.match(budget, /trending-up/);
-  assert.match(budget, /trending-down/);
+  assert.doesNotMatch(metricCard, /'▲'/);
+  assert.doesNotMatch(metricCard, /'▼'/);
+  assert.match(metricCard, /trending-up/);
+  assert.match(metricCard, /trending-down/);
+  assert.match(budget, /trendMarkup\(/);
 });
 
 test('Konto-Farben kommen aus Tokens und tragen sprechende Labels', () => {
@@ -776,10 +946,10 @@ test('Saldo wird neutral, wenn keine Einnahmen erfasst sind', () => {
   // Ohne Einnahmen ist balance = -Ausgaben eine Tautologie; die rote Zahl liest
   // sich fälschlich als „im Minus". Bedingung: income === 0 && balance < 0.
   assert.match(budget, /const balanceNeutral = s\.income === 0 && s\.balance < 0;/);
-  assert.match(budget, /balanceNeutral[\s\S]{0,80}budget-summary-card--balance-neutral/);
+  assert.match(budget, /balanceNeutral[\s\S]{0,80}metric-card--balance-neutral/);
   // Echte Einnahmen behalten die Farbsemantik (grün Überschuss / rot Mehrausgabe).
-  assert.match(budget, /budget-summary-card--balance-positive/);
-  assert.match(budget, /budget-summary-card--balance-negative/);
+  assert.match(budget, /metric-card--balance-positive/);
+  assert.match(budget, /metric-card--balance-negative/);
 });
 
 test('der Saldo-Trend entfällt im neutralen Ausgaben-Fall', () => {
@@ -789,8 +959,8 @@ test('der Saldo-Trend entfällt im neutralen Ausgaben-Fall', () => {
 });
 
 test('die neutrale Saldo-Farbe kommt aus einem Token, nicht als Literal', () => {
-  const rule = budgetCss.match(/\.budget-summary-card--balance-neutral[^\n]*\{[^}]*\}/);
-  assert.ok(rule, '.budget-summary-card--balance-neutral fehlt in budget.css');
+  const rule = panelCss.match(/\.metric-card--balance-neutral[^\n]*\{[^}]*\}/);
+  assert.ok(rule, '.metric-card--balance-neutral fehlt in panel.css');
   assert.match(rule[0], /var\(--color-text-primary\)/);
   assert.doesNotMatch(rule[0], /var\(--color-danger\)|var\(--color-success\)/);
 });
@@ -822,12 +992,12 @@ test('die Ausgaben-Karte trägt im „Nur Ausgaben"-Modus die volle Breite', () 
   // Die Spaltenzahl der geteilten Kennzahl-Zeile kommt seit der Baustein-
   // Extraktion aus --summary-cards; geprüft wird die Invariante (eine Spalte),
   // nicht mehr die grid-template-columns-Schreibweise.
-  const rule = budgetCss.match(/\.budget-summary--expenses-only[^\n]*\{[^}]*\}/);
-  assert.ok(rule, '.budget-summary--expenses-only fehlt in budget.css');
+  const rule = panelCss.match(/\.metric-grid--expenses-only[^\n]*\{[^}]*\}/);
+  assert.ok(rule, '.metric-grid--expenses-only fehlt in panel.css');
   assert.match(rule[0], /--summary-cards:\s*1/);
 
-  const base = budgetCss.match(/\n\.budget-summary\s*\{[^}]*\}/);
-  assert.ok(base, '.budget-summary fehlt in budget.css');
+  const base = panelCss.match(/\n\.metric-grid\s*\{[^}]*\}/);
+  assert.ok(base, '.metric-grid fehlt in panel.css');
   assert.match(base[0], /grid-template-columns:\s*repeat\(var\(--summary-cards[^)]*\)/);
 });
 

@@ -120,22 +120,29 @@ class YuvomiInstallPrompt extends HTMLElement {
       :host {
         display: block;
         position: fixed;
-        bottom: calc(var(--nav-height-mobile, 56px) + env(safe-area-inset-bottom, 0px) + 8px);
-        left: var(--space-3, 12px);
-        right: var(--space-3, 12px);
-        z-index: var(--z-toast, 300);
+        /* Ueber der GANZEN Nav-Zone, nicht ueber der Kapselhoehe.
+         * --nav-bottom-height zaehlt Kapsel PLUS Luft PLUS safe-area; die
+         * frueher hier nachgerechnete Summe (--nav-height-mobile + safe + 8)
+         * liess die 8px Luft ueber der Kapsel aus und legte den Banner damit
+         * 8px in die Leiste hinein. Seit der FAB in der Kapsel sitzt, deckt
+         * dieser eine Wert auch ihn ab - die Sonderregel in layout.css, die
+         * den Banner um den schwebenden Knopf herumschob, ist entfallen. */
+        bottom: calc(var(--nav-bottom-height) + var(--space-2));
+        left: var(--space-3);
+        right: var(--space-3);
+        z-index: var(--z-toast);
         pointer-events: none;
       }
 
       .banner {
         display: flex;
         align-items: center;
-        gap: var(--space-3, 12px);
-        padding: var(--space-3, 12px) var(--space-4, 16px);
-        background: var(--color-surface, #fff);
-        border: 1px solid var(--color-border, #e8e7e2);
-        border-radius: var(--radius-md, 12px);
-        box-shadow: var(--shadow-md, 0 2px 8px rgba(0,0,0,0.08));
+        gap: var(--space-3);
+        padding: var(--space-3) var(--space-4);
+        background: var(--color-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        box-shadow: var(--shadow-md);
         pointer-events: auto;
         transform: translateY(calc(100% + 20px));
         transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
@@ -148,7 +155,7 @@ class YuvomiInstallPrompt extends HTMLElement {
       .icon {
         width: 40px;
         height: 40px;
-        border-radius: var(--radius-sm, 8px);
+        border-radius: var(--radius-sm);
         flex-shrink: 0;
       }
 
@@ -158,31 +165,31 @@ class YuvomiInstallPrompt extends HTMLElement {
       }
 
       .title {
-        font-family: var(--font-sans, system-ui);
-        font-size: var(--text-base, 0.875rem);
-        font-weight: var(--font-weight-semibold, 600);
-        color: var(--color-text-primary, #1c1c1a);
-        line-height: var(--line-height-tight, 1.25);
+        font-family: var(--font-sans);
+        font-size: var(--text-base);
+        font-weight: var(--font-weight-semibold);
+        color: var(--color-text-primary);
+        line-height: var(--line-height-tight);
       }
 
       .subtitle {
-        font-family: var(--font-sans, system-ui);
-        font-size: var(--text-sm, 0.8125rem);
-        color: var(--color-text-secondary, #6c6b67);
-        line-height: var(--line-height-base, 1.5);
+        font-family: var(--font-sans);
+        font-size: var(--text-sm);
+        color: var(--color-text-secondary);
+        line-height: var(--line-height-base);
         margin-top: 2px;
       }
 
       .btn-install {
         flex-shrink: 0;
-        padding: var(--space-2, 8px) var(--space-4, 16px);
-        background: var(--color-btn-primary, #5b2fd4);
-        color: var(--color-text-on-accent, #fff);
+        padding: var(--space-2) var(--space-4);
+        background: var(--color-btn-primary);
+        color: var(--color-text-on-accent);
         border: none;
-        border-radius: var(--radius-sm, 8px);
-        font-family: var(--font-sans, system-ui);
-        font-size: var(--text-sm, 0.8125rem);
-        font-weight: var(--font-weight-semibold, 600);
+        border-radius: var(--radius-sm);
+        font-family: var(--font-sans);
+        font-size: var(--text-sm);
+        font-weight: var(--font-weight-semibold);
         cursor: pointer;
         min-height: 36px;
         min-width: 36px;
@@ -190,7 +197,7 @@ class YuvomiInstallPrompt extends HTMLElement {
       }
 
       .btn-install:hover {
-        background: var(--color-btn-primary-hover, #4a26bb);
+        background: var(--color-btn-primary-hover);
       }
 
       .btn-dismiss {
@@ -202,9 +209,9 @@ class YuvomiInstallPrompt extends HTMLElement {
         justify-content: center;
         background: none;
         border: none;
-        border-radius: var(--radius-xs, 4px);
+        border-radius: var(--radius-xs);
         cursor: pointer;
-        color: var(--color-text-tertiary, #737370);
+        color: var(--color-text-tertiary);
         padding: 0;
         min-height: 32px;
         min-width: 32px;
@@ -212,7 +219,7 @@ class YuvomiInstallPrompt extends HTMLElement {
       }
 
       .btn-dismiss:hover {
-        background: var(--color-surface-3, #efeee9);
+        background: var(--color-surface-3);
       }
 
       .btn-dismiss svg {
@@ -234,24 +241,49 @@ class YuvomiInstallPrompt extends HTMLElement {
        * (Maus) bleibt bei der kompakteren Größe. */
       @media (hover: none) {
         .btn-install {
-          min-height: var(--target-base, 44px);
+          min-height: var(--target-base);
         }
 
         .btn-dismiss {
-          width: var(--target-base, 44px);
-          height: var(--target-base, 44px);
-          min-width: var(--target-base, 44px);
-          min-height: var(--target-base, 44px);
+          width: var(--target-base);
+          height: var(--target-base);
+          min-width: var(--target-base);
+          min-height: var(--target-base);
         }
       }
 
       @media (min-width: 1024px) {
         :host {
           /* Desktop: Sidebar statt Bottom-Nav, Banner unten rechts */
-          bottom: calc(var(--space-4, 16px) + env(safe-area-inset-bottom, 0px));
+          bottom: calc(var(--space-4) + env(safe-area-inset-bottom, 0px));
           left: auto;
-          right: var(--space-4, 16px);
+          right: var(--space-4);
           max-width: 380px;
+        }
+      }
+
+      /* WER EINEN SHADOW ROOT AUFMACHT, BRINGT DEN MOTION-SCHUTZ SELBST MIT.
+       *
+       * Der globale Universalselektor-Block in reset.css erreicht einen Shadow
+       * Tree NICHT - ein Selektor endet an der Schattengrenze, und diese
+       * Komponente ist der einzige Shadow-DOM-Bewohner der App. Gemessen: unter
+       * emuliertem prefers-reduced-motion liefert dieselbe Deklaration im Light
+       * DOM 0s, hier 0.35s (Audit 2026-08-08, P2-2). Das Banner schob sich also
+       * auch dann herein, wenn das Geraet Bewegung reduziert - und es ist die
+       * erste Begegnung mit der App auf dem Telefon.
+       *
+       * PRODUCT.md sagt "All animations respect prefers-reduced-motion" zu; ein
+       * globaler Block kann diese Zusage fuer einen Shadow Tree nie einloesen.
+       *
+       * Der Zustandswechsel bleibt: .banner--visible setzt weiter
+       * translateY(0), nur ohne Weg dorthin. Das Banner ERSCHEINT, statt sich
+       * hereinzuschieben - und _remove() traegt fuer den Rueckweg eine Frist,
+       * weil transitionend ohne Transition nie feuert. */
+      @media (prefers-reduced-motion: reduce) {
+        .banner,
+        .btn-install,
+        .btn-dismiss {
+          transition: none;
         }
       }
     `;
@@ -316,12 +348,41 @@ class YuvomiInstallPrompt extends HTMLElement {
     this._shadow.appendChild(style);
     this._shadow.appendChild(banner);
 
+    // DER BANNER MELDET SEINE HOEHE AN DIE SHELL.
+    //
+    // Er liegt fixiert auf der Toast-Ebene und verdeckte damit das Ende jeder
+    // Seite: auf /rewards lagen 89px der letzten Punktestandszeile dauerhaft
+    // unter ihm, ohne dass man weiterscrollen konnte. Die Nachlauf-Regeln in
+    // layout.css rechnen den Wert in `padding-block-end` von `.app-content`
+    // ein; ohne Banner steht die Variable auf 0.
+    //
+    // GEMESSEN, NICHT GERECHNET: die Hoehe haengt am Text, und der bricht in
+    // 24 Sprachen unterschiedlich um. Eine Formel aus Icon plus Polsterung
+    // waere in genau den Sprachen falsch, in denen der Titel zweizeilig wird.
+    this._sizeObserver?.disconnect();
+    this._sizeObserver = new ResizeObserver(([entry]) => {
+      const height = entry?.borderBoxSize?.[0]?.blockSize ?? entry?.contentRect?.height ?? 0;
+      document.documentElement.style.setProperty('--install-prompt-height', `${Math.ceil(height)}px`);
+    });
+    this._sizeObserver.observe(banner);
+
     // Slide-in Animation nach nächstem Frame
     requestAnimationFrame(() => {
       requestAnimationFrame(() => {
         banner.classList.add('banner--visible');
       });
     });
+  }
+
+  /**
+   * Die gemeldete Hoehe geht mit dem Banner. Sie steht am `html`-Element und
+   * ueberlebte sonst jedes Entfernen - der Nachlauf am Seitenende bliebe als
+   * Loch stehen, obwohl nichts mehr darueber liegt.
+   */
+  disconnectedCallback() {
+    this._sizeObserver?.disconnect();
+    this._sizeObserver = null;
+    document.documentElement.style.removeProperty('--install-prompt-height');
   }
 
   /** iOS Teilen-Icon (Box mit Pfeil nach oben) */
@@ -401,13 +462,32 @@ class YuvomiInstallPrompt extends HTMLElement {
     this._remove();
   }
 
-  /** Banner mit Slide-out entfernen */
+  /**
+   * Banner mit Slide-out entfernen.
+   *
+   * `transitionend` allein reicht nicht als Ausstieg: bei
+   * `prefers-reduced-motion: reduce` gibt es keine Transition, das Ereignis
+   * feuert nie, und das Host-Element bliebe samt Listenern im Dokument stehen.
+   * Dasselbe gilt fuer eine unterbrochene Transition (Sprachwechsel, Re-Render).
+   * Deshalb eine Frist als zweiter Weg hinaus - wer zuerst kommt, gewinnt.
+   */
   _remove() {
     const banner = this._shadow.querySelector('.banner');
     if (!banner) return;
 
     banner.classList.remove('banner--visible');
-    banner.addEventListener('transitionend', () => this.remove(), { once: true });
+
+    let done = false;
+    const finish = () => {
+      if (done) return;
+      done = true;
+      clearTimeout(timer);
+      this.remove();
+    };
+    // Etwas ueber der 0.35s-Transition; sie ist der Normalfall, die Frist der
+    // Notausgang.
+    const timer = setTimeout(finish, 400);
+    banner.addEventListener('transitionend', finish, { once: true });
   }
 
   /** iOS: Banner direkt anzeigen */

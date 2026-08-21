@@ -10,6 +10,831 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Added
 - Outlook calendar push (Microsoft Graph): events can be pushed one-way to Outlook.com calendars of personal Microsoft accounts (outlook.com / M365 Family — Outlook.com offers no CalDAV). Multiple family accounts connect via OAuth (free Entra ID app registration, `MS_CLIENT_ID`/`MS_CLIENT_SECRET`/`MS_REDIRECT_URI`). Each account can pick one dedicated auto-sync target calendar (recommended: a "Yuvomi" calendar created in Outlook) plus the family member it belongs to — all Yuvomi events visible to that person are then pushed automatically, with assigned members appended to the title (`Dinner (Anna, Ben)`); per-event targets in the unified sync-target picker override the auto-sync calendar. Yuvomi stays the source of truth: edits become updates, deletions remove the remote event, and manual changes or deletions in Outlook are detected via a per-calendar `changeKey` listing (one small request per calendar per run) and reverted to the Yuvomi state on the next sync. Externally synced events (Google/CalDAV/ICS) are excluded to avoid duplicates. Setup guide in `docs/installation.md`.
 
+### Fixed
+
+- **The module grid on the project website had fallen out of its container.** A single stray
+  `</div>` in the module section closed the page's content wrapper instead of the feature grid,
+  so everything after it - the fourteen module cards, their intro line, the phone row and the
+  closing paragraph - rendered at full viewport width instead of the 1152px every other block
+  uses. On a phone the cards sat flush against both screen edges with their corners clipped,
+  which made the one section meant to show "eighteen modules, neatly sorted" the only one that
+  looked broken. Four review passes had missed it because they all asked about overflow, and a
+  block at full viewport width does not overflow; browsers repair markup like this silently, so
+  the console stayed empty too. The landing-page test suite now checks that every section closes
+  exactly the elements it opens.
+- **The quick-start copy button handed out one secret where the next paragraph asked for two.**
+  The visible code block carried the note "run twice - one value for SESSION_SECRET, one for
+  DB_ENCRYPTION_KEY", but the button copied the command without it and only once, while the
+  warning two lines below asked readers to replace both placeholders with "the two values you
+  just generated". The likely outcomes were the same secret in both fields, or
+  `DB_ENCRYPTION_KEY` left on the placeholder the page itself describes as a key printed on a
+  public website - and encrypting a database is not reversible. The command now appears twice
+  wherever two values are needed, in the copied text as well as on screen, and the same fix
+  landed in the install guide, the README and the installation docs.
+- **The privacy policy contradicted itself in German.** `datenschutz.html` gave its effective
+  date as 16.08.2026 at the top and 09.06.2026 in section 14; the English version was consistent
+  at both places.
+- **Screenshots on the landing page were served below the resolution they are displayed at.** The
+  phone capture in the hero and the gallery shares its source with the small module cards, and
+  the derivative was sized for the cards - so the hero, which shows it four times larger, was
+  upscaled even on a non-retina phone and delivered less than half the pixels a modern display
+  asks for. Lead images now get their own size, selected from the markup rather than from a list
+  in the build script.
+
+### Changed
+
+- **The site's closing copy no longer speaks only to families.** The hero already said "for a
+  family, a couple, or just you", but the closing call to action, its supporting line and the
+  footer all reverted to "your family's data" and "built for families" - so the last three blocks
+  a solo user reads told them, three times, that they were not the intended audience. All three
+  now speak of the household, which is the word the page already uses at its strongest points.
+- **Docker and Podman are one platform card instead of two.** The install guide has always
+  treated them as a single path - the compose file is the only difference, and its tab is named
+  for both - while the landing page listed them separately. Readers counted six platforms here
+  and found seven tabs there with no explanation for the gap. The card now names both runtimes,
+  and the two routes that belong to no platform at all (the guided web installer and installing
+  from source) are named in a line below the grid, so the two pages add up.
+- **The outbound claim can now be checked.** "One update check against the GitHub releases API,
+  nothing else" is the most verifiable statement on the page and was the only one that led
+  nowhere; it now links to the privacy page and to the server source that makes the request.
+- **Body text on the landing page has a reading measure.** Line lengths ran from 20 to 172
+  characters on the same page, and the longest of them was the warning about the irreversible
+  database key. Every paragraph now shares one named measure and lands between 70 and 75
+  characters.
+- The copy buttons announce their result to screen readers instead of only changing their own
+  label, and the page description now names one-person households alongside families and couples.
+
+## [2.25.1] - 2026-08-20
+
+### Security
+
+- **The MCP endpoint now enforces the same module permissions as the REST API (#823).** A member
+  configured with a module set to "no access" was refused by `/api/v1` but still served by the
+  matching MCP tool: `list_tasks` returned the household's tasks for an account whose Tasks module
+  was `none`, and the write tools were open the same way. The reason was structural rather than a
+  missed check - the curated core tools run in-process against SQLite and never pass through the
+  Express middleware where the permission rule was spelled out, so nothing was there to apply it.
+  The rule now lives in one place (`moduleAccessVerdict` in `server/permissions.js`) that both
+  surfaces call: a module on `none` refuses the read and the write tool, a module on `read` refuses
+  only the write tool, and `tools/list` hides what the account may not call, so an AI client is
+  never offered a tool its next request would deny. Token scopes and member permissions are two
+  independent limits and both have to agree - handing out a token can no longer widen what the
+  person behind it is allowed to do. Guest accounts for Shared expenses, which `/api/v1` confines to
+  the expense routes, likewise reach no core tool any more. The OpenAPI bridge was never affected:
+  it loops back through the REST layer and inherited every limit already. Self-hosters who kept the
+  MCP port away from ordinary accounts for this reason no longer need to.
+
+## [2.25.0] - 2026-08-20
+
+### Fixed
+
+- **"Undo" in the toast messages works again.** Deleting a note, a task, a shopping item or an entry
+  in any other module offers a short "Undo" window at the bottom of the screen - and clicking it did
+  nothing at all. The button and its action were both in place; the click never reached them,
+  because the swipe-to-dismiss gesture on the toast captured the pointer as soon as it went down,
+  which redirects the resulting click to the toast instead of the button underneath. Keyboard and
+  touch took a different route and still worked, which is why this stayed hidden for so long: it
+  only ever broke for mouse users. Two more faults sat in the same place and are fixed with it -
+  simply moving the mouse across a toast pushed it off-screen and faded it to invisible before the
+  pointer could reach the button, and the horizontal swipe was never triggerable on a phone at all,
+  because the browser claimed the gesture for scrolling.
+
+### Added
+
+- **Retry-safe writes for the API (`Idempotency-Key`).** If a `POST` to the API goes out and the
+  answer is lost on the way - a timeout, a dropped connection, a restart at the wrong moment - the
+  caller cannot tell whether the record was created. Retrying may create a duplicate; not retrying
+  may lose the entry. Any `POST` under `/api/v1` now accepts an optional `Idempotency-Key` header:
+  repeating the same request with the same key returns the original response instead of creating a
+  second record, and says so with an `Idempotent-Replayed: true` header. Reusing a key for a
+  different request, or retrying while the first attempt is still running, is answered with `409`
+  rather than silently handing back someone else's result; a request that failed releases its key,
+  so a corrected payload can be sent again under the same one. Keys belong to the account that used
+  them, are kept for 24 hours and survive a restart. Callers that send no header are unaffected -
+  nothing about the existing API changes. Reported for task creation, implemented for every
+  endpoint, and documented in the OpenAPI spec.
+
+## [2.24.3] - 2026-08-20
+
+### Fixed
+
+- **Calendar feed times now carry their time zone.** Events you create in Yuvomi are stored as plain
+  wall-clock time, and the subscription feed exported them as RFC 5545 *floating* time - valid, and
+  meant to be read on the viewer's own clock. In practice Google Calendar, Apple Calendar,
+  Thunderbird, Outlook and Home Assistant all resolve such values to UTC, so a 16:00 appointment in
+  a household running `TZ=Europe/Madrid` showed up at 18:00 for everyone subscribed to the feed. The
+  digits are unchanged; they are now anchored: `DTSTART;TZID=Europe/Madrid:...` with a matching
+  `VTIMEZONE` component and an `X-WR-TIMEZONE` calendar header. Events synced in from Google or
+  CalDAV already carried an unambiguous offset and keep it, all-day events are unaffected, and a
+  household whose zone is UTC gets a plain `Z` instead of a timezone component many clients do not
+  carry. Re-subscribing is not necessary - the next feed refresh corrects the times.
+- **A failed Google or Apple calendar sync is visible instead of silent.** Both providers recorded
+  sync failures in the server log only, so an expired token or a revoked app password looked from
+  the outside like a calendar that quietly stopped updating - one household noticed after roughly
+  two weeks, and only from the duplicates that reconnecting left behind. The last error now appears
+  in Settings -> Sync -> Calendar, right below the connection status it explains, and disappears by
+  itself as soon as a run succeeds.
+
+### Added
+
+- **Appointments brought in by a sync can be cleared out.** Disconnecting a Google or Apple account
+  removed the credentials but left every appointment it had already imported behind: no sync touches
+  them again, and reconnecting imported them a second time as visible duplicates - most obvious on
+  recurring events. Removing them meant deleting one appointment at a time. Disconnecting now offers
+  to take them along and says how many there are, and for anyone already disconnected, Settings ->
+  Sync -> Calendar offers to clear them afterwards. Your own appointments stay, including ones
+  waiting to be uploaded, and nothing changes at Google or iCloud - only Yuvomi's copy is removed,
+  and reconnecting fetches everything again.
+
+## [2.24.2] - 2026-08-20
+
+### Fixed
+
+- **A list that scrolls inside the page no longer loses a row to an empty strip below it.** Whenever
+  the bulk-action pill appeared - checked-off items in Shopping, the "Running low" filter in Pantry,
+  selection mode in Contacts - the room it needs was reserved twice: once as a trailing pad inside
+  the list, where it works, and once below the list, where it is neither scrollable nor visible
+  content. The second reservation shortened the list by 76 px on a desktop and 80 px on a phone, at
+  every scroll position, for as long as the pill was on screen. On a 1440x900 window the shopping
+  list went from 641 to 717 px of visible rows - about one more item, while you are ticking items
+  off. Nothing about reachability changed: at the scroll end the last row still ends exactly where
+  it did before, 6 px above the pill.
+- **The install banner no longer covers the end of a list.** It got its trailing room in v2.24.0,
+  but only on the pages that scroll as a whole - Tasks, Rewards, Documents, the Dashboard. On the
+  eight pages that scroll an inner container instead (Kitchen, Budget, Contacts, Notes, Calendar)
+  the room landed on the frame around that container, so the banner still hid the last entries with
+  no way to scroll to them. Every scroll port now carries its own trailing room, whichever
+  architecture its page uses.
+- **The calendar's agenda stopped reserving 80 px for a button that is not there.** The reservation
+  was written for the floating action button, which the agenda hides on pointer devices in favour of
+  the toolbar's create button - so on a desktop those 80 px held nothing at all.
+
+## [2.24.1] - 2026-08-19
+
+### Changed
+
+- **The weekly meal plan fits on a phone.** A single dish took 172 px of vertical space to say
+  sixteen characters, because its title, its actions and a dashed "add another" strip each claimed a
+  row of their own. A meal is now one row — title and ingredient count on the left, its actions at
+  the end — the same shape the three neighbouring Kitchen tabs have used for a year. One week went
+  from 5830 px of scrolling to 3056 px, so a whole day now fits on one screen instead of filling it
+  with two meals. Nothing was hidden away: every action stays visible, it just no longer costs its
+  own line. The per-slot "add another meal" button is gone on phones, where a labelled "Add meal"
+  button already sits under every day — there were 34 ways to add a meal on a screen showing 27 of
+  them. On tablets and desktops, where the empty slots are visible and that button does not exist,
+  it stays.
+- **"Today" looks the same everywhere it is marked.** The week planner tinted both the weekday and
+  the date in the Kitchen colour, which was a third way of saying today next to the two the calendar
+  already had. It now carries the same filled accent mark the calendar's month and week views use.
+  The cycle calendar had the same problem with consequences: it ringed today in the Health colour,
+  the one tone in that grid closest to the period colour — and today is often a logged day, so both
+  rings met on the same cell. Measured perceptual distance to the period colour rose from 17.2 to
+  31.5 in light mode and from 14.3 to 26.0 in dark.
+
+## [2.24.0] - 2026-08-19
+
+### Changed
+
+- **A card's headline number is now the size the design system always promised it.** It read at
+  Title 3 while the documentation described Title 1 - the same grade as the heading above it, so the
+  main statement of a card looked like its own footnote. Long values no longer shrink below Title 3;
+  where a row of cards gets too narrow for that, the row now wraps to two columns instead of
+  squeezing its cards. On a phone that had produced "GEGENSTÄN/DE" and "GESAMTWE/RT" broken
+  mid-compound across three lines, with an amount running into the neighbouring card.
+- **Rewards tells apart where a point came from by its sign, not by its colour.** Points earned from
+  a task and points given as a bonus were drawn in two tints that were byte-identical, because both
+  modules belong to the same colour family - the ledger showed two different things looking exactly
+  the same. The five kinds of entry have always had five distinct icons; those now carry the
+  distinction alone. The progress bar towards the next reward lost its gradient and wears the app's
+  single accent, like every other fill level.
+- **Health stops saying "health" fourteen times on one screen.** Seven card icons and six trend
+  lines were drawn in the module colour on a page whose title and seal already answer that question.
+  A trend line now carries the colour of its value, and a card icon the colour of its label.
+- **A task's priority looks the same in the calendar as in the task list.** In the calendar it was
+  still a tinted field with tinted lettering - the shape the last release replaced everywhere else
+  with a single dot in full colour beside plain type. The four levels sat perceptually 6.6 and 6.8
+  apart as tinted fields, against the 11.3 this project accepted for its chart colours.
+- **Sub-tab counters, attachment chips, drop zones and note avatars no longer name a colour twice.**
+  Each of them carried a module tone as a faint surface and the same tone again as its lettering or
+  glyph. A counter says how many, an attachment names a file, a drop zone is a placeholder - none of
+  them names an identity, so they are neutral now. The avatar on a note is the exception in the
+  other direction: it identifies a person and wears their colour at full strength.
+- **Charts across the app share one coordinate system.** The value axis, grid and time labels now
+  come from one place instead of three, and a chart no longer stretches out of proportion to fill
+  its box.
+
+### Fixed
+
+- **The inventory's three headline numbers were rendering as body text.** They carried a class name
+  that no stylesheet has ever defined, so "24.503,00 €" sat in the same size and weight as the
+  label above it.
+- **The install banner no longer hides the end of a page.** It sits fixed above the content like the
+  action button and the bulk-action pill, but unlike those two it never reserved any room: on the
+  rewards page the last 97 pixels of the final row - a child's points, their progress bar and the
+  redeem button - stayed under the banner with no way to scroll to them.
+- **In the light theme, the settings list shows all of its module marks again.** The neutral mark
+  sat one surface step too high and measured 1.01:1 against its own ground, which is not a surface
+  at all. Twelve coloured marks stood next to seventeen invisible ones; in the dark theme the same
+  rule had always been visible.
+- **The budget's trend chart labels its scale inside the picture.** The axis sat outside the chart
+  as separate text, because the chart was stretched and any text inside it would have been distorted
+  too - which had it backwards: the stretching was the cause. Outside, the labels drifted against
+  their own grid lines whenever the chart resized, and the amounts were cut off on the left, showing
+  "050,00 €" where "5.050 €" belongs.
+- **The housekeeping payment bars show how full they are.** Two bars stood next to each other at
+  fixed pixel heights with no track behind them, so the taller one showed nothing except that it was
+  taller. The "last visit" figure carried a date and a time in one number and ran past the edge of
+  its card; the time is now a footnote under the date.
+- **On a narrow screen, a recipe row keeps its shape.** The ingredient count was aligned to the
+  right while the recipe name started on the left, on the line directly below it - the alignment was
+  written for the wide layout and stayed when the narrow one moved the count onto its own row.
+- **The subscription chart's line is evenly thick.** It was drawn into a stretched box without the
+  attribute that keeps stroke widths constant, so the line came out thicker in one direction than
+  the other. Its colour now comes from the chart-series palette rather than the module tint.
+
+## [2.23.1] - 2026-08-18
+
+### Fixed
+
+- **The line under a birthday reads as separate facts again.** Taking the tinted capsule off the countdown in the last release also took away the only thing that separated it from what follows, and "in 12 days 30.08.2026 · turns 37 Linda's sister" ran together as a single stretch of text. The capsule had been doing that job without anyone writing it down. The parts of the line are now separated the way the rest of the app separates them, with a middle dot - which also fixes something that predates this: the note has always sat flush against the age, and it only looked deliberate because a capsule stood to the left of it.
+
+## [2.23.0] - 2026-08-18
+
+### Changed
+
+- **A label that names a step says its colour once, at full strength.** The last release settled this for marks - a tinted disc cannot carry a colour, because in the dark a wash only lightens. The measurement was written for something that is *measured*, a disc with a width and a height, and that is exactly what let the other half of the app through: a label is not measured, it grows with its text. Task priorities were the clearest case. Each of the four levels was a tinted pill with a tinted border and tinted lettering - the same colour said three times, faintly - and between the top two levels, "High" and "Urgent", the tinted fields ended up 3.5 apart on the perceptual scale where 11 is what this project accepted for its chart colours, in a list where two labels never sit side by side to be compared. Priority is now a single dot in the full colour with the word beside it in plain type; the pantry's "almost empty" and "2 days left", the inventory status, an expected booking and the birthday countdown carry their colour in the lettering instead of under it. Eight more labels that were tinted in the colour of the module they were already standing in - the household badge in Budget, the pregnancy marker and the dose time in Health, the counter in the mobile "More" sheet, the widget counter and the age badge on the overview - are now neutral, because they name nothing that the room around them has not already said.
+- **A birthday count that never was.** The countdown next to a birthday knows three steps - today, within the week, later - and said so in a comment. Two of the three were written as separate rules that happened to be identical, so a birthday tomorrow and one in forty days looked exactly the same. Today now carries the module's colour at full strength, "within the week" steps forward into the main text colour, and everything further out stays quiet.
+- **A key figure's icon takes the colour of its label, not of its module.** The shared figure card - the same one used by Budget, Health, Housekeeping, Inventory, subscriptions and the overview - had its icon fixed to the module colour. On the health overview that meant nine vital cards with nine identical pink glyphs: nine statements about which module you are in, on a page whose title and seal answer that already. It is the same correction the weather glyph got two releases ago. The colour of one of these cards belongs to its *value*, which already decides whether a change reads as good or bad; the icon beside the label is a pictogram of that label and now shares its colour. The fill bar in the same card follows the app's own accent for the same reason - a fill level does the same thing in every module.
+- **A household member shows their own colour in the birthday list.** Everywhere else - the overview, the calendar, tasks, and since the last release contacts - a member of the household appears in the colour they picked. On the birthday page itself they all sat on the same neutral disc, indistinguishable from a relative who has no account. Linked entries now show that person's picture or their initials in their own colour; entries that belong to nobody in the household stay neutral on purpose.
+
+### Fixed
+
+- **The tag under a task is a full-size target again.** A tag in a task row sets a filter when you tap it, and it stood 23 pixels tall in a row that had the space for the full 24 the accessibility guideline asks for - close enough to pass on a technicality, not close enough to be right. The row now carries its own height instead of inheriting it from whichever chip inside it happens to be tallest, and the tag takes the full target size. Rows that carry neither a priority nor a tag keep that height too, which they never did before.
+
+## [2.22.1] - 2026-08-18
+
+### Fixed
+
+- **A dialog stays where it is while you fill it in - now on every window width.** The fix in v2.21.1 took the hidden scroll box off the dialog panel and left it one level up, on the overlay behind it, where the very same thing could happen: opening the repeat interval in the new-task dialog pushed the whole panel upwards until its title and close button had left the screen, with no way back, and the dialog could only be left through Save or Cancel. What was left showed above a window width of 768px and only with system animations switched off - a combination that is common on Windows, which is where it was reported from a second time. Both layers are now clipped in a way that creates no scroll box at all, and the panel no longer depends on its entry animation to keep the form fields inside it anchored to itself. Scrolling happens where it always did: inside the dialog's content.
+
+## [2.22.0] - 2026-08-18
+
+### Added
+
+- **A contact category can be given its own colour.** Seven categories came with one - doctor green, emergency red, and so on - and every category a household added itself got none, which in practice meant they all borrowed the module's colour and looked identical: two categories in the same shade say less than none at all. The reason was structural rather than an oversight. The colour was written as seven style rules keyed by the category's slug, and a rule keyed by a slug can only ever match the seven that ship with the app. It now lives with the category itself, chosen from those same seven tones, and a category without a choice stays deliberately neutral instead of borrowing. Nothing looks different in an existing household: the seven predefined categories keep exactly the colours they had. The choice sits in the category manager, where each row shows its own mark and opens its palette on demand; the mark is the preview, drawn the way the category will appear in the list.
+
+### Changed
+
+- **A mark that names something carries its colour at full strength, everywhere.** The overview learned this in the last two releases - a tinted disc cannot carry a colour, because in the dark a wash only lightens and in the light neighbouring family tones collapse onto the same value. The measurement retired one class and left eleven relatives of the identical build alive under other names: the category disc in Contacts, the module mark in the settings module list, the pregnancy marker in Health, the sender mark on document cards. All of them are settled now, in the direction each one calls for. Something that names an identity is filled with its colour; something that names nothing - a dropzone, an empty preview tile, the avatar of a contact who is not a household member - is neutral rather than faintly tinted with the module it happens to sit in. A colour freely chosen by a household member cannot fill a disc, because nothing can be known about its brightness in advance; those carry their colour beside the content as an edge or a ring, the way calendar blocks already do.
+- **An appointment looks the same in every calendar view.** The last release gave the week and all-day rows a 3px edge in their calendar colour, and left the month and day views on the pale tinted box they had before - the same appointment spoke two languages depending on which view button had been pressed. Both now carry the edge. There are two shapes for an event colour in the calendar and no longer four: the edge on a bar, the dot on an agenda row.
+- **A contact who is a household member shows that person, not the module.** The row displayed the same disc in the module's pink for everybody, while the same people carry their own colour on the overview, in the calendar and in tasks. A linked contact now shows the member's picture or initials in their own colour - and that colour outranks the category, so a household member stays recognisable even inside a category that has one of its own.
+- **The settings list shows which module a page belongs to.** Twenty-nine settings pages carried twenty-nine identical grey glyphs, although twelve of them are about a module whose colour stands as a legend in the sidebar two clicks away. Those twelve now carry it; the rest - account, appearance, notifications, backup - name no module and stay neutral on purpose. The same correction reached the module list itself, where every built-in row had silently fallen back to the app's own violet: the resolver that turns a module into its colour was private to the navigation, so the list had no access to it and nobody noticed while the mark was a pale wash.
+
+
+## [2.21.1] - 2026-08-18
+
+### Fixed
+
+- **An event that ends at midnight belongs to the evening it started in.** A Friday appointment running 21:00 to 24:00 appeared on Saturday as well, and not as itself: because its end date fell on the next calendar day, the calendar counted it as a multi-day event and moved it into the all-day row, where it ran as a bar across both days. The month grid showed it twice, the week and day views billed it as all-day, and the agenda listed it under Saturday too. An end time of exactly midnight now closes the day it ends, so the appointment stays a Friday evening. Events that genuinely cross midnight are untouched - one more minute and Saturday is booked again - and so are all-day events, which store the same midnight stamp but mean their last day inclusively.
+- **The overview reads "today" from your clock, not from UTC.** Parts of the dashboard resolved the current day in UTC while the values they were compared against - a meal's date, a task's due date, the budget month - are the local calendar days you typed in. East of UTC that made the overview show *yesterday's* meals during the early morning hours (between 00:00 and 02:00 in central Europe) and, on the first of a month, bill the previous month; west of UTC the same drift landed on tomorrow late in the evening. The overdue line of the task list was off by the time-zone offset all day long. All of it now follows the local calendar day, which the rest of the route already used.
+- **A dialog stays where it is while you fill it in.** Opening the repeat interval in the new-task dialog pushed the whole panel upwards until its title and close button had left the screen, with no way to scroll them back - the dialog could only be left through Save or Cancel. The panel was clipped in a way that still left it scrollable to the browser but not to the reader, and Chrome scrolls every ancestor of a select when it opens one. The panel can no longer be scrolled at all; the content inside it scrolls, as it always did.
+
+## [2.21.0] - 2026-08-17
+
+### Changed
+
+- **The weather widget shows the weather, not the room it hangs in.** Its glyph carried the overview module's violet, which said where the card sits - something the page already answers - and nothing about what the card reports. The conditions now set the colour: clear day, clear night, cloud, rain, snow and thunderstorm each have their own tone, and a soft round light sits behind the glyph in that same tone. The glyph moves the way its weather does, too: the sun turns its rays around the standing disc, clouds drift, raindrops and snowflakes fall, and a thunderstorm flashes the light rather than the symbol. All twelve colour values are measured against the three real backgrounds they can sit on in each theme, and against the contrast requirement for small text rather than the lower one for icons, because the same tone also carries the forecast's high temperature. Colour is never the only signal: the glyph of the condition and its written description stand right beside it. The same tone reaches the quiet weather line under the greeting and the wall-tablet view, where every forecast day carries its own - from two metres a colour is read faster than a shape. A reduced-motion setting stops all movement and keeps the colour; the reduced-transparency and increased-contrast settings switch the light off, exactly as they already do for the glow behind the glass.
+- **The weather forecast shows how the week runs, not just five pairs of numbers.** Under each weekday stood a high and a low with no relation to their neighbours, so working out which day will be the warmest was arithmetic. Every day now carries a bar scaled against the whole forecast: where it sits says where the day falls in the week, how long it is says how far the temperature swings, and its colour names one of five bands from icy to hot. The bands mean the same thing in every unit, with the thresholds written out per unit instead of converted, so "below freezing" is 32 °F and not 31.999. The first column is called "Today" instead of naming its weekday.
+
+## [2.20.0] - 2026-08-17
+
+### Changed
+
+- **A module looks the same wherever it names itself.** The round module mark had two faces: a saturated disc on the overview widget heads, and a pale tinted one everywhere else - the day programme, the search results, the wall rows, the module head, and the launcher grid in the mobile "More" sheet. The pale face is gone. It is the same measurement that retired the tinted band behind the widget titles in the last release, now with its light-mode half: Notes, Documents and Inventory share one colour family, and at the tint's strength their discs came out as exactly the same shade of grey-blue - the wash erased the very difference it was there to show, and a colour that cannot be told apart is not a colour. Every mark now carries its module colour at full strength, which is what the mobile menu was reported for: its icons no longer look like they belong to a different app than the ones in the sidebar and on the overview.
+- **The mobile tab bar shows the module colours, the way the desktop sidebar always has.** The sidebar is where all modules stand side by side, so it is where the colours are legible as a legend - that has been the rule since the interface settled on a single accent for its frame. The rule was quietly a desktop rule: above a certain window width every navigation icon carried its module's colour, below it they were all grey. The same component spoke a different language depending on the window, and on phones - where this app is mostly used - no module colour appeared in the navigation at all. The tab bar now follows the same rule: each icon in its module's colour, and the active tab taking the app's own violet back, exactly as the sidebar does. Nothing else in the bar changes colour; the capsule, the sliding indicator, the labels and the create button stay as they were. Measured against the bar's glass in both themes, every colour clears the contrast requirement for text, not just the one for icons.
+- **One module, one icon.** Which glyph stands for a module was written down in five different places, and they had drifted apart: Notes was a sticky note in the navigation and a pushpin on the overview, Housekeeping a paintbrush in one place and sparkles in the other. There is now a single list, and the widget heads ask for a widget by name instead of naming a glyph, so the two cannot disagree again. Along the way the app's own icon set gained the seven drawings it was missing - pantry, family, cycle, weather, clock, key figures and countdown - and every module glyph is drawn at the same stroke weight regardless of size, which until now happened to be true only because of the sizes it was used at.
+
+### Fixed
+
+- **The installer's built-in colour fallback shows the current dark theme again.** The setup wizard carries a copy of the app's colours inline, so it stays legible if the stylesheet cannot be served; three of those values still described the theme from before the last release's dark-mode work.
+
+## [2.19.0] - 2026-08-17
+
+### Changed
+
+- **The dark theme has depth again.** Cards rise from the stage instead of sinking into it: every surface steps up one shade while the stage keeps its OLED-friendly value, elevated surfaces carry a hairline of light that black shadows cannot provide on a near-black ground, and the glass of the tab bar and the sheets is mixed from the app's own warm surface instead of a cool system gray. The quiet third text color (placeholders, footnotes) was the last cold leftover of the replaced palette and is now warm in both themes - in the dark it had also been the one text role that would have slipped below its contrast promise on the risen surfaces.
+- **The overview widget head is a title row, not a colored band.** The tinted band behind every widget title - three stacked color statements, counting its tinted divider and the 2px module line on the card's top edge - is gone. A widget now states its module with exactly one element: the round seal next to the title, filled with the module color at full strength, on the widgets and on the small stat tiles alike. The measured reason, recorded in the design notes: a tinted wash cannot carry color on a dark ground, it only lightens - color statements belong to small full-tone elements.
+- **Calendar event blocks lead with their color at full strength.** In the week and all-day rows an event was a pale tinted box with a faint outline; it now carries a 3px edge in its calendar color, the way timeline blocks are drawn in the calendar apps this design measures itself against. Two small companions from the same review: avatar initials in the calendar grids no longer render below readability (from a 20px disc the initials are at least 11px, smaller discs show the member's color alone, the name stays in the tooltip), and task chips in the agenda no longer sit flush against their tinted edge.
+- **Family birthdays show the family member's own color.** The birthday tile tinted every avatar in the module color, so the same person glowed in their profile color on one tile and sat gray on the next. Birthdays linked to a household member now use that member's avatar color; contacts without a link keep the neutral tint on purpose, since they have no identity color in the household. The age badge spells out "turns 37" instead of leaving a bare number next to "in 13 days" - the wording existed but was hidden in a tooltip.
+
+### Fixed
+
+- **The actions on a meal card are reachable with a screen reader again**. Every card in the weekly plan was itself one large button, and the delete, shopping list and recipe buttons sat inside it. Interactive content inside a button is invalid markup, and assistive technology folds those inner controls into the name of the outer button instead of offering them as controls of their own. The card is now a plain container: opening a meal belongs to its title, and the three actions stand beside it as siblings rather than children. Clicking, keyboard operation and dragging a meal to another slot are unchanged.
+
+## [2.18.1] - 2026-08-17
+
+### Fixed
+
+- **A module you are not allowed to see no longer turns up in search** (#467). Search reached across every module and asked only who owned a row — which for appointments, contacts and shopping items is nobody in particular, since those belong to the household. A member whose Contacts access was set to "No access" still found the phone numbers by typing a name, and the same held for appointments, shopping items, tasks, notes and the health entries. Each kind of result is now tied to the module it comes from and is skipped when that module is blocked. Blocking one module does not affect the others, and "Read only" still finds everything. The kitchen tab bar had the smaller version of the same problem: it showed a badge counting open shopping items to a member who cannot open that list.
+- **A module you are not allowed to see no longer sends its content to your dashboard** (#467). Blocking a module for a role or a member hid its tile, but the dashboard request still answered with everything behind it: a child whose Calendar access was set to "No access" was still sent the appointment titles, their descriptions, locations and attachment names, and the same held for tasks, budget figures, notes, the shopping list, birthdays, rewards, the housekeeping log, the medication summary and the countdown rows. Nothing showed it on screen - the data sat in the response, in the browser's network tab and in the offline cache. The dashboard now drops every part of a blocked module before it is even looked up. "Read only" is unchanged: it still delivers the data, it only takes away writing.
+- **Search finds all five shopping items again, not two of them** (migration v151). Every item was written to the search index twice at the moment it was created, and search returns at most five hits per kind — so a search that should have listed five items listed two or three, and looked complete doing it. The duplicate disappeared as soon as anyone edited or ticked off the item, which is why it only ever affected the freshly added, untouched ones: exactly the ones people search for. Existing duplicates are cleaned up on upgrade.
+
+## [2.18.0] - 2026-08-17
+
+### Added
+
+- **Anything with a date can count down to it** (#647). A calendar event and a task can each be marked "count down on the overview", and a **Key dates** tile then shows them together, sorted by how near they are - the holiday and the driving licence in one list, each row still leading back to its own module: tapping a task opens that task, tapping an event opens that day in the calendar. The wording is coarse while the date is far off and exact once it is near: "about 3 years", "about 9 months", then plain days from 30 out, because "10 days until the licence expires" has to stay 10 days. There is no threshold to configure - a question about a display detail is one nobody wants to be asked. The colour says how soon, not where the entry came from: what is due today or tomorrow is amber, what has passed is red, and the module the row belongs to keeps its colour on the mark at the left. This is one flag on each of two things that already exist rather than a third kind of entry: a holiday you already keep in the calendar does not have to be written down twice, and a licence that is not an appointment does not have to be pushed into the calendar to get a number. On a task the flag survives the reset, which is the point of the whole thing - a task that repeats from the day you tick it off ("always another N years", "N days after cleaning the filter") keeps counting down through every cycle. The switch needs a due date and stays locked without one, instead of saving something that would never appear. On an event the mark stays local: it is not sent to Google or CalDAV and it is not overwritten when a sync run comes back, the same way the icon and the visibility setting already behave. **A date that has passed stays for another week** ("3 days ago") rather than vanishing on the morning after - a licence expiry that disappears exactly when the consequence begins would leave you alone in the one moment you set it for; a recurring entry is never "expired" and keeps pointing at its next turn. What does not fit in the tile is counted at the bottom ("+2 more") instead of being cut off silently. The tile is not offered at all while nothing is marked, so a household that does not use this sees nothing new, and it appears at its saved position with the first countdown. It is deliberately not in the agenda view: the agenda answers what is happening in the coming days, and a countdown resolving in 2027 would sit at the bottom of every one of them.
+
+## [2.17.0] - 2026-08-17
+
+### Added
+
+- **An as-needed medication can finally be taken** (#700). "As needed" was a checkbox in the form, a badge in the list and a column in the database - but there was no button anywhere, because both booking paths hang off a schedule and an as-needed medication has none by definition. The Medications tab and the Health overview now share an **As needed** section that logs a dose with one tap. A medication can carry a **minimum interval** and a **usual dose**: the interval and the last dose taken produce the readout next to the button, which names the absolute time first ("earliest 18:40") and the remaining wait second, because the absolute one still holds three hours later. It is derived from the stored entry rather than a timer in one tab, so it survives a reload and shows the same thing on a second device. Taking a dose earlier is not blocked, only asked about, and the usual dose is deducted from the stock the same way a scheduled one is.
+- **Documents can be attached to a task without leaving it** (#733). The task dialog could only link files that were already in Documents, so adding a photo of a note meant uploading it elsewhere first. The field is now the same one Budget, Shared Expenses and Inventory use: upload a file, drop it onto the field, or pick something already filed. New uploads land in a "Tasks" folder and stay linked, and they inherit the visibility of their task: what hangs off a private task stays private, and a task limited to its assignees shares its attachment with exactly those members and whoever created it. Dropping a file onto the field works in those three modules now as well.
+- **Images attached to a task are shown as previews** in the task detail view, and the other documents are listed by name (#733). What usually hangs off a task is a photographed note, and a filename does not answer the question the photo was attached for.
+- **Tasks have comments** (#734). Discussion about a task can happen next to it instead of in a chat somewhere else. Whoever can see the task can read and write; only the author can edit a comment, and only the author or an admin can remove one. A `@name` mentions a family member, with suggestions while typing, and the mentioned person gets a push notification - but only if they are allowed to see the task in the first place. A member whose Tasks access is read-only sees the conversation without being invited to write into it.
+
+### Fixed
+
+- **A dose taken without a schedule no longer disappears from its own day** (#700). Medication entries were filtered by their planned time, which an as-needed dose does not have, so it fell out of every date range: it was missing from the intake log, from the adherence figure, and from the CSV export somebody prints for a doctor.
+- **The time of a logged dose is the time on your clock again**, not the UTC one. The app sent the moment with its time zone, the route stored only the date and time, and the zone was dropped in between - so in Central European Summer Time a dose taken at 22:41 was recorded as 20:41, in the app and in the export.
+- **The "Documents" row in a task's detail view is no longer always empty** (#733). It had been reading a field the API never filled, so linked documents showed up as a paperclip count on the card and as nothing at all inside the task.
+
+## [2.16.1] - 2026-08-16
+
+### Fixed
+
+- **A reward without an icon no longer shows the word "null" after you edit it** (#789). The edit form always sends every field, sending the empty ones as nothing at all, and the route could not tell "leave this alone" apart from "clear this" - so it stored the text "null" as the icon. Changing the price of a reward was enough to trigger it, and clearing a description had the same effect. Rewards that already carry the stray text are cleaned up on upgrade, including the copy of the icon kept in the redemption history; a description that merely contains the word is left alone.
+
+## [2.16.0] - 2026-08-16
+
+### Added
+
+- **Every member arranges their own overview** (#585). Which tiles the board shows, in what order and at what size, was stored once for the whole household: whoever took the cycle tile off their board took it off everyone's, and whoever pulled tasks to the top moved them for the children too. A family has different needs on the same page, which is what the request said. The arrangement and the "Today at a glance" band now belong to the member who set them, stored the same way the navigation order and the calendar defaults already were. Nothing changes on upgrade: as long as nobody rearranges anything, everyone keeps seeing the household's saved board, and the first personal change only affects that one person. While you are rearranging, the customize bar says that this is your board alone; "Reset" says what it resets, which the word alone no longer does now that the arrangement is personal. On a shared wall tablet the loading skeleton no longer predicts the previous member's grid after a change of user.
+- **Every member can take a module out of their own navigation** (#673). Switching a module off was possible, but only for an admin and only for the whole household, so a member who never opens Housekeeping had it in the sidebar for good. Each row in **Settings → Personal → Navigation** now carries an eye button that hides that module for the person clicking it, names the module it means, and states its reason when the household has switched that module off entirely. Hiding is tidying, not a withdrawal: a link from a notification, a dashboard widget or the search still opens the page, and what someone may not reach stays a matter of permissions. Hidden modules also stop being offered as mobile favourites - and when that changes one of your three, the confirmation says which position moved instead of letting you find it on the phone later. Kitchen can be hidden as a group or one station at a time.
+- **Switching a module on or off for the household has its own page**, **Settings → Modules → Active modules** (admin-only). It used to sit twelve pixels from the personal control, both unlabelled, and the one that takes a module from six people has neither a confirmation nor an undo. Personal → Navigation is now entirely yours: order, mobile favourites, and what you want to see. The page description says what the page has actually been able to do, in place of "order and mobile navigation".
+
+### Changed
+
+- **The Unraid store listing names the modules it had been missing.** Both the app template and the repository profile described Yuvomi with a module list that stopped before Health, Rewards and Inventory, and still called shared expenses by its old name. Anyone reading the listing before installing now sees what the app actually ships.
+- **The website leads with what Yuvomi is, not with what it does not do.** The homepage headline now carries the positioning - one home instead of many subscriptions - and the sub-line names the category and the modules; the two chips that already appeared in the proof bar one line below are gone.
+
+### Fixed
+
+- **The website and both READMEs no longer claim that nothing leaves your server.** Yuvomi checks for a new release against the GitHub releases API every six hours, and there is no setting that turns it off. Five places said "nothing phones home" or "nothing leaves it until you say so"; all of them now name the version check as the one outbound call. Three further statements only appeared with JavaScript switched on - visitors without it were shown the older, incorrect wording.
+- **The English privacy policy renders its table of contents again.** The page was created as a copy of the German one and inherited the stylesheet but not the markup classes, which left its 14 contents links at 18px instead of the intended 44px touch target, without the surrounding card. It also gained the separate "right to object" section the German version has.
+- **The install page showed a different GitHub star count than the homepage.** The number is written into both pages by a build-time script; a manual edit had updated only one of them.
+- **Three module cards on the homepage carried another module's colour.** Pantry showed the recipe colour, while Backup and API tokens - which are not modules you switch on and off - borrowed the colours of Tasks and Shared expenses. The two now share a neutral tone.
+- **The two floating buttons on phones no longer cover the text while you read.** Both step aside when you scroll down and return when you scroll back up. The jump menu, previously hidden below 700px, is available on phones again.
+
+## [2.15.0] - 2026-08-16
+
+### Changed
+
+- **One name for the shared expenses module, in every language.** It answered to several at once: in German "Gemeinsame Ausgaben" as the page heading, "Geteilte Ausgaben" as the receipt folder in Documents, and a third wording in a navigation key that no part of the app ever displayed. Ten of the twenty-four languages carried three spellings or more, and the guard that already watches module names could not see any of it, because it compares the navigation against the API token dialog and the folder belongs to neither. The heading is now the name everywhere it has room, the receipt folder included; an existing folder is renamed on upgrade, so receipts filed so far stay where they are. The tab inside Budget keeps its short label, because it sits seventh in a row of tabs and a full name there would push the row wider than the screen.
+- **The README is a landing page again instead of a second manual.** It had grown to just under five hundred lines in each language, which is eighteen screens on a phone before the first install command, and more than half of that text sat folded away behind expanders - including the one thing no collection of separate apps can offer, namely what the modules hand each other. The screenshot gallery, the module-by-module detail and the FAQ now live where a reader who wants them already goes: the project page and the spec. What moved in is the handover between modules, what a household actually needs to know before installing (image size, memory, ports, volumes, and what leaves the server), and a closing invitation to ask a question. Loading it costs 65 kilobytes instead of 4.85 megabytes.
+- **Installing by copy and paste no longer starts the container before you have set your secrets.** The instructions were a single block whose third line asked, in a comment, for the environment file to be edited, and whose fourth line already started everything. Generating the two secrets and starting the container are separate steps now, with the warning between them that an encrypted database never opens again once its key is lost. The command that generates a key appears at all, for the first time.
+
+### Fixed
+
+- **The claim that nothing leaves your server until you configure it was not true.** The app asks GitHub once for the list of releases, on first load and every six hours after, to tell you that a newer version exists; nothing turns that off. The README and the project page now name that one request instead of promising none. Everything else - weather, calendar sync, cloud backup - does stay off until you enter credentials, as stated.
+- **"Copying one file is the whole export" now says when it holds.** With documents kept in a folder, on WebDAV or in Google Drive, the database carries their metadata and not the files, which the same README warns about two screens further down. Both statements agreed with each other but not with the reader.
+- **The manual Podman path works again.** The shortened instructions downloaded the Docker compose file and then called Docker, on a host that by definition has neither. The Podman file and its command are back, with the SELinux labels named as the reason they matter on RHEL, Fedora and CentOS Stream.
+
+## [2.14.5] - 2026-08-16
+
+### Added
+
+- **The privacy notice is available in English.** The project page defaults to English and puts "0 trackers" forward as its strongest claim, while the only evidence for it existed in German. `privacy.html` translates all fourteen sections and both pages link each other with `hreflang` set; the German version remains the binding one, stated at the top. The links follow the page language, so the English page no longer sends its own proof to a German legal text.
+- **The project page has a progress line and a jump menu**, and the legal pages (imprint, privacy) got the same theme switch as the rest of the site.
+
+### Changed
+
+- **The project page is down from eleven sections to eight**, with the positioning pulled out as a section of its own and the feature rows merged with the module grid instead of standing as two headings for one subject. The screenshots were retaken against 2.14.4 and now show Inventory as the eighteenth module.
+- **The German privacy notice corrects one factual claim.** Section 6 stated that fonts are served exclusively from our own server as self-hosted WOFF2 files. Measured, the pages load no web font at all: they use system fonts, and the WOFF2 files under `docs/fonts/` only feed the screenshot and social-image pipeline.
+
+### Fixed
+
+- **The category picker in the Inventory item form was blank.** The five categories that ship with the module stopped carrying their name in the database when they became translatable (2.14.0): the name column is empty for them and the label comes from a translation key, exactly as it already worked for task and contact categories. The picker still read the raw name, so it offered five unlabelled options - the list itself was there, only its labels were missing. Every other place in the module already resolved the label correctly; the picker was the one that did not. Reported in #783.
+- **Weekend shading in the month grid ignored the chosen first day of the week.** The tint was attached to the last two columns of the grid, which is Saturday and Sunday only as long as the week starts on Monday. With Sunday as the first day it shaded Friday and Saturday, with Saturday it shaded Thursday and Friday. It now follows the actual weekday of each cell, so the shading stays on the weekend whichever day the week starts on. Reported in #780.
+
+### Security
+
+- **A fresh installation no longer starts with the placeholder encryption key.** `.env.example` ships `DB_ENCRYPTION_KEY=REPLACE_WITH_A_STRONG_ENCRYPTION_KEY`, not an empty line. Copying the quick-start block in one go and skipping the edit therefore encrypted the database against a constant that is printed in this repository and on the project page, and the warning underneath said the opposite ("leave it empty and the database stays unencrypted"). Yuvomi now refuses to start in that state as long as no database exists yet, naming both ways out. An installation that already runs on the placeholder keeps starting and gets a warning with the rotation steps instead, because an abort would take a working instance away without undoing anything. The quick start on the project page is split so a single paste cannot skip the step in between.
+
+## [2.14.4] - 2026-08-15
+
+### Changed
+
+- **The advanced step is split in two, along a question rather than a number.** It carried 18 decision points on one screen while the second-largest step had 12: six accordions to judge before seeing a single field, plus six loose fields underneath. It is now "Storage & backups" - where your data lives on the server and where copies of it go - followed by "Advanced", which covers what Yuvomi connects to. Both are down to six and seven points. Both are also numbered now: the advanced step used to be excluded from the step counter as an "optional collection step", which made the largest screen of the run the only one without a progress indication; there is no collection step left to justify that.
+- **The installer groups the three home-network permissions instead of scattering them.** Yuvomi refuses connections to addresses on your own network by default; three switches lift that for calendar subscriptions, recipe mirrors and a WebDAV target. They sat in three different places because they technically hang off three different fields - two loose under "More options", one inside the WebDAV accordion - even though they answer the same question. The review screen has always shown them as a single line and says why; they are now asked as a single group, with one explanation of what the protection does.
+- **The installer reports a running container, not just an existing configuration file.** The preflight already determined this with a container inspection on every run, a test asserted the field was a boolean, and the README announced it - but no line in the wizard ever read it. It matters on a re-run: saving restarts the container, so the household is briefly cut off. A guard now checks the other direction too, that every field the preflight returns is actually consumed.
+
+### Fixed
+
+- **The documentation now explains where backups go on a NAS, and why there is no field for it.** `DATA_DIR` is in the setup wizard because the application never reads that name - it exists purely as a Compose substitution for the mount source. `BACKUP_DIR` and `MODULES_DIR` are read by the application itself, where they mean the directory *inside* the container, so a host path like `./backups` in your `.env` resolves to `/app/backups`, outside the mounted volume. To put backups on an array you change the mount source, which is now documented with an example.
+
+## [2.14.3] - 2026-08-15
+
+### Fixed
+
+- **Running the web installer a second time no longer downgrades a working installation.** The simple path writes fixed values for host, port, `SESSION_SECURE` and `TRUST_PROXY`, and the re-run protection cannot catch them: it preserves whatever the client does *not* send, and these are sent. An instance set up behind a reverse proxy therefore lost its secure-only cookies, its proxy trust and its `BASE_URL` the moment someone picked "simple setup" again to change one small thing - with a blue banner that read like reassurance ("your current .env will be backed up") rather than a warning. When an existing `.env` is detected the simple path is now disabled, the recommendation moves to the advanced path, and a note says why. Three further values that were written on every run regardless of what the wizard showed are gone: `SYNC_INTERVAL_MINUTES` no longer resets a hand-tuned interval to 15, and `DOCUMENT_STORAGE_LOCAL_ENABLED`, `DOCUMENT_STORAGE_WEBDAV_ENABLED` and `WEBDAV_BACKUP_ENABLED` no longer write a literal `false` that silently switched off off-site backups and document storage while leaving their URL, username and password in place.
+- **The default answer to "how is Yuvomi exposed?" no longer produces an installation nobody can sign in to.** "Behind a reverse proxy with HTTPS" was the pre-selected option, which sets `SESSION_SECURE=true`, while the fields right next to it still read `localhost:3000`. Anyone who left the defaults alone got an instance that only issues `Secure` cookies over plain HTTP, so the browser discards them and login fails without any message - and the hint text actively recommended that option in both reference languages. The choice now follows the host (`localhost`, `127.*`, `10.*`, `192.168.*`, `172.16-31.*`, `*.local`, `.lan`, `.internal`, `home.arpa`, IPv6 ULA and any name without a dot count as local), the hint states the consequence instead of a recommendation, and the combination of an `http://` address with enforced secure cookies is blocked outright, naming the way out.
+- **The "download your .env" button no longer reports success when nothing arrived.** It clicked a plain anchor, which cannot fail, and then unconditionally marked the keys as saved. Since the installer shuts itself down five minutes after the admin account is created, anyone who left the tab open and came back found a dead endpoint, no file, no error - and an interface claiming the keys were safe. This is the only backup of the `DB_ENCRYPTION_KEY`, for which there is deliberately no reset. The download now goes through `fetch`, checks the response, and only then reports success; a failure says so and shows where the file is on disk. The screen also states that the installer is about to shut down.
+- **Re-running the installer on an existing installation no longer ends on a raw "Not found."** `POST /api/v1/auth/setup` answers with 404 when an account already exists and `NODE_ENV=production` - which every real deployment sets - while the wizard only accepted 201 or 403. The 403 branch existed in no production container, so the last screen of an eleven-step run showed an untranslated English server string with no explanation and no way forward. Both sides now treat 404 as the normal re-run case: the wizard continues to the final screen, which it needs anyway for the download and the follow-up links, and says that the account was already there.
+- **The public address is asked for instead of guessed, and it now follows what you type.** `BASE_URL` was derived from scheme, host and port, which is never right behind a reverse proxy - the CLI installer asks for it explicitly for exactly that reason. Wrong values only ever fail silently: password-reset and invitation mails carry links nobody can open, and it surfaces weeks later. There is now a field for it, pre-filled from host, port and the exposure choice and updated as any of the three changes, and every derived redirect URI (Google Calendar, Google Drive, OIDC) comes from that one value instead of three separate constructions. The review screen lists it.
+- **Switching the interface language no longer disarms the confirmation step or mislabels a failed container start.** Four labels change at runtime and still carried a static translation key, so `applyTranslations` wrote their base text back. On the review screen that meant the "click again to confirm" state reverted to "Save & start Docker" while the wizard still considered the action confirmed - one more click would have written the `.env` and started the container without the second confirmation. On the Docker screen a failed start was relabelled "Downloading image", next to a red cross and a visible error log, and announced that way in the live region.
+- **Placeholder text in the installer meets contrast requirements in dark mode.** No `::placeholder` rule existed, so Chrome's default `#757575` applied, which does not follow the theme: measured 3.36:1 against the dark field background across all 25 fields that carry an example value. The app fixed the same class of problem in its own fields in July; the installer now uses the same element-level rule, and the value lands at 5.4:1.
+- **"Check again" after installing a container engine now unlocks the simple path.** The lock could only ever be set, never lifted, so anyone who installed Docker mid-run watched the message disappear while the card marked "recommended" stayed dead - and kept the accent fill that marks it as the recommended choice. The lock now hangs on its two independent reasons (missing engine, existing `.env`) and the emphasis moves with it.
+- **Filipino is selectable again.** It was supported, shipped and detected, but missing from the language dropdown - so a Filipino browser landed on an empty switcher, and anyone who changed the language once could not get back.
+- **Several controls in the installer are reachable and readable where they were not.** The language switcher could only be reached backwards with Shift+Tab, because the focus moves to each step's heading and the switcher sat before it in the document; it also covered headings while scrolling on a phone. The exposure dropdown cut its longest option off without an ellipsis at 390px. The accordion headers and the language switcher fell below the 44px touch target on mobile, each for its own reason: a specificity conflict that a media query cannot resolve, and a button that carries no `.btn` class. Unchecked checkboxes rendered as white boxes in dark mode because no `color-scheme` was declared.
+
+### Changed
+
+- **The exposure choice and the public address moved to the first configuration step.** They set `SESSION_SECURE` and `TRUST_PROXY` and decide whether login works at all, but they sat under a heading that reads "all optional - skipping is safe". They now belong to the step that asks how Yuvomi is reached, which is also what they answer. As a side effect the calendar step shows the final redirect URI rather than a provisional `http://host:port`, and the OIDC redirect field is pre-filled correctly for the first time.
+- **The installer ends with what to do next instead of a warning and a homework assignment.** The final screen offered a download and a warning triangle; it now adds three concrete next steps - invite your family, choose your modules, install it on your phones - pointing at the real routes on the new instance. Setting up a family planner that has exactly one member is where the old ending left you.
+- **The review screen states what happens to the security keys instead of showing eight dots.** Both key rows were masked bullets labelled `SESSION_SECRET` and `DB_ENCRYPT_KEY` - the latter not even the real variable name, so searching the `.env` for it found nothing. They now say whether a key was newly generated or carried over from the existing file. The data folder and the private-network switches were added, the latter because a review screen that omits exactly the security-relevant toggles is reviewing the wrong thing.
+- **A missing container engine is no longer a dead end.** The message said "please install them and reload this page" with no link and no distinction between a missing engine and Podman without Compose, although the server knows the difference. It now links to the matching instructions and offers a "check again" button instead of asking for a page reload.
+- **The redirect URIs can be copied.** They have to be transferred character by character into the Google Cloud Console and were the only values without a copy button, while the secrets two fields away had one.
+- **The installer looks like the rest of Yuvomi in the places where it did not.** The wordmark used the accent colour, which the app's own stylesheet documents as forbidden for titles; the primary button used raw accent instead of the app's mix; the card carried a hairline border plus a wide shadow where the app's card has neither; hints were a size smaller than in the app. The inline fallback token block, which only takes effect when `tokens.css` cannot be loaded, had drifted from the real values in dark mode - in exactly the failure case it exists for.
+
+## [2.14.2] - 2026-08-15
+
+### Changed
+
+- **The mobile "More" sheet now takes up less than half the screen instead of almost all of it.** It opened as a tall surface covering 87% of a 390x844 phone: the modules sat in three columns, split across four section headings that repeated the grouping the desktop sidebar already shows, and Sign out had a full-width row of its own below the system cluster. The modules now sit in one flat four-column grid with no headings - the order is unchanged, because the navigation items already arrive sorted by section, so those headings were labelling an order the grid has anyway - and Settings, Help, Changelog and Sign out share the fourth row of that same grid, still monochrome so they stay distinguishable from the coloured module tiles. Measured with the same eight modules, the sheet went from 735px (87.1%) to 354px (41.9%) at 390x844, and from 704px to 354px at 375x812, where it no longer scrolls at all; even with every module enabled it stays at 64.5%. Sign out gave up its separate row because the reason for that row is gone: it once sat under the exact pixel that opens the sheet, which has been impossible since the sheet's bottom edge moved above the tab bar. It remains the last target of the row and keeps its confirmation dialog. The permanently visible bottom bar is unchanged.
+- **Module names in the "More" sheet are hyphenated properly instead of broken mid-syllable.** The narrower four-column cell no longer fits every German compound on one line, so the labels follow the recipe the tab bar has used since v2.2.0: Caption 2, at most two lines, real hyphenation in the document language. Hyphenation alone was not enough - at 375px "Haushaltshilfe" missed a single line by 1.2px, and the browser then takes the last permitted break point, which produced "Haushaltshil-fe", exactly the look the previous three-column layout existed to avoid. A minimum of four characters on each side of the hyphen turns that into "Haushalts-hilfe"; at 320px the same rule yields "Beloh-nungen", "Geburts-tage" and "Einstel-lungen". Every tile reserves both lines, so the grid rows stay flush at every width instead of changing height depending on whether a long name happens to sit in that row.
+
+## [2.14.1] - 2026-08-15
+
+### Fixed
+
+- **A guard now holds the rule that a per-user setting must not sit behind an admin-only page.** Five times a setting that writes per user, on a route that deliberately carries no admin check, was reachable only from a leaf marked admin-only - and for everyone else that page does not resolve at all, so there was not even an error to see. Four of those were found by reading, the fifth only by measuring the rule against the server. That measurement is now a test, in two probes because one layer cannot carry the rule: the first resolves the router mount chain and maps every writing call of an admin-only page onto its actual handler; the second covers `PUT /preferences`, where it is not the route that decides but the key, and only keys that are never written household-wide count - weather and the cycle switch know both paths and are context-dependent, which is why the first version reported the household weather page as a violation. Cross-checked against all five historical cases at once: every one of them is reported, each by the probe that can see it. Nothing changes for users; this is a fence, not a feature.
+- **Two source files no longer count as binary, which made them invisible to every text tool.** `server/services/holidays.js` and `server/services/cardav-sync.js` each carried a raw NUL byte, deliberately used as a separator inside a map key. That runs perfectly - JavaScript allows the character in a string - but it makes `file` report "data" and `grep` return nothing at all rather than "no matches", unless you happen to pass `-a`. It surfaced when a search for `sync` in the holidays service came back empty on a file with 33 occurrences, and the wrong conclusion had already been drawn from it. The character is now written as the escape `\x00`, which produces exactly the same string, and a guard keeps any source file from going binary again - every text-based check in this repository would have had the same blind spot without ever turning red.
+
+## [2.14.0] - 2026-08-15
+
+### Added
+
+- **"Heute auf einen Blick" lässt sich abschalten.** Das Kopfband der Übersicht fasst zusammen, was in Aufgaben, Kalender, Mahlzeiten und Einkauf ansteht - nützlich, wenn diese Bereiche nicht ohnehin als Kacheln daliegen, und sonst eine Wiederholung. Bisher verschwand es nur indirekt, nämlich wenn man alle vier Bereiche als Widgets einblendete (#740, gemeldet von @tyboxer87). Jetzt trägt es im Anpassen-Modus denselben Ausblenden-Knopf wie jede Kachel und kommt über dieselbe Chip-Leiste zurück; Speichern, Abbrechen, Rückgängig und Zurücksetzen nehmen es mit, statt es neben dem Zyklus stehen zu lassen. Wie die Kachelanordnung gilt die Entscheidung für den Haushalt, weil die Übersicht eine gemeinsame Seite ist. Im Anpassen-Modus bleibt das Band sichtbar, auch abgeschaltet und auch ohne Inhalt - sonst wäre der Schalter, der es zurückholt, nur da, solange man ihn nicht braucht. Standardmäßig bleibt alles wie bisher.
+
+## [2.13.1] - 2026-08-15
+
+### Fixed
+
+- **Everyone can manage their own calendar subscriptions, not just the admin.** The server has always treated ICS subscriptions as owner-based: the list returns the household's shared ones plus your own, and editing, syncing or deleting someone else's answers 403, with admin rights as an addition rather than a precondition. But the only page holding them was Settings → Sync → Calendar, which is admin-only, so four members of a five-person household could not add the subscription they were entitled to add - and got no error saying why, because the page did not resolve for them at all. Both the subscriptions and the one-time calendar import now live under **Settings → Personal → Calendar subscriptions**. What stays behind the admin gate is what genuinely belongs to the household: CalDAV accounts and the Google/Apple connections, whose routes really do carry an admin check. This is the fifth case of a per-user setting stranded on an admin-only leaf, and the second found by measuring the rule against the server rather than reading pages: every writing endpoint that works per user was checked for an admin gate, and the ones without now have a reachable home. Nothing changes for existing subscriptions.
+- **Six settings pages work offline again, four of which had quietly stopped.** The service worker precaches the settings pages so they open without a connection, but that list is maintained by hand and had drifted: Email, Permissions, Health and Weather were missing, and opening any of them offline simply failed - silently, because online they always worked. Found while adding the new page, since the module-graph guard that has covered this since v1.63.0 follows imports, and a settings page is loaded through a dynamic `import()` that appears in no static import tree. A second guard now holds the rule the first one cannot see: every leaf listed in the settings registry has to be precached, measured against the registry rather than the directory, so a page that is merely dead does not count as missing.
+
+## [2.13.0] - 2026-08-15
+
+### Added
+
+- New Inventory module (Stage 1 of a larger design aimed at upstream contribution): track owned belongings with hierarchical storage locations, a manageable category list, purchase price, warranty length, condition and status. Deliberately no current-value/resale-estimate field - see discussion #696: a manually maintained number nobody updates is worse than none. Budget/document/subscription linking, derived deadlines and calendar integration follow in later stages.
+- Inventory items can now be linked to documents from the Documents module (receipts, warranty cards, manuals), reusing the same document-linking mechanism Budget entries already use (Stage 2 of the Inventory module design). Items stay household-visible as before; each linked document is still filtered per viewer.
+- Inventory items can now be linked to Budget entries (a purchase, a refund, a repair, an accessory bought later), including creating a new item directly from a booking with its purchase price prefilled automatically (Stage 3 of the Inventory module design). Visibility follows Budget's own rules exactly - in personal budget mode, a private booking stays invisible to other members even when linked to a household-visible item.
+- Inventory items now surface a derived warranty deadline (Stage 4 of the Inventory module design): a proactive in-app reminder 30 days before the warranty ends, and a dedicated, subscribable read-only ICS calendar feed for warranty end dates. Both are computed on the fly from the purchase date and warranty length, never stored.
+- Inventory items can now track an arbitrary number of custom dates beyond the built-in warranty deadline - TÜV, service, insurance renewal, or anything else with a date - each with its own configurable reminder lead time. These join the same reminder system and the same ICS feed (renamed from "warranty deadlines" to "inventory deadlines" to reflect the broader scope) that Stage 4 introduced.
+- **Inventory ships disabled and each household switches it on** - the first module with that default. Every module is a permanent line item in the navigation of every household, including the ones that will never track a bike, and Inventory is the first whose audience is visibly a subset. Enable it under Settings → Navigation; a household that does not want it never sees it, and existing installs do not find a new entry after an update they did not ask for.
+- The Inventory deadlines ICS feed token is now per user instead of household-wide, matching the calendar feed. A household-wide token could not be withdrawn from one person: whoever had subscribed kept access until it was taken from everyone. Each member now mints, rotates and disables their own subscription, and doing so leaves everyone else's running. The feed's *content* is unchanged and still household-wide - inventory items belong to the household, not to a member.
+- The Inventory list is a two-level browse: the landing page shows metric cards (item count, total purchase value, items needing attention) and a category overview, and tapping a category shows its items grouped by storage location with "All" / "Needs attention" filter chips scoped to that category. Items can carry a single photo, and tapping one opens a read-only detail view (with a colored accent stripe) before editing; the nav icon carries a badge for items with a soon-expiring or overdue warranty or tracked date. The "Needs attention" metric card on the landing page is itself a filter now - tapping it flattens the list across every category to just the items that need a look, the same view search results already use. The five seeded categories (Electronics, Vehicles, Household, Sports, Other) are localized instead of staying German regardless of the app's language, matching how Task Categories already handle their own seeded set.
+
+### Fixed
+
+- **Everyone can manage their own calendar and inventory feed subscription, not just the admin.** Both feed tokens have always been personal - they sit on your own user row, and neither route asks whether you are an admin - but the only place to reach them was Settings → Sync → Calendar, and that leaf is admin-only. In a household of five, one person could subscribe their phone to the family calendar and the other four could not, with no error to explain it: the page simply did not exist for them. The two sections now have their own leaf under **Settings → Personal → Feed subscriptions**, reachable by every member. Only the two feed sections moved; CalDAV accounts, ICS subscriptions and the one-time calendar import stay where they are for now. This is the fourth time a per-user setting had been stranded on an admin-only leaf, after the calendar defaults, the task defaults (#695) and the navigation order; existing subscription URLs keep working and nobody has to re-subscribe.
+- **`docker-compose.yml` starts on Synology, QNAP and other older Docker builds again.** Since v2.2.1 the file passed its `.env` in the Compose long form (`- path: .env` / `required: false`), which exists only from Compose v2.24 onwards. Anything older refuses the whole manifest with `services.yuvomi.env_file.0 must be a string` - not at startup, but while reading the file, so nothing runs and the message points at a line the user did not write (#765, reported by @Zaldans on DSM 7.3.2 with Docker 24.0.2). The entry is back to the short form `- .env`, which every Compose version understands and which `podman-compose.yml` has kept all along. Nothing is lost by it: the long form was there for Git/GitOps stacks that clone the repository without a `.env` (#698), and that path has had its own file since, `docs/docker-compose.portainer.yml`, which lists every variable explicitly because Portainer hands its variables to Compose for substitution rather than as an env file. Keeping the long form only moved the failure one step later for those stacks - without a `.env` there is no `SESSION_SECRET`, and the container exits on startup - while breaking every NAS whose engine predates it. A guard now holds the short form across all Compose manifests in the repository rather than a list of known files.
+
+## [2.12.0] - 2026-08-15
+
+### Added
+
+- **A subtask can be renamed or removed, not just ticked off.** Correcting a typo used to mean marking the subtask done and typing the whole thing again, because the row offered a checkbox and nothing else (#748, reported by @rebeckaengstrom1). Each row now carries a rename and a delete action at the same size and in the same restrained tone as the actions on the task row above it, and deliberately not on hover only: a touch device has no hover, and fixing a typo is exactly where a phone is the likely device. Deleting asks first and says what it costs, since ticking off can be taken back and this cannot. Nothing changed on the server, which could always do both: a subtask is an ordinary task that happens to have a parent.
+
+### Security
+
+- **A private subtask no longer shows up under a shared parent, and no task can be changed or deleted by someone who cannot see it.** Two gaps that had been there for a while and that only became visible while reviewing something else. The task **list** returned every subtask of a shared parent with its title, regardless of that subtask's own visibility, and counted it in the progress bar - the detail view had been filtering correctly for a long time, the list simply never got the same rule. Separately, `PUT` and `DELETE /api/v1/tasks/:id` loaded the row by id and acted on it without asking whether the caller was allowed to see it, so anyone who knew or guessed an id could edit or delete another member's private task. Both now apply the same visibility rule the rest of the module uses, and answer 404 rather than 403, since the existence of a task is itself information. Nothing changes for tasks marked visible to everyone, which is the default.
+
+### Fixed
+
+- **The calendar feed no longer writes a doubled `RRULE:` prefix on imported series.** An appointment read in over an ICS subscription or CalDAV stores its recurrence as the full property line, prefix included; the feed put another one in front of it, so subscribers received `RRULE:RRULE:FREQ=...`. Apple Calendar tolerates it, stricter parsers do not: Home Assistant rejected the whole event with "Failed to parse calendar EVENT component: Field required", which is why a feed that worked in one app failed in another (#761, reported and diagnosed by @TanguyBaudrin, who found the doubled prefix with an ICS validator after my first guess turned out to be wrong). The rule that resolves the two spellings now lives in one place instead of six: five modules already got it right and one did not, and nothing counted the copies. Existing subscriptions repair themselves on the next refresh.
+
+## [2.11.0] - 2026-08-14
+
+### Added
+
+- **Reminders can go to any HTTP endpoint as a generic webhook channel** (#692 by @ContatoLucasSonntag, for #660). It sits next to Gotify and ntfy, with the same delivery tracking, retry and deduplication, and an optional write-only Bearer token. Because a fixed body would have limited it to receivers that take arbitrary JSON - Home Assistant and n8n do, Discord does not, it requires `content` or `embeds` and answers anything else with a 400 - the channel also takes an optional **payload template**: paste the shape the service expects and put `{{title}}`, `{{body}}`, `{{url}}` and `{{tag}}` where the reminder's values belong. One generic provider then covers Discord, Slack and the rest, instead of Yuvomi growing an adapter per service. Values are JSON-escaped on the way in, so a reminder title with a quote or a line break cannot break the surrounding JSON, and a template that would only fail at delivery time is rejected while you are still in the form. Leaving the field empty keeps the default body. See the [notification webhook guide](docs/notification-webhooks.md).
+- **Every member can hide the cycle tab for themselves.** The tab was a household switch and nothing else: an admin turned it on for everyone or off for everyone, although not everyone in a household has a cycle (#760, reported by @ElHado). There is now a personal switch next to it, under Settings → Personal → Health, and it needs no admin rights - it only changes your own view. The two combine the strict way round: the household setting decides what is possible and the personal one can only narrow it, so turning the cycle off for the household still hides it from everyone and nobody can pull a switched-off tab back. Where that is the case, the personal switch says so instead of pretending to do something. The default is on at both ends, so nothing changes for anyone who does not touch it.
+- **Belarusian ruble (BYN) as a currency.** Selectable everywhere a currency is, including subscriptions and shared expenses (#745, requested by @lapytko). Belarus also joins the region presets, which fills in BYN, `DD.MM.YYYY` and a 24-hour clock in one step.
+- **`defaultDateInPeriod()` and `monthPeriodKeys()` in the public date helpers (`/utils/date.js`).** They answer the question every module with a time frame has to answer for a new entry: which date does the form start on? The rule is today as long as the displayed period contains today, otherwise the first day of that period, and `monthPeriodKeys()` supplies the case that recurs everywhere - the calendar month, never the six-week grid a month view draws, which begins in the previous month. Budget has followed this rule since v1.37.0 and the calendar since v2.10.1, each with its own copy; that is why the calendar went without it until a bug report (#737). **Nothing changes for anyone using Yuvomi** - both modules propose exactly the same dates as before. The entry is here because `/utils/` is part of the surface third-party modules build on (see MODULES.md), so a module with a period frame can now inherit the rule instead of rewriting it.
+
+### Fixed
+
+- **Searching the Paperless DMS for a number finds documents that merely contain it again.** A bare number was read as an archive serial number and nothing else, so a document called "1728 Pest receipt" was unreachable by searching for `1728` even though it sat in the list right there (#763, reported and diagnosed by @croquetgenius). Street numbers, years, invoice numbers and model numbers were all affected, and users who do not keep ASNs at all had no way to search for a number. Bare numbers now run both readings at once: the document with that serial number comes first, the ordinary full-text matches follow, and a document found by both ways appears once. The explicit forms `asn:123`, `asn 123` and `asn#123` still mean the serial number and nothing else, so the exact lookup added in v1.26.0 is intact. If the serial-number lookup fails, the full-text results still come back rather than the search failing with it.
+
+## [2.10.1] - 2026-08-14
+
+### Fixed
+
+- **A new appointment starts on the day you are looking at, not on today.** Clicking an empty slot already opened the form on the day that was clicked, but the "+" in the toolbar and the floating action button had no day to go on and always fell back to today. In day view that is the reported case: page forward three days, reach for "+", and the appointment is created behind you (#737, reported and diagnosed by @LycidasFfm). The other three views had the same defect, only further away - in month view "+" put the appointment in August while September was on the screen. All four now propose the first day of the period on display, with one exception that keeps the old behaviour where it was right: as long as today is inside that period, today stays the proposal, because the user can see it. The empty state of the search is deliberately left on today, since a result list is not a period. The proposal is a starting value in an open form, not a decision - the date field is right there and editable.
+
+## [2.10.0] - 2026-08-14
+
+### Added
+
+- **Unticking a synced calendar asks what should happen to the appointments it already brought in.** Until now they simply stayed, and the only way to get rid of them was to delete each one by hand - which is what the reporter, who treats his CalDAV server as the single source of truth, was left doing (#732). The question names the number, so it is not a guess whether three or three hundred are affected, and it offers *Keep* and *Delete* rather than *Cancel* and *OK*, because both are real choices. Keeping is the default: unticking is often a slip, and it is the only one of the two that can be taken back. The same question now appears when a CalDAV account is disconnected, which used to be the one path that left appointments visible but stripped of the calendar they came from. Deleting is strictly local - it never propagates to the provider, so the calendar stays untouched for everyone else in the household, and switching the calendar back on fetches the appointments again. Appointments you edited yourself are included: "delete all appointments from this calendar" means all of them, and a silent exception would leave rows behind whose origin nobody could tell. Your own local appointments are never touched, not even the ones that use this calendar as their upload target.
+
+### Changed
+
+- **Connecting a CalDAV account no longer switches on every calendar it finds.** An account often carries more than the one calendar you came for - work, birthdays, public holidays - and all of them used to start syncing the moment the connection succeeded, filling the household with appointments nobody asked for and leaving them to be removed one by one. Calendars now arrive unticked, and you pick the ones that should come in. The same applies to a calendar the server reports for the first time on a later refresh. Because an account with nothing ticked would otherwise look broken, the list opens by itself in that state and says so in one line. Ticking a calendar that was already synced keeps working as before, and refreshing still preserves choices you have already made.
+- **The ICS subscriptions and the calendar picker are one list grammar.** They answer the same question - what comes into this household - and looked like two different features doing it: the subscription rows carried no row surface, no minimum height and a different inner spacing than the calendar rows right above them. Both now take the same rule rather than each keeping its own copy of it; the pointer cursor stays with the rows that actually toggle as a whole, since a subscription row is operated by its buttons.
+
+## [2.9.0] - 2026-08-14
+
+### Added
+
+- **Yuvomi says at startup when the document folder is not where it expects it.** With local document storage enabled, a `DOCUMENT_STORAGE_LOCAL_PATH` that nobody mounted used to fail in the worst possible way, which is not at all: the upload path creates missing folders, so the write succeeded into the container layer, the file was gone on the next `pull && up -d`, and the database went on referencing it. Nothing in the logs, nothing in the interface, just missing documents later. The server now checks the folder once at startup and warns if it is absent or unwritable, naming the path it looked for and both ends of the mount. It is a warning rather than an abort: document storage is optional and an otherwise healthy instance should not refuse to boot over it. The backup directory has had this check for a while; the document folder is where the failure is quieter (#751).
+
+## [2.8.4] - 2026-08-14
+
+### Fixed
+
+- **Preserve subtasks when spawning recurring task occurrences.** Completing a recurring parent task with subtasks now copies its subtask structure with reset status (`open`) to the next occurrence, preserving checklists and multi-step workflows across occurrences (#742, #744). Undoing completion discards pristine spawned follow-up tasks while preserving any follow-up tasks whose subtasks were completed or edited.
+
+## [2.8.3] - 2026-08-14
+
+### Fixed
+
+- **The filter strip of a list gets the whole reading column back, instead of a third of it.** On shopping and contacts the strip caps itself at the reading measure while also carrying the page's own side padding, and with `border-box` that padding is subtracted from the cap rather than added to it. Measured at 1907px, 720px of reading column left 313px for the chips, while the body directly below carried the full 720px: a household with seven shopping lists saw its list tabs break off mid-name (#758). Both strips now compute the cap where the padding lives and count it in, and they end on the same right edge as the rows beneath them rather than 200px short of it. Contacts had the identical defect and nobody had reported it; a guard that reads both sides out of the stylesheets found it in its first run, and will find the next one.
+
+## [2.8.2] - 2026-08-14
+
+### Changed
+
+- **The first row of the folder browser in Documents says "All documents", because that is what it selects.** It read "All folders" while carrying a document count next to it, so "All folders · 6" sat directly above "Appartement · 6" - the same number twice, with only one folder in the list. The row is the neutral state of a filter, not an overview of folders, and a reporter took it for the latter and concluded his folder was not listed at all, when it was the clickable row right below (#757). The section heading above it dropped "Browse" for the same reason: folders here are flat, with no nesting to browse into, so the word promised a hierarchy the module does not have.
+
+## [2.8.1] - 2026-08-14
+
+### Fixed
+
+- **A synced series keeps its recurrence when you edit the appointment.** An appointment read in over CalDAV stores its rule as the full calendar line, with the `RRULE:` prefix that belongs to it. The form read the rule without that prefix in mind, so the very first segment came out as `RRULE:FREQ` and nothing matched: a weekly series arrived in the editor as "no repetition", and saving wrote that emptiness down. The sync then carried the loss back into the calendar it came from, which for the reporter meant the appointment stopped recurring everywhere. The rule is read in both spellings now. Beyond that, a rule goes back exactly as it came whenever nobody touched the repetition fields - this form knows five parts of RFC 5545, and a rule carrying `BYSETPOS` or `WKST` would otherwise have been simplified into something else while the user was only changing the assignee: "every third Thursday" quietly becoming "every month". Changing or clearing the repetition still does what it says. The server accepts an unchanged rule without running it past its validator, because it is already in the database - without that, every edit to any other field would have failed on a repetition the user never looked at. In the same pass, a locally created series pushed to an Apple calendar gets a valid `RRULE:` line again instead of a property without a name.
+- **A recipe with no meal ticked stays that way.** Clearing all four boxes and saving turned into all four being set, silently: the form only revealed it when you opened the recipe again and found every box ticked. What made that expensive is the meal plan's random pick, which draws from whatever a recipe declares - a stock or a base sauce could not be kept out of it. An empty selection now means what it says: the recipe is in no meal filter and in no random pick, and it says so with a "no meal" badge rather than showing nothing. It stays fully usable by hand - the plan dialog offers all four meals for it, and it can still be dragged into any slot, because dragging it there is the decision. An absent field still means all four, so nothing changes for a client that never sends one, and a partial update no longer drags the selection along with it. For third-party modules on `/api/v1/recipes` this is a behaviour change worth noting: `meal_types: []` used to come back as all four and now comes back empty.
+- **"Refresh calendars" no longer switches every calendar back on.** Fetching the list from a CalDAV account deleted the stored selection and wrote it back with everything enabled, so a calendar deliberately unticked came back into the sync unasked - along with its appointments on the next run. The list is refreshed, the selection is kept: a calendar the server newly reports still defaults to on, a known one keeps whatever it was. The same reset sat a second time in the credentials path, where changing a password had the same effect.
+- **The default assignee can be set before the sync runs, not after.** It was available exactly as long as it had no effect: the picker appeared only once a calendar had been synced, by which time the first and usually largest batch of appointments was already in, unassigned and to be corrected by hand - for recurring appointments many times over. The picker now stands on every calendar of a connected account, including before you tick it, and the ICS subscription form asks for the assignee while creating rather than only in the edit dialog it opens afterwards.
+- **"Cancel" works in the edit view of an item.** Opening a task, tapping "Bearbeiten" and then "Abbrechen" did nothing at all. The cancel buttons were wired once when the dialog opened, and the edit form is deliberately built later, only on the tap - so its button never got a handler. It is delegated now, which repairs the same dead button in every module with a read view: tasks, shopping, pantry, housekeeping and recipes.
+
+## [2.8.0] - 2026-08-14
+
+### Added
+
+- **The dashboard can show a row of module tiles.** Everything outside the tab bar is reachable only through "More", so the modules a household uses weekly were two taps away with no sign of what was waiting in them. Up to four tiles carry a number and a jump target in one row: measured at 1440x900, 753x105px for the whole row, and the same 105px on a 390px phone. The tiles show what is *not* already on the screen - a module the "Heute" panel already summarises is left out, and so is one whose own widget is visible, so the row follows the layout rather than keeping its own idea of it. What it leads with, therefore, are the modules a standard dashboard shows no widget for at all: rewards, health and the housekeeping log. Where a household does not use those, they have no number and no tile appears. It is a widget like every other one, not a fixed block at the top: it moves, hides and resizes in "Anpassen", an admin can lock it for a household member like any other widget, and switching a module off does not leave a hole in the layout. Each tile checks its own module, so a member who cannot see the budget never sees a budget tile.
+
+### Changed
+
+- **The lists have one beat.** A row was as tall as its longest line of metadata, and that line wrapped: on tasks eight possible elements produced two to three lines, so neighbouring rows stood at different heights and the eye had nothing to follow down the page. Nine modules now share one row grammar - the title on its line, the metadata on exactly one line below it, and what does not fit moves to the detail surface rather than being clipped. Measured at 390x844: tasks 71.1 to 61.1px, birthdays 121.6 to 62.6, housekeeping 130.9 to 64.8, budget 143.5 to 64.9, pantry 89.5 to 64.9, shopping 69.2 to 64.9, recipes 68.9 to 64.0, contacts 67.7 to 64.0, and the calendar agenda 67.3 to 61.4. 64px is the floor, not a miss of it: a row with a permanently visible 48px action zone cannot go below 48 plus twice its 8px padding. Those are medians, and one list keeps a deliberate exception: in the pantry a row carrying a status mark grows by one line, because the article name wraps rather than being cut - a shortened name is the loss of the row's only purpose in a supermarket aisle, and that decision outranks the beat. The two marks now move together instead of one at a time, so such a row costs one extra line rather than two. German is the constraint here, not English - "Dringend" and "Heute fällig" already fill the text column of a 390px phone, so the third element appears from the carrier width where it fits, rather than pushing the row onto a second line.
+- **On a desktop the primary action of a module is a labelled button in its header.** A circle floating over the content is a phone answer; on a pointer device it covered the last row of the list while the module header stood half empty beside it. The mechanism existed and was switched off - five modules had been carrying that button in their markup all along. It shows again above 1024px, and the floating button steps aside wherever one appears. That made a split visible the circles had hidden: three spellings for the same act stood in the same slot, from "Neue Aufgabe" through the button that read out its whole aria-label as a caption to two modules that said nothing at all. The rule is now the noun - the header reads "+ Termin" and the plus sign carries the verb, while a screen reader still hears "Termin hinzufügen". The long forms did not fit: "Neuer Eintrag" broke the budget header onto a second row at 1440px. Where a module offers its create path some other way, the second one goes: on the shopping list, whose quick-add row stands open on a pointer device, the floating button no longer stands 700px below it as a second door into the same room.
+- **The bulk action of a list is a pill above the tab bar, not a block above the list.** Checking off a single shopping item cost 103 of 552px of list area, because a static bar took the full width and wrapped its own contents onto two lines. It is one line of 48px now, in the material of the undo toast and in the same bottom layer, and the list starts where it started before anything was checked. Pill and toast share one stack, so they dodge each other rather than overlap: the one with the five-second deadline stays where toasts always are, and the pill moves. At the scroll end neither covers a row. On a very narrow phone the pill drops its sentence rather than truncating it, and the number moves to the button beside it - to the delete button on the shopping list, where a missing object is expensive, and to "Alles auf die Einkaufsliste" in the pantry, where "Alles" without its sentence can be read as the whole pantry instead of the ten items the filter is showing. It is a mark for the eye only; a screen reader still hears the pill's sentence, which never goes away for it.
+- **Deleting a whole subset asks first, and the dangerous button no longer looks like the harmless one.** "Löschen" and "In den Vorrat" stood side by side as two identical capsules 40px apart, and 8px below them the undo toast offered "Verwerfen" in the same shape again: three buttons, three very different consequences, one appearance. The undo was the reason given for leaving it that way, and it only ever answers a mistake you notice. The pill now turns into its own question - the sentence becomes "9 Artikel löschen?", the other actions step aside, and what remains is cancel and confirm. Escape takes it back, the keyboard lands on cancel rather than on the confirmation, and a screen reader hears the question because the focus moves into the group that the question names. The destructive capsule carries its own ink on the shell material, measured against the composited glass rather than the declared token: 5.13:1 in light, 5.47:1 in dark. Two things the rendering had to say rather than the plan: the question does not fit at every width in every language - Dutch needs 153 of 149px at 390px where German is comfortable with 115 - so the pair of buttons drops below the question whenever it has to, at no fixed breakpoint. And the confirmation sits exactly where the button that opened it sat, to the pixel at 390 and 414px, so a second tap from the same motion as the first would have gone straight through the question. It is held for 400ms, below the double-tap threshold and above the time it takes to read a question.
+- **The "More" sheet is grouped the way the desktop sidebar is.** Ten modules sat in one ungrouped grid, while the groups that sort them - Plan, Household, People, Finance - already hang on every navigation item and label the sidebar. The same set of modules that is sorted on a desktop was a wall on a phone. Each tile carries a box now, which makes the whole cell the target instead of just its icon and label, and gives its count badge a corner.
+- **The calendar's day view is a carrier with flat bars.** It was the week grid with one column: 56px per hour, bordered blocks, and a now-line that painted over whatever it crossed. Events are flat tint bars with a colour spine at 40px per hour, and below one hour a bar drops its time-and-place line rather than clipping it. The now-line runs below the events and its dot above everything, in the hour gutter where no event stands - so "now" stays findable and no title is ever struck through.
+- **A module's colour appears once as a surface and once as ink.** On tasks four green treatments stood in one screen at once - a filled view switcher, a filled group segment, a tinted filter chip and a chip with a raw accent border. The tone said the same thing four ways, and two of them were saturated blocks next to the violet primary button. The active filter chip is the tinted surface, the active segment is a raised pill in a well with the tone as ink, and nothing else takes the colour. The measurement that once justified the fill had expired: it was made before the family tones of 2.1.0, and today the raw tone holds 5.04:1 light and 4.82:1 dark on its own.
+- **The folder browser in Documents unfolds instead of scrolling sideways.** Below tablet width it was a strip of fixed 160px chips: measured at 390px it offered 356px of window onto 1488px of content, so two of nine folders were readable and one at 320px, and the name inside each chip had 53px, which showed six of the fourteen characters of "Versicherungen". It also sat directly under the filter row, which scrolls sideways too, so two different things answered the same gesture one above the other. Collapsed, the browser is now a single row that also names the folder you are in; opened, it is the full list in the shared row grammar, where no name is cut. The rows themselves joined that grammar in the same pass - Documents was the only route in the app with no shared row at all, and its folder entry had rebuilt the grammar and missed it (44px instead of 48, gap 8 instead of 12, an ellipsis where the shared rule wraps). The section heading moved out of the carrier and onto the page, where headings belong.
+- **A budget category row stacks on a phone.** As one line with a fixed name column the arithmetic did not work out: at 320px the row split 288px into 104 for the name, 58 for the bar and 78 for the amount, the name was cut in five of nine rows and seven of nine bars were under 3px. Name and amount now share the first line and the bar takes the second across the full width, which gives it about four times the length on which a comparison can happen at all. Nothing is cut at any width.
+- **The pending requests in Rewards are a card like any other, and the standings row lost its rank digit.** The card was the only fully tinted content surface of its kind, which put a violet primary button on a green ground; the count of open requests now sits in the heading, where it is a number rather than a colour field. Its tint also mixed against white while the card actually sits on the page ground, where it measured 1.11:1 in light and 1.64:1 in dark - loud as a vocabulary and weak as a signal, and a different thing in each theme. Mixed against the ground it really has, it is now the same step in both. The rank digit in front of each name was the first thing in the row and the only part of it that no action follows from; in a household with two children a "2" permanently reads as "last", and how close the next reward is stands in the same row and can be acted on.
+- **The "More" sheet fits on the screen and ends above the tab bar.** It was anchored to the bottom of the window with no ceiling and no scroller, so on a 568px-tall phone it grew upwards out of the picture: its top edge measured -142.6px and the search field sat entirely above the screen, reachable by keyboard and by nothing else. It now stops below the full height, scrolls in its body while the handle and the search stay put, and ends above the tab bar it used to cover - which also means the pixel that opens it now closes it instead of landing on "Log out". Logging out has its own full row at the foot, the same shape the sidebar already gave it.
+- **The action discs on a note take their fill from the note, not from the modal scrim.** They were the only controls in the app with a filled resting surface, and the value they used was the overlay that dims a page behind a dialog - which on a dark card made the disc darker than the card it sits on. Derived from the card's own ink they now separate in both themes.
+
+### Fixed
+
+- **The agenda says which calendar an appointment belongs to again.** The row cut had dropped the calendar name with the reasoning that the colour spine on the left says the same thing. It says it only to someone who knows the assignment by heart: a household with a family, a work, a school and a public-holiday calendar has four colours, and two of them are blue. For anyone with a colour vision deficiency the information was not retrievable at all. The name is back on the metadata line, but with the rank of a place rather than of a title - it is the first thing to go when the row gets narrow, the same mechanism the pantry and the budget already use for best-before dates, tags and accounts. It costs nothing where it appears: measured across seven widths, the agenda row stays at 60.7px with no wrapped metadata line either way. The threshold is measured rather than rounded - with the name shown, 16 of 37 rows wrapped at 24.8rem of carrier width, seven at 29.8rem, one at 32.3rem and none from 34.8rem. A screen reader hears the calendar at every width, because the name is in the row's label rather than only on screen.
+- **A task no longer shows its urgency twice.** A reminder synced over CalDAV carries its priority as a property and again as a category, so the priority chip "Dringend" stood directly beside the mirrored label "dringend" - two shapes, one word, on a line that has been single since the row cut and pays for every element. A label that reads exactly like the task's own priority is left out now. Only that one: a task marked "high" that carries a "dringend" label keeps it, because that is a contradiction rather than a duplicate, and it should be visible.
+- **A saved dashboard layout no longer counts as rearranged just because a widget was added later.** A layout stored before a widget existed had that widget appended at the end, and the board compares its order against the author's default to decide whether someone arranged it deliberately. Appended at the end, it did not match, so the grid quietly switched from dense packing to preserving an order nobody had set - and the gaps that packing exists to close came back. A widget that is new to a stored layout is now sorted to the place it holds in the default, right behind the neighbour it belongs after. In a layout the household really did rearrange there is no default position left, only neighbours, so it follows the one it belongs behind even where that one was moved.
+- **The scroll end no longer keeps room for a button that is not there.** Where the primary action docks into the module header, the floating button is hidden but its reserved run-out was not: five routes kept 96px of empty space below their last row on a desktop, and the shopping list 156px instead of 60. The reservation asks whether a button is hidden by the page, which was the wrong question once the answer came from a stylesheet. Each of the four places that hides the button now takes its run-out with it.
+- **A long item name breaks with a hyphen instead of in the middle of a word.** The shared row grammar wraps a name rather than truncating it, because a shortened name is the loss of the row's only purpose in a supermarket aisle. That was right, and how it wrapped was never checked: on the narrowest phone 11 of 26 shopping rows stood as "Kirschtoma / ten" and "Räucher / lachs", every ordinary German compound broken at no particular place and with nothing to mark it. The rows hyphenate now, in the language the interface is actually set to. It costs one line on one row of the whole list, and only at that width.
+- **A budget bar carries its value again instead of only proving there is one.** Every category below roughly six per cent of the largest one drew the same bar, so at 1440px four categories that differ by a factor of 9.4 rendered identically at 25.9px each: -234.98 €, -157.50 €, -153.49 € and -25.00 €. The floor was itself once a fix, against a tiny category looking empty, and it traded a cosmetic problem for a false statement in a money module. The share is now the share, and the smallest category stays visible through a minimum length rather than a minimum share.
+- **Both actions of a medication dose stay on the screen.** On a 390px phone "Überspringen" sat at 92 of its 122px outside the picture, clipped and with no way to scroll to it - in the module that carries medication, the most expensive place for an unreachable action. A fix for this existed but never reached that row: two renderers build the same row and only one of them carried the class the rule looks for. Both now shorten in two steps, dropping the labels and keeping the icons, the target size and the spoken name. Measured at 1440, 1024, 768, 430, 390 and 320px, nothing leaves the screen.
+- **Blocks on one page end at one right edge.** The reading measure had moved from the row carriers to the page, but as a list of names, so anything not on the list ran to the full rail: at 1440px the pending requests in Rewards ended 436px to the right of the carrier directly below them, the contact group heading 436px to the right of its own list, and the budget chart the same distance from the bookings under it. Four blocks joined the measure; the metric band stays deliberately wide.
+
+## [2.7.1] - 2026-08-12
+
+### Changed
+
+- **The module guide covers modules that run a backend service of their own.** `MODULES.md` described browser-only modules well and said nothing about the case where a module needs stored state, scheduled work or a third-party credential - which is where the two expensive mistakes get made: opening the database directly, which works on the day it is written and dies on the next migration, and trusting a user id sent by the module's own page, which turns a page bug into an authorization bypass. The guide now states the storage boundary (`/api/v1`, never the database file), the identity rule (re-check the session server-side through `GET /api/v1/auth/me`, and cache that answer briefly, because `/api/` is rate-limited per IP and a service that does not forward the caller's address spends that budget for all of its users at once), and what a module's own CSRF pair and API token owe. It also says how a module survives an upgrade: nothing gates loading on a compatibility range, so a module that calls a renamed endpoint keeps loading and fails in front of the user. `/api/v1` and the public browser libraries are what a third-party module builds on, and breaking changes to those are called out here; direct database access, private helpers under `server/` and undocumented response fields are outside that line and can move in any release. Contributed by @JakeTheRabbit (#728, #729), from building a sidecar module platform against an unmodified Yuvomi image.
+
+## [2.7.0] - 2026-08-12
+
+### Added
+
+- **A task created in Yuvomi now reaches the CalDAV reminder list.** The sync was one-way for anything that started here: tasks arriving from a server could be edited, completed and deleted back, but a task typed into Yuvomi stayed local forever, and nothing said so. The reason was written down in the source - a task carries no selectable target, so there was no list to put it in - and it had stopped being true: the calendar has had a per-person default target since 1.79.0. Measured against the sentence the interface actually shows, "sync in both directions", this was not a missing feature but a wrong promise. The task dialog now carries the same target field the event dialog has, prefilled from a personal default under Settings → Personal → Task defaults, and the list offered is only what the household enabled *for tasks*: a list pointing at shopping would send a task out and bring it back as a shopping item. The upload runs immediately after saving and again on every sync, and it is the last step of a run on purpose, because the prune before it removes mirrors the server does not know - a task uploaded any earlier would be deleted seconds after it arrived. Its UID is derived from the task's own id rather than drawn at random, so a run that dies between the upload and the bookkeeping overwrites its own object next time instead of leaving a duplicate. Subtasks are excluded: as standalone VTODOs they would stand next to their parent as equals, and the relationship that makes them subtasks would be gone. Nothing changes for anyone who picks no target - that task stays local, exactly as every task did before.
+- **A dose can be corrected or taken back.** The medication log knew `take` and `skip` and nothing else, so a mistap was permanent - not just on screen: the wrong time goes into the CSV export as well, which is the file somebody prints and hands to a doctor. The log entry can now be edited (time and status) and an entry that was never planned can be deleted. A *scheduled* entry cannot: the scheduler would recreate it on its next run, so deleting it would look like a success and be a return on the instalment plan. It is undone instead, back to pending. The time travels with the status rather than beside it, so anything that is not "taken" clears the timestamp - an entry that says not-taken while carrying a time it was taken at contradicts itself, and it would contradict itself in the export too.
+
+### Fixed
+
+- **The dose log says "pending" when a dose is pending.** It knew two states and drew three: everything that was not skipped was labelled as taken, so every dose still waiting for the day claimed to have been swallowed. Nothing pointed at it while there was no way back out of a state - with a correction dialog next to it, that line would be the one contradicting the correction. Three states now, each with its own mark; skipped and pending step back equally far, and only the word beside them tells them apart.
+
+### Changed
+
+- **A task's note is a note, not a caption.** The field was two rows tall, while the comment above it in the source argued the opposite case: the note sits next to the title precisely because a summary cannot carry free text. It is six rows now and renders Markdown in the read view, through the same renderer the notes module and the dashboard have used all along - not a new building block, one that was never connected.
+
+## [2.6.1] - 2026-08-12
+
+### Fixed
+
+- **The widget grid runs to the bottom of the window again.** On desktop the shell kept a 96px strip free below the scroll port so the floating action button could never cover anything - a margin that shortened the scrollable area across its full width. On a board of cards that is the one place it must not come from: the grid broke off 96px above the window edge, mid-card, with a dead band underneath, and the default board needed 25% more scrolling than it had content for. The room is now a trailing pad *inside* the scroll port, so the reserve sits behind the last row instead of in front of the window edge. The promise it protects is the one that was actually needed - nothing is unreachable, rather than nothing is ever covered: both measured failures were at the scroll end, where nothing can be pushed aside any more, and there the pad is what lies under the button. In between, content passes beneath it and can be scrolled clear in either direction, and a mis-tap lands on the button's own create action rather than on the row action below it. Phones are unaffected: the reserve is zero there, because the button sits inside the navigation capsule.
+- **A dashboard card's title row is a band, not a box.** It measured 73px for a 17px title and a 24px seal - up to 29.9% of the whole card on a phone - because the "All" link beside the title claimed a full 48px touch box inside a 12px-padded row. A free-standing target owes its size in one axis, so the link takes it in the width while its visible box shrinks and its touch area stays 48px by reaching into the header's own padding. The band is 49px now, the touch target is unchanged, and the title keeps its size: the row was bulky, not the type. The tinted sender band introduced in 2.6.0 reads as a band because of it, instead of as an empty coloured field.
+- **The speed dial's action list follows the writing direction.** It anchored to the physical right edge while the button itself has followed the logical axis since 2.6.0, so in Arabic and Farsi the button sat at one end of the capsule and its actions lined up against the other.
+
+## [2.6.0] - 2026-08-12
+
+### Changed
+
+- **Every dashboard card now wears its module's colour, as a surface instead of a stroke.** Module identity on the board was a 2px hairline along the top edge - just about visible in the light theme and, in the dark one, not at all: the board read as a wall of equally grey rectangles. The card header carries the family tone as a tinted band now, at the wash step of the tint scale, which is the rung defined for a tint that sits *under* foreign content - the seal, the title, the badge and the link all belong to the card, not to the tone. The seal on that band gets the band as its own base, or its disc would mix against the card surface and sit at 1.06:1 on the tint. Measured across all five default cards: title 15.3:1 light and 12.1:1 dark, header link 5.5:1 and 6.1:1, badge 6.0:1 and 6.3:1.
+- **The day programme is the principal object of the page again.** "Heute wichtig" sat on a smaller radius and a lighter shadow than the widgets below it, so the most important block on the surface was optically the quietest - "what is on today?" weighed less than "birthdays". It now carries the larger card radius and one elevation step above the grid, and its rows have the breathing room of a programme rather than the density of a list. Touching a row tints it in the tone of the room it comes from instead of neutral grey; the seal on the left already said where the row belongs, and a grey hover threw that away at the moment of contact. On phones the programme no longer shrinks: padding *and* title size used to drop there, so on the device PRODUCT.md names as the primary scene the day programme was the smallest version of itself while five full-size cards stood underneath it.
+- **A tile is wide enough for the names in it.** At 1440px the grid laid out four 270px columns, and in them the ellipsis cut through real content - "Familienmitg…", "Tante Claire Bec…", "Leo John…". The minimum column is 280px now, which at that width means three calm columns instead of four cramped ones; the auto-fill mechanism is untouched, so the fourth column returns on its own around 1700px, with room for text. The family card's member names moved up to the row-title step the rest of the board uses - 14px was the exception, and next to a 38px avatar it read like a caption.
+- **Leftover height became breathing room instead of a hole.** Row heights follow the 1x1 tiles, so a tile spanning two rows gets the sum of both plus the gap - measured 489px of slot for 319px of content in the family card, and the difference sat as a dead block below the last element. The card body stretches now and anchors its footer to the bottom, so the surplus falls *between* content and closing line: a deliberate frame with head, body and foot. The family card gained that closing line - the household's task tally for the day, from the same server-side aggregates the rows use, since counting the rendered rows would lie as soon as the household outgrows the limit. The savings rate gained a second channel: a track where the month's income is the full width and the filled part is exactly the percentage printed beside it.
+- **The monthly balance is a readout, not a number at the end of a label row.** It sat as a 22px amount on the right of a caption line - the same anatomy as "Sparquote 45 %" directly below, so the card's headline fact was built like its supporting one. Stacked, at 28px, it is what it is: the number you open the card for.
+- **A list tile takes its row count from its height.** The birthday list was cut to three on the server, for every tile size there is, so the two-row default ran a third of its card empty and no layout could fix it - the material was not there. The supply now covers the tallest version and the tile decides how much of it appears: three rows for one grid row, five for two. The rule sits in one place so the next list widget inherits it instead of inventing another constant.
+- **The demo board shows the weather card.** It is off by default, because the masthead line under the greeting already says the current conditions - but the card is what the wall-tablet case looks like, and it carries the location and the forecast the line has no room for. In the demo it sits before the two flat tiles, which is also where the screenshot frame ends. The echo rule applies as always: with the card visible, the masthead line steps aside.
+
+### Fixed
+
+- **A select in the settings was 23px tall.** The token subject picker and the default calendar target carried `class="form-select"` - a name no stylesheet has ever defined - so both fell back to the browser default while the input beside them in the same form group wore the field material. They now use the canonical `form-input`, which also brings the chevron padding: 40px at the pointer, 48px at the finger. A guard now checks the shape rather than a list of names, so the next invented `form-*` class fails on the first run instead of on a 55-minute browser sweep.
+
+- **A pinned note keeps its colour on the dashboard.** Two things had to line up for this one. Notes without a colour rendered `--note-color:;` - a valid *empty* value, which takes `var()` its fallback and invalidates the whole recipe - and notes *with* a colour never reached the recipe at all, because `glass.css` carries the more specific dashboard rule and set a neutral well there. The tinted recipe in `dashboard.css` had been dead code since the HIG rollout while claiming the opposite of what was on screen. The well is still a well - a box inside a box is a recess, not a second card - it just carries the note's tone now.
+- **Note tiles follow their card's width, not the window's.** Three columns from 1024px up, even when the note card is one grid column wide: three notes in ~105px each, and what was left was "Urlaubs-…", "WLAN & …", "Emmas …". The tile count is a container query on the widget now, with thresholds that are tile widths rather than device classes.
+- **A note tile no longer dims itself on hover.** It took `opacity: 0.8` - making its own text harder to read in order to show it could be touched - and lifted a pixel like a control. It steps up one rung of the tint scale instead.
+- **The masthead tools hang at the top instead of floating mid-title.** They were centred against a greeting stack three lines tall, and four on a phone, so the "Stand 21:39" anchor landed halfway up beside the title with nothing to relate to.
+
+## [2.5.0] - 2026-08-11
+
+### Added
+
+- **Wall mode: the dashboard as a display for the hallway tablet.** Three pieces existed for that scene and served it only one at a time: the clock tile, the weather card as an opt-in, and the photo screensaver after five minutes of quiet. Together they were three checkboxes, not a state. Wall mode is the state, and it is the *awake* one to the screensaver's resting one: the same `/` route in a different gait, carrying the time in the 48/72px display steps that until now had no user at all, the day program, who is up today as faces with a count, and the weather with its forecast. Sidebar, tab bar and the plus button step aside; nothing on the surface is touchable, because the point is to read it from two metres while walking past. The way out is quietly present rather than hidden: a glyph in the corner that any touch raises to a labelled capsule for a few seconds, plus Escape. Between 22:00 and 06:00 it dims - the dark ground is forced even for a light theme (the stored preference is untouched and restored in the morning), and the only filled area on the page becomes a hairline, because the problem in a dark hallway is luminance, not colour mode. A load failure heals itself every 60 seconds instead of showing a retry button nobody at a wall presses, with the clock still running beside it to prove the device is alive. The switch is device-local like theme and language and sits in Settings → Appearance; the normal dashboard, saved layouts, Customize and the screensaver are untouched.
+
+### Changed
+
+- **The dashboard's day program now says what it does.** A row that leads somewhere is a link, so Cmd-click and middle-click open it in a new tab and "copy link" yields one - the same thing the widget headers have done since the last round. The task row stays a button, because it does not navigate: it opens the quick-action dialog on its own object, and an href there would be a promise the handler breaks. The widget cards no longer lift on hover: the card was never the click target - its rows, its header link and its empty-state entry are, and each has its own hover. The card promised a destination that does not exist under the cursor.
+- **One module, one name.** The shopping module was called "Einkaufen" (a verb) in the navigation and "Einkauf" everywhere else; it is now the noun in both places, which is what the other sixteen modules already were. Split expenses lost its verb form too, in German and in eleven other languages that carried an infinitive or imperative. The API token dialog kept its own list of module names and had drifted independently: it called the start page "Dashboard" in seventeen of twenty-four languages while the navigation calls it "Overview", and the housekeeping module "Haushalt" instead of "Haushaltshilfe". A guard now compares both lists in every language and found three more on its first run - the English and Filipino notes module was called "Board", and Filipino search was a verb in one list and a noun in the other.
+- **The dashboard says when it last looked.** The silent refresh does its work invisibly, which on a wall tablet is exactly the problem: a surface that never visibly moves cannot be told apart from a frozen one, and "nothing else today" is not believable without a reload. A quiet "Stand 19:24" now sits under the customize button - an absolute time, not a "3 minutes ago" that would need a second timer just to contradict itself.
+- **The dark hover no longer shouts.** It stood two ramp steps above the surface while the light one stands one below white - measured on a cockpit row, 1.414:1 against 1.201:1, and the louder answer belonged to the theme where a brightness jump is more noticeable. It is now the next surface step in both themes. Correcting that one number exposed three places that had been living off the excess: elements already sitting on a raised surface used the same token and would have landed on their own color (measured 1:1 - no hover at all). They now use `--color-surface-elevated-hover`, a step that was never new, only never named, and a guard keeps the two apart.
+
+### Fixed
+
+- **A widget title no longer runs through its own header link.** In a narrow tile the title text was a bare node between the seal and the badge - an anonymous flex item no selector could reach - so it shrank its box and kept drawing straight across "Manage". It now truncates, and the header keeps a minimum gap: `space-between` distributes surplus, and where there is none it distributes nothing.
+- **An empty widget no longer wears a "0" badge.** The header counted zero next to its title while the body below already said the empty state in words - two voices for the same fact, and the badge was the worse one.
+- **Escape closes the dashboard's speed dial.** Only a click anywhere did; whoever opened it with the keyboard could not close it again without a mouse and stood in a list of four destinations they had not aimed for. The focus returns to the button. The first-run dialog also has an accessible name now - it was `role="dialog" aria-modal="true"` with nothing to announce but "dialog".
+- **The rewards footer chip meets the touch target.** It was 38px tall, under the device world's minimum, while being a real control that jumps into the rewards module.
+- **"1 Tage" is gone.** The birthday countdown had no singular variant in any of the 24 locales.
+- **The loading skeleton promises the layout that actually arrives.** It drew the default grid while the saved arrangement only turns up with `/preferences`, so anyone who had rearranged their dashboard watched foreign tiles flash and then jump on every load. The demo seed's own layout also left a hole in the bottom right corner: five tiles covering seven grid cells across four columns, with nothing left for `dense` to fill it with.
+
+## [2.4.0] - 2026-08-11
+
+### Added
+
+- **An API token can act as a chosen family member.** Only an admin can create one, so until now every request a token made belonged to the admin - and a budget entry's owner is fixed to whoever creates it. A bank-import connector could therefore only ever file transactions under the administrator, never under the member they belong to. Creating a token now asks which member it acts as: that member supplies the identity, role, ownership and module permissions, while the administrator stays recorded as the creator for the audit trail. The subject can only narrow access, never widen it - module permissions are resolved for the member on every request, a non-admin subject cannot reach admin-only routes, and scopes remain an additional limit on top. Split-expense guests cannot be selected. Existing tokens keep behaving exactly as before. (#697)
+
+### Changed
+
+- **The day program looks past midnight.** The closing line now names tomorrow's first due task ("Nothing else today - tomorrow: permission slip"), and the free-day state row picks whichever comes first, the next appointment or the next due task - an evening glance no longer promises "nothing else" while something is due at school in the morning. On free days the family card tells each member what is next instead of stacking four identical "Free today" lines.
+- **Dashboard rows act on the object they name, and an open tab stays current.** The cockpit's task row opens the same quick-action dialog as the tasks widget (mark done / edit) instead of dropping the user into the task list to search again; the meal row needs no special path, because /meals already scrolls today's slot into view. Dashboard content also refreshes silently when the tab becomes visible again and every 15 minutes while it stays visible - a wall tablet shows the evening's truth, not the morning's.
+- **The dashboard cockpit now tells the day instead of summarizing modules.** "Heute wichtig" was three module aggregates (one task, one count, one meal); it is now a chronological day program: today's remaining appointments with their time, tasks due today ("by 17:00", overdue first), the next planned meal, and open shopping as a timeless closing row - each row carrying its module seal and, where someone is assigned, the member's avatar, plus the object id as an anchor for future deep links. An empty day finally answers instead of disappearing: "Free today" or "All done for today", with the next upcoming appointment as an outlook, and a complete program closes with "Nothing else today". The weather moved from a card into a quiet line under the greeting - the card stays available as a wall-tablet opt-in, and a visible weather card silences the masthead line. The family widget now shows per member what today holds (next appointment, open tasks counted server-side and visibility-filtered) instead of a member count that never changes. Saved layouts keep their exact view; only the author defaults changed.
+
+### Fixed
+
+- **The dashboard stops inventing deadlines and speaking in two tones.** A task due tomorrow with no set time no longer shows an invented "23:59" - that was the internal sort placeholder leaking into the UI as a deadline nobody set. The family card's seal now carries the same module tone as its hairline (contacts) instead of borrowing the settings gray from its "Manage" link, and the module hairline sits on every widget card instead of only on tall ones - a signal that appeared on one of five cards read as an accident, not a system.
+- **Dashboard accessibility and first-run copy.** The focus ring in "Heute wichtig" is no longer clipped by the list's rounded corners; the weather card carries a visually hidden heading, so screen-reader heading navigation finally reaches it; the pinned-notes widget puts only the visible excerpt into the DOM instead of the full note - screen readers read Wi-Fi passwords and school notes out loud while the eye saw two clamped lines; and the onboarding no longer describes the mobile bottom bar and swipe gestures to desktop users, nor calls the plus button a "FAB".
+
+## [2.3.0] - 2026-08-11
+
+### Added
+
+- **An idle wall tablet can show photos from Immich instead of a fixed dashboard.** A dashboard that never changes burns itself into the panel. An administrator connects the server under Settings -> Administration -> Immich, where the API key stays on Yuvomi's side and never reaches the browser, optionally limits the source to a single album, tests the connection and previews the result. After five minutes without input, photos rotate every 20 seconds until the next touch, pointer, key or scroll; the caption changes corners so the protection does not introduce a bright fixed area of its own. `IMMICH_URL`, `IMMICH_API_KEY` and `IMMICH_SCREENSAVER_ALBUM_ID` set the same values and take precedence over the database. (#693)
+- **Income categories can carry subcategories too.** They were an expense-only concept, so "Salary" could not be broken down into monthly pay, overtime and bonus the way "Groceries" could be broken down. Both types now behave the same, and the subcategory field sits directly under the category in the entry form instead of below the fold under "Advanced". (#691)
+- **Tandoor as a second recipe source, next to Mealie.** Adding a recipe mirror under Settings -> Kitchen now starts with the question which server it is. Tandoor recipes land in the same list as Mealie and native ones, with their own source badge, and get the same read-only mirroring, thumbnail proxy and meal-plan integration. (#530)
+
+### Changed
+
+- **The Mealie mirror from v1.73.0 is now provider-neutral.** `mealie_accounts` became `recipe_provider_accounts` with a `provider` column, and one shared adapter interface replaced the Mealie-only client, mirroring how document storage already handles Paperless and Papra. A third provider needs an adapter, not another copy of the sync, route and frontend logic. Existing Mealie accounts notice nothing: the migration renames tables and columns in place, no data moves. The API path `/api/v1/mealie` is now `/api/v1/recipe-providers`, which matters only for anything calling it directly with an API token. (#530)
+
+### Fixed
+
+- A Tandoor sync stopped after the first page when Tandoor sat behind a reverse proxy that rewrites its own URLs in the paging links. (#530)
+- **Installing the app worked again behind an authenticating reverse proxy.** A `<link rel="manifest">` is fetched with credentials omitted by default, even same-origin, so Cloudflare Access, Authelia, Authentik or basic auth answered it with their login page instead of the manifest. Without a valid manifest the browser never offers installation: the button under Settings -> Personal -> This device stayed disabled and the install banner never appeared, while every other page behaved normally and hid the cause. The manifest link now carries `crossorigin="use-credentials"`. Installations without a proxy are unaffected. (#715)
+
+### Security
+
+- Recipe provider sync (Mealie and Tandoor) goes through the same SSRF-hardened HTTP client as calendar subscriptions and document storage. **This needs an action from anyone whose Mealie sits on a Docker-internal or LAN-only address**, which is the common case: that target is now refused, and the account shows "URL resolves to a private IP address" as its last sync error until `RECIPE_PROVIDER_ALLOW_PRIVATE_NETWORK=true` is set in the environment. Mirrored recipes already in the database are untouched while the sync is refused. (#530)
+- Tandoor's thumbnail proxy no longer follows an image URL to a host outside the configured account. Tandoor names the image host in its own API response, and the server attached the account's Bearer token to whatever it named - any household member viewing a mirrored recipe could have made the server send that token elsewhere. (#530)
+
+## [2.2.3] - 2026-08-11
+
+### Changed
+
+- **The shopping list no longer names the selected list twice.** Its name stood in the list picker as the active chip and again as a heading right below it, with a rename pencil and a menu. The chip is the title now; rename, "From meal plan", "Manage categories" and "Delete list" moved into a menu at the trailing end of the chip row, on every screen width. That gives the items about 64 px more room on a phone - the route now uses 64% of the screen for content where it used 53%, level with tasks and budget.
+- The second colour of the budget charts moves from teal to petrol. It was the exact tone the budget itself wears, so an account coloured "Teal" was indistinguishable from the module around it. Existing accounts and categories keep their choice and simply render in the new tone.
+
+## [2.2.2] - 2026-08-11
+
+### Changed
+
+- Updated the production dependencies: `better-sqlite3-multiple-ciphers` to 13, plus `express-rate-limit`, `nodemailer` and `googleapis`. The database binding is now a Node-API build that ships its own prebuilt binaries, so the Docker image neither downloads nor compiles one. The development-only `puppeteer` moved along with them, and the `allowScripts` build-script pins were realigned to match. (#720, #721)
+- `package-lock.json` now carries a download URL and an integrity hash for every entry. 184 of 238 had neither, which left `npm ci` with nothing to verify what it had downloaded against. (#725)
+- Dependabot no longer proposes Node major versions for the Docker image. Those stay manual until a new line reaches LTS, so an install never moves from a supported Node to a short-lived one on its own. (#724)
+
+## [2.2.1] - 2026-08-11
+
+### Added
+
+- **Portainer install guide**, for both a pasted stack and a Git/GitOps stack. Portainer never places a `.env` next to the compose file, so a stack manifest has to list every variable explicitly - `docs/docker-compose.portainer.yml` does, and a Git stack should point its compose path at it.
+
+### Fixed
+
+- **Yuvomi kept a browser's GPU busy while nothing was happening.** The tinted shapes drifting behind the interface carried their blur on the same element that moved, so the browser re-rendered that blur on every single frame - for as long as the page stayed open. Measured on an idle dashboard, the app now holds 60 frames per second where it managed about 20, and a laptop no longer heats up with Yuvomi merely open in a tab.
+- **A red "unexpected error" appeared when the app started.** Behind it was a browser notice about layout measurements being delivered one frame later - routine, not a fault, and nothing was ever broken by it.
+- Deploying from a Git-managed stack (Portainer, Komodo, Dockge) no longer fails with `env file .env not found`. The repository's `docker-compose.yml` is written for a local clone with a generated `.env` beside it; a missing one is now tolerated instead of aborting the deployment.
+
+## [2.2.0] - 2026-08-10
+
+### Changed
+
+- **The app has one colour again.** The violet of the app icon carries the navigation, the add button, buttons, switches, links and focus rings - in every module, the same. Module colours stay where they answer "where am I": the badge in the module header, the module's own bars and chips, its widget on the dashboard, its icon in the sidebar. Opening the budget no longer repaints the whole frame teal.
+- **Warmer surfaces in both themes.** The page background moves from a cool grey to warm paper in light mode, and from near-black to warm charcoal in dark mode, where cards now separate visibly from the background instead of floating on it.
+- **The add button sits inside the navigation bar** on phones and tablets, at its trailing end, instead of floating above it. On pages without an add action the bar uses the full width.
+- The sidebar shows every module's icon in its own colour, so the colour vocabulary is legible in one place instead of being worn by the whole app.
+- The calendar's colour moves from violet to azure - next to a violet app colour, the two were the same tone.
+- Tab bar labels are one step smaller (the size iOS itself uses for them), so the longest German label fits on one line down to 360 px wide.
+- **The search in list modules collapses to its icon on phones**, as it already did in short windows. One header row instead of two.
+- Filters and grouping share a single row in tasks and documents instead of wrapping onto two; the grouping choice shows its icons when the row gets narrow.
+
+### Fixed
+
+- **Phones lost up to three quarters of the screen to interface chrome.** On a 375x812 phone the task list left 210 px for content and now leaves 507 px; the budget goes from 329 to 514 px, shopping from 244 to 429, recipes from 413 to 598.
+- The add button reserved a full-width strip above the navigation on every screen - 92 px, whether or not anything lay underneath it.
+- The install banner sat 8 px inside the navigation bar instead of above it.
+
+## [2.1.0] - 2026-08-10
+
+### Added
+
+- **Module seal** — a circular, tinted chip with the module's icon, derived from the brand mark. It names where an object comes from wherever modules are mixed (global search, "Today", dashboard widget headers, the "More" list) and stands exactly once per module head as its sender.
+- **Overlap mark** — an avatar overlapping the seal in "Today", so an entry says not only which module it comes from but whom it concerns. It appears only when the entry carries a person and the household has more than one member.
+- **Solo households** are recognised automatically. With exactly one member, the family widget, the visibility field and "assigned to" disappear from the interface; entries keep their stored values, and the fields return as soon as a second member joins.
+
+### Changed
+
+- Module colours come from **nine colour families** instead of eighteen individual tints. Modules of the same life domain (kitchen, money, people …) share one tone and are told apart by their icon; two colliding pairs disappear as a result.
+- **System notifications name their module in the title** — "Calendar", "Tasks", "Subscriptions", "Medication" instead of "Yuvomi" — and tapping one now opens that module instead of the dashboard.
+- The **task form** shows title and note, with everything else behind "More settings", whose summary names what it holds ("Urgent · Finances · 5 points"). Every field in the form is the same height.
+- The **dashboard greeting uses the first name** only, so it no longer wraps to a second line on phones.
+- **Short viewports** (a laptop at 200 % browser zoom, a phone in landscape, a split-screen tablet) get a single-row module header, so content is visible instead of chrome.
+- Widget titles on the dashboard are **headings**, and the "All" jumps are links — they can be opened in a new tab and are announced with their module name.
+- Pinned notes on the dashboard and the recipe rail in the meal plan follow the shared row-list pattern instead of stacking one card per row.
+
+### Fixed
+
+- The install banner **covered the add button** on every mobile screen, so the most frequent action failed silently on first launch.
+- In the budget, **red meant two opposite things**: spending less than last month was flagged like an overrun. Colour now shows whether a change is good or bad, the arrow shows its direction, and the category chart mirrors income and expenses around a shared axis.
+- **In-app reminders did not appear at all** since v0.52.15 — they were looking for a toast container that had been split in two and renamed.
+- The **large title vanished while scrolling** instead of collapsing; the docked bar now names the module.
+- At 200 % browser zoom, **the task list showed no task at all**.
+- Task titles, the sidebar toggle and other single targets were **smaller than they needed to be**, even where their surroundings left room.
+- Reward progress bars were **invisible to screen readers**; they now announce their value ("37 of 60 points").
+- Metric rows in health, budget and housekeeping had their **numbers on different lines** despite equal tile heights.
+- Em dashes in the interface text of all 24 languages are now hyphens, as the project's own style requires.
+
+## [2.0.1] - 2026-08-10
+
+### Changed
+
+- The setup wizard follows the redesigned app. It already borrowed the app's design tokens, so in normal use it looked current, but the colours it falls back on when those tokens cannot be loaded still described the previous release: a packaging or volume mistake produced a page that looked like the old version and pointed the diagnosis in the wrong direction. The tinted wash across the top is gone as well, for the same reason the login screen lost it - the mark is carried by the tile, not by the backdrop
+
+### Fixed
+
+- On the overview, the quick-action button behaved unlike the one in every other module. It slid out of sight whenever you scrolled down and only came back on the way up, which meant a single downward nudge you never made - an address bar sliding out on iOS, a widget growing as its data arrived - could take the button away and leave it away. It was also the last floating button still living inside the scrolling area, the arrangement that made it drift off screen on iPhone in the first place (#634). It now sits in the same place as every other module's button, keeps still while you scroll, and the room reserved for it below the last row comes from the same measurement the rest of the app uses, so the button can no longer cover a link at the bottom of a widget
+- The error panel in Settings, the one that appears when a page cannot load and offers to try again, printed its message and its button in tones that fell short of the contrast requirement against their own red tint, at 4.45:1 and 4.16:1. Both now use the darker ink tone the app already used on every other tinted surface, and the retry button belongs to the message it sits in rather than borrowing the module's colour
+
+## [2.0.0] - 2026-08-09
+
+### Changed
+
+- The whole interface has been redesigned in Apple's Human Interface Guidelines and its liquid-glass design language. Yuvomi should now feel like an app that shipped with the device: the system font stack and Apple's type scale, cool system neutrals, capsule controls and inset-grouped lists. Glass is chrome and nothing else - the tab bar, the sidebar, sheets and the action button are made of it, while everything you actually read sits on an opaque surface. Each of the seventeen modules keeps its own accent colour so you can tell at a glance where you are, and all of them were verified against the surfaces they are used on: WCAG AA in light *and* dark, with the same values holding under reduced transparency and increased contrast. On phones the module title now starts as a large title and collapses into the bar as you scroll, the way it does elsewhere on the platform. Nothing about your data, your household or your integrations changes
+- The same swipe now means the same thing in every list. Until now only the shopping list and tasks answered a swipe at all, and they disagreed: swiping right checked off a shopping item but opened a task for editing. The start of the row now always carries the positive action and the end the destructive or secondary one, so **tasks and the shopping list have swapped sides** - a swipe that used to open a task now completes it. Because this is muscle memory, a one-time hint appears the first time you complete a swipe after updating. **Birthdays and subscriptions gained the two gestures**, which they never had: in birthdays a swipe towards the start of the row edits and one towards the end deletes, with the same five-second undo the delete button already offered; in subscriptions the pair replaces four buttons per row. The rule assigns a rank rather than a fixed role, which is why editing sits at the end in tasks and at the start in birthdays: it is the secondary action where a positive one stands beside it, and the primary one where none does
+
+### Fixed
+
+- Printing from a device in dark mode produced an unreadable page. The print stylesheet forced text to black but only recoloured the page body, so every surface underneath kept its dark theme colour - the result was black ink on a black background, measured at 1.06:1 on module titles and 1.23:1 inside cards, across eleven of the sixteen routes measured. Both dark-mode sources now apply to screens only, so a printout always uses the light palette regardless of the theme you are working in. Light mode was never affected
+- Swiping to delete a shopping item removed it immediately and for good: no undo, no confirmation, and the row flew out as if the job were done. It was the only gesture in the app that destroyed data without a way back, which is exactly the trap for anyone who learned the same gesture as harmless in tasks or birthdays. Deleting by gesture now goes through the same undoable path the row button already used
+- The shopping list ignored swipes entirely until something rebuilt it. Opening the page gave you rows that answered no gesture at all; they only started working after you added an item, checked one off with the button, or switched lists. This had been the case since the gesture was introduced
+- Screen readers announced every subscription row as just "Edit, button". The row body wraps all of its content - name, description, status, due date, billing cycle, payment method, amount - and carried an edit label that replaced that content instead of adding to it. The row now announces what it contains, with the action named at the end
+- A number of colours that were readable in light mode failed the contrast requirement in dark mode, among them the hover states of the semantic colours, several module accents on tinted backgrounds, and icon-only buttons that fell back to the browser's default text colour instead of inheriting their own
+- On a touch device, the edit and delete buttons in birthdays and subscriptions were not merely hidden but removed: with the swipe gestures carrying those two actions, the buttons were taken out of the focus order and out of the screen reader tree as well. Since the gestures are touch-only and the rows themselves carry no action, anyone driving a phone or tablet by keyboard, switch control or VoiceOver could no longer edit or delete an entry at all. The buttons now step out of the way visually but stay reachable, and come back on focus
+- Deleting a contact or a document from its context menu was announced in a red that fell just short of the contrast requirement while the row was highlighted, at 4.45:1 against the tinted background. Both now use the darker ink tone the rest of the app already used on tinted surfaces
+- In Arabic and Persian, every horizontally scrolling bar faded the wrong edge: the filter rows in tasks, the budget tabs and the meal week all dimmed the chips you could see while cutting off the ones you could not. The scroll position was measured in a way that never reported "there is more at the start" in a right-to-left layout, and the fade itself had a fixed physical direction
+- During a swipe, the coloured action panel behind the row briefly turned into a plain surface, and the moving row lost the backing that keeps its text off the panel underneath
+- In the installed app, choosing a theme that disagreed with the system left the status bar in the other one: dark mode on a light phone kept a light bar above a dark page, and the reverse for light mode on a dark phone. The status bar now follows your choice, and only falls back to the system setting when the theme is set to automatic
+- On pantry and shopping, swiping a filter row or list tab sideways popped the page header back open even though the list underneath was still scrolled, and it stayed open until the next vertical scroll
+- Navigating between modules left one observer behind per page header, attached to a header that no longer existed
+- Undoing a deletion in the shopping list acted on whichever list you happened to be looking at, not the one the item came from. Switching lists inside the five-second window put the restored item into the wrong list and miscounted both tabs; deleting all checked items was worse, because the deletion itself was sent five seconds later to the list open at that moment, clearing a list you never asked to clear. Both now stay with the list the action started in
+- The offline page had the same status bar mismatch as the app, and no way to correct it after the fact
+
 ## [1.87.0] - 2026-08-06
 
 ### Added

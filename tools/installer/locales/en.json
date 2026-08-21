@@ -10,7 +10,8 @@
     "toggleVisibility": "Show or hide value",
     "copy": "Copy",
     "copied": "Copied ✓",
-    "language": "Language"
+    "language": "Language",
+    "copyRedirect": "Copy redirect URI"
   },
   "config": {
     "title": "Basic Configuration",
@@ -22,7 +23,11 @@
     "tzLabel": "Timezone",
     "errHost": "Invalid hostname. Use only letters, digits, hyphens and dots.",
     "errPort": "Invalid port. Must be a number between 1 and 65535.",
-    "prereqMissing": "Missing prerequisites: {{list}}. Please install them and reload this page."
+    "prereqMissing": "Missing prerequisites: {{list}}. {{link}} shows how to install them.",
+    "prereqLinkDocker": "The Docker guide",
+    "prereqLinkCompose": "The podman-compose guide",
+    "prereqRecheck": "Check again",
+    "errSecureOverHttp": "The public address starts with http://, but this choice enforces secure cookies - nobody can sign in that way. Pick \"Direct access\" or use an https:// address."
   },
   "secrets": {
     "title": "Security Keys",
@@ -96,7 +101,17 @@
     "webdavBackup": "Off-site backups",
     "on": "enabled",
     "off": "disabled",
-    "documentGoogleDrive": "Google Drive documents"
+    "documentGoogleDrive": "Google Drive documents",
+    "sessionSecret": "Session key",
+    "dbKey": "Database key",
+    "keyGenerated": "Newly generated",
+    "keyPreserved": "Existing key is kept",
+    "dataDir": "Data folder",
+    "privateNetwork": "Private-network access",
+    "privateNetworkIcs": "Calendar subscriptions",
+    "privateNetworkRecipes": "Recipes",
+    "privateNetworkWebdav": "WebDAV documents",
+    "baseUrl": "Public address"
   },
   "docker": {
     "title": "Starting Yuvomi",
@@ -139,16 +154,26 @@
     "open": "Open Yuvomi →",
     "backupReminder": "Remember to back up your .env file now - it holds your keys.",
     "download": "Download .env file",
-    "savedTo": "Saved to {{path}}"
+    "savedTo": "Saved to {{path}}",
+    "downloadFailed": "The file could not be loaded - the installer has most likely shut down already. Your keys are in the .env file on your server.",
+    "serverStops": "The installer shuts down a few minutes from now. Download the file before you close this tab.",
+    "nextTitle": "Next up",
+    "nextInvite": "Invite your family",
+    "nextInviteDesc": "Create invitation links so everyone picks their own password.",
+    "nextModules": "Choose your modules",
+    "nextModulesDesc": "Turn on what your household actually uses and hide the rest.",
+    "nextInstall": "Install it on your phones",
+    "nextInstallDesc": "Open Yuvomi on a phone and add it to the home screen - it works offline.",
+    "subtitleExisting": "Yuvomi is running. This installation already has an administrator account - sign in with your existing credentials."
   },
   "advanced": {
     "tag": "Advanced · optional",
     "title": "Advanced Settings",
-    "subtitle": "Reverse proxy, single sign-on and automatic backups. All optional - skipping is safe.",
+    "subtitle": "Single sign-on, access to your home network, and a few fine adjustments. All optional.",
     "proxyLabel": "How is Yuvomi exposed?",
     "proxyBehindHttps": "Behind a reverse proxy with HTTPS (Caddy, nginx, Traefik)",
     "proxyDirect": "Direct access over localhost / HTTP",
-    "proxyHint": "When unsure choose “Reverse proxy”: it enforces secure cookies. Pick “Direct” only for local HTTP access without HTTPS.",
+    "proxyHint": "Pick \"Direct access\" if you open Yuvomi over http:// - otherwise you cannot sign in. Behind a reverse proxy with HTTPS, pick the first option.",
     "oidc": "Single Sign-On (OIDC)",
     "oidcHint": "Fill in all four fields to enable SSO, or leave them empty.",
     "oidcIssuerLabel": "Issuer URL",
@@ -173,8 +198,7 @@
     "documentLocalEnable": "Store new documents in a local folder",
     "documentLocalPathLabel": "Folder path",
     "documentLocalPathHint": "Path inside the container. Leave empty to use /documents.",
-    "sectionNetwork": "Networking",
-    "sectionIntegrations": "Integrations & backups",
+    "sectionIntegrations": "Single sign-on",
     "errSchedule": "Invalid cron schedule (expected five space-separated fields, e.g. 0 2 * * *).",
     "errKeep": "Backups to keep must be a positive number.",
     "webdavBackup": "Off-site Backups (WebDAV)",
@@ -206,8 +230,17 @@
     "documentWebdavPrivateNetworkHint": "Needed for a Nextcloud on your own network. Lifts the SSRF protection for this target.",
     "icsPrivateNetwork": "Allow calendar subscriptions from your home network",
     "icsPrivateNetworkHint": "Needed for ICS feeds from devices on your own network. Lifts the SSRF protection for calendar subscriptions.",
+    "recipeProviderPrivateNetwork": "Allow recipe provider mirrors on your home network",
+    "recipeProviderPrivateNetworkHint": "Needed for a Mealie or Tandoor instance on your own network. Lifts the SSRF protection for recipe provider mirrors.",
     "oidcTrustEmail": "Trust email without a verified claim",
-    "oidcTrustEmailHint": "Only enable this if your provider does not send email_verified and you trust it."
+    "oidcTrustEmailHint": "Only enable this if your provider does not send email_verified and you trust it.",
+    "baseUrlLabel": "Public address",
+    "baseUrlHint": "The address your family opens Yuvomi at - not the container's host and port. Used for password reset and invitation links.",
+    "syncIntervalLabel": "Calendar sync interval (minutes)",
+    "syncIntervalHint": "How often Yuvomi syncs calendars and contacts. Raise it if your provider rate-limits you.",
+    "errSyncInterval": "Enter a positive whole number of minutes.",
+    "sectionPrivateNetwork": "Access to your home network",
+    "privateNetworkHint": "Yuvomi refuses connections to addresses on your own network by default, which protects against a server being tricked into reaching internal services. Enable what you actually run at home."
   },
   "welcome": {
     "title": "Welcome to Yuvomi",
@@ -218,7 +251,9 @@
     "simpleTime": "About 2 minutes",
     "advancedTitle": "Advanced setup",
     "advancedDesc": "Full control: reverse proxy, calendar sync, email, single sign-on and backups.",
-    "advancedTime": "Every option, step by step"
+    "advancedTime": "Every option, step by step",
+    "existingLocked": "An existing installation was detected. Continue with the advanced setup so your current settings are kept.",
+    "containerRunning": "Yuvomi is currently running. Saving will restart the container, so it will be briefly unavailable."
   },
   "simple": {
     "title": "Ready to go",
@@ -250,5 +285,11 @@
     "fromHint": "The \"from\" address recipients will see. Many providers require it to match your username.",
     "fromNameLabel": "Sender name",
     "errIncomplete": "SMTP server and sender address are required."
+  },
+  "storage": {
+    "title": "Storage & backups",
+    "subtitle": "Where your data lives on the server, and where copies of it go. All optional - the defaults work.",
+    "sectionBackups": "Backups",
+    "sectionDocuments": "Document storage"
   }
 }

@@ -71,7 +71,7 @@ router.get('/:id', (req, res) => {
 // Neuen Termin anlegen.
 // Body: { title, description?, start_datetime, end_datetime?,
 //         all_day?, location?, color?, icon?, assigned_to?,
-//         recurrence_rule? }
+//         recurrence_rule?, countdown? }
 // Response: { data: Event }
 // --------------------------------------------------------
 router.post('/', async (req, res) => {
@@ -133,8 +133,9 @@ router.post('/', async (req, res) => {
            location, color, icon, assigned_to, created_by, recurrence_rule,
            attachment_name, attachment_mime, attachment_size, attachment_data, attachment_document_id,
            target_caldav_account_id, target_caldav_calendar_url, target_google_calendar_id,
-           target_outlook_account_id, target_outlook_calendar_id, visibility)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           target_outlook_account_id, target_outlook_calendar_id, visibility,
+           countdown)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         vTitle.value, vDesc.value,
         vStart.value, vEnd.value,
@@ -151,7 +152,8 @@ router.post('/', async (req, res) => {
         vGoogle.value,
         vOutlook.value.accountId,
         vOutlook.value.calendarId,
-        normalizeVisibility(req.body.visibility)
+        normalizeVisibility(req.body.visibility),
+        req.body.countdown ? 1 : 0
       );
       setEventAssignments(db.get(), result.lastInsertRowid, userIds);
       return result.lastInsertRowid;
@@ -212,7 +214,18 @@ router.put('/:id', async (req, res) => {
     if (req.body.end_datetime   !== undefined) checks.push(datetime(req.body.end_datetime, 'Enddatum'));
     if (req.body.color          !== undefined) checks.push(color(req.body.color, 'Farbe'));
     if (req.body.location       !== undefined) checks.push(str(req.body.location, 'Ort', { max: MAX_TITLE, required: false }));
-    if (req.body.recurrence_rule !== undefined) checks.push(rrule(req.body.recurrence_rule, 'Wiederholung'));
+    // Der unveränderte Bestandswert kommt ohne Prüfung durch: Die Regel steht
+    // bereits so in der Datenbank, und der Validator kennt nur das Vokabular der
+    // eigenen Oberfläche (FREQ/INTERVAL/BYDAY/UNTIL/COUNT, ohne „RRULE:"-Präfix).
+    // Eine aus CalDAV eingelesene Serie trägt regelmäßig mehr als das - Präfix,
+    // WKST, BYMONTHDAY. Ohne diese Ausnahme scheiterte jede Änderung an einem
+    // anderen Feld (Zuweisung, Titel) an der Wiederholung, die der Nutzer gar
+    // nicht angefasst hat (#756). Geändert wird weiterhin nur, was der Validator
+    // zulässt.
+    if (req.body.recurrence_rule !== undefined
+        && req.body.recurrence_rule !== event.recurrence_rule) {
+      checks.push(rrule(req.body.recurrence_rule, 'Wiederholung'));
+    }
     // CalDAV-Ziel nur prüfen, wenn der Client es mitschickt; sonst bestehenden Wert behalten.
     const caldavProvided = req.body.target_caldav_account_id !== undefined
       || req.body.target_caldav_calendar_url !== undefined;
@@ -335,6 +348,12 @@ router.put('/:id', async (req, res) => {
             target_outlook_account_id  = ?,
             target_outlook_calendar_id = ?,
             visibility      = ?,
+            -- Anzeigeeinstellung, kein gespiegeltes Feld (#647): sie steht nicht
+            -- in MIRRORED_FIELDS und löst deshalb keinen Push aus. Wie bei den
+            -- Nachbarfeldern gilt „nicht mitgeschickt" als „nicht angefasst" -
+            -- das PUT eines Clients, der das Feld nicht kennt (Modul, ältere
+            -- App), darf eine gesetzte Markierung nicht stillschweigend löschen.
+            countdown       = ?,
             user_modified   = ?
         WHERE id = ?
       `).run(
@@ -361,6 +380,7 @@ router.put('/:id', async (req, res) => {
         req.body.visibility !== undefined
           ? normalizeVisibility(req.body.visibility, event.visibility)
           : event.visibility,
+        req.body.countdown !== undefined ? (req.body.countdown ? 1 : 0) : event.countdown,
         userModified,
         id
       );

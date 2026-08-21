@@ -15,7 +15,7 @@ import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
 import { resolveShoppingTarget, announceTransfer, mountMissingShoppingList } from '/utils/kitchen-transfer.js';
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
 import { addLocalDays, startOfLocalWeekKey, toLocalDateKey } from '/utils/date.js';
-import { normalizeRecipeMealTypes, recipeSupportsMealType } from '/utils/recipe-meal-types.js';
+import { normalizeRecipeMealTypes, recipeSupportsMealType, recipeAllowsMealType } from '/utils/recipe-meal-types.js';
 import { mountEmptyState, mountLoadError, emptyStateEl } from '/utils/empty-state.js';
 import { mealPayloadFromRecipe } from '/utils/recipe-to-meal.js';
 import { findPageFab } from '/utils/fab.js';
@@ -233,7 +233,7 @@ export async function render(container, { user }) {
           </button>
         </div>
         <div class="page-toolbar__actions">
-          <button class="week-nav__today" id="week-today">${t('meals.today')}</button>
+          <button class="btn btn--secondary week-nav__today" id="week-today">${t('meals.today')}</button>
           <!-- Nur Desktop: klappt die Rezept-Spalte weg, damit alle sieben
                Tagesspalten in voller Breite ins Board passen. -->
           <button class="btn btn--icon week-nav__rail-toggle" id="rail-toggle"
@@ -249,12 +249,12 @@ export async function render(container, { user }) {
         </div>
       </div>
       <div class="meals-layout">
-        <div class="week-grid" id="week-grid">
+        <div class="week-grid page-scrollport" id="week-grid">
           <div style="grid-column:1/-1">${renderSkeletonList({ rows: 5, lines: 2 })}</div>
         </div>
         <aside class="recipe-sidebar" id="recipe-sidebar"></aside>
       </div>
-      <button class="page-fab" id="fab-new-meal" aria-label="${t('meals.addMealTitle')}">
+      <button class="page-fab" id="fab-new-meal" aria-label="${t('meals.addMealTitle')}" data-dock-label="${t('newLabel.meals')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
@@ -538,17 +538,19 @@ function renderRecipeSidebar() {
     titleEl.textContent = recipe.title;
     card.appendChild(titleEl);
 
-    if (recipe.source === 'mealie') {
-      const sourceBadge = document.createElement('span');
-      sourceBadge.className = 'source-badge source-badge--mealie';
-      sourceBadge.textContent = t('recipes.sourceMealie');
-      if (recipe.mealie_account_name) sourceBadge.title = recipe.mealie_account_name;
-      card.appendChild(sourceBadge);
+    if (recipe.source !== 'native') {
+      const sourceBadgeEl = document.createElement('span');
+      sourceBadgeEl.className = `source-badge source-badge--${recipe.source}`;
+      sourceBadgeEl.textContent = t(`recipes.source${recipe.source[0].toUpperCase()}${recipe.source.slice(1)}`);
+      if (recipe.provider_account_name) sourceBadgeEl.title = recipe.provider_account_name;
+      card.appendChild(sourceBadgeEl);
     }
 
-    // Mahlzeiten-Chips nur bei echter Teilmenge: ein Rezept, das zu allen (oder
-    // keinem) Typ passt, trägt mit "überall"-Chips null Information und ist dann
-    // das lauteste Element der Karte (Audit P2, Muster wie recipes.js showBadges).
+    // Mahlzeiten-Chips nur bei echter Teilmenge: ein Rezept, das zu allen Typen
+    // passt, trägt mit "überall"-Chips null Information und ist dann das
+    // lauteste Element der Karte (Audit P2, Muster wie recipes.js showBadges).
+    // Der leere Fall ist seit #750 die Gegenprobe und keine Teilmenge mehr: Er
+    // sagt „nur von Hand", denn der Zufallsvorschlag übergeht dieses Rezept.
     const recipeTypes = normalizeRecipeMealTypes(recipe.meal_types);
     const allTypeOptions = recipeMealTypeOptions();
     if (recipeTypes.length && recipeTypes.length < allTypeOptions.length) {
@@ -562,6 +564,14 @@ function renderRecipeSidebar() {
           badge.textContent = option.label;
           types.appendChild(badge);
         });
+      card.appendChild(types);
+    } else if (!recipeTypes.length) {
+      const types = document.createElement('div');
+      types.className = 'recipe-sidebar__card-types';
+      const badge = document.createElement('span');
+      badge.className = 'meal-type-badge meal-type-badge--none';
+      badge.textContent = t('recipes.mealTypeNone');
+      types.appendChild(badge);
       card.appendChild(types);
     }
 
@@ -611,15 +621,20 @@ function renderSlot(date, type, mealsForDay, dayCol, typeRow) {
       ? `<span class="meal-card__recurrence" aria-label="${t('meals.recurrenceBadge')}"><i data-lucide="repeat-2" class="icon-sm" aria-hidden="true"></i></span>`
       : '';
 
+    // Die Karte ist bewusst KEIN Button: sie trägt Buttons und einen Link, und
+    // interaktiver Inhalt in einem Button ist invalides HTML - Screenreader
+    // verlieren dann die inneren Aktionen (Critique 2026-08-17). Das Öffnen
+    // gehört der Titelfläche; die Aktionen stehen daneben, nicht darin.
     return `
-      <div class="meal-card"
+      <div class="meal-card" data-meal-id="${meal.id}">
+        <button type="button" class="meal-card__open"
            data-action="edit-meal"
-           data-meal-id="${meal.id}"
-           role="button" tabindex="0">
-        <div class="meal-card__title"><span class="meal-card__title-text">${esc(meal.title)}</span>${recurrenceBadge}</div>
-        ${ingLabel ? `<div class="meal-card__meta">
-          <span class="meal-card__ingredients-count">${ingLabel}${esc(ingDoneLabel)}</span>
-        </div>` : ''}
+           data-meal-id="${meal.id}">
+          <span class="meal-card__title"><span class="meal-card__title-text">${esc(meal.title)}</span>${recurrenceBadge}</span>
+          ${ingLabel ? `<span class="meal-card__meta">
+            <span class="meal-card__ingredients-count">${ingLabel}${esc(ingDoneLabel)}</span>
+          </span>` : ''}
+        </button>
         <div class="meal-card__actions">
           ${meal.recipe_url ? `<a class="meal-card__action-btn meal-card__action-btn--recipe"
             data-action="open-recipe"
@@ -734,19 +749,14 @@ function wireGrid(grid) {
     }
   });
 
-  grid.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      const card = e.target.closest('[data-action="edit-meal"]');
-      if (card) { e.preventDefault(); card.click(); }
-    }
-  });
-
   grid.addEventListener('dragover', (e) => {
     if (!_dragRecipeId) return;
     const slot = e.target.closest('.meal-slot');
     if (!slot) return;
     const recipe = state.recipes.find((entry) => entry.id === _dragRecipeId);
-    if (!recipe || !recipeSupportsMealType(recipe, slot.dataset.type)) return;
+    // Ziehen ist eine Entscheidung des Nutzers, nicht der Automatik: ein Rezept
+    // ohne erklärte Mahlzeit bleibt hier ablegbar (#750, recipeAllowsMealType).
+    if (!recipe || !recipeAllowsMealType(recipe, slot.dataset.type)) return;
     e.preventDefault();
     clearRecipeDropTargets();
     slot.classList.add('meal-slot--drop-target');
@@ -760,7 +770,7 @@ function wireGrid(grid) {
     clearRecipeDropTargets();
     if (!slot) return;
     const recipe = state.recipes.find((entry) => entry.id === recipeId);
-    if (!recipe || !recipeSupportsMealType(recipe, slot.dataset.type)) return;
+    if (!recipe || !recipeAllowsMealType(recipe, slot.dataset.type)) return;
     e.preventDefault();
     const slotMeals = state.meals.filter((meal) => meal.date === slot.dataset.date && meal.meal_type === slot.dataset.type);
     if (slotMeals.length) {
@@ -1322,14 +1332,15 @@ function buildModalContent({ mode, date, mealType, meal }) {
   const hasIngOpen = isEdit && meal.ingredients?.some((i) => !i.on_shopping_list);
 
   const recipeOptionHtml = (r) => `<option value="${r.id}" ${isEdit && meal.recipe_id === r.id ? 'selected' : ''}>${esc(r.title)}</option>`;
-  // Optgroups nur, sobald Mealie-Rezepte wirklich vorkommen: ohne Mirror-
+  // Optgroups nur, sobald gespiegelte Rezepte wirklich vorkommen: ohne Mirror-
   // Account bleibt die flache Liste von vorher unverändert (kein UI-Rauschen).
-  const hasMirroredRecipes = state.recipes.some((r) => r.source === 'mealie');
+  const hasMirroredRecipes = state.recipes.some((r) => r.source !== 'native');
+  const mirroredSources = [...new Set(state.recipes.map((r) => r.source).filter((s) => s !== 'native'))].sort();
   const recipeOptions = hasMirroredRecipes
     ? [
       `<option value="">${t('meals.savedRecipePlaceholder')}</option>`,
-      `<optgroup label="${esc(t('recipes.sourceNative'))}">${state.recipes.filter((r) => r.source !== 'mealie').map(recipeOptionHtml).join('')}</optgroup>`,
-      `<optgroup label="${esc(t('recipes.sourceMealie'))}">${state.recipes.filter((r) => r.source === 'mealie').map(recipeOptionHtml).join('')}</optgroup>`,
+      `<optgroup label="${esc(t('recipes.sourceNative'))}">${state.recipes.filter((r) => r.source === 'native').map(recipeOptionHtml).join('')}</optgroup>`,
+      ...mirroredSources.map((s) => `<optgroup label="${esc(t(`recipes.source${s[0].toUpperCase()}${s.slice(1)}`))}">${state.recipes.filter((r) => r.source === s).map(recipeOptionHtml).join('')}</optgroup>`),
     ].join('')
     : [
       `<option value="">${t('meals.savedRecipePlaceholder')}</option>`,

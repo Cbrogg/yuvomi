@@ -14,11 +14,13 @@ import { createLogger } from './logger.js';
 import * as db from './db.js';
 import { router as authRouter, sessionMiddleware, requireAuth, requireAdmin } from './auth.js';
 import { csrfMiddleware } from './middleware/csrf.js';
+import idempotencyMiddleware from './middleware/idempotency.js';
 import { buildOpenApiSpec } from './openapi.js';
 import * as googleCalendar from './services/google-calendar.js';
 import * as appleCalendar from './services/apple-calendar.js';
 import * as icsSubscription from './services/ics-subscription.js';
 import * as icsExport from './services/ics-export.js';
+import * as inventoryDeadlinesIcs from './services/inventory-deadlines-ics.js';
 import * as caldavReminders from './services/caldav-reminders-sync.js';
 import * as caldavSync from './services/caldav-sync.js';
 import * as outlookCalendar from './services/outlook-calendar.js';
@@ -28,7 +30,7 @@ import { startScheduler as startBackupScheduler } from './services/backup-schedu
 import { startScheduler as startSplitExpenseScheduler } from './services/split-expenses-scheduler.js';
 import { startScheduler as startPushScheduler } from './services/push-scheduler.js';
 import { startScheduler as startMedicationScheduler } from './services/medication-scheduler.js';
-import { startScheduler as startMealieScheduler } from './services/mealie-sync.js';
+import { startScheduler as startRecipeProviderScheduler } from './services/recipe-provider-sync.js';
 import { emailService } from './services/email.js';
 import dashboardRouter from './routes/dashboard.js';
 import tasksRouter from './routes/tasks.js';
@@ -36,6 +38,7 @@ import shoppingRouter from './routes/shopping.js';
 import mealsRouter from './routes/meals.js';
 import recipesRouter from './routes/recipes.js';
 import pantryRouter from './routes/pantry.js';
+import inventoryRouter from './routes/inventory/index.js';
 import kitchenRouter from './routes/kitchen.js';
 import calendarRouter from './routes/calendar.js';
 import notesRouter from './routes/notes.js';
@@ -46,11 +49,13 @@ import budgetRouter from './routes/budget.js';
 import subscriptionsRouter from './routes/subscriptions.js';
 import documentsRouter from './routes/documents.js';
 import googleDriveStorageRouter from './routes/document-storage-google-drive.js';
+import { checkLocalStorageMount } from './services/document-storage.js';
 import dmsRouter from './routes/dms.js';
-import mealieRouter from './routes/mealie.js';
+import recipeProvidersRouter from './routes/recipe-providers.js';
 import splitExpensesRouter from './routes/split-expenses.js';
 import weatherRouter from './routes/weather.js';
 import preferencesRouter from './routes/preferences.js';
+import screensaverRouter from './routes/screensaver.js';
 import remindersRouter from './routes/reminders.js';
 import searchRouter from './routes/search.js';
 import familyRouter from './routes/family.js';
@@ -66,6 +71,7 @@ import permissionsRouter from './routes/permissions.js';
 import changelogRouter from './routes/changelog.js';
 import mcpRouter from './mcp/server.js';
 import { moduleForPath, requiredAccess, tokenAllows } from './scopes.js';
+import { moduleAccessVerdict, MODULE_ACCESS_DENIED, MODULE_ACCESS_READ_ONLY } from './permissions.js';
 
 const log     = createLogger('Server');
 const logSync = createLogger('Sync');
@@ -296,8 +302,10 @@ app.get('/manifest.webmanifest', apiLimiter, (req, res) => {
     display: 'standalone',
     display_override: ['standalone', 'minimal-ui'],
     orientation: 'portrait-primary',
-    theme_color: '#007AFF',
-    background_color: '#F5F5F7',
+    // Muss mit public/manifest.json und den theme-color-Metas in index.html
+    // zusammenbleiben: der App-Grund (#F5F3ED = --neutral-100, warmes Papier).
+    theme_color: '#F5F3ED',
+    background_color: '#F5F3ED',
     lang: 'de-DE',
     categories: ['productivity', 'lifestyle'],
     icons: [
@@ -346,6 +354,25 @@ app.get('/feed/calendar/:token.ics', feedLimiter, (req, res) => {
   }
 });
 
+// Eigenständiger Feed für Inventar-Garantiefristen (Stufe 4) - getrennt vom
+// Haushaltskalender-Feed oben, siehe server/services/inventory-deadlines-ics.js.
+app.get('/feed/inventory-deadlines/:token.ics', feedLimiter, (req, res) => {
+  try {
+    // Auflösen statt nur prüfen, wie beim Kalender-Feed oben: das Token gehört
+    // einem Nutzer, damit es einzeln zurückziehbar ist. In den Feed-Inhalt geht
+    // die Id nicht ein - Inventar ist Haushaltseigentum ohne Sichtbarkeitsachse.
+    const userId = inventoryDeadlinesIcs.findUserIdByFeedToken(db.get(), req.params.token);
+    if (!userId) return res.status(404).type('text/plain').send('Not found');
+    const ics = inventoryDeadlinesIcs.buildInventoryDeadlinesFeed(db.get());
+    res.set('Cache-Control', 'private, no-store');
+    res.set('Content-Disposition', 'inline; filename="yuvomi-inventory-deadlines.ics"');
+    res.type('text/calendar; charset=utf-8').send(ics);
+  } catch (err) {
+    log.error('', err);
+    res.status(500).type('text/plain').send('Internal error');
+  }
+});
+
 // MCP-Endpoint (Streamable HTTP, stateless): Auth über bestehende Bearer-API-Tokens.
 // Eigener Namespace außerhalb von /api/v1 → kein CSRF, kein Guest-Guard.
 app.use('/mcp', apiLimiter, requireAuth, mcpRouter);
@@ -364,9 +391,9 @@ app.use('/api/v1', (req, res, next) => {
       || req.path === '/auth/logout'
       || req.path === '/version';
     if (allowed) return next();
-    return res.status(403).json({ error: 'This account can only access Split expenses.', code: 403 });
+    return res.status(403).json({ error: 'This account can only access Shared expenses.', code: 403 });
   } catch {
-    return res.status(403).json({ error: 'This account can only access Split expenses.', code: 403 });
+    return res.status(403).json({ error: 'This account can only access Shared expenses.', code: 403 });
   }
 });
 // Token-Scopes: Nur für Token-Auth relevant. Ein gescoptes Token (scopes !== null)
@@ -387,27 +414,34 @@ app.use('/api/v1', (req, res, next) => {
 // erreichbar, damit die App bedienbar bleibt. Admins haben sessionModuleAccess
 // === null (Bypass), ebenso unbeschränkte Mitglieder (Fast-Path).
 app.use('/api/v1', (req, res, next) => {
-  const access = req.sessionModuleAccess;
-  if (!access) return next();
-  const moduleKey = moduleForPath(req.path);
-  if (!moduleKey || !(moduleKey in access)) return next();
-  const level = access[moduleKey];
-  if (level === 'none') {
+  // Die Regel selbst steht in permissions.js — dieselbe Funktion prüft den
+  // MCP-Endpoint (#823), damit beide Oberflächen nicht auseinanderlaufen.
+  const verdict = moduleAccessVerdict(
+    req.sessionModuleAccess,
+    moduleForPath(req.path),
+    requiredAccess(req.method),
+  );
+  if (verdict === MODULE_ACCESS_DENIED) {
     return res.status(403).json({ error: 'You do not have access to this module.', code: 403 });
   }
-  if (level === 'read' && requiredAccess(req.method) === 'write') {
+  if (verdict === MODULE_ACCESS_READ_ONLY) {
     return res.status(403).json({ error: 'You have read-only access to this module.', code: 403 });
   }
   return next();
 });
 app.use('/api/v1', csrfMiddleware);
+// Retry-Sicherheit für schreibende Aufrufer (#822): greift nur, wenn ein
+// `Idempotency-Key` mitkommt, und liegt hinter Auth, Scopes und CSRF - ein
+// abgewiesener Aufruf darf keinen Schlüssel verbrauchen.
+app.use('/api/v1', idempotencyMiddleware);
 app.use('/api/v1/dashboard', dashboardRouter);
 app.use('/api/v1/tasks', tasksRouter);
 app.use('/api/v1/shopping', shoppingRouter);
 app.use('/api/v1/meals', mealsRouter);
 app.use('/api/v1/recipes', recipesRouter);
-app.use('/api/v1/mealie', mealieRouter);
+app.use('/api/v1/recipe-providers', recipeProvidersRouter);
 app.use('/api/v1/pantry', pantryRouter);
+app.use('/api/v1/inventory', inventoryRouter);
 // Kreislauf-Zustand der vier Küchen-Tabs in einer Abfrage (utils/kitchen-tabs.js).
 app.use('/api/v1/kitchen', kitchenRouter);
 app.use('/api/v1/calendar', calendarRouter);
@@ -423,6 +457,7 @@ app.use('/api/v1/documents', documentsRouter);
 app.use('/api/v1/split-expenses', splitExpensesRouter);
 app.use('/api/v1/weather', weatherRouter);
 app.use('/api/v1/preferences', preferencesRouter);
+app.use('/api/v1/screensaver', screensaverRouter);
 app.use('/api/v1/reminders', remindersRouter);
 app.use('/api/v1/search', searchRouter);
 app.use('/api/v1/family', familyRouter);
@@ -531,12 +566,17 @@ app.listen(PORT, () => {
     logSync.info(`Auto-sync active every ${SYNC_INTERVAL_MS / 60_000} minutes.`);
   }, 10_000);
 
+  // Ein fehlender Mount fuer die lokale Dokumentablage faellt sonst erst auf,
+  // wenn die Dateien nach einem Update verschwunden sind (#751).
+  checkLocalStorageMount(createLogger('DocumentStorage'))
+    .catch((err) => log.error('Document storage check failed:', err.message));
+
   // Backup-Scheduler starten
   startBackupScheduler();
   startSplitExpenseScheduler();
   startPushScheduler();
   startMedicationScheduler();
-  startMealieScheduler();
+  startRecipeProviderScheduler();
 });
 
 export default app;

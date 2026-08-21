@@ -10,16 +10,18 @@ import { openModal as openSharedModal, closeModal, confirmOverModal, advancedSec
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { wireTablist } from '/utils/tablist.js';
-import { t, formatDate, getLocale, getNumberFormat } from '/i18n.js';
+import { t, formatDate, formatDayMonth, getLocale, getNumberFormat } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { render as renderSplitExpenses } from '/pages/split-expenses.js';
 import { openSubscriptionModal, render as renderSubscriptions } from '/pages/subscriptions.js';
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
-import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
+import { toLocalDateKey, parseLocalDateKey, addLocalDays,
+         monthPeriodKeys, defaultDateInPeriod } from '/utils/date.js';
 import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
+import { trendMarkup } from '/utils/metric-card.js';
 import { intervalUnitLabel } from '/rrule-ui.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
@@ -89,7 +91,7 @@ function categoryLabel(category) {
 function subcategoryLabel(subcategory) {
   const item = typeof subcategory === 'object'
     ? subcategory
-    : Object.values(state.meta.expenseSubcategories ?? {}).flat().find((s) => s.key === subcategory);
+    : Object.values(state.meta.subcategories ?? {}).flat().find((s) => s.key === subcategory);
   const key = item?.key ?? subcategory;
   const name = item?.name ?? subcategory;
   return SUBCATEGORY_I18N()[key] ?? name;
@@ -104,7 +106,7 @@ function incomeCategories() {
 }
 
 function getSubcategories(category) {
-  return state.meta.expenseSubcategories?.[category] || [];
+  return state.meta.subcategories?.[category] || [];
 }
 
 function defaultSubcategory(category) {
@@ -187,7 +189,7 @@ let state = {
   budgetMode:  'shared',      // 'shared' (Altverhalten) | 'personal' (#476/#505)
   scope:       'mine',        // Ansichts-Filter im personal-Modus: 'mine' | 'household'
   expensesOnly: false,        // Anzeige „Nur Ausgaben" (#504): Einnahmen+Saldo ausblenden
-  meta:        { expenseCategories: [], incomeCategories: [], expenseSubcategories: {} },
+  meta:        { expenseCategories: [], incomeCategories: [], subcategories: {} },
   // Zeitachse der Berichte: dieselbe Kopfleiste wie der Monat, nur mit
   // umschaltbarer Auflösung. Der Anker lebt hier statt in budget-stats.js, damit
   // beide Enden beim Tabwechsel aneinander angeglichen werden können.
@@ -365,11 +367,11 @@ async function loadBudgetMeta() {
     state.meta = {
       expenseCategories: res.data?.expenseCategories ?? [],
       incomeCategories: res.data?.incomeCategories ?? [],
-      expenseSubcategories: res.data?.expenseSubcategories ?? {},
+      subcategories: res.data?.subcategories ?? {},
     };
   } catch (err) {
     console.error('[Budget] meta Fehler:', err);
-    state.meta = { expenseCategories: [], incomeCategories: [], expenseSubcategories: {} };
+    state.meta = { expenseCategories: [], incomeCategories: [], subcategories: {} };
     window.yuvomi?.showToast(t('budget.metaLoadError'), 'danger');
   }
 }
@@ -406,8 +408,8 @@ export async function render(container, { user }) {
   state.expensesOnly = localStorage.getItem(EXPENSES_ONLY_KEY) === '1';
 
   setHtml(container, `
-    <div class="budget-page">
-      <div class="page-toolbar page-toolbar--wrap budget-nav">
+    <div class="budget-page page-measure--narrow">
+      <div class="page-toolbar page-toolbar--wrap page-toolbar--narrow budget-nav">
         <h1 class="page-toolbar__title">${t('budget.title')}</h1>
         <!-- Der Kopf-Slot bleibt auf jedem Tab besetzt: entweder Stepper oder
              ein ruhiger Kontexttext. Eine Lücke machte jeden Tabwechsel zur
@@ -422,7 +424,7 @@ export async function render(container, { user }) {
           </button>
           <!-- „Aktuell" ist ein Reset, kein Navigationsschritt: hinter dem
                Stepper statt zwischen Pfeil und Wert. -->
-          <button class="budget-nav__today" id="budget-today">${t('budget.currentMonth')}</button>
+          <button class="btn btn--secondary budget-nav__today" id="budget-today">${t('budget.currentMonth')}</button>
           <span class="budget-nav__note" id="budget-period-note" hidden></span>
         </div>
         ${state.budgetMode === 'personal' ? `
@@ -449,15 +451,16 @@ export async function render(container, { user }) {
               return `<button class="sub-tab${on ? ' sub-tab--active' : ''}" id="budget-tab-${id}" type="button" role="tab" data-tab-id="${id}" aria-controls="budget-body" aria-selected="${on ? 'true' : 'false'}" tabindex="${on ? '0' : '-1'}"><span class="sub-tab__label">${label}</span></button>`;
             }).join('')}
           </div>
-          <button class="btn btn--primary btn--icon toolbar-new-btn" id="budget-add" aria-label="${t('budget.addEntryLabel')}">
+          <button class="btn btn--primary toolbar-new-btn" id="budget-add" aria-label="${t('budget.addEntryLabel')}">
             <i data-lucide="plus" aria-hidden="true"></i>
+            <span class="toolbar-new-btn__label">${t('newLabel.budget')}</span>
           </button>
         </div>
       </div>
       <div id="budget-body" role="tabpanel" tabindex="0" style="flex:1;display:flex;flex-direction:column;overflow:hidden;">
         ${renderSkeletonList({ rows: 6, lines: 2 })}
       </div>
-      <button class="page-fab" id="fab-new-budget" aria-label="${t('budget.newEntryFabLabel')}">
+      <button class="page-fab" id="fab-new-budget" aria-label="${t('budget.newEntryFabLabel')}" data-dock-label="${t('newLabel.budget')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
@@ -573,7 +576,7 @@ function wireNav() {
 // Ohne Rückgabe des Fokus endet die Tastaturnavigation nach dem ersten
 // Pfeildruck im Nichts - der Nutzer müsste sich von vorn durchtabben.
 function refocusSegmented(barSelector) {
-  _container.querySelector(`${barSelector} .budget-segmented__item.is-active`)?.focus();
+  _container.querySelector(`${barSelector} .segmented__item.is-active`)?.focus();
 }
 
 function updateLabel() {
@@ -594,7 +597,7 @@ function renderBody() {
   const p    = state.prevSummary;
   updateTabs();
   if (state.activeTab === 'reports') {
-    setHtml(body, '<div class="budget-tab-panel budget-tab-panel--reports" id="budget-reports-panel"></div>');
+    setHtml(body, '<div class="budget-tab-panel page-scrollport budget-tab-panel--reports" id="budget-reports-panel"></div>');
     renderStats(body.querySelector('#budget-reports-panel'), {
       user: _user, currency: state.currency,
       budgetMode: state.budgetMode, scope: state.scope,
@@ -618,7 +621,7 @@ function renderBody() {
     return;
   }
   if (state.activeTab === 'plan') {
-    setHtml(body, '<div class="budget-tab-panel budget-panel--reading budget-tab-panel--plan" id="budget-plan-panel"></div>');
+    setHtml(body, '<div class="budget-tab-panel page-scrollport budget-tab-panel--reading budget-tab-panel--plan" id="budget-plan-panel"></div>');
     renderPlans(body.querySelector('#budget-plan-panel'), {
       user: _user, currency: state.currency, month: state.month,
       formatAmount, categoryLabel, esc,
@@ -644,14 +647,14 @@ function renderBody() {
     return;
   }
   if (state.activeTab === 'subscriptions') {
-    setHtml(body, '<div class="budget-tab-panel budget-tab-panel--subscriptions" id="budget-subscriptions-panel"></div>');
+    setHtml(body, '<div class="budget-tab-panel page-scrollport budget-tab-panel--subscriptions" id="budget-subscriptions-panel"></div>');
     renderSubscriptions(body.querySelector('#budget-subscriptions-panel'), { user: _user }).catch((err) => {
       console.error('[Budget] subscriptions render error:', err);
     });
     return;
   }
   if (state.activeTab === 'split-expenses') {
-    setHtml(body, '<div class="budget-tab-panel budget-tab-panel--split-expenses" id="budget-split-expenses-panel"></div>');
+    setHtml(body, '<div class="budget-tab-panel page-scrollport budget-tab-panel--split-expenses" id="budget-split-expenses-panel"></div>');
     const panel = body.querySelector('#budget-split-expenses-panel');
     renderSplitExpenses(panel, { embedded: true, user: _user }).catch((err) => {
       console.error('[Budget] split expenses render error:', err);
@@ -667,10 +670,10 @@ function renderBody() {
   // Mehrausgabe, grün = Überschuss).
   const balanceNeutral = s.income === 0 && s.balance < 0;
   const balanceClass = balanceNeutral
-    ? 'budget-summary-card--balance-neutral'
+    ? 'metric-card--balance-neutral'
     : s.balance >= 0
-      ? 'budget-summary-card--balance-positive'
-      : 'budget-summary-card--balance-negative';
+      ? 'metric-card--balance-positive'
+      : 'metric-card--balance-negative';
   const prevLabel = p ? formatMonthLabel(p.month).split(' ')[0].slice(0, 3) : '';
 
   // Erwartete Buchungen stecken in keiner der drei Karten (#637). Ohne diese
@@ -697,27 +700,30 @@ function renderBody() {
   // im Vorzeichen. Das frühere Math.abs stand nur bei den Ausgaben und war damit
   // eine stille Ausnahme - jetzt ist es die Rolle, die für beide Karten gilt.
   const incomeCard = `
-      <div class="budget-summary-card budget-summary-card--income">
-        <div class="budget-summary-card__label">${t('budget.income')}</div>
-        <div class="budget-summary-card__amount">${amountByRole(s.income, 'total').text}</div>
-        ${p ? renderTrend(s.income, p.income, prevLabel) : ''}
+      <div class="metric-card metric-card--income">
+        <div class="metric-card__label">${t('budget.income')}</div>
+        <div class="metric-card__value">${amountByRole(s.income, 'total').text}</div>
+        ${p ? renderTrend(s.income, p.income, prevLabel, 'higher') : ''}
       </div>`;
+  // Ausgaben-Trend im Betragsraum (Math.abs), wie die Zahl auf der Karte:
+  // die API liefert expenses signiert negativ, aber „+954 € ggü. Jul" muss
+  // hier „954 € mehr ausgegeben" heißen. Valenz: weniger ist besser.
   const expensesCard = `
-      <div class="budget-summary-card budget-summary-card--expenses">
-        <div class="budget-summary-card__label">${t('budget.expenses')}</div>
-        <div class="budget-summary-card__amount">${amountByRole(s.expenses, 'total').text}</div>
-        ${p ? renderTrend(s.expenses, p.expenses, prevLabel) : ''}
+      <div class="metric-card metric-card--expenses">
+        <div class="metric-card__label">${t('budget.expenses')}</div>
+        <div class="metric-card__value">${amountByRole(s.expenses, 'total').text}</div>
+        ${p ? renderTrend(Math.abs(s.expenses), Math.abs(p.expenses), prevLabel, 'lower') : ''}
       </div>`;
   // Rolle `balance`: hier trägt die Zahl selbst die Richtung.
   const balanceCard = `
-      <div class="budget-summary-card ${balanceClass}">
-        <div class="budget-summary-card__label">${t('budget.balance')}</div>
-        <div class="budget-summary-card__amount">${amountByRole(s.balance, 'balance').text}</div>
-        ${p && !balanceNeutral ? renderTrend(s.balance, p.balance, prevLabel) : ''}
+      <div class="metric-card ${balanceClass}">
+        <div class="metric-card__label">${t('budget.balance')}</div>
+        <div class="metric-card__value">${amountByRole(s.balance, 'balance').text}</div>
+        ${p && !balanceNeutral ? renderTrend(s.balance, p.balance, prevLabel, 'higher') : ''}
       </div>`;
 
   setHtml(body, `
-    <div class="budget-tab-panel budget-tab-panel--budget">
+    <div class="budget-tab-panel page-scrollport budget-tab-panel--budget">
     <!-- Anzeige-Umschalter: nur Ausgaben vs. volle Zusammenfassung -->
     <div class="budget-summary-bar">
       <button class="budget-expenses-toggle${expensesOnly ? ' budget-expenses-toggle--active' : ''}"
@@ -729,7 +735,7 @@ function renderBody() {
       </button>
     </div>
     <!-- Zusammenfassung -->
-    <div class="budget-summary${expensesOnly ? ' budget-summary--expenses-only' : ''}">
+    <div class="metric-grid${expensesOnly ? ' metric-grid--expenses-only' : ''}">
       ${expensesOnly ? expensesCard : incomeCard + expensesCard + balanceCard}
     </div>
     ${pendingNote}
@@ -768,7 +774,7 @@ function renderBody() {
         </a>` : ''}
         </div>
       </div>
-      <div class="budget-list" id="budget-list">
+      <div class="budget-list page-scrollport" id="budget-list">
         ${renderEntries()}
       </div>
     </div>
@@ -854,6 +860,22 @@ function updateTabs() {
     if (caps.add) {
       addBtn.setAttribute('aria-label', addLabel);
       addBtn.setAttribute('title', addLabel);
+      /* DAS SICHTBARE WORT GILT NUR FUER DEN EINTRAG.
+       *
+       * Der Kopfknopf trug fest `newLabel.budget` ("Eintrag"), waehrend diese
+       * Funktion seine Aktion je Tab umstellt: auf "Konten" stand sichtbar
+       * "Eintrag" und im `aria-label` "Konto hinzufuegen". Das ist zweimal
+       * falsch - es fuehrt den Zeigernutzer in die Irre, und der sichtbare Text
+       * steht nicht im zugaenglichen Namen (WCAG 2.5.3, Sprachsteuerung kann
+       * den Knopf nicht ansprechen; Codex-Review zu PR #754).
+       *
+       * Das Wort faellt dort weg, statt ein falsches zu behalten: `newLabel`
+       * fuehrt Nomen je MODUL, nicht je Untertab, und die vier fehlenden
+       * ("Budget", "Konto", "Abo", "Darlehen") waeren vier neue Schluessel in
+       * 24 Sprachen - eine eigene Runde, keine Zeile in einem Fix. Ohne Text
+       * benennt das `aria-label` den Knopf allein, und das tut es korrekt. */
+      const labelSpan = addBtn.querySelector('.toolbar-new-btn__label');
+      if (labelSpan) labelSpan.hidden = caps.add !== 'budget.newEntryFabLabel';
     }
   }
   const fab = findPageFab('fab-new-budget');
@@ -882,18 +904,28 @@ function renderCategoryBars(byCategory) {
 
   return byCategory.map((c) => {
     const isExpense = c.total < 0;
-    // Nicht-null-Kategorien behalten einen sichtbaren Mindestbalken, statt bei
-    // winzigem Anteil (z. B. -25 € neben +5050 €) auf 0 zu runden und leer zu
-    // wirken (Audit P3).
-    const rawPct    = (Math.abs(c.total) / maxAbs) * 100;
-    const pct       = c.total !== 0 ? Math.max(3, Math.round(rawPct)) : 0;
+    /* DER ANTEIL IST DER ANTEIL. Hier stand `Math.max(6, Math.round(rawPct))`.
+     * Der Boden war selbst einmal ein Audit-Fix (P3): eine winzige Kategorie
+     * sollte neben einer grossen nicht auf 0 runden und leer wirken. Er hat das
+     * Kosmetikproblem geloest und eine Falschaussage eingefuehrt - gemessen bei
+     * 1440px rendern -234,98 €, -157,50 €, -153,49 € und -25,00 € ALLE VIER
+     * exakt 25,9px, obwohl zwischen erstem und letztem das 9,4-Fache liegt
+     * (Critique 2026-08-13). Der einzige Zweck eines Balkens neben einer Zahl
+     * ist der Vergleich auf einen Blick, und in einem Geldmodul.
+     * Sichtbar bleibt der Zwerg trotzdem: der Mindestbalken ist jetzt eine
+     * LAENGE im CSS (`--bar-visible` schaltet ihn), kein Anteil - 2px stehen
+     * fuer "da ist etwas", ohne 25 € wie 235 € aussehen zu lassen. */
+    const scale     = Math.abs(c.total) / maxAbs;
     const cls       = isExpense ? 'budget-bar-row__fill--expenses' : 'budget-bar-row__fill--income';
 
+    // --mirrored (Critique 2026-08-10, P0): Einnahmen und Ausgaben wuchsen von
+    // derselben Nulllinie in dieselbe Richtung, die Richtung steckte allein im
+    // Farbton. Jetzt spiegeln beide um eine gemeinsame Mittelachse.
     return `
-      <div class="budget-bar-row">
+      <div class="budget-bar-row budget-bar-row--mirrored">
         <div class="budget-bar-row__label" title="${esc(categoryLabel(c.category))}">${esc(categoryLabel(c.category))}</div>
         <div class="budget-bar-row__track">
-          <div class="budget-bar-row__fill ${cls}" style="--bar-scale:${pct / 100}"></div>
+          <div class="budget-bar-row__fill ${cls}" style="--bar-scale:${scale.toFixed(4)};--bar-visible:${c.total !== 0 ? 1 : 0}"></div>
         </div>
         <div class="budget-bar-row__amount" style="color:${isExpense ? 'var(--color-danger)' : 'var(--color-success)'};">
           ${isExpense ? '' : '+'}${formatAmount(c.total)}
@@ -928,16 +960,40 @@ function renderEntries() {
     // das Vorzeichen kommt aus dem Zahlformat (signDisplay), nicht aus einem
     // vorangestellten '+' - sonst steht es in RTL-Locales auf der falschen Seite.
     const amountText = amountByRole(e.amount, 'flow').text;
-    const date      = formatEntryDate(e.date);
+    /* DER MONAT STEHT ÜBER DER LISTE, NICHT IN JEDER ZEILE.
+     *
+     * Die Liste ist per Konstruktion EIN Monat - `loadMonth(state.month)` holt
+     * sie, der Monatsschritter im Kopf benennt ihn, und der CSV-Link daneben
+     * trägt denselben Monat als Parameter. „19.08.2026" wiederholte ihn 23 Mal
+     * und das Jahr dazu; „19.08." sagt in der Zeile dasselbe.
+     *
+     * Über `formatDayMonth` und nicht per slice - Reihenfolge und Trennzeichen
+     * hängen an der Datumsformat-Präferenz (dmy, mdy, ymd), ein abgeschnittener
+     * String hätte sie in drei von sieben Formaten verdreht. Dieselbe Funktion,
+     * aus demselben Grund, wie in der Aufgabenzeile.
+     *
+     * `formatEntryDate` bleibt, wie es ist: die Darlehensraten weiter unten
+     * stehen in KEINER Monatsansicht, dort trägt die Zeile das volle Datum. */
+    const date      = formatDayMonth(e.date);
     const recurTag  = e.is_recurring
       ? ` <span class="budget-recur-mark" role="img" aria-label="${t('budget.recurringLabel')}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>${e.recurrence_virtual ? ' ' + t('budget.virtualBudgetBadge') : ''}`
       : (e.recurrence_parent_id ? ` <span class="budget-recur-mark" role="img" aria-label="${t('budget.recurringInstanceLabel')}"><i data-lucide="corner-down-left" class="icon-sm" aria-hidden="true"></i></span>` : '');
-    const categoryMeta = isIncome || !e.subcategory
-      ? categoryLabel(e.category)
-      : `${categoryLabel(e.category)} · ${subcategoryLabel(e.subcategory)}`;
+    /* DIE UNTERKATEGORIE STEHT IN DER DETAILFLÄCHE.
+     *
+     * Sie war das vierte Element einer Zeile, die bei 390px 156px Textspalte
+     * hat - gemessen brach die Metazeile damit in JEDER der 14 geprüften
+     * Zeilen um, fünf bis acht Mal („Wohnen / Zuhause · Strom / Wasser / Gas ·
+     * Gemeinsames Girokonto" allein sind 123px Höhe). Die Kategorie ist die
+     * Achse, nach der das Balkendiagramm über der Liste den Monat aufteilt;
+     * die Unterkategorie verfeinert sie und wird beim Öffnen der Buchung
+     * gezeigt und geändert. */
+    const categoryMeta = categoryLabel(e.category);
     const acctName = accountName(e.account_id);
+    /* Das Trennzeichen gehört IN den Span, nicht davor: das Konto fällt unter
+     * 480px Containerbreite weg (budget.css), und ein Separator davor bliebe
+     * als „·" am Zeilenende stehen. */
     const acctMeta = acctName
-      ? ` · <span class="budget-entry__account"><i data-lucide="wallet" class="icon-sm" aria-hidden="true"></i>${esc(acctName)}</span>`
+      ? `<span class="budget-entry__account"> · <i data-lucide="wallet" class="icon-sm" aria-hidden="true"></i>${esc(acctName)}</span>`
       : '';
     // Im personal-Modus geteilte Einträge klar als Haushalts-Topf kennzeichnen (#476/#505).
     const sharedBadge = (state.budgetMode === 'personal' && e.visibility === 'shared')
@@ -969,18 +1025,20 @@ function renderEntries() {
     // Lösch-Button darin verschachtelt ist. Das aria-label hält den
     // Lösch-Button-Namen aus dem Zeilen-Namen heraus.
     return `
-      <div class="budget-entry${pending ? ' budget-entry--pending' : ''}" data-id="${e.id}" role="button" tabindex="0"
+      <div class="list-row budget-entry${pending ? ' budget-entry--pending' : ''}" data-id="${e.id}" role="button" tabindex="0"
            aria-label="${esc(t('budget.editEntry'))}: ${esc(e.title)}, ${amountText}">
         <div class="budget-entry__indicator ${indClass}"></div>
-        <div class="budget-entry__body">
-          <div class="budget-entry__title">${esc(e.title)}${sharedBadge}${pendingBadge}</div>
-          <div class="budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}${receiptMark}</div>
+        <div class="list-row__main">
+          <div class="list-row__name budget-entry__title">${esc(e.title)}${sharedBadge}${pendingBadge}</div>
+          <div class="list-row__meta budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}${receiptMark}</div>
         </div>
         <div class="budget-entry__amount ${amtClass}">${amountText}</div>
-        ${confirmBtn}
-        <button class="row-action row-action--danger" data-action="delete" data-id="${e.id}" aria-label="${t('budget.deleteLabel')}">
-          <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
-        </button>
+        <div class="list-row__actions">
+          ${confirmBtn}
+          <button class="row-action row-action--danger" data-action="delete" data-id="${e.id}" aria-label="${t('budget.deleteLabel')}">
+            <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
+          </button>
+        </div>
       </div>
     `;
   }).join('');
@@ -993,7 +1051,7 @@ function renderAccountsPage() {
   // Rolle `balance`: das Vorzeichen steckt in der Zahl. Nebenbei behebt die
   // Rollenlogik, dass ein Nettovermögen von exakt 0 vorher als Erfolg grün
   // erschien - null Vermögen ist keine gute Nachricht, sondern gar keine.
-  const netWorth = amountByRole(state.netWorth, 'balance', { block: 'budget-summary-card' });
+  const netWorth = amountByRole(state.netWorth, 'balance', { block: 'metric-card' });
 
   const archiveToggle = hasArchived ? `
       <button class="budget-accounts__toggle" id="budget-toggle-archived" type="button" aria-pressed="${state.accountsShowArchived}">
@@ -1005,25 +1063,25 @@ function renderAccountsPage() {
   // Vorher stand das Nettovermögen als Label-plus-Wert direkt im Kopf und war
   // damit die vierte Kartenbauart des Moduls (Critique 2026-07-30, P0).
   const header = `
-    <div class="budget-panel-head">
-      <span class="budget-panel-head__title">${t('budget.accountsTab')}</span>
-      <div class="budget-panel-head__actions">
+    <div class="panel-head">
+      <span class="panel-head__title">${t('budget.accountsTab')}</span>
+      <div class="panel-head__actions">
         ${archiveToggle}
         <button class="btn btn--secondary" id="budget-add-account" type="button">
           <i data-lucide="plus" class="icon-sm" aria-hidden="true"></i>${t('budget.addAccount')}
         </button>
       </div>
     </div>
-    <div class="budget-summary">
-      <div class="budget-summary-card ${netWorth.className}">
-        <div class="budget-summary-card__label">${t('budget.netWorth')}</div>
-        <div class="budget-summary-card__amount">${netWorth.text}</div>
+    <div class="metric-grid">
+      <div class="metric-card ${netWorth.className}">
+        <div class="metric-card__label">${t('budget.netWorth')}</div>
+        <div class="metric-card__value">${netWorth.text}</div>
       </div>
     </div>`;
 
   if (!all.length) {
     return `
-      <div class="budget-tab-panel budget-tab-panel--accounts">
+      <div class="budget-tab-panel page-scrollport budget-tab-panel--accounts">
         ${header}
         <div class="empty-state">
           <i data-lucide="wallet" class="empty-state__icon" aria-hidden="true"></i>
@@ -1064,7 +1122,6 @@ function renderAccountsPage() {
             <span class="budget-account__balance ${balClass}">${formatAmount(a.current_balance)}</span>
             <span class="budget-account__starting">${t('budget.startingBalanceShort')} ${formatAmount(a.starting_balance)}</span>
           </span>
-          <i data-lucide="chevron-right" class="budget-account__chevron icon-sm" aria-hidden="true"></i>
         </button>
         <button class="budget-account__edit" type="button" data-edit="${a.id}" aria-label="${t('budget.editAccount')}">
           <i data-lucide="pencil" class="icon-sm" aria-hidden="true"></i>
@@ -1073,7 +1130,7 @@ function renderAccountsPage() {
   }).join('');
 
   return `
-    <div class="budget-tab-panel budget-tab-panel--accounts">
+    <div class="budget-tab-panel page-scrollport budget-tab-panel--accounts">
       ${header}
       <div class="budget-accounts__list">${cards}</div>
     </div>`;
@@ -1307,16 +1364,16 @@ function renderLoansDashboard() {
 
   return `
     <section class="budget-loans">
-      <div class="budget-panel-head budget-loans__header">
+      <div class="panel-head budget-loans__header">
         <div>
-          <div class="budget-panel-head__title">${t('budget.loansTitle')}</div>
+          <div class="panel-head__title">${t('budget.loansTitle')}</div>
           <div class="budget-loans__summary">${t('budget.loansSummary', {
             count: summary.active_count ?? 0,
             amount: formatAmount(summary.remaining_principal ?? summary.remaining_amount ?? 0),
           })}</div>
           ${state.loanFilterId ? `<div class="budget-list-header__filter">${esc(activeLoanLabel())}</div>` : ''}
         </div>
-        <div class="budget-panel-head__actions">
+        <div class="panel-head__actions">
           ${state.loanFilterId ? `
           <button class="btn btn--secondary btn--sm" type="button" id="budget-clear-loan-filter">
             <i data-lucide="x" aria-hidden="true"></i>${t('budget.clearLoanFilter')}
@@ -1324,11 +1381,11 @@ function renderLoansDashboard() {
           <!-- Einfachauswahl, keine Sicht: role="radiogroup" statt des früheren
                role="group", damit der Zustand angesagt wird UND die geteilte
                Verhaltensschicht Pfeiltasten liefert (Critique 2026-07-30, P1). -->
-          <div class="budget-segmented budget-loans__filters" role="radiogroup" aria-label="${t('budget.loanStatusFilterLabel')}">
+          <div class="segmented budget-loans__filters" role="radiogroup" aria-label="${t('budget.loanStatusFilterLabel')}">
             ${[['active', 'budget.loanStatusActive'], ['paid', 'budget.loanStatusPaid'], ['all', 'budget.loanStatusAll']]
               .map(([id, key]) => {
                 const on = state.loanStatusFilter === id;
-                return `<button class="budget-segmented__item${on ? ' is-active' : ''}"
+                return `<button class="segmented__item${on ? ' is-active' : ''}"
                     type="button" role="radio" data-tab-id="${id}" aria-checked="${on}"
                     tabindex="${on ? '0' : '-1'}">${t(key)}</button>`;
               }).join('')}
@@ -1338,18 +1395,18 @@ function renderLoansDashboard() {
       <!-- Geteilte Kennzahl-Zeile statt der früheren eigenen budget-loans__stats
            (fünfte Kartenbauart des Moduls, Critique 2026-07-30, P0). Rolle
            total: die Richtung steht im Label, nicht im Vorzeichen. -->
-      <div class="budget-summary">
-        <div class="budget-summary-card">
-          <div class="budget-summary-card__label">${t(summary.has_interest ? 'budget.loanRemainingPrincipal' : 'budget.loanRemainingAmount')}</div>
-          <div class="budget-summary-card__amount">${amountByRole(summary.remaining_principal ?? summary.remaining_amount ?? 0, 'total').text}</div>
+      <div class="metric-grid">
+        <div class="metric-card">
+          <div class="metric-card__label">${t(summary.has_interest ? 'budget.loanRemainingPrincipal' : 'budget.loanRemainingAmount')}</div>
+          <div class="metric-card__value">${amountByRole(summary.remaining_principal ?? summary.remaining_amount ?? 0, 'total').text}</div>
         </div>
-        <div class="budget-summary-card">
-          <div class="budget-summary-card__label">${t('budget.loanRemainingInstallments')}</div>
-          <div class="budget-summary-card__amount">${summary.remaining_installments ?? 0}</div>
+        <div class="metric-card">
+          <div class="metric-card__label">${t('budget.loanRemainingInstallments')}</div>
+          <div class="metric-card__value">${summary.remaining_installments ?? 0}</div>
         </div>
-        <div class="budget-summary-card">
-          <div class="budget-summary-card__label">${t('budget.loanPaidAmount')}</div>
-          <div class="budget-summary-card__amount">${amountByRole(summary.paid_amount ?? 0, 'total').text}</div>
+        <div class="metric-card">
+          <div class="metric-card__label">${t('budget.loanPaidAmount')}</div>
+          <div class="metric-card__value">${amountByRole(summary.paid_amount ?? 0, 'total').text}</div>
         </div>
       </div>
       ${summary.has_foreign_currency ? `<p class="form-hint budget-loan-hint">${t('budget.loanSummaryConverted', {
@@ -1441,14 +1498,14 @@ function renderLoanPaymentEntry(loan, payment) {
   ).text;
 
   return `
-    <div class="budget-entry budget-entry--loan" data-loan-payment-id="${payment.id}" data-loan-id="${loan.id}" ${entry ? `data-entry-id="${entry.id}"` : ''}>
+    <div class="list-row budget-entry budget-entry--loan" data-loan-payment-id="${payment.id}" data-loan-id="${loan.id}" ${entry ? `data-entry-id="${entry.id}"` : ''}>
       <div class="budget-entry__indicator budget-entry__indicator--${flow}"></div>
-      <div class="budget-entry__body">
-        <div class="budget-entry__title">${esc(payment.entry_title || t('budget.loanPaymentTitle', { borrower: loan.borrower }))}</div>
-        <div class="budget-entry__meta">${meta}</div>
+      <div class="list-row__main">
+        <div class="list-row__name budget-entry__title">${esc(payment.entry_title || t('budget.loanPaymentTitle', { borrower: loan.borrower }))}</div>
+        <div class="list-row__meta budget-entry__meta">${meta}</div>
       </div>
       <div class="budget-entry__amount budget-entry__amount--${flow}">${amountText}</div>
-      <div class="row-actions">
+      <div class="list-row__actions">
         ${entry ? `
         <button class="row-action" data-action="loan-payment-edit" data-loan-id="${loan.id}" data-payment-id="${payment.id}" data-entry-id="${entry.id}" aria-label="${t('common.edit')}">
           <i data-lucide="pencil" class="icon-md" aria-hidden="true"></i>
@@ -1464,7 +1521,7 @@ function renderLoanPaymentEntry(loan, payment) {
 function renderLoansPage() {
   const loans = state.loans?.loans ?? [];
   if (!loans.length) {
-    return `<div class="budget-tab-panel budget-tab-panel--loans">
+    return `<div class="budget-tab-panel page-scrollport budget-tab-panel--loans">
       <div class="empty-state">
         <i data-lucide="hand-coins" class="empty-state__icon" aria-hidden="true"></i>
         <div class="empty-state__title">${t('budget.loansEmpty')}</div>
@@ -1477,7 +1534,7 @@ function renderLoansPage() {
     </div>`;
   }
 
-  return `<div class="budget-tab-panel budget-tab-panel--loans">
+  return `<div class="budget-tab-panel page-scrollport budget-tab-panel--loans">
     ${renderLoansDashboard()}
   </div>`;
 }
@@ -1711,33 +1768,37 @@ function renderLoanCard(loan) {
 }
 
 /**
- * Rendert eine Trend-Zeile im Vergleich zum Vormonat.
- * Alle drei Metriken (income, expenses, balance) nutzen dieselbe Logik:
- *   delta > 0 → positiver Trend (▲ grün), delta < 0 → negativer Trend (▼ rot).
- * Ausgaben werden als negative Zahlen übergeben, daher gilt:
- *   weniger Ausgaben ↔ delta > 0 ↔ gut.
- * @param {number} current   Aktueller Wert
- * @param {number} prev      Vormonatswert
+ * Rendert eine Trend-Zeile im Vergleich zum Vormonat, in zwei getrennten
+ * Kanälen (Critique 2026-08-10, P0):
+ *   - PFEIL und Vorzeichen zeigen die Richtung der Zahl auf der Karte. Die
+ *     Karten zeigen Beträge („die Richtung steht im Label"), also rechnet auch
+ *     das Delta im Betragsraum - vorher lief es über die signierte Rohsumme,
+ *     und „-954 € ggü. Jul" unter „Ausgaben 3.000 €" behauptete weniger
+ *     Ausgaben, wo 954 € mehr ausgegeben wurden.
+ *   - Die FARBE trägt allein die Valenz: `betterWhen` sagt pro Kennzahl, ob
+ *     mehr oder weniger die gute Richtung ist. Vorher kodierte die Klasse das
+ *     Vorzeichen der Differenz, und gesunkene Ausgaben lasen sich als Alarm.
+ * @param {number} current   Aktueller Wert (im Anzeigeraum der Karte)
+ * @param {number} prev      Vormonatswert (im selben Raum)
  * @param {string} prevLabel Kurzname des Vormonats (z.B. "Mär")
+ * @param {'higher'|'lower'} betterWhen Welche Richtung die gute ist
  */
-function renderTrend(current, prev, prevLabel) {
+function renderTrend(current, prev, prevLabel, betterWhen = 'higher') {
   const delta = current - prev;
   if (Math.abs(delta) < 0.005) {
-    return `<div class="budget-summary-card__trend budget-summary-card__trend--neutral">${t('budget.trendNeutral', { month: prevLabel })}</div>`;
+    return trendMarkup({
+      delta: 0, text: esc(t('budget.trendNeutral', { month: prevLabel })), icon: false,
+    });
   }
-  const positive = delta > 0;
   // Rolle `flow`: eine Veränderung gegenüber dem Vormonat trägt immer ein
-  // Vorzeichen, aus demselben Zahlformat wie die Buchungen selbst.
+  // Vorzeichen, aus demselben Zahlformat wie die Buchungen selbst. Valenz und
+  // Pfeil entscheidet utils/metric-card.js (Farbe = Valenz via betterWhen,
+  // Pfeil = Richtung) - die Trennung der beiden Kanäle ist dort API.
   const deltaText = amountByRole(delta, 'flow').text;
-  const cls      = positive ? 'budget-summary-card__trend--positive' : 'budget-summary-card__trend--negative';
-  // Pfeil als Lucide-Icon statt ▲/▼: die Textglyphen fallen aus der Icon-Familie
-  // und sind je nach Font unterschiedlich breit (Zeilenzittern). Das „vs." stand
-  // bisher fest im Template — jetzt trägt der Key den ganzen Satz.
-  const icon = positive ? 'trending-up' : 'trending-down';
-  return `<div class="budget-summary-card__trend ${cls}">
-    <i data-lucide="${icon}" class="icon-sm" aria-hidden="true"></i>
-    ${esc(t('budget.trendDelta', { amount: deltaText, month: prevLabel }))}
-  </div>`;
+  return trendMarkup({
+    delta, betterWhen,
+    text: esc(t('budget.trendDelta', { amount: deltaText, month: prevLabel })),
+  });
 }
 
 function formatEntryDate(dateStr) {
@@ -1765,7 +1826,7 @@ function openCategoryManager() {
         basePath: '/budget/categories',
         groups: [
           { key: 'expense', labelKey: 'budget.expenses', addLabelKey: 'budget.addCategory', subcategories: true },
-          { key: 'income',  labelKey: 'budget.income',   addLabelKey: 'budget.addCategory' },
+          { key: 'income',  labelKey: 'budget.income',   addLabelKey: 'budget.addCategory', subcategories: true },
         ],
         supportsSubcategories: true,
         labelResolver: (item) => item.label ?? budgetCategoryLabel(item.key, item.name, t),
@@ -1784,11 +1845,13 @@ function openCategoryManager() {
 function openBudgetModal({ mode, entry = null, initialType = '' }) {
   const isEdit = mode === 'edit';
   const today  = toLocalDateKey(new Date());
-  const todayMonth = today.slice(0, 7);
   // Ein neuer Eintrag gehört in den Monat, den der Nutzer gerade ansieht. Sonst
   // legt „+" beim Blättern in den März stillschweigend einen Juli-Eintrag an,
   // der sofort aus der Liste verschwindet. Im laufenden Monat bleibt es heute.
-  const defaultDate = state.month === todayMonth ? today : `${state.month}-01`;
+  // Dieselbe Regel trägt der Kalender über seine vier Ansichten; sie steht
+  // deshalb in utils/date.js und nicht zweimal hier und dort.
+  const { from, to } = monthPeriodKeys(state.month);
+  const defaultDate = defaultDateInPeriod(from, to, today);
 
   const isExpense  = isEdit ? entry.amount < 0 : true;
   // Bei virtuellen Serien hält amount nur den Monatsanteil; im Formular den eingegebenen Periodenbetrag zeigen.
@@ -1859,6 +1922,14 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       <select class="form-input" id="bm-category">${catOpts}</select>
     </div>
 
+    <div class="form-group js-entry-field" id="bm-subcategory-group">
+      <div class="budget-field-header">
+        <label class="form-label" for="bm-subcategory">${t('budget.subcategoryLabel')}</label>
+        <button class="btn btn--secondary budget-inline-add" type="button" id="bm-add-subcategory">${t('budget.addSubcategory')}</button>
+      </div>
+      <select class="form-input" id="bm-subcategory">${subcatOpts}</select>
+    </div>
+
     <div class="form-group js-entry-field">
       <label class="form-label" for="bm-date">${t('budget.dateLabel')}</label>
       <yuvomi-datepicker type="date" id="bm-date"
@@ -1878,14 +1949,6 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
     <div class="js-entry-field">
       ${advancedSection(`
         ${accountField}
-        <div class="form-group" id="bm-subcategory-group" ${isExpense ? '' : 'hidden'}>
-          <div class="budget-field-header">
-            <label class="form-label" for="bm-subcategory">${t('budget.subcategoryLabel')}</label>
-            <button class="btn btn--secondary budget-inline-add" type="button" id="bm-add-subcategory">${t('budget.addSubcategory')}</button>
-          </div>
-          <select class="form-input" id="bm-subcategory">${subcatOpts}</select>
-        </div>
-
         <div class="form-group">
           <label class="toggle">
             <input type="checkbox" id="bm-recurring" ${isEdit && entry.is_recurring ? 'checked' : ''}>
@@ -2012,10 +2075,10 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
         const catSelect = panel.querySelector('#bm-category');
         const subcatGroup = panel.querySelector('#bm-subcategory-group');
         const subcatSelect = panel.querySelector('#bm-subcategory');
-        const subcategories = currentType === 'expense' ? getSubcategories(catSelect.value) : [];
+        const subcategories = getSubcategories(catSelect.value);
         const currentValue = preferredSubcategory || subcatSelect.value;
 
-        subcatGroup.hidden = currentType !== 'expense';
+        subcatGroup.hidden = false;
         subcatSelect.replaceChildren(...subcategories.map((s) => {
           const opt = document.createElement('option');
           opt.value = s.key;
@@ -2046,7 +2109,6 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       };
 
       const addSubcategory = async () => {
-        if (currentType !== 'expense') return;
         const category = panel.querySelector('#bm-category').value;
         if (!category) return;
         const name = await requestNameInPanel(panel, {
@@ -2125,7 +2187,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
         const title      = panel.querySelector('#bm-title').value.trim();
         const absVal     = parseFloat(panel.querySelector('#bm-amount').value);
         const category   = panel.querySelector('#bm-category').value;
-        const subcategory = currentType === 'expense' ? panel.querySelector('#bm-subcategory').value : '';
+        const subcategory = panel.querySelector('#bm-subcategory').value;
         const date       = panel.querySelector('#bm-date').value;
         const recurring  = panel.querySelector('#bm-recurring').checked ? 1 : 0;
         const interval   = panel.querySelector('#bm-interval').value;

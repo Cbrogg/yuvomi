@@ -513,12 +513,15 @@ async function route(req, res, server) {
     return serveStatic(res, resolve(projectRoot(), 'public', 'styles', 'tokens.css'), 'text/css; charset=utf-8');
   }
 
-  // Selbstgehostete Variable Fonts. basename() neutralisiert Path-Traversal;
-  // nur .woff2 aus public/fonts wird ausgeliefert.
-  if (req.method === 'GET' && url.pathname.startsWith('/fonts/') && url.pathname.endsWith('.woff2')) {
-    const name = basename(url.pathname);
-    return serveStatic(res, resolve(projectRoot(), 'public', 'fonts', name), 'font/woff2');
-  }
+  // HIER STAND EINE /fonts/-ROUTE. Sie lieferte Plus Jakarta Sans aus
+  // public/fonts, damit der Installer dieselbe Schrift trug wie die App. Mit dem
+  // HIG-Redesign ist die Schrift aus der App gefallen: public/ enthaelt kein
+  // @font-face mehr, weder sw.js noch das Manifest nennen die Dateien, und der
+  // Installer nimmt seit v2.0.0 den System-Stack. Uebrig war eine Route auf zwei
+  // Binaerdateien, die niemand anforderte - und ein Test, der ihr 200 zusicherte.
+  //
+  // Die Dateien sind mitentfallen. Wer die Route zurueckholt, braucht wieder
+  // beides: eine Schrift, die die App auch benutzt, und einen Grund.
 
   // i18n-Mini-Modul des Installers (Phase 4: i18n-Verdrahtung).
   if (req.method === 'GET' && url.pathname === '/i18n-mini.js') {
@@ -756,7 +759,12 @@ async function route(req, res, server) {
 
       json(res, result.status, result.body);
 
-      if (result.status === 201 || result.status === 403) {
+      // 404 gehoert dazu: /auth/setup antwortet bei bereits vorhandenem Konto
+      // in production mit 404 und nur ausserhalb davon mit 403 (server/auth.js).
+      // Jedes reale Deployment setzt NODE_ENV=production, der 403-Zweig war hier
+      // also toter Code - und ein Rerun beendete den Installer nie, weil dieser
+      // Block nicht lief.
+      if (result.status === 201 || result.status === 403 || result.status === 404) {
         // Nicht sofort schliessen: die Abschlussseite bietet den Download der
         // .env an, und der holt die Datei von hier. Ab jetzt gilt der kurze
         // Nachlauf, den jeder weitere Request verlaengert.

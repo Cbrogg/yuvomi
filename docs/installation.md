@@ -154,7 +154,7 @@ git --version              # git version 2.x.x
 
 ## Step-by-Step Installation
 
-There are six ways to get Yuvomi running. **Option A** (web installer) is recommended for most users — it walks you through every step in your browser. **Option B** (pre-built image) is a quick manual alternative. **Option C** (build from source) is for contributors or custom builds. **Options D–F** install directly from a NAS/home-server app store with no terminal required: **Option D** (TrueNAS SCALE), **Option E** (Umbrel), and **Option F** (Unraid).
+There are seven ways to get Yuvomi running. **Option A** (web installer) is recommended for most users — it walks you through every step in your browser. **Option B** (pre-built image) is a quick manual alternative. **Option C** (build from source) is for contributors or custom builds. **Options D–F** install directly from a NAS/home-server app store with no terminal required: **Option D** (TrueNAS SCALE), **Option E** (Umbrel), and **Option F** (Unraid). **Option G** covers Portainer, whether you paste the stack or let it follow this repository via Git.
 
 ---
 
@@ -177,19 +177,23 @@ node tools/installer/install-server.js
 
 #### 3. Open the Wizard
 
-Open your browser and navigate to **http://localhost:8090**. The wizard detects your browser language (24 languages supported), verifies that a container engine is available (Docker with Compose v2, or Podman with `podman compose` / `podman-compose`), and reports any existing `.env` file or running container before you start. It then guides you through:
+Open your browser and navigate to **http://localhost:8090**. The wizard detects your browser language (24 languages supported), verifies that a container engine is available (Docker with Compose v2, or Podman with `podman compose` / `podman-compose`), and reports an existing `.env` file as well as a running container before you start. When it finds one, the **simple setup is disabled** and you continue with the advanced setup: the simple path writes fixed values for host, port, `SESSION_SECURE` and `TRUST_PROXY`, which would silently downgrade an installation that already runs behind a reverse proxy. The wizard then guides you through:
 
-- Basics — timezone (`TZ`) and HTTP host port (`OIKOS_HTTP_PORT`)
+- Basics — domain/IP, HTTP host port (`OIKOS_HTTP_PORT`), timezone (`TZ`), how Yuvomi is exposed (`SESSION_SECURE`, `TRUST_PROXY`) and the public address (`BASE_URL`). The exposure choice follows the host you enter, and the wizard rejects an `http://` address combined with enforced secure cookies — nobody could sign in to that combination
 - Security key generation (`SESSION_SECRET`, `DB_ENCRYPTION_KEY`) — on a re-run, keys already present in your `.env` are kept rather than regenerated, so running the wizard again on a live installation cannot lock you out of your encrypted database
-- Optional integrations (weather, Google Calendar, Apple CalDAV, local folder, WebDAV, or Google Drive document storage)
-- Advanced settings — reverse-proxy/HTTPS (`SESSION_SECURE`, `TRUST_PROXY`), Single Sign-On (OIDC), and automatic backups
+- Optional integrations (weather, Google Calendar, Apple CalDAV)
+- Email/SMTP for the "forgot password" flow (`EMAIL_SMTP_*`, `EMAIL_FROM_*`)
+- Storage & backups — the host data folder (`DATA_DIR`), automatic backups, off-site WebDAV backups and the three document storage options. Everything that decides where data lives
+- Advanced settings — Single Sign-On (OIDC), the three home-network permissions (they lift the SSRF protection and are asked as one group), the calendar sync interval, live currency rates and the Web-Push contact. Everything that decides what Yuvomi connects to
 - Writing your `.env` file (an existing `.env` is backed up to `.env.bak-<timestamp>` first)
 - Starting the container (via Docker or Podman, whichever was detected)
 - Creating your admin account
 
-The final screen lets you **download a copy of your `.env`** — keep it safe, as it holds the encryption keys that cannot be recovered if lost. Keys carried over from an earlier run appear there as a comment instead of a value, because the browser never receives them; those keys are still in the `.env` on disk and in its backup copy.
+The final screen lets you **download a copy of your `.env`** — keep it safe, as it holds the encryption keys that cannot be recovered if lost. The file is fetched from the server rather than rebuilt in the browser, so it contains the real values, including keys carried over from an earlier run that the browser itself never receives. If the download fails (most likely because the installer has already shut down), the screen says so instead of reporting success, and points you at the `.env` on disk.
 
-The installer server shuts down automatically after setup completes (or after 30 minutes of inactivity).
+Download the file before you close the tab: the installer server shuts down **5 minutes after your admin account is created**, and after 30 minutes of inactivity otherwise.
+
+The final screen also links to the next three steps on your new instance: inviting your family, choosing which modules to enable, and installing Yuvomi on your phones. Running the wizard again on an installation that already has an admin account is a supported case — it writes your `.env`, restarts the container and takes you to that same screen instead of failing.
 
 ---
 
@@ -221,9 +225,10 @@ Generate a secure value for each:
 
 ```bash
 openssl rand -hex 32
+openssl rand -hex 32
 ```
 
-Run this command **twice** and paste each result. See [Environment Variables](#environment-variables) for all options.
+That prints **two** values: paste one as `SESSION_SECRET` and the other as `DB_ENCRYPTION_KEY`. See [Environment Variables](#environment-variables) for all options.
 
 #### 3. Start the Container
 
@@ -234,9 +239,9 @@ docker compose up -d
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
 
 > **Pinning a version.** Every release is also published under immutable tags:
-> `1.87.0` (exact version), `1.87` (latest patch of that minor), plus a moving `main`
+> `2.25.1` (exact version), `2.25` (latest patch of that minor), plus a moving `main`
 > tag for the current development state. To pin production to a known-good release,
-> set `image: ghcr.io/ulsklyc/yuvomi:1.87.0` in your compose file and bump it
+> set `image: ghcr.io/ulsklyc/yuvomi:2.25.1` in your compose file and bump it
 > deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
@@ -282,7 +287,7 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server running on port 3000 | Version 1.87.0
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.25.1
 yuvomi  | [Yuvomi] Environment: production
 yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
@@ -385,6 +390,33 @@ Click **Apply**. Once the container is running, click the Yuvomi icon → **WebU
 
 ---
 
+### Option G — Portainer (Stack or Git/GitOps)
+
+Portainer never places a `.env` file next to the compose file. Whatever you type under **Environment variables** is handed to Compose for `${...}` substitution instead, so the manifest has to list every variable it wants to reach the container. That is exactly what [`docker-compose.portainer.yml`](docker-compose.portainer.yml) does — use it rather than the repository's `docker-compose.yml`.
+
+#### Web editor stack
+
+**Stacks → Add stack → Web editor**, paste the contents of [`docker-compose.portainer.yml`](docker-compose.portainer.yml), then add at least these two under **Environment variables**:
+
+- `SESSION_SECRET` — a long random string (`openssl rand -hex 32`)
+- `DB_ENCRYPTION_KEY` — same generator; back it up, it cannot be recovered or changed on an existing database
+
+Every other variable is optional and falls back to the default shown in the file. `BASE_URL` is strongly recommended — without it, password reset and invitation mails are never sent.
+
+#### Git / GitOps stack
+
+**Stacks → Add stack → Repository**, repository `https://github.com/ulsklyc/yuvomi`, branch `main`, and set the **Compose path** to:
+
+```
+docs/docker-compose.portainer.yml
+```
+
+Add the same environment variables as above. Auto-update then follows `main` on its own.
+
+> **Do not point a Git stack at the repository's `docker-compose.yml`.** That file is written for a local clone with a generated `.env` beside it, so it passes most of its configuration through `env_file` — and Portainer clones the repository without one. The deploy then fails on the missing file, and even if it did not, the container would start without `SESSION_SECRET` and exit (issues #698, #765).
+
+---
+
 ## Environment Variables
 
 All configuration happens in the `.env` file. The container reads these values on startup.
@@ -398,7 +430,7 @@ All configuration happens in the `.env` file. The container reads these values o
 | `PORT` | Port the Express server listens on **inside the container** (rarely changed) | `3000` | No |
 | `OIKOS_HTTP_PORT` | Host port that the compose file maps to the container's port 3000. Change this to expose Yuvomi on a different host port; the app inside the container always listens on 3000. | `3000` | No |
 | `OIKOS_HTTP_BIND` | Host bind address for the published port (`podman-compose.yml` only). Set to `127.0.0.1` for rootless Podman behind a reverse proxy on the same host. | `0.0.0.0` | No |
-| `TZ` | Container timezone (e.g. `Europe/Berlin`). Affects timestamps, the automated-backup schedule, and serves as the household zone wherever a time carries none of its own: events pushed to Google Calendar when the target calendar reports no zone, and the due times of CalDAV reminders synced into Tasks. | `UTC` | No |
+| `TZ` | Container timezone (e.g. `Europe/Berlin`). Affects timestamps, the automated-backup schedule, and serves as the household zone wherever a time carries none of its own: events pushed to Google Calendar when the target calendar reports no zone, the due times of CalDAV reminders synced into Tasks, and the times in the exported calendar feed (`/feed/calendar/<token>.ics`), which subscribers read in this zone - a wrong `TZ` shifts every appointment for everyone subscribed. | `UTC` | No |
 | `NODE_ENV` | Runtime environment | `production` | No |
 | `LOG_LEVEL` | Lowest severity written to the container log (`debug`, `info`, `warn`, `error`). Set to `debug` to see the per-run detail of the calendar, contact and holiday sync, which stays quiet at `info` when a run has nothing to do. | `info` | No |
 | `TRUST_PROXY` | Number of reverse-proxy hops to trust, or a subnet string (e.g. `1`, `172.16.0.0/12`, `loopback`). The default already trusts a single hop, so `req.ip` returns the real client IP behind one Caddy/Nginx/Traefik proxy without any configuration. Set to `loopback` for direct, proxy-less deployments, or to a subnet/higher hop count behind multiple proxy layers. Numeric values are treated as a hop count; named values (`loopback`, `linklocal`, `uniquelocal`) work as expected. | `1` | No |
@@ -427,10 +459,15 @@ is closed. **Requires HTTPS** (the Push API and service workers only work over a
 see [HTTPS / Reverse Proxy](#https--reverse-proxy-nginx)). Each device opts in under
 Settings → Personal → Notifications.
 
-Admins can also add household Gotify or ntfy channels on the same settings page. These channels
-are configured in the UI and do not require environment variables. The Yuvomi backend container or
-host must be able to reach the configured Gotify/ntfy base URL. HTTPS is recommended; HTTP is
-accepted for trusted internal networks such as a private LAN or container network.
+Admins can also add household Gotify, ntfy or generic HTTP webhook channels on the same settings
+page. These channels are configured in the UI and do not require environment variables. The Yuvomi
+backend container or host must be able to reach the configured base URL. HTTPS is recommended; HTTP
+is accepted for trusted internal networks such as a private LAN or container network.
+
+A webhook channel posts JSON to any endpoint, with an optional write-only Bearer token. If the
+receiver expects a body of its own shape - Discord and Slack do - a payload template produces it
+without needing a service-specific adapter; see the
+[notification webhook guide](notification-webhooks.md).
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
@@ -506,14 +543,49 @@ returned by the API once saved; it is stored in the database the same way as oth
 credentials (e.g. the Apple app-specific password), with encryption-at-rest available via the
 optional `DB_ENCRYPTION_KEY`.
 
+### Immich Photo Screensaver (Optional)
+
+Connect a self-hosted Immich server under **Settings → Administration → Immich** to show random
+photos after five minutes without activity. The administration page can test the connection and
+open an immediate preview. An optional album UUID limits the selection; otherwise Yuvomi uses the
+whole accessible library. The Immich API key needs `asset.read` and `asset.view` permissions.
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `IMMICH_URL` | Immich server root or URL ending in `/api` | — | No |
+| `IMMICH_API_KEY` | Immich API key with asset read/view permissions | — | No |
+| `IMMICH_SCREENSAVER_ALBUM_ID` | Optional album UUID used as the photo source | Entire accessible library | No |
+
+Non-empty environment values override their corresponding database values and make those fields
+read-only in Settings. The API key is never returned to the browser. Keys saved in Settings are
+encrypted at rest when `DB_ENCRYPTION_KEY` is enabled. See the dedicated
+[Immich screensaver guide](immich-screensaver.md) for setup, Docker networking, preview behavior,
+security, and troubleshooting.
+
 ### Database & Storage
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `DB_PATH` | Path to the SQLite database file inside the container | `/data/yuvomi.db` | No |
-| `DB_ENCRYPTION_KEY` | SQLCipher AES-256 key for encryption at rest. Leave it empty and the database stays unencrypted. Once set there is no way back: it cannot be recovered and cannot be changed on an existing database. | - | No, but strongly recommended |
+| `DB_ENCRYPTION_KEY` | SQLCipher AES-256 key for encryption at rest. Leave it empty and the database stays unencrypted. Once set there is no way back: it cannot be recovered and cannot be changed on an existing database. The placeholder that `.env.example` ships (`REPLACE_WITH_...`) is refused on a fresh install, because it is printed in this repository and would protect nothing. | - | No, but strongly recommended |
 | `DATA_DIR` | Host directory mounted at `/data` inside the container (set in `.env` or `docker-compose.yml`). | `./data` | No |
-| `MODULES_DIR` | Host directory mounted at `/app/modules` inside the container - the drop-in folder for [third-party modules](../MODULES.md). Compose-only, like `DATA_DIR`. | `./modules` | No |
+| `MODULES_DIR` | Host directory mounted at `/app/modules` inside the container - the drop-in folder for [third-party modules](../MODULES.md). | `./modules` | No |
+
+> **Where the backups go.** There is no `BACKUP_DIR` in the setup wizard, and that is deliberate.
+> Unlike `DATA_DIR`, which exists only as a Compose substitution for the mount source, `BACKUP_DIR`
+> and `MODULES_DIR` are also read by the application itself - and there they mean the directory
+> *inside* the container. A host path such as `./backups` in your `.env` therefore resolves to
+> `/app/backups` in the container, outside the mounted volume and not writable, which is why every
+> deployment descriptor pins it to `/backups`. To keep the backups on a NAS array, change the
+> **mount source**, not the variable:
+>
+> ```yaml
+> volumes:
+>   - /mnt/user/appdata/yuvomi/data:/data
+>   - /mnt/array/yuvomi-backups:/backups   # host side is yours to choose
+> ```
+>
+> The same applies to the module drop-in folder at `/app/modules`.
 | `BACKUP_DIR` | In `.env`/`docker-compose.yml`: the **host** directory mounted at `/backups`. Inside the container the app reads the same name as the **container** path it writes to — the compose files pin it to `/backups`, and the image defaults to `/backups` as well. Only override it inside the container if you mount your backup volume somewhere else. | `./backups` (host) / `/backups` (container) | No |
 
 Generate a secure `DB_ENCRYPTION_KEY`:
@@ -523,6 +595,14 @@ openssl rand -hex 32
 ```
 
 > **Warning**: If you lose this key, you cannot access your database. Keep a backup of your `.env` file in a safe place.
+
+> **The placeholder is not a key.** `.env.example` ships
+> `DB_ENCRYPTION_KEY=REPLACE_WITH_A_STRONG_ENCRYPTION_KEY`, not an empty line. Copying the file and
+> starting without editing it would encrypt the database against a constant that is printed in this
+> repository. A fresh installation therefore refuses to start with that value and tells you both ways
+> out: put a real key in, or clear the line to run unencrypted. An installation that already runs on
+> the placeholder keeps starting - taking a working instance away would not undo anything - and gets
+> a warning with the rotation steps on every start instead.
 
 ### Local Folder Document Storage (Optional)
 
@@ -554,6 +634,12 @@ environment:
 > Ensure the mounted folder is writable by the container (adjust ownership/permissions as needed).
 > Files live on the host volume, so include that folder in your host-level backups — database
 > backups hold only document metadata, not these binaries.
+
+> **`_DIR` and `_PATH` are the two ends of one mount and must match.** If `DOCUMENT_STORAGE_LOCAL_PATH`
+> points at a path nobody mounted, uploads still succeed: the folder is created inside the container
+> layer and the files are gone on the next `pull && up -d`, while the database keeps referencing them.
+> Since v2.9.0 the server checks this at startup and warns when the folder is missing or not writable,
+> naming the path it looked for. A silent start means the mount is where the app expects it.
 
 ### WebDAV Document Storage (Optional)
 
@@ -654,6 +740,7 @@ it in controlled environments.
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `ICS_SUBSCRIPTION_ALLOW_PRIVATE_NETWORK` | Allow `http://` and private/local network ICS feeds; lifts SSRF protection (`true`/`false`) | `false` | No |
+| `RECIPE_PROVIDER_ALLOW_PRIVATE_NETWORK` | Allow `http://` and private/local network recipe provider (Mealie/Tandoor) targets; lifts SSRF protection (`true`/`false`) | `false` | No |
 
 ### Google Calendar Sync (Optional)
 
@@ -1211,6 +1298,15 @@ list by default would pull a server's existing reminders into your task board un
 
 After switching a list on, either press "Sync reminders" or wait for the next scheduled run
 (`SYNC_INTERVAL_MINUTES`).
+
+Once a list is enabled for **Tasks**, it also becomes a destination: the task dialog gains a "sync
+target" field, and a task created in Yuvomi with a target set is uploaded on the next run (or right
+away, on save). Each member sets their own default under **Settings → Personal → Task defaults** -
+which lists the household mirrors is an admin decision, which of them your new tasks go to is
+yours. A task without a target stays local, as every task did before. Lists mapped to **Shopping**
+are not offered as task destinations: a task sent there would come back as a shopping item.
+Subtasks are never uploaded on their own, and a task that has already been uploaded cannot be moved
+to a different list.
 
 If the page shows no lists at all, the server is not advertising any collection that accepts
 `VTODO`. Create a task list in your CalDAV server (in Radicale, Nextcloud or your client of

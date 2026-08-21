@@ -11,7 +11,9 @@ import { openDetailView, visibilityRow, assignedRow } from '/components/detail-v
 import { stagger, wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { t, formatDate as formatPreferredDate, formatDayMonth, formatTime, timeSuffix, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc, fmtLocation } from '/utils/html.js';
-import { shiftEndDateKey, isEndBeforeStart, weekStartIndex, weekdayOrder } from '/utils/date.js';
+import { shiftEndDateKey, isEndBeforeStart, weekStartIndex, weekdayOrder,
+         monthPeriodKeys, startOfLocalWeekKey, addLocalDays, defaultDateInPeriod,
+         isWeekendKey } from '/utils/date.js';
 import { truncateRuleBefore, shiftSeriesStart, shiftEndForStart } from '/utils/recurrence-scope.js';
 import { getReadableTextColor } from '/utils/color.js';
 import { refresh as refreshReminders } from '/reminders.js';
@@ -230,7 +232,31 @@ const LAYER_SCHOOL_KEY    = 'yuvomi:calendar:layer:school';
 const ASSIGNED_TO_ME_KEY  = 'yuvomi:calendar:assignedToMe';
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-const HOUR_HEIGHT = 56; // px pro Stunde in Wochen-/Tagesansicht
+/* DIE STUNDENHOEHE STEHT IN tokens.css UND NUR DORT.
+ *
+ * Sie stand hier als `HOUR_HEIGHT = 56` und dort als `--cal-hour-height: 56px`:
+ * zwei Schreibweisen desselben Werts, von denen eine still veralten kann - wer
+ * das Token anfasst, verschiebt die Stundenlinien und laesst die Termine
+ * stehen, ohne dass ein Test das sieht. Positionen werden deshalb als calc()
+ * gegen den Token-Namen ausgedrueckt; wer die Hoehe wirklich in Pixeln braucht
+ * (Klick auf eine Uhrzeit, Scroll zur aktuellen Stunde), misst sie am Element.
+ *
+ * Es bleibt EIN Variablenname. Die Tagesansicht ist dichter (40px statt 56px),
+ * aber sie sagt das in ihrem eigenen CSS - `.day-view` ueberschreibt
+ * --cal-hour-height mit --cal-hour-height-day, und alles darin (Zeitspalte,
+ * Stundenlinien, Termine, Now-Linie) folgt automatisch. JS kennt die Dichte
+ * gar nicht, es kennt nur den Bezug. */
+const HOUR_VAR = '--cal-hour-height';
+
+/** Vertikaler Versatz einer Minutenzahl als calc() gegen die Stundenhoehe. */
+function hourOffset(minutes) {
+  return `calc(var(${HOUR_VAR}) * ${Math.round((minutes / 60) * 1e4) / 1e4})`;
+}
+
+/** Gemessene Stundenhoehe einer 24-Stunden-Spalte (Klick- und Scroll-Mathematik). */
+function measuredHourHeight(colEl) {
+  return (colEl?.getBoundingClientRect?.().height || 0) / 24;
+}
 
 function renderIconPickerResults(selectedIcon, query = '') {
   const q = query.trim().toLowerCase();
@@ -239,7 +265,7 @@ function renderIconPickerResults(selectedIcon, query = '') {
       .flatMap((c) => c.icons)
       .filter((icon) => icon.label.toLowerCase().includes(q) || icon.value.includes(q));
     if (filtered.length === 0) {
-      return `<div class="event-icon-picker__no-results">${esc(t('calendar.iconSearchEmpty'))}</div>`;
+      return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('calendar.iconSearchEmpty'))}</p></div>`;
     }
     return `
       <div class="event-icon-picker__category-icons">
@@ -542,6 +568,22 @@ function eventIconName(icon) {
   return EVENT_ICONS.some((item) => item.value === normalized) ? normalized : 'calendar';
 }
 
+/**
+ * Hat dieser Termin ein EIGENES Icon - also eines, das etwas hinzufuegt?
+ *
+ * 'calendar' ist der Datenbank-Default der Spalte und zugleich der Rueckfall
+ * von eventIconName() fuer alles Unbekannte: ein Termin, an dem nie jemand ein
+ * Icon gewaehlt hat, traegt es trotzdem. Im Monat und in der Woche stoert das
+ * nicht, dort steht der Chip in einem Raster voller Fremdherkunft. Im
+ * Tagesraster waere es ein generisches Kalender-Glyph an jeder Zeile INNERHALB
+ * des Kalenders - es sagt nichts (Herkunfts-Regel: im eigenen Raum ist die
+ * Herkunft selbstverstaendlich) und kostet die Titelspalte 20px, die bei 16px
+ * hohen Balken fehlen. Die Zugehoerigkeit traegt dort der Spine.
+ */
+function hasEventIcon(icon) {
+  return eventIconName(icon) !== 'calendar';
+}
+
 function customEventIconHtml(icon, className) {
   if (icon !== 'tooth') return '';
   return `<svg class="${className} event-icon--custom" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -675,6 +717,37 @@ function getAgendaRange(dateStr) {
   return { from: dateStr, to: addDays(dateStr, 30) };
 }
 
+/**
+ * Der Zeitraum, den eine Ansicht gerade zeigt - als Zeitraum für einen neuen
+ * Termin, nicht als Ladespanne. Deshalb nicht getRangeForView(): dessen
+ * Monatsspanne ist das 42-Tage-Raster und begänne im Vormonat.
+ */
+function visibleDayRange(view, cursor, weekStart = 1) {
+  if (view === 'month')  return monthPeriodKeys(cursor);
+  if (view === 'week')   {
+    const from = startOfLocalWeekKey(cursor, weekStart);
+    return { from, to: addLocalDays(from, 6) };
+  }
+  if (view === 'agenda') return { from: cursor, to: addLocalDays(cursor, 30) };
+  return { from: cursor, to: cursor };                  // day: der Cursor ist der Tag
+}
+
+/**
+ * Vorbelegtes Datum für einen neuen Termin, bei dem niemand einen Tag angeklickt
+ * hat: Toolbar-„+", FAB, Leerzustand der Agenda (#737). Die Entscheidung selbst
+ * trifft defaultDateInPeriod() - sie gilt hausweit und nicht nur hier.
+ */
+function newEventDefaultDate(view, cursor, today, weekStart = 1) {
+  if (!cursor) return today;
+  const { from, to } = visibleDayRange(view, cursor, weekStart);
+  return defaultDateInPeriod(from, to, today);
+}
+
+/** newEventDefaultDate() für den aktuellen State - der Normalfall an den Aufrufstellen. */
+function newEventDate() {
+  return newEventDefaultDate(state.view, state.cursor, state.today, state.weekStart);
+}
+
 // Per-Render-Pass Day-Buckets. Vermeidet, dass jede der 42 Monats-Zellen die
 // komplette state.events/state.tasks-Liste neu filtert und pro Event ein neues
 // Date parst (O(Zellen × Events) → O(Events + Zellen)).
@@ -699,7 +772,7 @@ function buildDayIndex() {
   const hi = state.rangeTo   || '';
   for (const e of state.events) {
     const start = localDate(e.start_datetime);
-    const end   = e.end_datetime ? localDate(e.end_datetime) : start;
+    const end   = eventEndDate(e);
     // Auf das geladene Fenster klammern, damit mehrtägige/fehlerhafte Events
     // keinen unbegrenzten Bereich erzeugen.
     let from = lo && start < lo ? lo : start;
@@ -739,16 +812,38 @@ function eventsOnDay(dateStr) {
     ? (_dayIndex.events.get(dateStr) ?? [])
     : state.events.filter((e) => {
         const start = localDate(e.start_datetime);
-        const end   = e.end_datetime ? localDate(e.end_datetime) : start;
+        const end   = eventEndDate(e);
         return start <= dateStr && end >= dateStr;
       });
   return state.assignedToMe ? list.filter(belongsToMe) : list;
 }
 
+/**
+ * Letzter Kalendertag, auf dem ein Event erscheint.
+ *
+ * Ein Zeit-Event, das exakt um Mitternacht endet, belegt den Folgetag nicht:
+ * 21:00-24:00 ist ein Freitagstermin, kein Freitag-und-Samstag-Termin (#804).
+ * Ohne diese Korrektur galt das Ende als inklusiv, das Event landete im
+ * Tages-Bucket des Folgetags und wurde zusaetzlich als mehrtaegig eingestuft -
+ * dadurch rutschte es ueber isAllDayLike() faelschlich in die Ganztags-Zeile.
+ *
+ * Ganztags-Events sind bewusst ausgenommen: sie speichern ihr Ende als
+ * T00:00 und meinen es INKLUSIV (eine Reise 07.-09.09. endet auf
+ * '2026-09-09T00:00'). Die Regel gilt daher nur fuer Zeit-Events.
+ */
+function eventEndDate(ev) {
+  const start = localDate(ev.start_datetime);
+  if (!ev.end_datetime) return start;
+  const end = localDate(ev.end_datetime);
+  if (end <= start) return start;
+  if (ev.all_day || !ev.end_datetime.includes('T')) return end;
+  return localTime(ev.end_datetime) === '00:00' ? addDays(end, -1) : end;
+}
+
 /** True, wenn Start- und Enddatum auf verschiedene Kalendertage fallen. */
 function isMultiDayEvent(ev) {
   if (!ev || !ev.start_datetime || !ev.end_datetime) return false;
-  return localDate(ev.start_datetime) !== localDate(ev.end_datetime);
+  return localDate(ev.start_datetime) !== eventEndDate(ev);
 }
 
 /**
@@ -771,7 +866,7 @@ function agendaSegmentKind(ev, dayStr) {
   if (ev.all_day || !ev.start_datetime.includes('T')) return 'all-day';
   if (!isMultiDayEvent(ev)) return 'single';
   const startDay = localDate(ev.start_datetime);
-  const endDay   = localDate(ev.end_datetime);
+  const endDay   = eventEndDate(ev);
   if (dayStr === startDay) return 'start';
   if (dayStr === endDay)   return 'end';
   return 'middle';
@@ -810,18 +905,28 @@ function holidaysOnDay(dateStr) {
 /** Rendert einen read-only Task-Chip für Kalenderansichten. In der Monatsansicht
  *  (interactive:false) ist die Tageszelle selbst der Drill-in-Button; die Chips
  *  sind dort nur visuelles Signal und dürfen kein eigenes role/tabindex tragen -
- *  sonst entsteht ein fokussierbarer Button im Zellen-Button (Audit P1). */
-function renderTaskChip(task, { interactive = true } = {}) {
+ *  sonst entsteht ein fokussierbarer Button im Zellen-Button (Audit P1).
+ *  icon:false lässt das check-square-Icon weg: die Monats-Bars sind nach Kanon
+ *  icon-frei, Woche/Tag/Agenda behalten es als Termin/Aufgabe-Unterscheidung. */
+function renderTaskChip(task, { interactive = true, icon = true } = {}) {
   const priority = task.priority || 'none';
   const label    = esc(task.title);
   const timeStr  = task.due_time ? ` · ${task.due_time.slice(0, 5)}` : '';
   const button   = interactive
     ? ` role="button" tabindex="0" aria-label="${esc(t('calendar.taskChipAriaLabel', { title: task.title }))}"`
     : '';
+  // Die Prioritaet steht als Rangmarke im Punkt (list-row.css), nicht mehr als
+  // getoentes Feld mit getoenter Schrift: dieselbe Stufe, die die Aufgabenliste
+  // seit v2.23.0 so zeigt. „Ohne" bekommt keinen Punkt - eine Marke fuer eine
+  // Abwesenheit waere eine fuenfte Stufe.
+  const dot = priority !== 'none'
+    ? `<span class="priority-dot priority-dot--${priority}" aria-hidden="true"></span>`
+    : '';
   return `<div class="cal-task-chip cal-task-chip--${priority}"
                data-task-id="${task.id}"${button}
                title="${label}${esc(timeStr)}">
-    <i data-lucide="check-square" class="icon-sm" aria-hidden="true"></i>
+    ${icon ? '<i data-lucide="check-square" class="icon-sm" aria-hidden="true"></i>' : ''}
+    ${dot}
     <span>${label}${esc(timeStr)}</span>
   </div>`;
 }
@@ -919,7 +1024,7 @@ export async function render(container, { user }) {
     <div class="calendar-page" id="calendar-page">
       <div class="page-toolbar page-toolbar--wrap cal-toolbar" id="cal-toolbar"></div>
       <div id="cal-body" style="flex:1;display:flex;flex-direction:column;overflow:hidden;"></div>
-      <button class="page-fab" id="fab-new-event" aria-label="${t('calendar.newEvent')}">
+      <button class="page-fab" id="fab-new-event" aria-label="${t('calendar.newEvent')}" data-dock-label="${t('newLabel.calendar')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
@@ -977,7 +1082,7 @@ export async function render(container, { user }) {
   renderView();
   bodyEl.removeAttribute('aria-busy');
 
-  findPageFab('fab-new-event')?.addEventListener('click', () => openEventModal({ mode: 'create' }));
+  findPageFab('fab-new-event')?.addEventListener('click', () => openEventModal({ mode: 'create', date: newEventDate() }));
 
   if (initialEvent) {
     const targetDate = deepLinkTargetDate(initialEvent, dateParam);
@@ -1037,7 +1142,7 @@ function renderToolbar() {
   bar.insertAdjacentHTML('beforeend', `
     <h1 class="page-toolbar__title">${t('calendar.title')}</h1>
     <div class="page-toolbar__center cal-toolbar__month">
-      <button class="cal-toolbar__today" id="cal-today">${t('calendar.today')}</button>
+      <button class="btn btn--secondary cal-toolbar__today" id="cal-today">${t('calendar.today')}</button>
       <button class="btn btn--icon" id="cal-prev" aria-label="${t('calendar.back')}">
         <i data-lucide="chevron-left" aria-hidden="true"></i>
       </button>
@@ -1056,9 +1161,15 @@ function renderToolbar() {
           <span>${t('calendar.assignedToMe')}</span>
         </button>
       ` : ''}
+      <!-- KEIN aria-controls im geschlossenen Zustand: die Suchleiste entsteht
+           erst beim Öffnen (openCalendarSearch), und ein Verweis auf eine ID, die
+           es noch nicht gibt, kündigt einem Screenreader ein Ziel an, das nicht
+           existiert. Gesetzt wird es dort, wo die Leiste entsteht, und beim
+           Schließen wieder entfernt - dieselbe Regel wie in utils/sub-tabs.js:
+           ohne aufgelöstes Ziel bleibt das Attribut weg. -->
       <button class="btn btn--icon cal-toolbar__search-btn" id="cal-search"
               aria-label="${t('calendar.searchOpen')}" title="${t('calendar.searchOpen')}"
-              aria-expanded="false" aria-controls="cal-search-bar">
+              aria-expanded="false">
         <i data-lucide="search" aria-hidden="true"></i>
       </button>
       <div class="cal-toolbar__views" role="tablist" aria-label="${t('nav.calendar')}">
@@ -1068,8 +1179,9 @@ function renderToolbar() {
                   tabindex="${v === state.view ? '0' : '-1'}">${VIEW_LABELS()[v]}</button>
         `).join('')}
       </div>
-      <button class="btn btn--primary btn--icon toolbar-new-btn" id="cal-add" aria-label="${t('calendar.addEvent')}">
+      <button class="btn btn--primary toolbar-new-btn" id="cal-add" aria-label="${t('calendar.addEvent')}">
         <i data-lucide="plus" aria-hidden="true"></i>
+        <span class="toolbar-new-btn__label">${t('newLabel.calendar')}</span>
       </button>
     </div>
   `);
@@ -1081,7 +1193,7 @@ function renderToolbar() {
   bar.querySelector('#cal-prev').addEventListener('click', () => navigate(-1));
   bar.querySelector('#cal-next').addEventListener('click', () => navigate(1));
   bar.querySelector('#cal-today').addEventListener('click', goToday);
-  bar.querySelector('#cal-add').addEventListener('click', () => openEventModal({ mode: 'create' }));
+  bar.querySelector('#cal-add').addEventListener('click', () => openEventModal({ mode: 'create', date: newEventDate() }));
   bar.querySelector('#cal-search').addEventListener('click', openCalendarSearch);
 
   bar.querySelector('#cal-assigned-me')?.addEventListener('click', (e) => {
@@ -1314,6 +1426,16 @@ function scheduleMonthFit(grid) {
 function renderView() {
   const body = _container.querySelector('#cal-body');
   if (!body) return;
+  /* Das Lesemass der Seite folgt der ANSICHT, denn hier wechselt der Koerper
+   * seine Natur: die Agenda ist eine Zeilenliste und will die Lesebahn, das
+   * Monatsgitter ist eine Flaeche und will die ganze Content-Spalte. Ein
+   * fester Modifier stimmte in genau einer der vier Ansichten - dieselbe
+   * Kopplung wie auf /tasks (Liste gegen Kanban), und derselbe Guard prueft
+   * sie (Critique 2026-08-13, zweite Runde). */
+  _container.querySelector('#calendar-page')
+    ?.classList.toggle('page-measure--narrow', state.view === 'agenda');
+  _container.querySelector('.cal-toolbar')
+    ?.classList.toggle('page-toolbar--narrow', state.view === 'agenda');
   // Monats-Resize-Observer lösen, bevor das alte #month-grid detached wird;
   // nur die Monatsansicht setzt ihn danach wieder auf.
   _monthGridResizeObserver?.disconnect();
@@ -1365,7 +1487,7 @@ function renderMonthView(container) {
       <div class="month-weekdays">
         ${weekdayOrder(state.weekStart).map((idx) => `<div class="month-weekday">${DAY_NAMES_SHORT()[idx]}</div>`).join('')}
       </div>
-      <div class="month-grid" id="month-grid">
+      <div class="month-grid page-scrollport" id="month-grid">
         ${days.map(({ date, inMonth }) => renderMonthDay(date, inMonth)).join('')}
       </div>
     </div>
@@ -1418,16 +1540,27 @@ function renderMonthView(container) {
   _monthGridResizeObserver.observe(grid);
 }
 
+/**
+ * Klassen einer Monatszelle - eigene Funktion, weil hier der Wochentag über den
+ * Tag selbst entschieden wird und nicht über seine Spalte im Raster. Die
+ * Wochenend-Tönung hing früher an `:nth-child(7n)`/`7n-1` im CSS, was nur bei
+ * Wochenstart Montag Sa/So traf: bei Sonntag-Start färbte sie Fr/Sa (#780).
+ */
+function monthDayClasses(date, inMonth, todayKey = state.today) {
+  return [
+    'month-day',
+    !inMonth            ? 'month-day--outside' : '',
+    date === todayKey   ? 'month-day--today'   : '',
+    isWeekendKey(date)  ? 'month-day--weekend' : '',
+  ].filter(Boolean).join(' ');
+}
+
 function renderMonthDay(date, inMonth) {
   const evs      = eventsOnDay(date);
   const dayTasks = tasksOnDay(date);
   const dayHols  = holidaysOnDay(date);
   const isToday  = date === state.today;
-  const classes  = [
-    'month-day',
-    !inMonth ? 'month-day--outside' : '',
-    isToday  ? 'month-day--today' : '',
-  ].filter(Boolean).join(' ');
+  const classes  = monthDayClasses(date, inMonth);
 
   // Alle Chips (Feiertagsband, Termine, Aufgaben) bis zu einem großzügigen Puffer
   // ins DOM rendern; welche sichtbar bleiben, entscheidet fitMonthDayCells aus der
@@ -1447,15 +1580,18 @@ function renderMonthDay(date, inMonth) {
     </div>
   `).join('');
 
+  // Monatsgrid-Kanon (Apple Kalender / Fantastical): flache getönte Bar mit nur
+  // dem Titel. Icon und Avatar-Stack leben in der Tages-/Detailansicht; die
+  // "Wer"-Information bleibt für Tooltip/Screenreader im title-Attribut erhalten.
   const evHtml = evShown.map((ev) => `
     <div class="month-day__event"
          data-id="${ev.id}"
          style="${eventSurfaceStyle(ev)}"
-         title="${esc(ev.title)}${ev.cal_name ? ' · ' + ev.cal_name : ''}${chipAssigneeTitleSuffix(ev)}"
-    >${eventIconHtml(ev.icon, 'event-icon event-icon--compact')}<span>${esc(ev.title)}</span>${chipAssigneeStack(ev, { size: 15, maxVisible: 2 })}</div>
+         title="${esc(ev.title)}${ev.cal_name ? ' · ' + esc(ev.cal_name) : ''}${chipAssigneeTitleSuffix(ev)}"
+    ><span>${esc(ev.title)}</span></div>
   `).join('');
 
-  const taskHtml = taskShown.map((tk) => renderTaskChip(tk, { interactive: false })).join('');
+  const taskHtml = taskShown.map((tk) => renderTaskChip(tk, { interactive: false, icon: false })).join('');
 
   return `
     <div class="${classes}" data-date="${date}" data-total="${total}"
@@ -1534,11 +1670,11 @@ function renderWeekView(container) {
           </div>
         `).join('')}
       </div>
-      <div class="week-view__scroll" id="week-scroll">
+      <div class="week-view__scroll page-scrollport" id="week-scroll">
         <div class="week-view__body">
           <div class="week-view__times">
             ${Array.from({ length: 24 }, (_, h) => `
-              <div class="week-view__time-slot" style="height:${HOUR_HEIGHT}px;">
+              <div class="week-view__time-slot">
                 <span class="week-view__time-label">${h === 0 ? '' : formatTime(new Date(2000, 0, 1, h, 0, 0))}</span>
               </div>
             `).join('')}
@@ -1548,10 +1684,10 @@ function renderWeekView(container) {
             ${days.map((d, i) => `
               <div class="week-view__col" data-date="${d}">
                 ${Array.from({ length: 24 }, (_, h) => `
-                  <div class="week-view__hour-line" style="top:${h * HOUR_HEIGHT}px;"></div>
+                  <div class="week-view__hour-line" style="top:${hourOffset(h * 60)};"></div>
                 `).join('')}
                 ${timedEvs[i].map((ev) => renderWeekEvent(ev, layouts[i].get(ev.id))).join('')}
-                ${d === state.today ? `<div class="week-view__now-line" id="now-line" style="top:${nowTop()}px;"></div>` : ''}
+                ${d === state.today ? `<div class="week-view__now-line" id="now-line" style="top:${hourOffset(nowMinutes())};"></div>` : ''}
               </div>
             `).join('')}
           </div>
@@ -1594,25 +1730,31 @@ function renderWeekView(container) {
   });
 
   // Scrollen zu aktueller Zeit
-  const scroll = container.querySelector('#week-scroll');
-  if (scroll) {
-    const h = new Date().getHours();
-    scroll.scrollTop = Math.max(0, h * HOUR_HEIGHT - 80);
-  }
+  scrollToHour(container.querySelector('#week-scroll'), container.querySelector('.week-view__body'));
+}
+
+/**
+ * Setzt einen Zeitraster-Scroller auf die aktuelle Stunde, gemessen an der
+ * Gesamthoehe des 24-Stunden-Koerpers statt an einer zweiten Stundenzahl in JS.
+ */
+function scrollToHour(scroll, body) {
+  if (!scroll || !body) return;
+  const hourHeight = body.getBoundingClientRect().height / 24;
+  scroll.scrollTop = Math.max(0, new Date().getHours() * hourHeight - 80);
 }
 
 function renderWeekEvent(ev, layout = null) {
   const { start, end } = timeRangeForEvent(ev);
   const duration = Math.max(end - start, 30);
 
-  const top    = (start / 60) * HOUR_HEIGHT;
-  const height = (duration / 60) * HOUR_HEIGHT - 2;
+  const top    = hourOffset(start);
+  const height = `calc(${hourOffset(duration)} - 2px)`;
   const left = layout ? `calc(${(layout.colIndex / layout.totalCols) * 100}% + 2px)` : '2px';
   const width = layout ? `calc(${100 / layout.totalCols}% - 4px)` : 'auto';
 
   return `
     <div class="week-event" data-id="${ev.id}"
-         style="top:${top}px;height:${height}px;left:${left};width:${width};${eventSurfaceStyle(ev)}"
+         style="top:${top};height:${height};left:${left};width:${width};${eventSurfaceStyle(ev)}"
          title="${esc(ev.title)}${chipAssigneeTitleSuffix(ev)}">
       <div class="week-event__title">${eventIconHtml(ev.icon, 'event-icon event-icon--compact')}<span>${esc(ev.title)}</span>${(ev.recurrence_rule || ev.is_recurring_instance) ? calendarRepeatIconHtml() : ''}${chipAssigneeStack(ev, { size: 14, maxVisible: 2 })}</div>
       <div class="week-event__time">${formatTime(ev.start_datetime)}${ev.end_datetime ? '–' + formatTime(ev.end_datetime) : ''}</div>
@@ -1641,18 +1783,22 @@ function addDurationToDateTime(dateKey, timeStr, minutes) {
   };
 }
 
-function nowTop() {
+/** Minuten seit Mitternacht - der Bezug jeder Now-Linie. */
+function nowMinutes() {
   const now = new Date();
-  const minutes = now.getHours() * 60 + now.getMinutes();
-  return (minutes / 60) * HOUR_HEIGHT;
+  return now.getHours() * 60 + now.getMinutes();
 }
 
 /** Berechnet die geklickte Uhrzeit (auf 30-Minuten gerundet) aus einem Click-Event
- *  relativ zum übergebenen Spalten-Element. */
+ *  relativ zum übergebenen Spalten-Element. Die Stundenhöhe wird an der Spalte
+ *  gemessen (sie ist immer 24 Stunden hoch), nicht aus einer Zahl in dieser Datei
+ *  gelesen - so stimmt der Treffer auch in der dichteren Tagesansicht. */
 function clickedTime(e, colEl) {
   const rect = colEl.getBoundingClientRect();
+  const hourHeight = measuredHourHeight(colEl);
+  if (!hourHeight) return '09:00';
   const yOffset = Math.max(0, e.clientY - rect.top);
-  const totalMinutes = Math.round((yOffset / HOUR_HEIGHT) * 60 / 30) * 30;
+  const totalMinutes = Math.round((yOffset / hourHeight) * 60 / 30) * 30;
   const clamped = Math.min(Math.max(totalMinutes, 0), 23 * 60 + 30);
   return `${pad(Math.floor(clamped / 60))}:${pad(clamped % 60)}`;
 }
@@ -1734,7 +1880,7 @@ function renderDayView(container) {
   container.insertAdjacentHTML('beforeend', `
     <div class="day-view">
       ${(allday.length || tasksOnDay(state.cursor).length || holidaysOnDay(state.cursor).length) ? `
-      <div class="allday-row" style="display:grid;grid-template-columns:var(--space-12) 1fr;">
+      <div class="allday-row" style="display:grid;grid-template-columns:var(--cal-gutter-width) 1fr;">
         <div class="calendar-all-day-label">${t('calendar.allDayShort')}</div>
         <div class="allday-cell">
           ${holidaysOnDay(state.cursor).map((h) => `
@@ -1749,23 +1895,26 @@ function renderDayView(container) {
           ${tasksOnDay(state.cursor).map(renderTaskChip).join('')}
         </div>
       </div>` : ''}
-      <div class="day-view__scroll" id="day-scroll">
+      <div class="day-view__scroll page-scrollport" id="day-scroll">
         <div class="day-view__body">
           <div class="day-view__times">
             ${Array.from({ length: 24 }, (_, h) => `
-              <div class="week-view__time-slot" style="height:${HOUR_HEIGHT}px;">
+              <div class="week-view__time-slot">
                 <span class="week-view__time-label">${h === 0 ? '' : formatTime(new Date(2000, 0, 1, h, 0, 0))}</span>
               </div>
             `).join('')}
           </div>
           <div class="day-view__col" data-date="${state.cursor}" id="day-col">
             ${Array.from({ length: 24 }, (_, h) => `
-              <div class="week-view__hour-line" style="top:${h * HOUR_HEIGHT}px;"></div>
+              <div class="week-view__hour-line" style="top:${hourOffset(h * 60)};"></div>
             `).join('')}
-            ${timed.map((ev) => renderWeekEvent(ev, layout.get(ev.id))).join('')}
-            ${dayEvs.length === 0 ? `<div class="day-view__empty-hint" style="top:${(state.cursor === state.today ? nowTop() : 9 * HOUR_HEIGHT) + 16}px">${t('calendar.dayEmptyHint')}</div>` : ''}
-            ${state.cursor === state.today ? `<div class="week-view__now-line" style="top:${nowTop()}px;"></div>` : ''}
+            ${timed.map((ev) => renderDayEvent(ev, layout.get(ev.id))).join('')}
+            ${dayEvs.length === 0 ? `<div class="day-view__empty-hint" style="top:calc(${hourOffset(state.cursor === state.today ? nowMinutes() : 9 * 60)} + 16px)">${t('calendar.dayEmptyHint')}</div>` : ''}
           </div>
+          ${state.cursor === state.today ? `
+            <div class="day-view__now-line" aria-hidden="true" style="top:${hourOffset(nowMinutes())};"></div>
+            <div class="day-view__now-dot" aria-hidden="true" style="top:${hourOffset(nowMinutes())};"></div>
+          ` : ''}
         </div>
       </div>
     </div>
@@ -1785,7 +1934,7 @@ function renderDayView(container) {
   });
 
   container.querySelector('#day-col').addEventListener('click', (e) => {
-    const evEl = e.target.closest('.week-event');
+    const evEl = e.target.closest('.day-event');
     if (evEl) {
       const ev = state.events.find((ev) => ev.id === parseInt(evEl.dataset.id, 10));
       if (ev) openEventDetail(ev, evEl);
@@ -1795,11 +1944,50 @@ function renderDayView(container) {
     openEventModal({ mode: 'create', date: state.cursor, time });
   });
 
-  const scroll = container.querySelector('#day-scroll');
-  if (scroll) {
-    const h = new Date().getHours();
-    scroll.scrollTop = Math.max(0, h * HOUR_HEIGHT - 80);
-  }
+  scrollToHour(container.querySelector('#day-scroll'), container.querySelector('.day-view__body'));
+}
+
+/**
+ * Ein Termin im Tagesraster: flacher Tint-Balken mit Farbspine.
+ *
+ * DIE GRAMMATIK GILT FUER JEDEN TERMIN ODER FUER KEINEN. Im Mockup trug genau
+ * ein Event weder Spine noch Toenung (Screenshot 05) - hier kann das nicht
+ * passieren, weil beide aus derselben `--ev-color` fallen, die
+ * `resolveEventColor()` immer beantwortet (Ebene, Kalender oder App-Akzent).
+ *
+ * Die Zeit-/Ortszeile erscheint erst ab einer Stunde Dauer: darunter bleibt im
+ * 40px-Raster nur Platz fuer den Titel, und eine angeschnittene zweite Zeile
+ * ist schlechter als keine.
+ */
+function renderDayEvent(ev, layout = null) {
+  const { start, end } = timeRangeForEvent(ev);
+  const duration = Math.max(end - start, 30);
+  const roomy = duration >= 60;
+
+  const top    = hourOffset(start);
+  const height = `calc(${hourOffset(duration)} - 4px)`;
+  const cols   = layout?.totalCols ?? 1;
+  const idx    = layout?.colIndex ?? 0;
+  // Links 4px, rechts 10px: der Balken laesst die Zeitachse an beiden Raendern
+  // stehen, damit Stunden- und Now-Linie sichtbar hinter ihm weiterlaufen.
+  const left  = `calc(${(idx / cols) * 100}% + 4px)`;
+  const width = `calc(${100 / cols}% - 14px)`;
+
+  const place = ev.location ? ` · ${esc(fmtLocation(ev.location))}` : '';
+  const timeText = `${formatTime(ev.start_datetime)}${ev.end_datetime ? '–' + formatTime(ev.end_datetime) : ''}`;
+
+  return `
+    <div class="day-event${roomy ? '' : ' day-event--tight'}" data-id="${ev.id}"
+         style="top:${top};height:${height};left:${left};width:${width};${eventSurfaceStyle(ev)}"
+         title="${esc(ev.title)}${ev.location ? ' · ' + esc(fmtLocation(ev.location)) : ''}${chipAssigneeTitleSuffix(ev)}">
+      <span class="day-event__spine" aria-hidden="true"></span>
+      <span class="day-event__text">
+        <span class="day-event__title">${hasEventIcon(ev.icon) ? eventIconHtml(ev.icon, 'event-icon event-icon--compact') : ''}<span class="day-event__name">${esc(ev.title)}</span>${(ev.recurrence_rule || ev.is_recurring_instance) ? calendarRepeatIconHtml() : ''}</span>
+        ${roomy ? `<span class="day-event__meta">${timeText}${place}</span>` : ''}
+      </span>
+      ${roomy ? chipAssigneeStack(ev, { size: 20, maxVisible: 2 }) : ''}
+    </div>
+  `;
 }
 
 // --------------------------------------------------------
@@ -1816,7 +2004,7 @@ function renderAgendaView(container) {
 
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="agenda-view" id="agenda-view">
+    <div class="agenda-view page-scrollport" id="agenda-view">
       ${groups.length === 0
         ? `<div class="empty-state">
              <i data-lucide="calendar-plus" class="empty-state__icon" aria-hidden="true"></i>
@@ -1825,16 +2013,18 @@ function renderAgendaView(container) {
            </div>`
         : groups.map(({ date, events, tasks, holidays }) => `
           <div class="agenda-day">
-            <div class="agenda-day__header ${date === state.today ? 'agenda-day__header--today' : ''}">
+            <!-- Tageskopf als echte Ueberschrift (Critique 2026-08-10):
+                 /calendar hatte genau EIN h-Element im ganzen Dokument. -->
+            <h2 class="agenda-day__header ${date === state.today ? 'agenda-day__header--today' : ''}">
               <span class="agenda-day__date">${formatDate(date)}</span>
               <span class="agenda-day__weekday">${DAY_NAMES_LONG()[new Date(date + 'T00:00:00').getDay()]}</span>
-            </div>
+            </h2>
             ${holidays.length ? `<div class="agenda-holidays">${holidays.map((h) => `
               <div class="agenda-holiday" style="--holi-color:${esc(h.color)}">
                 <span class="agenda-holiday__dot"></span>
                 <span>${esc(h.name)}</span>
               </div>`).join('')}</div>` : ''}
-            ${events.map((ev) => renderAgendaEvent(ev, date)).join('')}
+            ${events.length ? `<div class="list-rows">${events.map((ev) => renderAgendaEvent(ev, date)).join('')}</div>` : ''}
             ${tasks.length ? `<div class="agenda-tasks">${tasks.map(renderTaskChip).join('')}</div>` : ''}
           </div>
         `).join('')
@@ -1846,7 +2036,7 @@ function renderAgendaView(container) {
 
   container.querySelector('#agenda-view').addEventListener('click', (e) => {
     if (e.target.closest('#agenda-empty-cta')) {
-      openEventModal({ mode: 'create' });
+      openEventModal({ mode: 'create', date: newEventDate() });
       return;
     }
     const taskChip = e.target.closest('.cal-task-chip');
@@ -1892,6 +2082,8 @@ function openCalendarSearch() {
 
   const toggle = _container.querySelector('#cal-search');
   toggle?.setAttribute('aria-expanded', 'true');
+  // Erst jetzt gibt es ein Ziel, also erst jetzt der Verweis darauf.
+  toggle?.setAttribute('aria-controls', 'cal-search-bar');
   toggle?.classList.add('cal-toolbar__search-btn--active');
 
   toolbar.insertAdjacentHTML('afterend', `
@@ -1938,6 +2130,8 @@ function closeCalendarSearch({ restoreView = true } = {}) {
 
   const toggle = _container.querySelector('#cal-search');
   toggle?.setAttribute('aria-expanded', 'false');
+  // Die Leiste ist gerade entfernt worden - der Verweis geht mit ihr.
+  toggle?.removeAttribute('aria-controls');
   toggle?.classList.remove('cal-toolbar__search-btn--active');
 
   if (restoreView) renderView();
@@ -2008,6 +2202,8 @@ function renderCalendarSearchState(kind) {
         <p class="cal-search-status__text">${esc(t('calendar.searchEmpty', { query: searchQuery }))}</p>
         <button class="btn btn--secondary" id="cal-search-empty-cta">${esc(t('calendar.newEvent'))}</button>
       </div>`);
+    // Bewusst ohne newEventDate(): die Trefferliste ersetzt die Ansicht, es steht
+    // gerade kein Zeitraum auf dem Schirm, auf den ein Vorschlag sich beziehen könnte.
     body.querySelector('#cal-search-empty-cta')?.addEventListener('click', () => openEventModal({ mode: 'create' }));
     setSearchLive(t('calendar.searchEmpty', { query: searchQuery }));
   } else if (kind === 'error') {
@@ -2042,15 +2238,15 @@ function renderCalendarSearchResults(body) {
   }
 
   body.insertAdjacentHTML('beforeend', `
-    <div class="agenda-view cal-search-results" id="cal-search-results">
+    <div class="agenda-view page-scrollport cal-search-results" id="cal-search-results">
       <p class="cal-search-results__count" aria-hidden="true">${esc(calendarSearchCountLabel())}</p>
       ${groups.map(({ date, events }) => `
         <div class="agenda-day" data-date="${esc(date)}">
-          <div class="agenda-day__header ${date === state.today ? 'agenda-day__header--today' : ''}">
+          <h2 class="agenda-day__header ${date === state.today ? 'agenda-day__header--today' : ''}">
             <span class="agenda-day__date">${formatDate(date, { long: true })}</span>
             <span class="agenda-day__weekday">${DAY_NAMES_LONG()[new Date(date + 'T00:00:00').getDay()]}</span>
-          </div>
-          ${events.map((ev) => renderAgendaEvent(ev, date)).join('')}
+          </h2>
+          <div class="list-rows">${events.map((ev) => renderAgendaEvent(ev, date)).join('')}</div>
         </div>
       `).join('')}
     </div>
@@ -2104,8 +2300,10 @@ async function openFoundEvent(ev) {
 export const __test = {
   normalizeCalendarView,
   defaultCalendarViewFromState,
+  newEventDefaultDate,
   filterTasksForCalendar,
   tasksOnDay,
+  eventEndDate,
   isMultiDayEvent,
   isAllDayLike,
   agendaSegmentKind,
@@ -2115,7 +2313,8 @@ export const __test = {
   hasAttachment,
   attachmentUrls,
   clickedTime,
-  HOUR_HEIGHT,
+  hourOffset,
+  monthDayClasses,
 };
 
 function renderAgendaEvent(ev, dayStr) {
@@ -2138,19 +2337,17 @@ function renderAgendaEvent(ev, dayStr) {
   }
 
   const displayBg     = resolveEventBackground(ev);
-  const displayColor  = resolveEventColor(ev);
-  const calLabelColor = ev.cal_color || ev.color || displayColor;
   const assignedUsers = ev.assigned_users ?? [];
   return `
-    <div class="agenda-event" data-id="${ev.id}" role="button" tabindex="0"
-         aria-label="${esc(ev.title)}, ${esc(timeStr)}${chipAssigneeLabel(ev) ? ', ' + esc(chipAssigneeLabel(ev)) : ''}">
+    <div class="list-row agenda-event" data-id="${ev.id}" role="button" tabindex="0"
+         aria-label="${esc(ev.title)}, ${esc(timeStr)}${ev.cal_name ? ', ' + esc(ev.cal_name) : ''}${chipAssigneeLabel(ev) ? ', ' + esc(chipAssigneeLabel(ev)) : ''}">
       <div class="agenda-event__color" style="background:${esc(displayBg)};"></div>
       <div class="agenda-event__body">
         <div class="agenda-event__title">${eventIconHtml(ev.icon)}<span>${esc(ev.title)}</span>${(ev.recurrence_rule || ev.is_recurring_instance) ? calendarRepeatIconHtml() : ''}</div>
         <div class="agenda-event__meta">
-          <span class="calendar-meta-item">${calendarMetaIconHtml('clock')}<span>${esc(timeStr)}</span></span>
-          ${ev.location ? `<span class="calendar-meta-item">${calendarMetaIconHtml('map-pin')}<span>${esc(fmtLocation(ev.location))}</span></span>` : ''}
-          ${ev.cal_name ? `<span class="event-cal-label" style="--cal-color:${esc(calLabelColor)}">${esc(ev.cal_name)}</span>` : ''}
+          <span class="calendar-meta-item calendar-meta-item--time">${calendarMetaIconHtml('clock')}<span>${esc(timeStr)}</span></span>
+          ${ev.location ? `<span class="calendar-meta-item calendar-meta-item--place">${calendarMetaIconHtml('map-pin')}<span>${esc(fmtLocation(ev.location))}</span></span>` : ''}
+          ${ev.cal_name ? `<span class="calendar-meta-item calendar-meta-item--cal">${calendarMetaIconHtml('calendar-days')}<span>${esc(ev.cal_name)}</span></span>` : ''}
           ${eventVisibilityMeta(ev.visibility)}
           ${assignedUsers.length ? `<span class="agenda-event__assigned">${renderAvatarStack(assignedUsers, { size: 20, maxVisible: 3 })}</span>` : ''}
         </div>
@@ -2202,7 +2399,11 @@ function attachmentNode(ev) {
   return link;
 }
 
-/** Kalendername als farbiger Chip, wie in der Agenda-Ansicht. */
+/* Kalendername als farbiger Chip - in der DETAILFLÄCHE, seit die Agendazeile
+ * ihn abgegeben hat: dort sagte er dasselbe wie die Farbspur an ihrer linken
+ * Kante, und er tat es als drittes Element einer Metazeile, die deswegen
+ * umbrach. Hier ist er die einzige Stelle, an der der Kalendername ausdrücklich
+ * steht. */
 function calendarChipNode(ev) {
   if (!ev.cal_name) return null;
   const chip = document.createElement('span');
@@ -2256,6 +2457,10 @@ function renderEventDetail(ev, reminders = []) {
       value: reminderSummary(ev, reminders),
     },
     visibilityRow(ev.visibility),
+    // Nur wenn markiert (#647): eine Zeile „Countdown: nein" an jedem Termin
+    // wäre ein Feld, das die Leseansicht erklärt statt sie zu beantworten. Die
+    // Detailansicht lässt leere Werte ohnehin weg.
+    { icon: 'hourglass', label: t('dashboard.countdownTitle'), value: ev.countdown ? t('calendar.countdownDetail') : '' },
     {
       icon: 'align-left',
       label: t('calendar.descriptionLabel'),
@@ -3177,6 +3382,29 @@ function buildEventModalContent({ mode, event, date, reminder = null, time = nul
       <p class="form-hint field-hint--warn" id="modal-visibility-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('common.visibility.assigneesNobodyHint')}</span></p>
     </div>` : ''}
 
+    <!-- #647: der Schalter, den @Kyrodan beschrieben hat - „einen Termin als
+         Countdown markieren" statt eines zweiten Systems daneben. Er steht im
+         Hauptbereich und nicht hinter „Weitere Einstellungen", weil er der
+         einzige Weg zu diesem Feature ist: hinter dem Aufklapper gaebe es die
+         Kachel fuer niemanden, der nicht danach sucht. -->
+    <div class="form-group">
+      <label class="toggle">
+        <input type="checkbox" id="modal-countdown" aria-describedby="modal-countdown-hint"
+               ${isEdit && event.countdown ? 'checked' : ''}>
+        <span class="toggle__track"></span>
+        <span>${t('calendar.countdownToggle')}</span>
+      </label>
+      <!-- cal-field-hint UND NICHT form-hint: die Regel fuer form-hint steht in
+           settings.css, und der Router laedt genau ein Page-CSS pro Seite - auf
+           /calendar ist sie schlicht nicht geladen. Der Hinweis rendert dort in
+           16px voller Primaertinte und war damit lauter als der Schalter, zu dem
+           er gehoert (gemessen 4 Zeilen / 94px).
+           Die uebrigen fuenf form-hint dieses Dialogs haben dasselbe Problem und
+           app-weit noch 34 weitere in elf Modulen - das ist ein eigener Umzug
+           und keine Beifang-Aenderung dieses Features. -->
+      <p class="cal-field-hint" id="modal-countdown-hint">${t('calendar.countdownHint')}</p>
+    </div>
+
     ${advancedSection(advancedFieldsHtml, { open: advancedFieldsOpen })}
 
     ${renderRRuleFields('event', isEdit ? event.recurrence_rule : null, { allowCount: true })}
@@ -3317,6 +3545,7 @@ async function saveEvent(overlay, mode, event, existingReminder = null, attachme
       all_day: allday ? 1 : 0,
       location, color, icon, assigned_to,
       visibility: overlay.querySelector('#modal-visibility')?.value || 'all',
+      countdown: overlay.querySelector('#modal-countdown')?.checked ? 1 : 0,
       recurrence_rule: rrule.recurrence_rule,
       target_google_calendar_id,
       target_caldav_account_id,

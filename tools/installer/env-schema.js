@@ -28,6 +28,9 @@ export const ENV_SCHEMA = [
   // ICS-Abos: der SSRF-Guard blockt Feeds im eigenen LAN (Home Assistant, *arr).
   // Ohne diesen Schalter scheitert genau der häufigste Self-Hoster-Fall stumm.
   { key: 'ICS_SUBSCRIPTION_ALLOW_PRIVATE_NETWORK', type: 'default', label: 'Allow ICS Feeds from Private Network', default: 'false', required: false, group: 'sync', writeToEnv: true },
+  // Rezept-Provider-Spiegel (Mealie/Tandoor): derselbe SSRF-Guard, derselbe
+  // häufigste Self-Hoster-Fall wie bei den ICS-Abos oben.
+  { key: 'RECIPE_PROVIDER_ALLOW_PRIVATE_NETWORK', type: 'default', label: 'Allow Private Network Recipe Provider Target', default: 'false', required: false, group: 'sync', writeToEnv: true },
   { key: 'TZ',                          type: 'default', label: 'Timezone',                 default: 'UTC',  group: 'system',  writeToEnv: true },
   { key: 'OIKOS_HTTP_PORT',             type: 'default', label: 'HTTP Port',                default: '3000', group: 'system',  writeToEnv: true },
   // Host-Ordner für Datenbank und App-Daten. Der Container-Pfad steht fest, der
@@ -35,6 +38,25 @@ export const ENV_SCHEMA = [
   // neben die Compose-Datei). Ohne Eintrag im Installer musste er von Hand in
   // die .env - und ein zweiter Lauf hätte ihn wieder gelöscht.
   { key: 'DATA_DIR',                    type: 'default', label: 'Host Data Folder',         default: './data', required: false, group: 'system', writeToEnv: true },
+  // BACKUP_DIR und MODULES_DIR fehlen hier bewusst, und der Grund ist EINE Regel,
+  // nicht zwei Einzelfaelle: DATA_DIR steht im Wizard, weil die App den Namen NIE
+  // liest - er existiert ausschliesslich als Compose-Substitution fuer die
+  // Mount-Quelle. BACKUP_DIR und MODULES_DIR liest die App dagegen selbst
+  // (server/services/backup-scheduler.js, server/services/modules.js), und dort
+  // bedeutet der Name etwas anderes: das Ziel IM Container. Ein Host-Pfad wie
+  // './backups' in der .env wird dort zu /app/backups, ausserhalb des gemounteten
+  // Volumes und fuer den node-User nicht anlegbar - das war #579.
+  //
+  // Die Compose-Descriptoren fangen das ab, indem sie BACKUP_DIR unter
+  // "environment:" auf /backups pinnen (environment schlaegt env_file), und ein
+  // Guard erzwingt das in jedem Ziel. Darauf ruht die Ausnahme aber NICHT: die
+  // .env.example warnt ausdruecklich davor, die Datei einem blanken
+  // "docker run --env-file" zu geben, und dort gibt es kein Override. MODULES_DIR
+  // pinnt ohnehin kein Descriptor.
+  //
+  // Wer die Sicherungen auf ein NAS-Array legen will, aendert deshalb den MOUNT
+  // in der Compose-Datei, nicht diese Variable - so steht es in
+  // docs/installation.md. Ein Wizard-Feld waere der bequemere und der falsche Weg.
   // Absolute Origin für Passwort-Reset-Links & Push. Vom Installer aus Schema/Host/Port
   // abgeleitet, nie aus dem Request-Host-Header (Reset-Poisoning-Schutz).
   { key: 'BASE_URL',                    type: 'default', label: 'Base URL',                 default: '',     group: 'system',  writeToEnv: true },

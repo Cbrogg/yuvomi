@@ -15,22 +15,22 @@ function wireLinks(container) {
 export async function render(container) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <main class="login-page" id="main-content">
-      <div class="login-card card card--padded">
-        <h1 class="login-card__title">${esc(t('forgotPassword.title'))}</h1>
-        <p class="login-card__intro">${esc(t('forgotPassword.intro'))}</p>
-        <form class="login-form" id="forgot-form" novalidate>
+    <main class="auth-page" id="main-content">
+      <div class="auth-card card card--padded">
+        <h1 class="auth-card__title">${esc(t('forgotPassword.title'))}</h1>
+        <p class="auth-card__intro">${esc(t('forgotPassword.intro'))}</p>
+        <form class="auth-form" id="forgot-form" novalidate>
           <div class="form-group">
             <label class="label" for="identifier">${esc(t('forgotPassword.identifierLabel'))}</label>
             <input class="input" type="text" id="identifier" name="identifier"
               autocomplete="username" autocapitalize="none" autocorrect="off" required />
           </div>
-          <div class="login-success" id="forgot-success" role="status" aria-live="polite" hidden></div>
-          <button type="submit" class="btn btn--primary login-form__submit" id="forgot-btn">
+          <div class="form-success" id="forgot-success" role="status" aria-live="polite" hidden></div>
+          <button type="submit" class="btn btn--primary auth-form__submit" id="forgot-btn">
             ${esc(t('forgotPassword.submit'))}
           </button>
         </form>
-        <p class="login-form__forgot"><a href="/login" data-link>${esc(t('forgotPassword.backToLogin'))}</a></p>
+        <p class="auth-form__forgot"><a href="/login" data-link>${esc(t('forgotPassword.backToLogin'))}</a></p>
       </div>
     </main>
   `);

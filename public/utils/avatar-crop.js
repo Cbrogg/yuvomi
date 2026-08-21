@@ -22,7 +22,12 @@ function injectStyles() {
   width: calc(100vw - var(--space-8));
 }
 .avatar-crop-dialog::backdrop {
-  background: rgba(0, 0, 0, 0.55);
+  /* --color-overlay ist der kanonische Modal-Grund (0.4), und dieser Dialog ist
+   * einer. Hier stand 0.55, dunkler als alle fünf Overlay-Stufen aus tokens.css
+   * und in keiner davon begründet - dass es durchkam, liegt an der Datei: die
+   * CSS-Guards lesen public/styles/, und dieses Stylesheet lebt eingebettet in
+   * einer .js. */
+  background: var(--color-overlay);
 }
 .avatar-crop-dialog__header {
   padding: var(--space-4) var(--space-4) 0;

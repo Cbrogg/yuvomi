@@ -45,11 +45,13 @@ export function calendarPaths() {
       patch: op({ summary: 'Enable/disable a Google calendar to sync', tag: 'Calendar', admin: true, stateChanging: true }),
     },
     '/api/v1/calendar/google/disconnect': { delete: op({ summary: 'Disconnect Google Calendar', tag: 'Calendar', admin: true, stateChanging: true }) },
+    '/api/v1/calendar/google/mirrored-events': { delete: op({ summary: 'Delete locally mirrored Google events', tag: 'Calendar', admin: true, stateChanging: true }) },
     '/api/v1/calendar/google/readonly': { put: op({ summary: 'Set Google Calendar read-only mode', tag: 'Calendar', admin: true, stateChanging: true }) },
     '/api/v1/calendar/apple/status': { get: op({ summary: 'Get Apple Calendar status', tag: 'Calendar' }) },
     '/api/v1/calendar/apple/sync': { post: op({ summary: 'Run Apple Calendar sync', tag: 'Calendar', admin: true, stateChanging: true }) },
     '/api/v1/calendar/apple/connect': { post: op({ summary: 'Connect Apple Calendar', tag: 'Calendar', admin: true, stateChanging: true, requestBody: jsonBody(null) }) },
     '/api/v1/calendar/apple/disconnect': { delete: op({ summary: 'Disconnect Apple Calendar', tag: 'Calendar', admin: true, stateChanging: true }) },
+    '/api/v1/calendar/apple/mirrored-events': { delete: op({ summary: 'Delete locally mirrored Apple events', tag: 'Calendar', admin: true, stateChanging: true }) },
     '/api/v1/calendar/subscriptions': {
       get: op({ summary: 'List ICS subscriptions', tag: 'Calendar' }),
       post: op({ summary: 'Create ICS subscription', tag: 'Calendar', stateChanging: true, requestBody: jsonBody(null) }),

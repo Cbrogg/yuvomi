@@ -96,7 +96,12 @@ test('die Kategorie-Facette bleibt einzeilig statt unbegrenzt zu wachsen', () =>
 test('die Dropzone zeigt den Tastaturfokus des versteckten Datei-Inputs', () => {
   // Der Input ist sr-only (1x1px, geclippt) aber tab-fokussierbar — ohne diese
   // Regel verschwand der Fokus beim Durchtabben spurlos.
-  assert.match(css, /\.document-dropzone:focus-within\s*\{[^}]*outline:/);
+  //
+  // Die Dropzone stand bis Runde 6 / Phase 4e doppelt (calendar.css und
+  // documents.css) und wohnt seitdem EINMAL in document-attach.css. Die Zusage
+  // gilt der Komponente, nicht der Datei, in der sie zufällig lag.
+  assert.match(read('../public/styles/document-attach.css'),
+    /\.document-dropzone:focus-within\s*\{[^}]*outline:/);
 });
 
 test('kompakte Chips halten das Touch-Maß über die Zeigergenauigkeit, nicht die Breite', () => {

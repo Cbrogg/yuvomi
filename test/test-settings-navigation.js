@@ -49,9 +49,13 @@ import {
 } from '../public/settings/pages/modules-kitchen.js';
 import {
   buildMobileNavigationPayload,
-  buildNavigationPayload,
-  persistModuleToggle,
+  buildOrderPayload,
+  kitchenGroupHidden,
 } from '../public/settings/pages/modules-navigation.js';
+import {
+  buildActiveModulesPayload,
+  persistHouseholdToggle,
+} from '../public/settings/pages/modules-active.js';
 
 const member = { role: 'member' };
 const admin = { role: 'admin' };
@@ -108,9 +112,26 @@ test('die Blätter verteilen sich wie beschlossen auf die vier Domänen', () => 
   // Critique 2026-07-27 fand sie unbalanciert (personal 5 / modules 8 / sync 3 /
   // documents 2 / admin 6) - `documents` ist aufgelöst, `modules` von acht auf
   // vier geschrumpft, und was per-user schreibt, liegt bei `personal`.
+  // Immich (#693) liegt bei `admin` wie das Wetter: eine serverweite
+  // Dienstanbindung, deren Zugangsdaten der Browser nie sieht.
+  // Die Aufgaben-Vorgaben (#695) liegen bei `personal` und NICHT bei
+  // `sync-reminders`: welche Erinnerungslisten der Haushalt abgleicht, ist eine
+  // Admin-Entscheidung, in welche davon meine neuen Aufgaben laufen, ist meine.
+  // Nach demselben Schnitt liegt das Zyklus-Opt-out (#760) bei `personal`: ob der
+  // Haushalt den Zyklus führt, steht im adminOnly-`modules-options`, ob ich ihn
+  // sehen will, entscheide ich.
+  // Und ebenso `personal-feeds`: beide Feed-Tokens hängen an der eigenen
+  // users-Zeile und beide Routen tragen keinen Admin-Check, das Blatt lag
+  // trotzdem im adminOnly-`sync-calendar`.
+  // `personal-calendar-subscriptions` ist die Gegenrichtung und derselbe Fall:
+  // `GET /calendar/subscriptions` liefert `shared = 1 OR created_by = ich`, und
+  // PATCH/DELETE/sync antworten 403 für fremde Abos - `isAdmin` ist dort ein
+  // ZUSATZrecht, keine Voraussetzung. Bei `sync` bleiben nur die Blätter, deren
+  // Routen wirklich `requireAdmin` tragen: CalDAV und Google/Apple hängen an
+  // Zugangsdaten des Haushalts.
   const perDomain = {};
   for (const leaf of SETTINGS_LEAVES) perDomain[leaf.domainId] = (perDomain[leaf.domainId] ?? 0) + 1;
-  assert.deepEqual(perDomain, { personal: 7, modules: 4, sync: 5, admin: 7 });
+  assert.deepEqual(perDomain, { personal: 11, modules: 5, sync: 5, admin: 8 });
   // Jedes Blatt hängt an einer existierenden Domäne.
   const domainIds = new Set(SETTINGS_DOMAINS.map((domain) => domain.id));
   for (const leaf of SETTINGS_LEAVES) {
@@ -171,42 +192,64 @@ test('Mitglieder können ihre eigene Navigation erreichen', () => {
   assert.equal(leaf.adminOnly, false);
 });
 
-test('die Order eines Mitglieds reist ohne die haushaltweiten Schalter', async () => {
-  // `disabled_modules` ist serverseitig auf Admins beschränkt (403). Im
-  // gemeinsamen Payload wäre der GANZE Request eines Mitglieds gescheitert und
-  // seine Reihenfolge hätte nie gespeichert.
-  const { buildOrderPayload, buildNavigationPayload } = await import('/settings/pages/modules-navigation.js');
-
-  const memberPayload = buildOrderPayload(['calendar', 'tasks', 'kitchen']);
-  assert.deepEqual(Object.keys(memberPayload), ['module_order']);
-  assert.equal('disabled_modules' in memberPayload, false);
-
-  // Für Admins bleibt die gemeinsame Payload erhalten: Order und Aktivierung
-  // werden weiter zusammen geschrieben, also bleibt der Zustand konsistent.
-  const adminPayload = buildNavigationPayload(['notes'], new Set(['meals']), ['calendar', 'kitchen']);
-  assert.ok(Array.isArray(adminPayload.disabled_modules));
-  assert.ok(Array.isArray(adminPayload.module_order));
-
-  // Beide expandieren die Kitchen-Sammelzeile identisch zurück.
-  assert.deepEqual(
-    buildOrderPayload(['calendar', 'kitchen']).module_order,
-    adminPayload.module_order,
-  );
-});
-
-test('Aktivierungs-Schalter und Kitchen-Kinder sind für Mitglieder nicht gerendert', async () => {
-  const source = await readFile(
+test('das persoenliche Blatt traegt keinen haushaltweiten Schalter mehr', async () => {
+  // Die Regel, nicht der Einzelfall: auf `modules-navigation` darf KEIN
+  // Bedienelement stehen, das den Haushalt aendert - egal ob hinter `isAdmin`
+  // versteckt oder nicht. Vorher war genau das der Fall, und zwei unbeschriftete
+  // Bedienelemente mit zwoelf Pixel Abstand trugen sehr verschiedene Reichweiten
+  // (Critique 2026-08-16, P0).
+  // Kommentare raus, BEVOR gesucht wird: beide Blaetter erklaeren im Fliesstext
+  // genau diese Schluessel, und ein Guard, der Prosa fuer Code haelt, meldet die
+  // Begruendung als Verstoss. Genau daran war die erste Fassung rot.
+  const stripComments = (src) => src.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/[^\n]*/g, '');
+  const personal = stripComments(await readFile(
     new URL('../public/settings/pages/modules-navigation.js', import.meta.url),
     'utf8',
-  );
-  // Haushaltweite Schalter nur für Admins; Mitglieder bekommen stattdessen die
-  // Erklärung, wer darüber entscheidet.
-  assert.match(source, /\$\{isAdmin \? toggleRowHtml\(\{[\s\S]{0,300}data-built-in-module-toggle/);
-  assert.match(source, /data-kitchen-child-toggle[\s\S]{0,400}settings-module-kitchen__child--readonly/);
-  assert.match(source, /isAdmin \? '' : `<p class="form-hint">\$\{t\('settings\.modulesEnableAdminOnly'\)\}/);
-  // Der Save-Pfad muss die Rolle kennen, sonst sendet ein Mitglied disabled_modules.
-  assert.match(source, /async function saveNavigationState\(list, isAdmin\)/);
-  assert.match(source, /isAdmin\s*\?\s*buildNavigationPayload\(/);
+  ));
+  for (const marker of ['data-built-in-module-toggle', 'data-kitchen-child-toggle',
+    'data-third-party-module-toggle']) {
+    assert.equal(personal.includes(marker), false,
+      `das persoenliche Blatt rendert noch '${marker}' - der Haushalts-Schalter ist zurueck`);
+  }
+  // LESEN bleibt richtig: das Blatt muss wissen, was der Haushalt abgeschaltet
+  // hat, sonst kann es den Ausblenden-Knopf nicht sperren und den Grund nicht
+  // nennen. Verboten ist das SCHREIBEN - der Schluessel als Payload-Feld.
+  // Der Kontext gehoert ins Muster: `preferences.disabled_modules : []` ist ein
+  // Ternaer und kein Objektschluessel - die erste Fassung dieses Guards war
+  // daran rot, obwohl das Blatt nur LAS.
+  assert.equal(/(^|[{,])\s*disabled_modules\s*:/m.test(personal), false,
+    'das persoenliche Blatt schreibt disabled_modules - das ist haushaltweit und admin-only');
+  assert.match(personal, /preferences\.disabled_modules/,
+    'das Blatt liest den Haushaltsstand nicht mehr - dann kann es den gesperrten Knopf nicht begruenden');
+  // Und der Save-Pfad muss die Rolle NICHT mehr kennen: eine Payload, die nicht
+  // weiss, wer sie absendet, kann auch nicht die falsche sein.
+  // Die Regel ist "der Save-Pfad kennt die Rolle nicht", nicht "die Signatur
+  // hat genau ein Argument": sie nahm spaeter die im Blatt nie gerenderten
+  // Order-Ids dazu, und daran war dieser Guard rot, ohne dass sich die
+  // Zusicherung geaendert haette.
+  assert.match(personal, /async function saveNavigationState\(list[,)]/);
+  assert.equal(/saveNavigationState\([^)]*isAdmin/.test(personal), false,
+    'der Save-Pfad kennt wieder die Rolle - dann kann er wieder die falsche Payload schicken');
+
+  // Gegenprobe auf der anderen Seite: das adminOnly-Blatt schreibt keine
+  // per-user-Schluessel.
+  const household = stripComments(await readFile(
+    new URL('../public/settings/pages/modules-active.js', import.meta.url),
+    'utf8',
+  ));
+  for (const marker of ['hidden_modules', 'module_order', 'mobile_nav_order', 'data-module-hide']) {
+    assert.equal(household.includes(marker), false,
+      `das Haushalts-Blatt fasst '${marker}' an - das ist per-user`);
+  }
+});
+
+test('das Blatt der aktiven Module liegt adminOnly in der Modul-Domaene', () => {
+  const leaf = SETTINGS_LEAVES.find((entry) => entry.id === 'modules-active');
+  assert.ok(leaf, 'Blatt modules-active fehlt in der Registry');
+  assert.equal(leaf.domainId, 'modules');
+  assert.equal(leaf.adminOnly, true);
+  assert.equal(findSettingsLeaf('/settings/modules/active', admin)?.id, 'modules-active');
+  assert.equal(findSettingsLeaf('/settings/modules/active', member), null);
 });
 
 test('navigation settings leaf reuses the canonical module-order helpers', async () => {
@@ -277,6 +320,18 @@ test('Mitglieder erreichen ihre eigenen Termin-Vorgaben', () => {
   assert.equal(findSettingsLeaf('/settings/personal/calendar', member)?.id, 'personal-calendar');
   // Das haushaltweite Kalenderblatt bleibt adminOnly.
   assert.equal(findSettingsLeaf('/settings/modules/calendar', member), null);
+});
+
+test('Mitglieder erreichen ihr eigenes Zyklus-Opt-out (#760)', () => {
+  // health_cycle_enabled_user schreibt per cfgUserSet pro Nutzer. Läge der
+  // Schalter im adminOnly-`modules-options`, könnte ihn genau die Mehrheit nicht
+  // bedienen, für die er gedacht ist - derselbe Schnitt wie bei personal-calendar.
+  const leaf = SETTINGS_LEAVES.find((entry) => entry.id === 'personal-health');
+  assert.equal(leaf.domainId, 'personal');
+  assert.equal(leaf.adminOnly, false);
+  assert.equal(findSettingsLeaf('/settings/personal/health', member)?.id, 'personal-health');
+  // Der haushaltweite Schalter bleibt daneben adminOnly.
+  assert.equal(findSettingsLeaf('/settings/modules/options', member), null);
 });
 
 test('drei Ein-Schalter-Blätter teilen sich jetzt eines', () => {
@@ -454,16 +509,20 @@ test('every approved settings leaf is registered as an exact SPA route', async (
   // Der Router muss seine Settings-Routen aus der Registry ableiten, nie aus
   // einer Handliste - sonst driften Registry und Routentabelle auseinander.
   assert.match(source, /import\s*\{[^}]*\bSETTINGS_LEAVES\b[^}]*\}\s*from\s*'\/settings\/registry\.js'/);
+  // Die Pflichtfelder, nicht das ganze Objektliteral: der Eintrag hat seit dem
+  // Titel-Umbau (Audit P1-2) ein `titleKey`, und ein Guard, der die exakte
+  // Feldliste festnagelt, bricht bei jedem weiteren Feld ohne einen Verstoss
+  // zu melden. Was hier zaehlt, ist Pfad + Seite + Auth + Modul.
   assert.match(
     source,
-    /SETTINGS_LEAVES\.map\(\(\{\s*path\s*\}\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*\}\)\)/,
+    /SETTINGS_LEAVES\.map\(\(\{\s*path\s*\}\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*[,}]/,
   );
   // Und die vom IA-Umbau verschobenen Alt-Pfade ebenso: ohne eigene Route
   // matcht ein alter Bookmark gar nichts und die Umleitung käme nie zum Zug.
   assert.match(source, /import\s*\{[^}]*\bRENAMED_SETTINGS_SOURCE_PATHS\b[^}]*\}\s*from\s*'\/settings\/registry\.js'/);
   assert.match(
     source,
-    /RENAMED_SETTINGS_SOURCE_PATHS\.map\(\(path\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*\}\)\)/,
+    /RENAMED_SETTINGS_SOURCE_PATHS\.map\(\(path\)\s*=>\s*\(\{\s*path,\s*page:\s*'\/pages\/settings\.js',\s*requiresAuth:\s*true,\s*module:\s*'settings'\s*[,}]/,
   );
   assert.ok(RENAMED_SETTINGS_SOURCE_PATHS.length > 0);
 });
@@ -694,6 +753,7 @@ test('navigation sections match the grouped desktop information architecture', (
   assert.equal(moduleSection('kitchen'), NAV_SECTION.household);
   assert.equal(moduleSection('housekeeping'), NAV_SECTION.household);
   assert.equal(moduleSection('documents'), NAV_SECTION.household);
+  assert.equal(moduleSection('inventory'), NAV_SECTION.household);
   assert.equal(moduleSection('rewards'), NAV_SECTION.household);
   assert.equal(moduleSection('contacts'), NAV_SECTION.people);
   assert.equal(moduleSection('birthdays'), NAV_SECTION.people);
@@ -983,42 +1043,57 @@ test('hasValidWeatherCoords rejects empty, non-numeric and out-of-range input', 
   assert.equal(hasValidWeatherCoords('52.52', '180.1'), false);
 });
 
-test('buildNavigationPayload expands the visible order back to canonical Kitchen children', () => {
-  // Das kanonische Kinder-Set, nicht eine Teilmenge: dieser Test prüft die
-  // Reihenfolgen-Expansion, nicht welche Kinder aktiviert sind.
-  const payload = buildNavigationPayload(
-    ['notes'],
-    new Set(KITCHEN_CHILD_IDS),
-    ['calendar', 'tasks', 'kitchen', 'notes'],
+test('die Reihenfolge expandiert die Kuechen-Sammelzeile auf ihre vier Kinder', () => {
+  assert.deepEqual(
+    buildOrderPayload(['calendar', 'tasks', 'kitchen', 'notes']).module_order,
+    ['calendar', 'tasks', 'meals', 'recipes', 'shopping', 'pantry', 'notes'],
   );
+  assert.deepEqual(buildOrderPayload([]).module_order, []);
+  assert.deepEqual(buildOrderPayload(['kitchen']).module_order, ['meals', 'recipes', 'shopping', 'pantry']);
+});
 
-  assert.deepEqual(payload, {
-    disabled_modules: ['notes'],
-    module_order: ['calendar', 'tasks', 'meals', 'recipes', 'shopping', 'pantry', 'notes'],
+test('die Reihenfolge behaelt, was das Blatt nie gezeigt hat', () => {
+  // Ein Mitglied bekommt `/modules?admin=1` nicht, also stehen seine
+  // Drittanbieter-Module in keiner Zeile dieses Blatts. Sie deshalb aus seiner
+  // gespeicherten Reihenfolge zu streichen, waere ein stiller Verlust bei einer
+  // Handlung, die damit nichts zu tun hat (Codex-Review zu PR #790).
+  const payload = buildOrderPayload(['calendar', 'kitchen'], ['third-party-akahu', 'third-party-solar']);
+  assert.deepEqual(payload.module_order, [
+    'calendar', 'meals', 'recipes', 'shopping', 'pantry',
+    'third-party-akahu', 'third-party-solar',
+  ]);
+
+  // Was sichtbar war, gewinnt: eine Id, die das Blatt gerendert hat, kommt
+  // nicht doppelt zurueck, auch wenn sie faelschlich mitgegeben wird.
+  assert.deepEqual(
+    buildOrderPayload(['calendar'], ['calendar', 'third-party-akahu']).module_order,
+    ['calendar', 'third-party-akahu'],
+  );
+  assert.deepEqual(buildOrderPayload(['calendar']).module_order, ['calendar']);
+});
+
+test('die zwei Blaetter schreiben zwei disjunkte Schluesselmengen', () => {
+  // Das ist die Zusicherung, die den Umzug traegt (Critique 2026-08-16): das
+  // persoenliche Blatt kennt `disabled_modules` nicht mehr, und das
+  // adminOnly-Blatt kennt weder Reihenfolge noch Ausblendungen. Fielen sie
+  // wieder zusammen, waere die Verwechslungsfalle zurueck - und ein
+  // adminOnly-Blatt, das per-user-Schluessel schreibt, ist genau der Fall, den
+  // test:settings-admin-gate sucht.
+  const personal = buildOrderPayload(['calendar', 'kitchen']);
+  const household = buildActiveModulesPayload(['notes', 'rewards']);
+
+  assert.deepEqual(Object.keys(personal), ['module_order']);
+  assert.deepEqual(Object.keys(household), ['disabled_modules']);
+  assert.equal('disabled_modules' in personal, false);
+  assert.equal('module_order' in household, false);
+  assert.equal('hidden_modules' in household, false);
+});
+
+test('der Haushalts-Schalter entdoppelt seine Slugs', () => {
+  assert.deepEqual(buildActiveModulesPayload(['notes', 'notes', 'meals']), {
+    disabled_modules: ['notes', 'meals'],
   });
-});
-
-test('buildNavigationPayload yields an empty module order for an empty visible order', () => {
-  const payload = buildNavigationPayload([], new Set(KITCHEN_CHILD_IDS), []);
-
-  assert.deepEqual(payload, { disabled_modules: [], module_order: [] });
-});
-
-test('buildNavigationPayload keeps the single Kitchen position when expanding', () => {
-  const payload = buildNavigationPayload([], new Set(KITCHEN_CHILD_IDS), ['kitchen']);
-
-  assert.deepEqual(payload.module_order, ['meals', 'recipes', 'shopping', 'pantry']);
-});
-
-test('buildNavigationPayload disables Kitchen children that are not enabled', () => {
-  const payload = buildNavigationPayload(
-    ['budget'],
-    new Set(['meals']),
-    ['kitchen', 'budget'],
-  );
-
-  assert.deepEqual(payload.disabled_modules, ['budget', 'recipes', 'shopping', 'pantry']);
-  assert.deepEqual(payload.module_order, ['meals', 'recipes', 'shopping', 'pantry', 'budget']);
+  assert.deepEqual(buildActiveModulesPayload([]), { disabled_modules: [] });
 });
 
 test('buildMobileNavigationPayload normalizes aliases, duplicates, and slot count', () => {
@@ -1028,49 +1103,89 @@ test('buildMobileNavigationPayload normalizes aliases, duplicates, and slot coun
   );
 });
 
-test('persistModuleToggle restores the toggle and re-enables it when saving fails', async () => {
+test('die Kueche gilt als ausgeblendet, wenn kein SICHTBARES Kind mehr uebrig ist', () => {
+  const child = (id, over) => ({ id, enabled: true, hidden: false, ...over });
+
+  assert.equal(kitchenGroupHidden([child('meals'), child('recipes')]), false);
+  assert.equal(kitchenGroupHidden([child('meals', { hidden: true }), child('recipes')]), false,
+    'ein einzeln verstecktes Kind versteckt noch nicht die Gruppe');
+  assert.equal(kitchenGroupHidden([child('meals', { hidden: true }), child('recipes', { hidden: true })]), true);
+
+  // Ein haushaltweit abgeschaltetes Kind zaehlt nicht mit: es ist nicht
+  // versteckt, es gibt es nicht. Sonst haette der Gruppenknopf einen Zustand
+  // behauptet, den niemand gesetzt hat.
+  assert.equal(kitchenGroupHidden([child('meals', { hidden: true }), child('recipes', { enabled: false })]), true);
+  assert.equal(kitchenGroupHidden([child('meals'), child('recipes', { enabled: false })]), false);
+
+  // Alle vier abgeschaltet: die Gruppe ist dann nicht "von mir versteckt",
+  // sondern gar nicht da - der Knopf ist ohnehin gesperrt.
+  assert.equal(kitchenGroupHidden([child('meals', { enabled: false }), child('recipes', { enabled: false })]), false);
+  assert.equal(kitchenGroupHidden([]), false);
+});
+
+test('der Sitzungs-Teardown vergisst jeden per-Nutzer-Zustand, den die Navigation liest', async () => {
+  // Zwei Abgaenge, kein geteilter Code: der bewusste Logout und der
+  // Sitzungsablauf raeumten getrennt auf, und was nur in einem stand, vererbte
+  // sich am geteilten Geraet an das naechste Mitglied. Geprueft wird die REGEL:
+  // jeder per-Nutzer-Zustand, den `navItems()` liest, muss in der einen
+  // Aufraeumfunktion vorkommen, und beide Wege muessen sie rufen.
+  const source = await readFile(new URL('../public/router.js', import.meta.url), 'utf8');
+
+  const teardown = source.slice(source.indexOf('function forgetSessionState()'));
+  const body = teardown.slice(0, teardown.indexOf('\n}'));
+  for (const state of ['_preferencesLoaded', '_hiddenModules', '_moduleOrder', '_mobileNavOrder', 'currentUser']) {
+    assert.match(body, new RegExp(`${state}\\s*=`), `forgetSessionState() vergisst ${state} nicht`);
+  }
+  // `_disabledModules` gehoert ausdruecklich NICHT dazu: haushaltweit, fuer
+  // jeden gleich, und der Modul-Guard laeuft vor dem Nachladen.
+  assert.equal(/_disabledModules\s*=/.test(body), false,
+    '_disabledModules ist haushaltweit - es zurueckzusetzen oeffnet die Route, die der Haushalt abgeschaltet hat');
+
+  assert.match(source, /auth:expired[\s\S]{0,200}forgetSessionState\(\)/,
+    'der Sitzungsablauf raeumt nicht auf');
+  assert.match(source, /clearSession: \(\) => \{\s*forgetSessionState\(\)/,
+    'der bewusste Logout raeumt nicht ueber dieselbe Funktion auf');
+});
+
+test('der Haushalts-Schalter nimmt sich zurueck, wenn das Speichern scheitert', async () => {
+  // Die drei Faelle zogen mit dem Schalter von der Navigation auf das neue
+  // Blatt und gingen beim Umzug verloren - der Fehlerpfad des einzigen Blatts,
+  // das ein Modul fuer ALLE abschaltet, stand danach ungeprueft da.
   const input = { checked: true, disabled: true };
   let rerendered = false;
 
   await assert.rejects(
-    persistModuleToggle(input, true, async () => {
-      throw new Error('save failed');
-    }, async () => {
+    persistHouseholdToggle(input, true, async () => { throw new Error('save failed'); }, async () => {
       rerendered = true;
     }),
     /save failed/,
   );
 
-  assert.equal(input.checked, false);
+  assert.equal(input.checked, false, 'der Schalter blieb auf dem nicht gespeicherten Zustand stehen');
   assert.equal(input.disabled, false);
-  assert.equal(rerendered, false);
+  assert.equal(rerendered, false, 'ein gescheitertes Speichern darf nicht neu rendern');
 });
 
-test('persistModuleToggle re-renders only after a successful save', async () => {
+test('der Haushalts-Schalter rendert erst nach erfolgreichem Speichern neu', async () => {
   const input = { checked: false, disabled: true };
   const calls = [];
 
-  await persistModuleToggle(input, false, async () => {
-    calls.push('save');
-  }, async () => {
-    calls.push('render');
-  });
+  await persistHouseholdToggle(input, false, async () => { calls.push('save'); }, async () => { calls.push('render'); });
 
   assert.deepEqual(calls, ['save', 'render']);
   assert.equal(input.checked, false);
 });
 
-test('persistModuleToggle does not restore the input when the re-render fails', async () => {
+test('ein gescheiterter Re-Render nimmt den gespeicherten Schalter NICHT zurueck', async () => {
   const input = { checked: true, disabled: true };
 
   await assert.rejects(
-    persistModuleToggle(input, true, async () => {}, async () => {
-      throw new Error('render failed');
-    }),
+    persistHouseholdToggle(input, true, async () => {}, async () => { throw new Error('render failed'); }),
     /render failed/,
   );
 
-  // Save succeeded, so the toggle must keep its new state and not be reverted.
+  // Gespeichert ist gespeichert: den Schalter hier zurueckzudrehen wuerde einen
+  // Zustand zeigen, den der Server nicht mehr hat.
   assert.equal(input.checked, true);
 });
 

@@ -65,11 +65,11 @@ test('moduleForPath: Pfad-Prefix ⇒ Modul (inkl. geteilter Router)', () => {
   assert.equal(moduleForPath('/birthdays'), 'calendar');
   assert.equal(moduleForPath('/split-expenses/x'), 'budget');  // split-expenses gehört zu budget
   assert.equal(moduleForPath('/recipes'), 'meals');
-  // /mealie gehört zu meals: sonst greift die Mitglieds-Zugriffssperre
+  // /recipe-providers gehört zu meals: sonst greift die Mitglieds-Zugriffssperre
   // (server/index.js #467) nicht, und ein auf meals='none' gesperrtes Mitglied
-  // könnte GET /mealie/status trotzdem abfragen (das selbst absichtlich ohne
-  // eigenes Admin-Gate ist, siehe server/routes/mealie.js).
-  assert.equal(moduleForPath('/mealie'), 'meals');
+  // könnte GET /recipe-providers/status trotzdem abfragen (das selbst absichtlich
+  // ohne eigenes Admin-Gate ist, siehe server/routes/recipe-providers.js).
+  assert.equal(moduleForPath('/recipe-providers'), 'meals');
   assert.equal(moduleForPath('/preferences'), null);           // nicht scopebar
   assert.equal(moduleForPath('/'), null);
 });
@@ -160,7 +160,9 @@ test('tools/call: read-Scope erlaubt Lesen, verweigert Schreiben', async () => {
 
   const denied = await callToolRes(['tasks:read'], 'create_task', { title: 'X', priority: 'high' });
   assert.equal(denied.result.isError, true);
-  assert.match(denied.result.content[0].text, /not permitted by this token's scopes/);
+  // Eine Meldung für beide Grenzen (Scope wie Modulrecht, #823): welche
+  // zugeschlagen hat, verrät die Antwort bewusst nicht.
+  assert.match(denied.result.content[0].text, /not permitted for this account/);
 });
 
 test('tools/call: write-Scope erlaubt Anlegen, andere Module bleiben gesperrt', async () => {

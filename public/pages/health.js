@@ -14,9 +14,11 @@
 import { api } from '/api.js';
 import { t, formatDate, formatTime, getLocale, getNumberFormat } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { CHART, chartScales, chartGridMarkup, chartXLabelsMarkup } from '/utils/chart.js';
 import { wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { openModal, closeModal, confirmOverModal, reportFieldError } from '/components/modal.js';
+import { trendMarkup } from '/utils/metric-card.js';
+import { openModal, closeModal, confirmModal, confirmOverModal, reportFieldError } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import {
   computeVitalSeries, VITAL_METRICS, vitalMetric,
@@ -25,6 +27,7 @@ import {
 import {
   computeDueDoses, computeAdherence, refillState,
   daysMaskToIndices, indicesToDaysMask, WEEKDAY_COUNT,
+  prnDoseState, splitRemaining, toLocalStamp, parseLogInstant, scheduledLogs,
 } from '/utils/health-meds.js';
 import {
   deriveFlag, summarizeReport, analyteNames, analyteTrend, LAB_FLAGS,
@@ -41,15 +44,18 @@ import { HEALTH_ROUTES, renderHealthTabsBar } from '/utils/health-tabs.js';
 
 let _container = null;
 
-// Haushaltweiter Opt-in für den Zyklus-Tab (Settings → Module → Gesundheit).
-// Default an, damit Bestandshaushalte ihr Verhalten behalten; wird in render()
-// aus /preferences aufgefrischt.
+// Sichtbarkeit des Zyklus-Tabs. Zwei Schalter greifen ineinander: der Haushalt
+// erlaubt ihn (Settings → Module → Gesundheit, Admin), und jede Person kann ihn
+// für sich abwählen (Settings → Persönlich → Gesundheit, #760). `_effective` ist
+// die bereits verrechnete Sicht - der Client verrechnet sie NICHT selbst nach,
+// damit die Regel an genau einer Stelle steht. Default an, damit Bestandskonten
+// ihr Verhalten behalten; wird in render() aus /preferences aufgefrischt.
 let cycleEnabled = true;
 
 async function loadHealthPrefs() {
   try {
     const res = await api.get('/preferences');
-    cycleEnabled = res?.data?.health_cycle_enabled !== false;
+    cycleEnabled = res?.data?.health_cycle_effective !== false;
   } catch {
     cycleEnabled = true;
   }
@@ -114,35 +120,13 @@ const RANGE_LABELS = {
 // Kanal-Farben (Trend-Chart). Nur Tokens — keine Wertung, rein zur Unterscheidung.
 const CHANNEL_COLORS = ['var(--module-health)', 'var(--color-info)', 'var(--color-warning)'];
 
-// Gemeinsame Chart-Geometrie: linker Gutter für Y-Wert-Labels, unterer für
-// X-Datumslabels. Alle drei Health-Charts (Vitalwerte, Laborwerte, Aktivität)
-// teilen denselben 600×200-viewBox und dieselben Ränder, damit sie als EIN
-// lesbares System wirken statt als drei verschiedene Kurven-Kästen.
-const CHART = Object.freeze({ W: 600, H: 200, PAD_L: 40, PAD_R: 12, PAD_T: 14, PAD_B: 26 });
-
-function chartScales() {
-  const { W, H, PAD_L, PAD_R, PAD_T, PAD_B } = CHART;
-  return { left: PAD_L, right: W - PAD_R, top: PAD_T, bottom: H - PAD_B };
-}
-
-// Fünf horizontale Gitterlinien mit Y-Wert-Beschriftung am linken Rand — ersetzt
-// die früheren zwei frei schwebenden Min-/Max-Zahlen durch eine echte Werteachse.
-function chartGridMarkup(min, max, metric) {
-  const { W, PAD_L, PAD_R } = CHART;
-  const { top, bottom } = chartScales();
-  const out = [];
-  // Bei Spannen ab 4 Einheiten sind Dezimal-Ticks Pseudo-Präzision
-  // ("125,9 mmHg", Audit A2-21) - dort runden die Labels auf Ganzzahlen.
-  // Kleine Labor-Spannen (z. B. 0,5-1,2) behalten ihre Nachkommastellen.
-  const wholeTicks = (max - min) >= 4;
-  for (let k = 0; k <= 4; k++) {
-    const gy = top + (k * (bottom - top)) / 4;
-    const val = max - (k * (max - min)) / 4;
-    out.push(`<line class="health-chart__grid" x1="${PAD_L}" y1="${gy.toFixed(1)}" x2="${W - PAD_R}" y2="${gy.toFixed(1)}" />`);
-    out.push(`<text x="${PAD_L - 6}" y="${(gy + 3.5).toFixed(1)}" class="health-chart__axis health-chart__axis--y" text-anchor="end">${esc(axisTickText(metric, val, wholeTicks))}</text>`);
-  }
-  return out.join('');
-}
+// Die Chart-Geometrie STAND HIER und ist nach `utils/chart.js` gezogen: sie
+// loeste den Fall fuer die drei Charts dieses Moduls, und dieselbe Aufgabe
+// stellte sich dem Budget-Trend und dem Abo-Flaechenchart - beide haben sie je
+// eigen und je falscher beantwortet (Achse ausserhalb des SVG, verzerrende
+// Skalierung). Was hier bleibt, ist das VOKABULAR: wie ein Achsenwert dieses
+// Moduls aussieht, weiss nur dieses Modul.
+const chartGridFor = (min, max, metric) => chartGridMarkup(min, max, (val, wholeTicks) => axisTickText(metric, val, wholeTicks));
 
 // Achsen-Tick. Eine Dauer darf hier nicht dezimal stehen: „8,4" neben einer
 // Verlaufszeile mit „8 Std. 24 Min." wäre dieselbe Größe in zwei Zahlensystemen.
@@ -160,21 +144,9 @@ function axisTickText(metric, value, wholeTicks) {
   return fmtNum(wholeTicks ? Math.round(value) : value);
 }
 
-// X-Achsen-Datumslabels (erstes, mittleres, letztes Datum) unter dem Plot,
-// an den Plotgrenzen ausgerichtet (erstes linksbündig, letztes rechtsbündig).
-function chartXLabelsMarkup(dates) {
-  if (!dates.length) return '';
-  const { H, W, PAD_L, PAD_R } = CHART;
-  const y = H - 7;
-  const picks = dates.length <= 2
-    ? dates.map((d, i) => ({ d, i }))
-    : [dates[0], dates[Math.floor((dates.length - 1) / 2)], dates[dates.length - 1]].map((d, i) => ({ d, i }));
-  return picks.map(({ d }, idx) => {
-    const anchor = idx === 0 ? 'start' : idx === picks.length - 1 ? 'end' : 'middle';
-    const px = anchor === 'start' ? PAD_L : anchor === 'end' ? W - PAD_R : (PAD_L + (W - PAD_R)) / 2;
-    return `<text x="${px.toFixed(1)}" y="${y}" class="health-chart__axis" text-anchor="${anchor}">${esc(formatDate(d))}</text>`;
-  }).join('');
-}
+// Die Auswahl der drei Marken und ihre Ausrichtung stehen in `utils/chart.js`;
+// hier steht nur, dass die Beschriftung dieses Moduls ein DATUM ist.
+const chartXLabels = (dates) => chartXLabelsMarkup(dates.map((d) => formatDate(d)));
 
 // Panel-Definitionen je Route. Icons folgen den Sub-Tab-Icons (health-tabs.js).
 const PANELS = () => [
@@ -245,34 +217,42 @@ function panelMarkup(panel, activeRoute) {
     : panel.route === '/health/activity'
     ? '<div class="health-activity" data-activity-root></div>'
     : `
-      <div class="empty-state health-empty">
-        <div class="health-empty__icon" aria-hidden="true">
-          <i data-lucide="${esc(panel.icon)}"></i>
-        </div>
-        <div class="empty-state__title">${esc(t(panel.emptyTitleKey))}</div>
+      <div class="empty-state">
+        <i data-lucide="${esc(panel.icon)}" class="empty-state__icon" aria-hidden="true"></i>
+        <h2 class="empty-state__title">${esc(t(panel.emptyTitleKey))}</h2>
         <div class="empty-state__description">${esc(t(panel.emptyDescKey))}</div>
       </div>`;
 
   // Eigenes data-health-panel-Attribut statt des (per Frontend-Audit gesperrten)
-  // Legacy-„data-panel". Die Sichtbarkeit steuert showPanel() lokal — renderSubTabs
-  // synchronisiert bewusst keine Panels für dieses Modul.
+  // Legacy-„data-panel". Über dieses Attribut reicht health-tabs.js die Panels an
+  // renderSubTabs weiter (`panelFor`); von dort kommen `id`, `aria-labelledby` zum
+  // zugehörigen Tab und der Hidden-Zustand. Rolle und `aria-label` stehen hier
+  // trotzdem: sie tragen das Panel in dem Moment zwischen Markup-Einbau und
+  // Leisten-Render, in dem die Verknüpfung noch nicht steht. Danach ersetzt der
+  // Tabname das Label (zwei Namen wären einer zu viel).
   return `
     <section class="health-panel" data-health-panel="${esc(panel.route)}"
              role="tabpanel" aria-label="${esc(t(panel.titleKey))}" ${hidden}>
-      <header class="health-panel__head">
-        <h2 class="health-panel__title u-toolbar-title">${esc(t(panel.titleKey))}</h2>
-      </header>
+      <!-- Der Panel-Titel steht sichtbar schon in der Sub-Tab-Leiste darueber:
+           alle sechs Panels wiederholten ihn wortgleich als h2 direkt darunter
+           ("Uebersicht" ueber "Uebersicht"), also verdoppelte der Kopf
+           Information, statt eine Ebene zu benennen (Finish-Review Runde 4,
+           Befund 6). Dieselbe Regel hat die Einstellungen schon einmal
+           eingeholt - der Guard dazu prueft sie jetzt fuer beide.
+           Als Ueberschrift bleibt er stehen, nur unsichtbar: er haelt die
+           Dokumentgliederung zwischen dem h1 des Moduls und den h3 der
+           Abschnitte, und das tabpanel traegt denselben Namen im aria-label. -->
+      <h2 class="health-panel__title sr-only">${esc(t(panel.titleKey))}</h2>
       ${body}
     </section>
   `;
 }
 
-function showPanel(activeRoute) {
-  if (!_container) return;
-  _container.querySelectorAll('[data-health-panel]').forEach((panel) => {
-    panel.hidden = panel.dataset.healthPanel !== activeRoute;
-  });
-}
+// Kein eigenes showPanel() mehr: Auswahl und Panel-Sichtbarkeit sind EINE
+// Operation (WAI-ARIA APG „Tabs"), und sie gehört dorthin, wo auch
+// `aria-selected` gesetzt wird - in renderSubTabs. Zwei Besitzer für denselben
+// Zustand sind genau die Naht, an der `aria-selected` und `hidden` auseinander
+// laufen können.
 
 // Routen-basierter Kontext-FAB: die Primäraktion folgt der aktiven Health-Route.
 // Auf der Übersicht (keine Erstellen-Aktion) ausgeblendet.
@@ -331,8 +311,15 @@ export async function render(container, ctx = {}) {
 
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="health-page">
-      <h1 class="sr-only">${esc(t('nav.health'))}</h1>
+    <div class="health-page page-measure--narrow">
+      <!-- Kanonischer Modulkopf: die Sub-Tab-Leiste wechselt eine SICHT
+           innerhalb der Gesundheit (alle Health-Routen tragen module: 'health'),
+           also steht der Modulname als Large Title ueber ihr - dasselbe Muster
+           wie Budget, Belohnungen und Haushaltshilfe. renderHealthTabsBar haengt
+           die Leiste als zweite Zeile in diesen Kopf. -->
+      <header class="page-toolbar health-toolbar">
+        <h1 class="page-toolbar__title">${esc(t('nav.health'))}</h1>
+      </header>
       ${panels.map((panel) => panelMarkup(panel, activeRoute)).join('')}
     </div>
   `);
@@ -341,7 +328,6 @@ export async function render(container, ctx = {}) {
   container.querySelector('.health-page').appendChild(_fab);
 
   if (window.lucide) window.lucide.createIcons({ el: container });
-  showPanel(activeRoute);
   renderHealthTabsBar(container, activeRoute, { cycleEnabled });
   updateHealthFab(activeRoute);
   maybeMountOverview(activeRoute);
@@ -360,7 +346,6 @@ export async function update({ path, user } = {}) {
   if (user?.id) { vitals.meId = user.id; meds.meId = user.id; labs.meId = user.id; activity.meId = user.id; cycle.meId = user.id; overview.meId = user.id; }
   const activeRoute = normalizeHealthPath(path || window.location.pathname);
 
-  showPanel(activeRoute);
   _container.querySelector('.sub-tabs-bar')?.remove();
   renderHealthTabsBar(_container, activeRoute, { cycleEnabled });
   updateHealthFab(activeRoute);
@@ -634,11 +619,16 @@ function renderCards() {
   host.insertAdjacentHTML('beforeend', cards);
   if (window.lucide) window.lucide.createIcons({ el: host });
 
-  host.querySelectorAll('.health-metric-card').forEach((card) =>
+  host.querySelectorAll('.metric-card--select').forEach((card) =>
     card.addEventListener('click', () => {
       vitals.selectedType = card.dataset.type;
-      host.querySelectorAll('.health-metric-card').forEach((c) =>
-        c.classList.toggle('is-active', c.dataset.type === vitals.selectedType));
+      host.querySelectorAll('.metric-card--select').forEach((c) => {
+        const on = c.dataset.type === vitals.selectedType;
+        c.classList.toggle('is-active', on);
+        // aria-pressed muss den Toggle mitgehen - vorher blieb der beim
+        // Render gesetzte Wert stehen und log nach dem ersten Klick.
+        c.setAttribute('aria-pressed', String(on));
+      });
       renderDetail();
     }));
 }
@@ -649,29 +639,29 @@ function cardMarkup(metric, series) {
   const label = t(metric.labelKey);
 
   let valueHtml;
-  let metaHtml = `<div class="health-metric-card__empty">${esc(t('health.vitals.noValue'))}</div>`;
+  let metaHtml = `<span class="metric-card__note">${esc(t('health.vitals.noValue'))}</span>`;
 
   if (latest) {
     const unit = esc(vitalUnitText(metric, latest));
     const valueText = vitalValueText(metric, latest);
-    valueHtml = `<span class="health-metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="health-metric-card__unit">${unit}</span>` : ''}`;
+    valueHtml = `<span class="metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="metric-card__unit">${unit}</span>` : ''}`;
     metaHtml = `
-      <div class="health-metric-card__meta">
+      <span class="metric-card__meta">
         ${deltaMarkup(series.deltas.value_num, metric)}
-        <span class="health-metric-card__date">${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
-      </div>`;
+        <span>${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
+      </span>`;
   } else {
-    valueHtml = '<span class="health-metric-card__value health-metric-card__value--empty">–</span>';
+    valueHtml = '<span class="metric-card__value metric-card__value--empty">–</span>';
   }
 
   return `
-    <button type="button" class="health-metric-card${active ? ' is-active' : ''}" data-type="${esc(metric.type)}"
+    <button type="button" class="metric-card metric-card--select${active ? ' is-active' : ''}" data-type="${esc(metric.type)}"
       aria-pressed="${active}">
-      <span class="health-metric-card__head">
-        <i data-lucide="${esc(metric.icon)}" class="health-metric-card__icon" aria-hidden="true"></i>
-        <span class="health-metric-card__label">${esc(label)}</span>
+      <span class="metric-card__head">
+        <i data-lucide="${esc(metric.icon)}" class="metric-card__icon" aria-hidden="true"></i>
+        <span class="metric-card__label">${esc(label)}</span>
       </span>
-      <span class="health-metric-card__body">${valueHtml}</span>
+      <span class="metric-card__body">${valueHtml}</span>
       ${latest ? sparklineMarkup(series.points, 'value_num', metric) : ''}
       ${metaHtml}
     </button>`;
@@ -701,21 +691,21 @@ function sparklineMarkup(points, key, metric) {
   const pts = withVal.map((o, idx) => `${x(idx).toFixed(1)},${y(o.v).toFixed(1)}`).join(' ');
   const lastX = x(n - 1).toFixed(1);
   const lastY = y(withVal[n - 1].v).toFixed(1);
-  return `<svg class="health-metric-card__spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
-      <polyline points="${pts}" fill="none" stroke="var(--module-accent)" stroke-width="1.5"
+  // Farbe steht in panel.css am geteilten Bauteil, nicht hier: sie ist eine
+  // Aussage über den WERT und gehört deshalb der Karte, nicht dem Modul.
+  return `<svg class="metric-card__spark" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <polyline points="${pts}" fill="none" stroke-width="1.5"
         stroke-linecap="round" stroke-linejoin="round" vector-effect="non-scaling-stroke" />
-      <circle cx="${lastX}" cy="${lastY}" r="2" fill="var(--module-accent)" vector-effect="non-scaling-stroke" />
+      <circle cx="${lastX}" cy="${lastY}" r="2" vector-effect="non-scaling-stroke" />
     </svg>`;
 }
 
 function deltaMarkup(delta, metric) {
-  if (delta === null || delta === undefined) return '<span class="health-metric-card__delta"></span>';
-  const icon = delta > 0 ? 'trending-up' : (delta < 0 ? 'trending-down' : 'minus');
-  const dir = delta > 0 ? 'up' : (delta < 0 ? 'down' : 'flat');
-  return `
-    <span class="health-metric-card__delta health-metric-card__delta--${dir}">
-      <i data-lucide="${icon}" aria-hidden="true"></i>${esc(fmtVitalDelta(metric, delta))}
-    </span>`;
+  if (delta === null || delta === undefined) return '<span class="metric-card__trend"></span>';
+  // betterWhen bleibt null: „hoch" ist je nach Metrik gut ODER schlecht
+  // (Gewichtsabnahme, SpO₂, Glukose-Kontrolle) - die Farbe bleibt neutral,
+  // die Richtung trägt allein der Pfeil (utils/metric-card.js).
+  return trendMarkup({ delta, text: esc(fmtVitalDelta(metric, delta)) });
 }
 
 // --------------------------------------------------------
@@ -896,7 +886,7 @@ function chartMarkup(metric, series) {
         </span>`).join('')}</div>`
     : '';
 
-  const grid = chartGridMarkup(min, max, metric);
+  const grid = chartGridFor(min, max, metric);
 
   // Screenreader-Datentabelle: nur Buckets mit mindestens einem Wert.
   const chLabel = (idx) => (metric.channelLabelKeys?.[idx] ? t(metric.channelLabelKeys[idx]) : t(metric.labelKey));
@@ -905,7 +895,7 @@ function chartMarkup(metric, series) {
   const tableRows = dataPoints
     .map((p) => [formatDate(p.date), ...channels.map(({ key }) => fmtChannelValue(metric, p[key]))]);
   const table = tableRows.length ? chartTableMarkup(t(metric.labelKey), tableHeaders, tableRows) : '';
-  const xLabels = chartXLabelsMarkup(dataPoints.map((p) => p.date));
+  const xLabels = chartXLabels(dataPoints.map((p) => p.date));
 
   return `
     <svg class="health-chart" viewBox="0 0 ${W} ${H}" role="img"
@@ -1297,8 +1287,8 @@ async function loadMeds() {
   meds.logsByMed = {};
 
   const today = toLocalDateKey(new Date());
-  const from = addLocalDays(today, -(meds.adherenceDays - 1));
   await Promise.all(meds.list.map(async (m) => {
+    const from = addLocalDays(today, -(medLogWindowDays(m, meds.adherenceDays) - 1));
     const [sRes, lRes] = await Promise.all([
       api.get(`/health/medications/${m.id}/schedules`),
       api.get(`/health/medications/${m.id}/logs?from=${from}T00:00&to=${today}T23:59`),
@@ -1308,14 +1298,40 @@ async function loadMeds() {
   }));
 }
 
+/**
+ * Wie weit zurueck die Dosis-Eintraege eines Medikaments gelesen werden muessen.
+ *
+ * Grundlage ist das Adhaerenz-Fenster. Ein Bedarfsmedikament braucht mehr, wenn
+ * sein Mindestabstand darueber hinausreicht (erlaubt sind bis zu 28 Tage): der
+ * Countdown rechnet aus der LETZTEN Einnahme, und was ausserhalb des Fensters
+ * liegt, kommt gar nicht erst an. Der Meds-Tab schriebe dann „Noch nicht
+ * genommen", waehrend die Uebersicht mit ihrem groesseren Fenster gleichzeitig
+ * den richtigen Zeitpunkt zeigt - und die Zeile, die vor einer zu fruehen Dosis
+ * warnen soll, waere die eine, die schweigt.
+ */
+function medLogWindowDays(med, baseDays) {
+  const hours = Number(med?.min_interval_hours);
+  if (!med?.prn || !Number.isFinite(hours) || hours <= 0) return baseDays;
+  return Math.max(baseDays, Math.ceil(hours / 24) + 1);
+}
+
 function allSchedules() {
   return meds.list.flatMap((m) => meds.schedulesByMed[m.id] || []);
 }
 
+/**
+ * Die Dosen, gegen die sich die Adhaerenz messen laesst - also die GEPLANTEN.
+ *
+ * `planned` zaehlt Eintraege aus den Einnahmeplaenen; eine Bedarfsdosis gehoert
+ * zu keinem und darf deshalb nicht im Zaehler stehen. Sichtbar wurde das erst
+ * mit #700: vorher fielen Bedarfsdosen schon am Zeitraumfilter der Route heraus,
+ * seit dem Fix kommen sie mit - und drei von sieben geplanten Dosen plus acht
+ * Kopfschmerztabletten haetten „100 %, 11 von 11" ergeben.
+ */
 function allLogsInRange(from, to) {
   const out = [];
   for (const m of meds.list) {
-    for (const l of (meds.logsByMed[m.id] || [])) {
+    for (const l of scheduledLogs(meds.logsByMed[m.id])) {
       const key = String(l.scheduled_at || l.taken_at || l.created_at || '').slice(0, 10);
       if (key >= from && key <= to) out.push(l);
     }
@@ -1358,8 +1374,15 @@ function renderMedsShell() {
       <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.dueToday.title'))}</h3>
     </div>
     <div class="health-meds__due">${dueTodayMarkup()}</div>
+    ${prnMeds('meds').length ? `
+    <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.prn.title'))}</h3>
+    <div class="health-meds__prn">${prnListMarkup('meds')}</div>` : ''}
     <div class="health-meds__adherence-wrap">${adherenceMarkup()}${medLogHistoryMarkup()}</div>
-    <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.title'))}</h3>
+    <!-- „Alle Medikamente", nicht „Medikamente": der Abschnitt stand unter dem
+         gleichnamigen Tab und trug denselben Namen wie das Panel, benannte sich
+         also gegen „Heute faellig" gar nicht. Gefunden vom Guard, der die
+         Titelwiederholung seit Runde 5 fuer Leiste UND Abschnitt prueft. -->
+    <h3 class="health-meds__section-title u-toolbar-title">${esc(t('health.meds.allTitle'))}</h3>
     <div class="health-meds__list" id="health-meds-list">${medListMarkup()}</div>
   `);
   if (window.lucide) window.lucide.createIcons({ el: meds.root });
@@ -1371,7 +1394,7 @@ function dueTodayMarkup() {
   const today = toLocalDateKey(new Date());
   const due = computeDueDoses(allSchedules(), { from: today, to: today });
   if (!due.length) {
-    return `<div class="health-meds__due-empty">${esc(t('health.meds.dueToday.empty'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.dueToday.empty'))}</p></div>`;
   }
   const rows = due.map((dose) => {
     const med = meds.list.find((m) => m.id === dose.medicationId);
@@ -1395,19 +1418,323 @@ function dueRowMarkup(dose, med, log) {
     const data = `data-med-id="${esc(dose.medicationId)}" data-schedule-id="${esc(dose.scheduleId ?? '')}" data-scheduled-at="${esc(dose.scheduledAt)}" data-log-id="${esc(log?.id ?? '')}" data-dose="${esc(dose.dose_qty ?? '')}"`;
     actions = `
       <div class="health-dose__actions">
-        <button type="button" class="btn btn--sm btn--primary" data-dose-take ${data}>${esc(t('health.meds.take'))}</button>
-        <button type="button" class="btn btn--sm btn--ghost" data-dose-skip ${data}>${esc(t('health.meds.skip'))}</button>
+        <button type="button" class="btn btn--sm btn--primary health-dose__take" data-dose-take ${data} aria-label="${esc(t('health.meds.take'))}"><i data-lucide="check" class="icon-sm" aria-hidden="true"></i><span class="health-dose__take-label">${esc(t('health.meds.take'))}</span></button>
+        <button type="button" class="btn btn--sm btn--ghost health-dose__skip" data-dose-skip ${data} aria-label="${esc(t('health.meds.skip'))}"><i data-lucide="skip-forward" class="icon-sm" aria-hidden="true"></i><span class="health-dose__skip-label">${esc(t('health.meds.skip'))}</span></button>
       </div>`;
   } else {
     actions = `<span class="health-dose__status">${esc(t('health.meds.status.pending'))}</span>`;
   }
 
   return `
-    <li class="health-dose">
+    <li class="list-row health-dose">
       <span class="health-dose__time">${esc(dose.time)}</span>
-      <span class="health-dose__name">${esc(name)}${esc(doseText)}</span>
+      <span class="list-row__name health-dose__name">${esc(name)}${esc(doseText)}</span>
       ${actions}
     </li>`;
+}
+
+// --------------------------------------------------------
+// Bedarfsmedikation (#700)
+//
+// „Bei Bedarf" gab es seit jeher als Feld, als Abzeichen und als Spalte - nur
+// keinen Knopf: beide Buchungspfade hingen an `data-schedule-id`, und ein
+// Bedarfsmedikament hat definitionsgemaess keinen Zeitplan. Yuvomi versprach
+// hier etwas, das es nicht einloeste.
+//
+// Der Abschnitt steht bewusst EINMAL da und wird von beiden Tabs benutzt
+// (Medikamente und Uebersicht). Die Datei fuehrt fuer die geplante Dosis zwei
+// getrennte Renderer - `dueRowMarkup` und `overviewDueRowMarkup` -, und genau
+// dort ist eine Korrektur schon einmal nur in einem der beiden gelandet.
+// --------------------------------------------------------
+
+/** Der Datenzugang eines Tabs, damit ein Renderer beiden dient. */
+function prnScope(scope) {
+  return scope === 'overview'
+    ? { list: overview.meds, logs: overview.logsByMed, own: canEditFor(overview.personId, overview.meId), reload: reloadOverview }
+    : { list: meds.list,     logs: meds.logsByMed,     own: canEditFor(meds.personId, meds.meId),         reload: reloadMeds };
+}
+
+/** Die aktiven Bedarfsmedikamente eines Tabs. */
+function prnMeds(scope) {
+  return prnScope(scope).list.filter((m) => m.prn && m.active);
+}
+
+/** Zeitpunkt lesbar: die Uhrzeit allein nur, wenn sie noch heute liegt. */
+function prnWhenLabel(at) {
+  const sameDay = toLocalDateKey(at) === toLocalDateKey(new Date());
+  return sameDay ? formatTime(at) : `${formatDate(at)} ${formatTime(at)}`;
+}
+
+/** Restdauer als „5 Std. 20 Min." bzw. „20 Min.". */
+function prnRemainingLabel(ms) {
+  const { hours, minutes } = splitRemaining(ms);
+  return hours > 0
+    ? t('health.meds.prn.remainingHm', { hours, minutes })
+    : t('health.meds.prn.remainingM', { minutes });
+}
+
+/**
+ * Der Stand als zwei Angaben - die handlungsleitende zuerst.
+ *
+ * Vorn steht immer die absolute Uhrzeit, weil sie auch in drei Stunden noch
+ * stimmt; „noch 5 Std. 20 Min." ist nur in dem Moment richtig, in dem man
+ * hinsieht. Die Zweitangabe faellt bei Enge weg (health.css) - dieselbe
+ * Antwort, die die geplante Dosis daneben schon gibt, und der volle Satz
+ * bleibt am `title`/`aria-label` haengen.
+ *
+ * @returns {{ lead:string, detail:string, full:string }}
+ */
+function prnStatusParts(state) {
+  if (!state.allowed && state.nextAllowedAt) {
+    const lead = t('health.meds.prn.nextAt', { time: prnWhenLabel(state.nextAllowedAt) });
+    const detail = prnRemainingLabel(state.remainingMs);
+    return { lead, detail, full: `${lead} · ${detail}` };
+  }
+  if (!state.lastTakenAt) {
+    const lead = t('health.meds.prn.never');
+    return { lead, detail: '', full: lead };
+  }
+  const lead = t('health.meds.prn.ready');
+  const detail = t('health.meds.prn.lastTaken', { time: prnWhenLabel(state.lastTakenAt) });
+  return { lead, detail, full: `${lead} · ${detail}` };
+}
+
+/** Die Statuszeile als Markup - eine Quelle fuer Erstaufbau und Minutentakt. */
+function prnStatusMarkup(state) {
+  const parts = prnStatusParts(state);
+  // Der Countdown wird aus `data-prn-next` neu geschrieben, nicht aus einem
+  // laufenden Zaehler - deshalb ueberlebt er Reload und Geraetewechsel.
+  //
+  // Der Zeitpunkt steht NUR am wartenden Stand. `nextAllowedAt` existiert auch,
+  // wenn er laengst verstrichen ist, und der Minutentakt liest jedes gesetzte
+  // Attribut: eine abgelaufene Zeile haette ihn bei jedem Tick als „gerade
+  // abgelaufen" gemeldet und damit im Minutenrhythmus beide Tabs neu gebaut -
+  // ein offenes Einnahmeprotokoll klappt dabei zu, Scrollstand und Fokus gehen
+  // verloren.
+  const countdown = state.allowed ? '' : state.nextAllowedAt.toISOString();
+  return `
+    <span class="health-prn__status" data-prn-countdown title="${esc(parts.full)}"
+          data-prn-next="${esc(countdown)}">
+      <span class="health-prn__lead">${esc(parts.lead)}</span>
+      ${parts.detail ? `<span class="health-prn__detail">${esc(parts.detail)}</span>` : ''}
+    </span>`;
+}
+
+function prnRowMarkup(med, scope, own) {
+  const s = prnScope(scope);
+  const state = prnDoseState(med, s.logs[med.id] || []);
+  const doseText = med.prn_dose_qty != null
+    ? t('health.meds.doseQty', { count: fmtNum(med.prn_dose_qty) })
+    : med.dosage_text || '';
+
+  const action = own
+    ? `<button type="button" class="btn btn--sm ${state.allowed ? 'btn--primary' : 'btn--ghost'} health-prn__take"
+               data-prn-take data-prn-scope="${esc(scope)}" data-med-id="${esc(med.id)}"
+               aria-label="${esc(t('health.meds.prn.takeFor', { medication: med.name }))}">
+         <i data-lucide="pill" class="icon-sm" aria-hidden="true"></i>
+         <span class="health-prn__take-label">${esc(t('health.meds.prn.take'))}</span>
+       </button>`
+    : '';
+
+  return `
+    <li class="list-row health-dose health-prn${state.allowed ? '' : ' is-waiting'}">
+      <span class="list-row__name health-dose__name">${esc(med.name)}${doseText ? ` · ${esc(doseText)}` : ''}</span>
+      ${prnStatusMarkup(state)}
+      ${action}
+    </li>`;
+}
+
+/** Die Liste selbst - ohne Ueberschrift, die setzt der jeweilige Tab. */
+function prnListMarkup(scope) {
+  const list = prnMeds(scope);
+  if (!list.length) return '';
+  const own = prnScope(scope).own;
+  return `<ul class="health-meds__due-list">${list.map((m) => prnRowMarkup(m, scope, own)).join('')}</ul>`;
+}
+
+/**
+ * Schreibt die Countdown-Zeilen neu, ohne die Seite anzufassen.
+ *
+ * Einmal pro Minute reicht: die Anzeige rundet ohnehin auf volle Minuten auf.
+ * Laeuft der Abstand waehrenddessen ab, holt der naechste Durchlauf den ganzen
+ * Abschnitt frisch, damit der Knopf seine Rolle wechselt.
+ */
+function refreshPrnCountdowns() {
+  const now = Date.now();
+  let expired = false;
+  for (const el of document.querySelectorAll('[data-prn-countdown]')) {
+    const next = parseLogInstant(el.dataset.prnNext);
+    if (!next) continue;
+    const remaining = next.getTime() - now;
+    if (remaining <= 0) { expired = true; continue; }
+    const lead = t('health.meds.prn.nextAt', { time: prnWhenLabel(next) });
+    const detail = prnRemainingLabel(remaining);
+    el.title = `${lead} · ${detail}`;
+    el.querySelector('.health-prn__lead').textContent = lead;
+    const detailEl = el.querySelector('.health-prn__detail');
+    if (detailEl) detailEl.textContent = detail;
+  }
+  return expired;
+}
+
+let prnTicker = null;
+
+/** Startet den Minutentakt, sobald ein Countdown auf der Seite steht. */
+function ensurePrnTicker() {
+  if (prnTicker) return;
+  prnTicker = window.setInterval(() => {
+    if (!document.querySelector('[data-prn-countdown]')) { stopPrnTicker(); return; }
+    if (!refreshPrnCountdowns()) return;
+    // Abgelaufen: der Abschnitt muss neu, sonst bliebe der Knopf im
+    // Warte-Zustand stehen, obwohl die Dosis erlaubt ist. Beide Tabs sind
+    // gleichzeitig im DOM (nur eines sichtbar) - deshalb kein `else if`, sonst
+    // bliebe das jeweils andere auf dem alten Stand stehen.
+    if (meds.root?.isConnected) renderMedsShell();
+    if (overview.root?.isConnected) renderOverviewShell();
+  }, 60_000);
+}
+
+function stopPrnTicker() {
+  if (!prnTicker) return;
+  window.clearInterval(prnTicker);
+  prnTicker = null;
+}
+
+// Welche Medikamente gerade gebucht werden. Denselben Knopf gibt es mehrfach -
+// je Tab einen, beide gleichzeitig gemountet, und bei einem Medikament mit Plan
+// UND Bedarf zusaetzlich den geplanten neben dem der Bedarfszeile. `btn.disabled`
+// sperrt nur den angeklickten: wer waehrend der laufenden Anfrage den Tab
+// wechselt oder die andere Zeile nimmt, bucht dieselbe Dosis ein zweites Mal,
+// samt zweitem Bestandsabzug.
+const doseInFlight = new Set();
+
+/** JEDEN Buchungsknopf eines Medikaments sperren oder freigeben. */
+function setDoseBusy(medId, busy) {
+  if (busy) doseInFlight.add(medId); else doseInFlight.delete(medId);
+  for (const el of doseButtonsFor(medId)) el.disabled = busy;
+}
+
+/** Alle Knoepfe, die fuer dieses Medikament eine Dosis buchen - geplant wie bei Bedarf. */
+function doseButtonsFor(medId) {
+  return document.querySelectorAll(
+    `[data-prn-take][data-med-id="${medId}"],`
+    + `[data-dose-take][data-med-id="${medId}"], [data-dose-skip][data-med-id="${medId}"],`
+    + `[data-ov-dose-take][data-med-id="${medId}"], [data-ov-dose-skip][data-med-id="${medId}"]`,
+  );
+}
+
+/** Eine Bedarfsdosis buchen. */
+async function handlePrnDose(btn) {
+  const scope = btn.dataset.prnScope;
+  const s = prnScope(scope);
+  const medId = Number(btn.dataset.medId);
+  const med = s.list.find((m) => m.id === medId);
+  if (!med) return;
+  if (doseInFlight.has(medId)) return;
+
+  const state = prnDoseState(med, s.logs[medId] || []);
+  // Nicht gesperrt, nur gefragt: der Mindestabstand ist eine Empfehlung vom
+  // Beipackzettel, kein Schloss - und wer eine Dosis wirklich frueher nimmt,
+  // soll sie eintragen koennen, statt sie zu verschweigen. Der Dialog nennt
+  // den Zeitpunkt, um den es geht.
+  if (!state.allowed && state.nextAllowedAt) {
+    const ok = await confirmModal(t('health.meds.prn.earlyConfirm'), {
+      detail: t('health.meds.prn.earlyDetail', {
+        time: prnWhenLabel(state.nextAllowedAt),
+        remaining: prnRemainingLabel(state.remainingMs),
+      }),
+      confirmLabel: t('health.meds.prn.earlyConfirmAction'),
+    });
+    if (!ok) return;
+  }
+
+  setDoseBusy(medId, true);
+  const dose = med.prn_dose_qty != null ? Number(med.prn_dose_qty) : null;
+  try {
+    await api.post(`/health/medications/${medId}/logs`, {
+      status: 'taken',
+      // Wanduhrzeit, keine ISO-Zone: die Route kuerzt den Wert auf Minuten und
+      // wuerfe die Zone weg - die Einnahme stuende dann mit der UTC-Zahl im
+      // Protokoll und der Countdown rechnete daneben.
+      taken_at: toLocalStamp(),
+      ...(dose != null && Number.isFinite(dose) ? { dose_qty: dose } : {}),
+    });
+  } catch (err) {
+    console.error('[Health] prn dose error:', err);
+    setDoseBusy(medId, false);
+    window.yuvomi?.showToast(err?.data?.error || t('health.meds.doseError'), 'danger');
+    return;
+  }
+
+  // AB HIER IST DIE DOSIS GEBUCHT. Der Bestandsabzug ist ein zweiter Aufruf,
+  // und wenn er scheitert, darf das nicht als „Buchung fehlgeschlagen" dastehen:
+  // wer es dann noch einmal versucht, hat die Dosis zweimal im Protokoll. Der
+  // Bestand ist eine Nebenbuchhaltung, die Dosis die Aussage ueber den Koerper.
+  //
+  // Der Abzug wird beim Zuruecknehmen NICHT gutgeschrieben - so haelt es die
+  // geplante Dosis seit jeher (#701 korrigiert den Eintrag, nicht den Bestand).
+  // Das ist eine bekannte Grenze und keine Eigenheit der Bedarfsdosis; sie
+  // aufzuheben hiesse, jede Korrektur serverseitig gegenzubuchen, und das gehoert
+  // in einen eigenen Schritt statt in diesen.
+  if (dose != null && Number.isFinite(dose) && med.stock_qty != null) {
+    try {
+      const next = Math.max(0, Number(med.stock_qty) - dose);
+      await api.patch(`/health/medications/${medId}`, { stock_qty: next });
+    } catch (err) {
+      console.error('[Health] prn stock error:', err);
+      window.yuvomi?.showToast(t('health.meds.stockUpdateFailed'), 'danger');
+    }
+  }
+
+  window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
+  // Erst nach dem Neuzeichnen freigeben: bis dahin darf kein Zwilling scharf
+  // sein. Freigegeben wird ueber `setDoseBusy` und nicht ueber das Set allein -
+  // die Knoepfe von eben sind beim Neuzeichnen verschwunden, und die neuen sind
+  // gerade erst durch `wirePrn` gesperrt worden, weil die Buchung da noch lief.
+  // Ein blosses `delete` haette den Eintrag geraeumt und den Knopf gesperrt
+  // gelassen: bei einem Medikament ohne Mindestabstand bis zum naechsten
+  // Seitenaufbau.
+  await reloadMedViews();
+  setDoseBusy(medId, false);
+}
+
+/**
+ * BEIDE Ansichten auffrischen, die Medikamentendaten zeigen.
+ *
+ * Uebersicht und Medikamente sind gleichzeitig gemountet, und die weiche
+ * Tab-Navigation baut ein bereits geladenes Panel nicht neu auf. Nur den
+ * angefassten neu zu laden hiesse: der andere rechnet mit dem Stand von vorhin.
+ * Das faellt ueberall an, wo sich etwas an Medikamenten, Plaenen oder Dosen
+ * aendert - eine gebuchte Dosis verschiebt drueben den Countdown, ein
+ * abgeschalteter Bedarfshaken laesst drueben einen Knopf stehen, den es nicht
+ * mehr geben duerfte, und der bucht dann eine Dosis, vor der niemand mehr warnt.
+ * Geladen wird nur, was auch gemountet ist; wer die Uebersicht nie geoeffnet
+ * hat, zahlt nichts dafuer.
+ */
+async function reloadMedViews() {
+  const jobs = [];
+  if (meds.root?.isConnected && meds.loaded) jobs.push(reloadMeds());
+  if (overview.root?.isConnected && overview.loaded) jobs.push(reloadOverview());
+  await Promise.all(jobs);
+}
+
+/** Sperrt frisch gezeichnete Knoepfe, deren Buchung noch laeuft. */
+function respectDoseLock(root) {
+  // Ein Neuaufbau waehrend einer laufenden Buchung darf keinen Knopf wieder
+  // scharf machen - er entsteht ja frisch und wuesste sonst nichts davon.
+  root.querySelectorAll('[data-med-id]').forEach((btn) => {
+    if (typeof btn.disabled !== 'boolean') return;
+    if (doseInFlight.has(Number(btn.dataset.medId))) btn.disabled = true;
+  });
+}
+
+/** Bindet die Bedarfsknoepfe eines Wurzelelements. */
+function wirePrn(root) {
+  respectDoseLock(root);
+  root.querySelectorAll('[data-prn-take]').forEach((btn) => {
+    btn.addEventListener('click', () => handlePrnDose(btn));
+  });
+  if (root.querySelector('[data-prn-countdown]')) ensurePrnTicker();
 }
 
 function adherenceMarkup() {
@@ -1416,29 +1743,32 @@ function adherenceMarkup() {
   const planned = computeDueDoses(allSchedules(), { from, to: today }).length;
   const a = computeAdherence(allLogsInRange(from, today), planned);
 
+  // Seit Block 2 die geteilte Kennzahlkarte: Titel + Zeitraum teilen sich die
+  // Meta-Zeile, der Balken ist der geteilte __progress (Zweitkanal zur Zahl).
   const head = `
-    <div class="health-adherence__head">
-      <span class="health-adherence__title">${esc(t('health.meds.adherence.title'))}</span>
-      <span class="health-adherence__period">${esc(t('health.meds.adherence.period', { days: meds.adherenceDays }))}</span>
+    <div class="metric-card__meta">
+      <span class="metric-card__label">${esc(t('health.meds.adherence.title'))}</span>
+      <span>${esc(t('health.meds.adherence.period', { days: meds.adherenceDays }))}</span>
     </div>`;
 
   if (a.rate === null) {
-    return `<div class="health-adherence">${head}
-      <div class="health-adherence__empty">${esc(t('health.meds.adherence.noData'))}</div></div>`;
+    return `<div class="metric-card">${head}
+      <div class="metric-card__note">${esc(t('health.meds.adherence.noData'))}</div></div>`;
   }
   // Geplant, aber noch nichts protokolliert: KEIN großes rotes „0 %" — das liest
   // sich als Vorwurf. Stattdessen ein neutraler Frühzustand (Adherence-Scham vermeiden).
   if (a.taken === 0) {
-    return `<div class="health-adherence">${head}
-      <div class="health-adherence__empty">${esc(t('health.meds.adherence.notStarted'))}</div></div>`;
+    return `<div class="metric-card">${head}
+      <div class="metric-card__note">${esc(t('health.meds.adherence.notStarted'))}</div></div>`;
   }
   const pct = Math.round(a.rate * 100);
   return `
-    <div class="health-adherence">
+    <div class="metric-card">
       ${head}
-      <div class="health-adherence__value">${esc(fmtNum(pct))}%</div>
-      <div class="health-adherence__bar"><span style="width:${pct}%"></span></div>
-      <div class="health-adherence__summary">${esc(t('health.meds.adherence.summary', { taken: a.taken, planned: a.planned }))}</div>
+      <div class="metric-card__value">${esc(fmtNum(pct))}%</div>
+      <div class="metric-card__progress" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+           aria-valuenow="${pct}" aria-valuetext="${pct}%"><span style="--fill:${pct / 100}"></span></div>
+      <div class="metric-card__note">${esc(t('health.meds.adherence.summary', { taken: a.taken, planned: a.planned }))}</div>
     </div>`;
 }
 
@@ -1449,22 +1779,56 @@ function medLogHistoryMarkup() {
   const entries = [];
   for (const m of meds.list) {
     for (const l of (meds.logsByMed[m.id] || [])) {
-      entries.push({ med: m.name, at: l.taken_at || l.scheduled_at || l.created_at || '', status: l.status });
+      entries.push({
+        id: l.id, med: m.name, medId: m.id, scheduleId: l.schedule_id ?? null,
+        at: l.taken_at || l.scheduled_at || l.created_at || '', status: l.status,
+      });
     }
   }
   if (!entries.length) return '';
   entries.sort((a, b) => String(b.at).localeCompare(String(a.at)));
+
+  // Korrigieren darf nur, wer IN SEINEM EIGENEN Protokoll ist (#701).
+  //
+  // Nicht `canEditFor`: der Server laesst eine Korrektur ausdruecklich nur den
+  // Eigentuemer machen (`ownLogRow` in server/routes/health/medications.js -
+  // ein Dosis-Eintrag ist eine Aufzeichnung ueber den eigenen Koerper, mitlesen
+  // und nachtraeglich aendern sind zwei verschiedene Rechte). Wer fuer eine
+  // betreute Person eintraegt, darf also buchen, aber nicht nachbessern - und
+  // bekam die Stifte trotzdem angeboten, mit einem 404 dahinter. Ein Knopf, der
+  // nichts tut, ist genau der Fehler, wegen dem #700 ueberhaupt aufkam.
+  const own = meds.personId === meds.meId;
+
   const rows = entries.slice(0, 10).map((e) => {
-    const skipped = e.status === 'skipped';
+    // Uebersprungen und ausstehend sind beide "nicht genommen" und treten
+    // gleich weit zurueck; unterscheiden tut sie das Wort daneben.
+    const muted = e.status !== 'taken';
     const d = String(e.at);
     const timeLabel = d.length >= 16
       ? `${formatDate(d.slice(0, 10))} · ${formatTime(new Date(d))}`
       : formatDate(d.slice(0, 10));
-    return `<li class="health-medlog__row${skipped ? ' is-skipped' : ''}">
-        <i data-lucide="${skipped ? 'circle-slash' : 'check'}" aria-hidden="true"></i>
+    // Drei Staende, nicht zwei: das Protokoll kannte nur "uebersprungen" und
+    // "sonst genommen" und schrieb damit "Genommen" unter jede ausstehende
+    // Dosis. Solange es keinen Weg zurueck gab, fiel das kaum auf - seit es
+    // einen gibt (#701), waere es die Zeile, die der Korrektur widerspricht.
+    const statusLabel = {
+      skipped: t('health.meds.status.skipped'),
+      pending: t('health.meds.log.statusPending'),
+    }[e.status] ?? t('health.meds.status.taken');
+    const icon = { skipped: 'circle-slash', pending: 'circle-dashed' }[e.status] ?? 'check';
+    const body = `
+        <i data-lucide="${icon}" aria-hidden="true"></i>
         <span class="health-medlog__med">${esc(e.med)}</span>
         <span class="health-medlog__time">${esc(timeLabel)}</span>
-        <span class="health-medlog__status">${esc(skipped ? t('health.meds.status.skipped') : t('health.meds.status.taken'))}</span>
+        <span class="health-medlog__status">${esc(statusLabel)}</span>`;
+    if (!own) {
+      return `<li class="health-medlog__row${muted ? ' is-muted' : ''}">${body}</li>`;
+    }
+    return `<li class="health-medlog__row${muted ? ' is-muted' : ''}">
+        <button type="button" class="health-medlog__edit" data-medlog-edit="${esc(e.id)}"
+                aria-label="${esc(t('health.meds.log.correct', { medication: e.med, time: timeLabel }))}">
+          ${body}
+        </button>
       </li>`;
   }).join('');
   return `
@@ -1474,9 +1838,128 @@ function medLogHistoryMarkup() {
     </details>`;
 }
 
+/** Ein Log-Eintrag aus dem geladenen Bestand, samt Medikamentenname. */
+function findMedLog(logId) {
+  for (const m of meds.list) {
+    const hit = (meds.logsByMed[m.id] || []).find((l) => l.id === logId);
+    if (hit) return { ...hit, medName: m.name };
+  }
+  return null;
+}
+
+/**
+ * Einen Dosis-Eintrag korrigieren oder zurücknehmen (#701).
+ *
+ * Vorher gab es nur take/skip, also zwei Einbahnstraßen: ein Fehlgriff blieb
+ * für immer stehen, und zwar nicht nur in der App, sondern auch im Export.
+ *
+ * Gelöscht werden kann nur, was nicht aus einem Zeitplan stammt. Ein geplanter
+ * Eintrag wird zurückgenommen ("steht aus") statt entfernt, weil der Scheduler
+ * ihn sonst beim nächsten Lauf wieder anlegt - das Löschen sähe aus wie ein
+ * Erfolg und wäre eine Rückkehr auf Raten. Der Server weist es entsprechend ab.
+ */
+function openMedLogModal(logId) {
+  const entry = findMedLog(logId);
+  if (!entry) return;
+
+  const when = entry.taken_at || entry.scheduled_at || entry.created_at || '';
+  const dateValue = String(when).slice(0, 10);
+  const timeValue = String(when).length >= 16 ? String(when).slice(11, 16) : '';
+  const isScheduled = Boolean(entry.schedule_id);
+
+  openModal({
+    title: t('health.meds.log.editTitle'),
+    size: 'sm',
+    content: `
+      <form id="medlog-form" class="form-stack">
+        <p class="form-hint">${esc(entry.medName)}</p>
+        <div class="form-field">
+          <label class="label" for="medlog-status">${esc(t('health.meds.log.statusLabel'))}</label>
+          <select class="input" id="medlog-status">
+            <option value="taken"${entry.status === 'taken' ? ' selected' : ''}>${esc(t('health.meds.status.taken'))}</option>
+            <option value="skipped"${entry.status === 'skipped' ? ' selected' : ''}>${esc(t('health.meds.status.skipped'))}</option>
+            <option value="pending"${entry.status === 'pending' ? ' selected' : ''}>${esc(t('health.meds.log.statusPending'))}</option>
+          </select>
+        </div>
+        <div class="modal-grid modal-grid--2" id="medlog-when">
+          <div class="form-field">
+            <label class="label" for="medlog-date">${esc(t('health.meds.log.dateLabel'))}</label>
+            <yuvomi-datepicker id="medlog-date" type="date" value="${esc(dateValue)}"></yuvomi-datepicker>
+          </div>
+          <div class="form-field">
+            <label class="label" for="medlog-time">${esc(t('health.meds.log.timeLabel'))}</label>
+            <yuvomi-datepicker id="medlog-time" type="time" value="${esc(timeValue)}"></yuvomi-datepicker>
+          </div>
+        </div>
+        <p class="form-hint">${esc(isScheduled ? t('health.meds.log.scheduledHint') : t('health.meds.log.adhocHint'))}</p>
+
+        <div class="modal-actions">
+          ${isScheduled ? '' : `<button type="button" class="btn btn--danger btn--ghost" data-action="medlog-delete">${esc(t('common.delete'))}</button>`}
+          <button type="button" class="btn btn--ghost" data-action="cancel">${esc(t('common.cancel'))}</button>
+          <button type="submit" class="btn btn--primary">${esc(t('common.save'))}</button>
+        </div>
+      </form>`,
+    onSave(panel) {
+      if (window.lucide) window.lucide.createIcons({ el: panel });
+
+      const statusField = panel.querySelector('#medlog-status');
+      const whenBox = panel.querySelector('#medlog-when');
+      // Ein Zeitpunkt gehört zu "genommen". Bei den anderen beiden Ständen wäre
+      // er ein Widerspruch in derselben Zeile, deshalb tritt er dort weg.
+      //
+      // `style.display` statt des hidden-Attributs: `.modal-grid` setzt
+      // `display: grid`, und eine Klassenregel schlägt das Attribut - das Feld
+      // wäre trotz `hidden` sichtbar geblieben.
+      const syncWhen = () => { whenBox.style.display = statusField.value === 'taken' ? '' : 'none'; };
+      statusField.addEventListener('change', syncWhen);
+      syncWhen();
+
+      panel.querySelector('[data-action="cancel"]')?.addEventListener('click', () => closeModal({ force: true }));
+      panel.querySelector('[data-action="medlog-delete"]')?.addEventListener('click', () => deleteMedLog(entry));
+
+      panel.querySelector('#medlog-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const submitBtn = panel.querySelector('[type="submit"]');
+        const status = statusField.value;
+        const body = { status };
+        if (status === 'taken') {
+          const date = panel.querySelector('#medlog-date')?.value || dateValue;
+          const time = panel.querySelector('#medlog-time')?.value || '00:00';
+          if (date) body.taken_at = `${date}T${time.length === 5 ? time : '00:00'}:00`;
+        }
+        submitBtn.disabled = true;
+        try {
+          await api.patch(`/health/logs/${entry.id}`, body);
+          closeModal({ force: true });
+          window.yuvomi?.showToast(t('health.meds.log.saved'), 'success');
+          await reloadMedViews();
+        } catch (err) {
+          console.error('[Health] med log save error:', err);
+          submitBtn.disabled = false;
+          window.yuvomi?.showToast(err?.data?.error || t('health.meds.log.saveError'), 'danger');
+        }
+      });
+    },
+  });
+}
+
+async function deleteMedLog(entry) {
+  if (!(await confirmOverModal(t('health.meds.log.deleteConfirm'),
+    { danger: true, confirmLabel: t('common.delete'), detail: t('health.meds.log.deleteConfirmDetail') }))) return;
+  try {
+    await api.delete(`/health/logs/${entry.id}`);
+    closeModal({ force: true });
+    window.yuvomi?.showToast(t('health.meds.log.deleted'), 'success');
+    await reloadMedViews();
+  } catch (err) {
+    console.error('[Health] med log delete error:', err);
+    window.yuvomi?.showToast(err?.data?.error || t('health.meds.log.saveError'), 'danger');
+  }
+}
+
 function medListMarkup() {
   if (!meds.list.length) {
-    return `<div class="health-meds__empty">${esc(t('health.meds.noMeds'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.noMeds'))}</p></div>`;
   }
   return meds.list.map(medCardMarkup).join('');
 }
@@ -1534,10 +2017,16 @@ function wireMeds() {
       if (med) openMedModal(med);
     }));
 
+  // Eine Zeile im Einnahmeprotokoll korrigieren (#701).
+  meds.root.querySelectorAll('[data-medlog-edit]').forEach((row) =>
+    row.addEventListener('click', () => openMedLogModal(Number(row.dataset.medlogEdit))));
+
   meds.root.querySelectorAll('[data-dose-take]').forEach((btn) =>
     btn.addEventListener('click', () => handleDose(btn, 'take')));
   meds.root.querySelectorAll('[data-dose-skip]').forEach((btn) =>
     btn.addEventListener('click', () => handleDose(btn, 'skip')));
+
+  wirePrn(meds.root);
 }
 
 async function switchMedsPerson() {
@@ -1564,12 +2053,16 @@ async function reloadMeds() {
 
 async function handleDose(btn, action) {
   const medId = Number(btn.dataset.medId);
+  // Dieselbe Sperre wie bei der Bedarfsdosis: bei einem Medikament mit Plan UND
+  // Bedarf stehen beide Knoepfe nebeneinander, und zwei angestossene Buchungen
+  // sehen beide den alten Bestand.
+  if (doseInFlight.has(medId)) return;
   const logId = btn.dataset.logId ? Number(btn.dataset.logId) : null;
   const scheduleId = btn.dataset.scheduleId ? Number(btn.dataset.scheduleId) : null;
   const scheduledAt = btn.dataset.scheduledAt || null;
   const dose = btn.dataset.dose !== '' ? Number(btn.dataset.dose) : null;
 
-  btn.disabled = true;
+  setDoseBusy(medId, true);
   try {
     if (logId) {
       await api.post(`/health/logs/${logId}/${action}`, {});
@@ -1578,7 +2071,11 @@ async function handleDose(btn, action) {
       if (scheduledAt) body.scheduled_at = scheduledAt;
       if (scheduleId) body.schedule_id = scheduleId;
       if (dose != null && Number.isFinite(dose)) body.dose_qty = dose;
-      if (action === 'take') body.taken_at = new Date().toISOString();
+      // Wanduhrzeit wie bei der Bedarfsdosis: `v.datetime` kuerzt den Wert auf
+      // Minuten und wirft die Zone weg, aus 22:41 MESZ wuerde 20:41. Sichtbar
+      // war das im Protokoll; seit ein Medikament Plan UND Bedarf haben kann,
+      // rechnet auch der Countdown daraus - und zwar zwei Stunden daneben.
+      if (action === 'take') body.taken_at = toLocalStamp();
       await api.post(`/health/medications/${medId}/logs`, body);
     }
 
@@ -1592,10 +2089,13 @@ async function handleDose(btn, action) {
     }
 
     window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
-    await reloadMeds();
+    // Beide Tabs, nicht nur dieser: ein Medikament kann Plan UND Bedarf haben,
+    // und dann verschiebt auch die geplante Dosis den Countdown drueben.
+    await reloadMedViews();
+    setDoseBusy(medId, false);
   } catch (err) {
     console.error('[Health] dose error:', err);
-    btn.disabled = false;
+    setDoseBusy(medId, false);
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.doseError'), 'danger');
   }
 }
@@ -1651,6 +2151,29 @@ function openMedModal(med) {
             <span>${esc(t('health.meds.field.prn'))}</span>
           </label>
         </div>
+        <!-- Nur fuer Bedarfsmedikamente sichtbar (#700): ein Mindestabstand an
+             einem Medikament mit Zeitplan waere eine zweite, widersprechende
+             Auskunft darueber, wann die naechste Dosis ansteht. -->
+        <div class="modal-grid modal-grid--2" id="med-prn-fields">
+          <div class="form-field">
+            <label class="label" for="med-interval">${esc(t('health.meds.field.minInterval'))}</label>
+            <!-- Die Grenzen sind die der Route: groesser als 0 (ein Abstand von
+                 0 waere ein Countdown, der immer abgelaufen ist) und hoechstens
+                 28 Tage. Nicht enger, sonst liesse sich ein ueber die API
+                 gesetzter Viertelstundenabstand hier nicht mehr speichern -
+                 auch dann nicht, wenn nur der Name geaendert wird. Leer bleiben
+                 darf das Feld weiterhin: das ist „kein Abstand hinterlegt". -->
+            <input class="input" id="med-interval" type="number" inputmode="decimal" step="any" min="0.01" max="672"
+                   value="${esc(val(med?.min_interval_hours))}">
+            <p class="form-hint">${esc(t('health.meds.field.minIntervalHint'))}</p>
+          </div>
+          <div class="form-field">
+            <label class="label" for="med-prn-dose">${esc(t('health.meds.field.prnDose'))}</label>
+            <input class="input" id="med-prn-dose" type="number" inputmode="decimal" step="any" min="0"
+                   value="${esc(val(med?.prn_dose_qty))}">
+            <p class="form-hint">${esc(t('health.meds.field.prnDoseHint'))}</p>
+          </div>
+        </div>
         <div class="form-field">
           <label class="label" for="med-visibility">${esc(t('health.meds.field.visibility'))}</label>
           <select class="input" id="med-visibility">
@@ -1678,6 +2201,15 @@ function openMedModal(med) {
       renderSchedEditor(panel, med);
       if (window.lucide) window.lucide.createIcons({ el: panel });
 
+      // Die Bedarfsfelder folgen dem Haken - `style.display` und nicht `hidden`,
+      // weil `.modal-grid` `display: grid` setzt und die Klassenregel das
+      // Attribut schlaegt (dieselbe Falle wie im Protokoll-Modal).
+      const prnBox = panel.querySelector('#med-prn-fields');
+      const prnFlag = panel.querySelector('#med-prn');
+      const syncPrn = () => { prnBox.style.display = prnFlag.checked ? '' : 'none'; };
+      prnFlag.addEventListener('change', syncPrn);
+      syncPrn();
+
       panel.querySelector('[data-action="cancel"]')?.addEventListener('click', () => closeModal({ force: true }));
       panel.querySelector('[data-action="med-delete"]')?.addEventListener('click', () => deleteMed(med));
 
@@ -1695,7 +2227,7 @@ function openMedModal(med) {
           else await api.post('/health/medications', { ...body, ...ownerField(meds.personId, meds.meId) });
           closeModal({ force: true });
           window.yuvomi?.showToast(t('health.meds.saved'), 'success');
-          await reloadMeds();
+          await reloadMedViews();
         } catch (err) {
           console.error('[Health] med save error:', err);
           submitBtn.disabled = false;
@@ -1715,6 +2247,7 @@ function collectMedBody(panel) {
     return raw !== '' && raw != null ? Number(raw) : null;
   };
   const str = (sel) => panel.querySelector(sel)?.value?.trim() || undefined;
+  const isPrn = Boolean(panel.querySelector('#med-prn')?.checked);
 
   return {
     name,
@@ -1726,7 +2259,13 @@ function collectMedBody(panel) {
     note: str('#med-note'),
     visibility: panel.querySelector('#med-visibility')?.value || 'private',
     active: panel.querySelector('#med-active')?.checked ? 1 : 0,
-    prn: panel.querySelector('#med-prn')?.checked ? 1 : 0,
+    prn: isPrn ? 1 : 0,
+    // Faellt der Haken, raeumen die beiden Felder mit ab - sie stehen dann zwar
+    // noch ausgefuellt hinter `display: none`, beschreiben aber nichts mehr.
+    // Ein Medikament mit Zeitplan traege sonst weiter einen Mindestabstand,
+    // den keine Ansicht mehr zeigt und kein Formular mehr aendert.
+    min_interval_hours: isPrn ? num('#med-interval') : null,
+    prn_dose_qty: isPrn ? num('#med-prn-dose') : null,
   };
 }
 
@@ -1737,7 +2276,7 @@ async function deleteMed(med) {
   try {
     await api.delete(`/health/medications/${med.id}`);
     window.yuvomi?.showToast(t('health.meds.deleted'), 'success');
-    await reloadMeds();
+    await reloadMedViews();
   } catch (err) {
     console.error('[Health] med delete error:', err);
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.deleteError'), 'danger');
@@ -1991,7 +2530,7 @@ function renderLabsShell() {
 
 function labReportListMarkup() {
   if (!labs.reports.length) {
-    return `<div class="health-labs__empty">${esc(t('health.labs.noReports'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.noReports'))}</p></div>`;
   }
   return labs.reports.map(labReportCardMarkup).join('');
 }
@@ -2022,7 +2561,7 @@ function labReportCardMarkup(report) {
 function labDetailMarkup() {
   const report = selectedReport();
   if (!report) {
-    return `<div class="health-labs__detail-empty">${esc(t('health.labs.selectHint'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.selectHint'))}</p></div>`;
   }
 
   const own = canEditFor(labs.personId, labs.meId);
@@ -2044,7 +2583,7 @@ function labDetailMarkup() {
           <tbody>${results.map(resultRowMarkup).join('')}</tbody>
         </table>
       </div>`
-    : `<div class="health-labs__detail-empty">${esc(t('health.labs.noAnalytes'))}</div>`;
+    : `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.noAnalytes'))}</p></div>`;
 
   return `
     <div class="health-lab-detail">
@@ -2111,7 +2650,7 @@ function labTrendMarkup() {
 
   const body = points.length >= 2
     ? labTrendChart(points, selected)
-    : `<div class="health-labs__detail-empty">${esc(t('health.labs.trend.tooFew'))}</div>`;
+    : `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.trend.tooFew'))}</p></div>`;
 
   return `
     <div class="health-lab-trend">
@@ -2196,8 +2735,8 @@ function labTrendChart(points, analyteName) {
     tableRows,
   );
 
-  const grid = chartGridMarkup(min, max);
-  const xLabels = chartXLabelsMarkup(points.map((p) => p.date));
+  const grid = chartGridFor(min, max);
+  const xLabels = chartXLabels(points.map((p) => p.date));
 
   return `
     <svg class="health-chart" viewBox="0 0 ${W} ${H}" role="img" aria-label="${esc(ariaLabel)}">
@@ -2692,10 +3231,12 @@ function activityStatsMarkup(totals) {
     { icon: 'flame', labelKey: 'health.activity.totals.calories', value: t('health.activity.unit.kcal', { value: fmtNum(totals.calories) }) },
   ];
   return cards.map((c) => `
-    <div class="health-activity-stat">
-      <i data-lucide="${esc(c.icon)}" class="health-activity-stat__icon" aria-hidden="true"></i>
-      <span class="health-activity-stat__value">${esc(c.value)}</span>
-      <span class="health-activity-stat__label">${esc(t(c.labelKey))}</span>
+    <div class="metric-card">
+      <span class="metric-card__head">
+        <i data-lucide="${esc(c.icon)}" class="metric-card__icon" aria-hidden="true"></i>
+        <span class="metric-card__label">${esc(t(c.labelKey))}</span>
+      </span>
+      <span class="metric-card__value">${esc(c.value)}</span>
     </div>`).join('');
 }
 
@@ -2723,10 +3264,10 @@ function activityChartMarkup(summary) {
       ? `<rect x="${x.toFixed(1)}" y="${y.toFixed(1)}" width="${barW.toFixed(1)}" height="${h.toFixed(1)}" rx="3" fill="var(--module-health)"><title>${esc(`${label}: ${t('health.activity.unit.min', { value: fmtNum(b.durationMin) })}`)}</title></rect>`
       : '';
     return `${rect}
-      <text x="${(x + barW / 2).toFixed(1)}" y="${H - 8}" class="health-chart__axis" text-anchor="middle">${esc(label)}</text>`;
+      <text x="${(x + barW / 2).toFixed(1)}" y="${H - 8}" class="chart__axis" text-anchor="middle">${esc(label)}</text>`;
   }).join('');
 
-  const grid = chartGridMarkup(0, max);
+  const grid = chartGridFor(0, max);
 
   const tableRows = buckets.map((b, i) => [
     t(ACTIVITY_WEEKDAY_LABEL_KEYS[i]),
@@ -2749,7 +3290,7 @@ function activityChartMarkup(summary) {
 
 function activityLogMarkup(rows) {
   if (!rows.length) {
-    return `<div class="health-activity__empty">${esc(t('health.activity.noEntries'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.activity.noEntries'))}</p></div>`;
   }
   const own = canEditFor(activity.personId, activity.meId);
   return `
@@ -3078,8 +3619,8 @@ async function loadOverview() {
   overview.logsByMed = {};
 
   const today = toLocalDateKey(new Date());
-  const from = addLocalDays(today, -(OVERVIEW_ADHERENCE_DAYS - 1));
   await Promise.all(overview.meds.map(async (m) => {
+    const from = addLocalDays(today, -(medLogWindowDays(m, OVERVIEW_ADHERENCE_DAYS) - 1));
     const [sRes, lRes] = await Promise.all([
       api.get(`/health/medications/${m.id}/schedules`),
       api.get(`/health/medications/${m.id}/logs?from=${from}T00:00&to=${today}T23:59`),
@@ -3095,6 +3636,16 @@ function overviewAllSchedules() {
 
 function overviewAllLogs() {
   return overview.meds.flatMap((m) => overview.logsByMed[m.id] || []);
+}
+
+/**
+ * Nur die geplanten Dosen - dieselbe Grenze wie `allLogsInRange` im Meds-Tab.
+ * Adhaerenz misst die Einhaltung eines Plans, und eine Bedarfsdosis hat keinen;
+ * seit sie nicht mehr am Zeitraumfilter haengenbleibt (#700), muss sie hier
+ * ausdruecklich draussen bleiben. Auch der Streak rechnet nur mit ihnen.
+ */
+function overviewScheduledLogs() {
+  return scheduledLogs(overviewAllLogs());
 }
 
 function overviewFindLog(dose) {
@@ -3152,6 +3703,7 @@ function renderOverviewShell() {
     ${readOnlyBannerMarkup(overview.members, overview.personId, canEditFor(overview.personId, overview.meId), overview.meId)}
     <div class="health-overview__grid">
       ${overviewCard('calendar-check', 'health.overview.dueToday.title', overviewDueMarkup())}
+      ${prnMeds('overview').length ? overviewCard('pill', 'health.meds.prn.title', prnListMarkup('overview')) : ''}
       ${overviewCard('trending-up', 'health.overview.adherence.title', overviewAdherenceMarkup())}
       ${overviewCard('activity', 'health.overview.vitals.title', overviewVitalsMarkup())}
       ${canEditFor(overview.personId, overview.meId) ? overviewCard('plus-circle', 'health.overview.quick.title', quickCaptureMarkup()) : ''}
@@ -3181,7 +3733,7 @@ function overviewDueMarkup() {
   const today = toLocalDateKey(new Date());
   const due = computeDueDoses(overviewAllSchedules(), { from: today, to: today });
   if (!due.length) {
-    return `<div class="health-meds__due-empty">${esc(t('health.meds.dueToday.empty'))}</div>`;
+    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.dueToday.empty'))}</p></div>`;
   }
   const own = canEditFor(overview.personId, overview.meId);
   const rows = due.map((dose) => {
@@ -3203,31 +3755,42 @@ function overviewDueRowMarkup(dose, med, log, own) {
     actions = `<span class="health-dose__status health-dose__status--skipped"><i data-lucide="x" aria-hidden="true"></i>${esc(t('health.meds.status.skipped'))}</span>`;
   } else if (own) {
     const data = `data-med-id="${esc(dose.medicationId)}" data-schedule-id="${esc(dose.scheduleId ?? '')}" data-scheduled-at="${esc(dose.scheduledAt)}" data-log-id="${esc(log?.id ?? '')}" data-dose="${esc(dose.dose_qty ?? '')}"`;
+    /* DIESELBE FORM WIE IN `dueRowMarkup` - hier fehlte sie, und der Fix von
+     * dort erreichte diese Zeile deshalb nicht. Der Knopf trug weder
+     * `health-dose__skip` noch den Label-Span, also hatte die Container-Query
+     * `@container list-rows (max-width: 26rem)` nichts zu verbergen: gemessen
+     * bei 390px lag "Ueberspringen" bei left=360 und damit zu 92 von 122px
+     * ausserhalb des Bildes, geclippt und ohne Scrollweg dorthin (Critique
+     * 2026-08-13, offen geblieben). Zwei Renderer fuer dieselbe Zeile, und die
+     * Korrektur landete in einem - dasselbe Muster, das dieser Branch schon
+     * dreimal produziert hat.
+     * Das `aria-label` traegt den ganzen Satz weiter, wenn der Text faellt. */
     actions = `
       <div class="health-dose__actions">
-        <button type="button" class="btn btn--sm btn--primary" data-ov-dose-take ${data}>${esc(t('health.meds.take'))}</button>
-        <button type="button" class="btn btn--sm btn--ghost" data-ov-dose-skip ${data}>${esc(t('health.meds.skip'))}</button>
+        <button type="button" class="btn btn--sm btn--primary health-dose__take" data-ov-dose-take ${data} aria-label="${esc(t('health.meds.take'))}"><i data-lucide="check" class="icon-sm" aria-hidden="true"></i><span class="health-dose__take-label">${esc(t('health.meds.take'))}</span></button>
+        <button type="button" class="btn btn--sm btn--ghost health-dose__skip" data-ov-dose-skip ${data} aria-label="${esc(t('health.meds.skip'))}"><i data-lucide="skip-forward" class="icon-sm" aria-hidden="true"></i><span class="health-dose__skip-label">${esc(t('health.meds.skip'))}</span></button>
       </div>`;
   } else {
     actions = `<span class="health-dose__status">${esc(t('health.meds.status.pending'))}</span>`;
   }
 
   return `
-    <li class="health-dose">
+    <li class="list-row health-dose">
       <span class="health-dose__time">${esc(dose.time)}</span>
-      <span class="health-dose__name">${esc(name)}${esc(doseText)}</span>
+      <span class="list-row__name health-dose__name">${esc(name)}${esc(doseText)}</span>
       ${actions}
     </li>`;
 }
 
 async function handleOverviewDose(btn, action) {
   const medId = Number(btn.dataset.medId);
+  if (doseInFlight.has(medId)) return;
   const logId = btn.dataset.logId ? Number(btn.dataset.logId) : null;
   const scheduleId = btn.dataset.scheduleId ? Number(btn.dataset.scheduleId) : null;
   const scheduledAt = btn.dataset.scheduledAt || null;
   const dose = btn.dataset.dose !== '' ? Number(btn.dataset.dose) : null;
 
-  btn.disabled = true;
+  setDoseBusy(medId, true);
   try {
     if (logId) {
       await api.post(`/health/logs/${logId}/${action}`, {});
@@ -3236,7 +3799,11 @@ async function handleOverviewDose(btn, action) {
       if (scheduledAt) body.scheduled_at = scheduledAt;
       if (scheduleId) body.schedule_id = scheduleId;
       if (dose != null && Number.isFinite(dose)) body.dose_qty = dose;
-      if (action === 'take') body.taken_at = new Date().toISOString();
+      // Wanduhrzeit wie bei der Bedarfsdosis: `v.datetime` kuerzt den Wert auf
+      // Minuten und wirft die Zone weg, aus 22:41 MESZ wuerde 20:41. Sichtbar
+      // war das im Protokoll; seit ein Medikament Plan UND Bedarf haben kann,
+      // rechnet auch der Countdown daraus - und zwar zwei Stunden daneben.
+      if (action === 'take') body.taken_at = toLocalStamp();
       await api.post(`/health/medications/${medId}/logs`, body);
     }
 
@@ -3249,10 +3816,11 @@ async function handleOverviewDose(btn, action) {
     }
 
     window.yuvomi?.showToast(t('health.meds.doseSaved'), 'success');
-    await reloadOverview();
+    await reloadMedViews();
+    setDoseBusy(medId, false);
   } catch (err) {
     console.error('[Health] overview dose error:', err);
-    btn.disabled = false;
+    setDoseBusy(medId, false);
     window.yuvomi?.showToast(err?.data?.error || t('health.meds.doseError'), 'danger');
   }
 }
@@ -3264,19 +3832,19 @@ function overviewAdherenceMarkup() {
   const from = addLocalDays(today, -(OVERVIEW_ADHERENCE_DAYS - 1));
   const schedules = overviewAllSchedules();
   const planned = computeDueDoses(schedules, { from, to: today }).length;
-  const logs = overviewAllLogs().filter((l) => {
+  const logs = overviewScheduledLogs().filter((l) => {
     const k = String(l.scheduled_at || l.taken_at || l.created_at || '').slice(0, 10);
     return k >= from && k <= today;
   });
   const a = computeAdherence(logs, planned);
-  const streak = computeAdherenceStreak(schedules, overviewAllLogs(), { today });
+  const streak = computeAdherenceStreak(schedules, overviewScheduledLogs(), { today });
 
   if (a.rate === null) {
-    return `<div class="health-adherence__empty">${esc(t('health.overview.adherence.noData'))}</div>`;
+    return `<div class="metric-card__note">${esc(t('health.overview.adherence.noData'))}</div>`;
   }
   // Frühzustand ohne Vorwurf: solange nichts protokolliert ist, kein „0 %".
   if (a.taken === 0) {
-    return `<div class="health-adherence__empty">${esc(t('health.overview.adherence.notStarted'))}</div>`;
+    return `<div class="metric-card__note">${esc(t('health.overview.adherence.notStarted'))}</div>`;
   }
   const pct = Math.round(a.rate * 100);
   // Die Streak-Kachel erscheint erst ab Tag 1 — eine „🔥 0"-Serie zu zeigen wäre
@@ -3294,7 +3862,7 @@ function overviewAdherenceMarkup() {
       <div class="health-overview__stat">
         <span class="health-overview__stat-value">${esc(fmtNum(pct))}%</span>
         <span class="health-overview__stat-label">${esc(t('health.overview.adherence.period', { days: OVERVIEW_ADHERENCE_DAYS }))}</span>
-        <div class="health-adherence__bar"><span style="width:${pct}%"></span></div>
+        <div class="metric-card__progress"><span style="--fill:${pct / 100}"></span></div>
       </div>
       ${streakStat}
     </div>`;
@@ -3316,27 +3884,29 @@ function overviewVitalCardMarkup(metric, series) {
   const label = t(metric.labelKey);
 
   let valueHtml;
-  let metaHtml = `<div class="health-metric-card__empty">${esc(t('health.vitals.noValue'))}</div>`;
+  let metaHtml = `<span class="metric-card__note">${esc(t('health.vitals.noValue'))}</span>`;
   if (latest) {
     const unit = esc(vitalUnitText(metric, latest));
     const valueText = vitalValueText(metric, latest);
-    valueHtml = `<span class="health-metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="health-metric-card__unit">${unit}</span>` : ''}`;
+    valueHtml = `<span class="metric-card__value">${esc(valueText)}</span>${unit ? ` <span class="metric-card__unit">${unit}</span>` : ''}`;
     metaHtml = `
-      <div class="health-metric-card__meta">
+      <span class="metric-card__meta">
         ${deltaMarkup(series.deltas.value_num, metric)}
-        <span class="health-metric-card__date">${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
-      </div>`;
+        <span>${esc(formatDate(String(latest.measured_at).slice(0, 10)))}</span>
+      </span>`;
   } else {
-    valueHtml = '<span class="health-metric-card__value health-metric-card__value--empty">–</span>';
+    valueHtml = '<span class="metric-card__value metric-card__value--empty">–</span>';
   }
 
+  // --inset: die Kachel liegt IN der Übersichtskarte (Kasten-in-Kasten,
+  // Muster vorher .health-overview__card .health-metric-card).
   return `
-    <button type="button" class="health-metric-card" data-vital-nav="${esc(metric.type)}">
-      <span class="health-metric-card__head">
-        <i data-lucide="${esc(metric.icon)}" class="health-metric-card__icon" aria-hidden="true"></i>
-        <span class="health-metric-card__label">${esc(label)}</span>
+    <button type="button" class="metric-card metric-card--select metric-card--inset" data-vital-nav="${esc(metric.type)}">
+      <span class="metric-card__head">
+        <i data-lucide="${esc(metric.icon)}" class="metric-card__icon" aria-hidden="true"></i>
+        <span class="metric-card__label">${esc(label)}</span>
       </span>
-      <span class="health-metric-card__body">${valueHtml}</span>
+      <span class="metric-card__body">${valueHtml}</span>
       ${metaHtml}
     </button>`;
 }
@@ -3355,9 +3925,9 @@ function overviewUpcomingMarkup() {
     const med = overview.meds.find((m) => m.id === dose.medicationId);
     const doseText = dose.dose_qty != null ? ` · ${t('health.meds.doseQty', { count: fmtNum(dose.dose_qty) })}` : '';
     return `
-      <li class="health-overview-reminder">
+      <li class="list-row health-overview-reminder">
         <span class="health-dose__time">${esc(dose.time)}</span>
-        <span class="health-dose__name">${esc(med ? med.name : '')}${esc(doseText)}</span>
+        <span class="list-row__name health-dose__name">${esc(med ? med.name : '')}${esc(doseText)}</span>
       </li>`;
   }).join('');
   return `<ul class="health-overview__reminders-list">${rows}</ul>`;
@@ -3442,6 +4012,8 @@ function wireOverview() {
     btn.addEventListener('click', () => handleOverviewDose(btn, 'take')));
   overview.root.querySelectorAll('[data-ov-dose-skip]').forEach((btn) =>
     btn.addEventListener('click', () => handleOverviewDose(btn, 'skip')));
+
+  wirePrn(overview.root);
 
   overview.root.querySelectorAll('[data-vital-nav]').forEach((card) =>
     card.addEventListener('click', () => {
@@ -3644,9 +4216,9 @@ function renderCycleShell() {
   if (!prediction.hasData) {
     cycle.root.insertAdjacentHTML('beforeend', `
       ${persons}
-      <div class="empty-state health-empty">
-        <div class="health-empty__icon" aria-hidden="true"><i data-lucide="droplet"></i></div>
-        <div class="empty-state__title">${esc(t('health.cycle.emptyTitle'))}</div>
+      <div class="empty-state">
+        <i data-lucide="droplet" class="empty-state__icon" aria-hidden="true"></i>
+        <h2 class="empty-state__title">${esc(t('health.cycle.emptyTitle'))}</h2>
         <div class="empty-state__description">${esc(t('health.cycle.emptyDesc'))}</div>
         ${own ? `<button class="btn btn--primary empty-state__cta" data-action="cycle-first">
           <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>${esc(t('health.cycle.emptyCta'))}</button>` : ''}

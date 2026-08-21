@@ -9,6 +9,13 @@
 #   4. docker compose -f docker-compose.portainer.yml exec yuvomi node setup.js
 #   5. Open http://<your-host>:3000
 #
+# In Portainer there is no .env at all: the stack's environment variables are
+# handed to Compose for ${...} substitution. That is why every variable this
+# container needs is listed explicitly below instead of being pulled in via
+# `env_file` - a Git-managed stack has no file to pull from (issue #698). For a
+# Git/GitOps stack, point the Compose path at `docs/docker-compose.portainer.yml`
+# and set the two required variables in Portainer's own form.
+#
 # Required .env variables:
 #   SESSION_SECRET=<random-string-min-32-chars>
 #   DB_ENCRYPTION_KEY=<random-string-min-32-chars>
@@ -107,12 +114,12 @@ services:
       - "BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}"
       - BACKUP_KEEP=${BACKUP_KEEP:-7}
       # Additional off-box backup target via WebDAV (Nextcloud and friends).
-      - WEBDAV_BACKUP_ENABLED=${WEBDAV_BACKUP_ENABLED:-false}
+      - WEBDAV_BACKUP_ENABLED=${WEBDAV_BACKUP_ENABLED:-}
       - WEBDAV_BACKUP_URL=${WEBDAV_BACKUP_URL:-}
       - WEBDAV_BACKUP_USERNAME=${WEBDAV_BACKUP_USERNAME:-}
       - WEBDAV_BACKUP_PASSWORD=${WEBDAV_BACKUP_PASSWORD:-}
       - WEBDAV_BACKUP_PATH=${WEBDAV_BACKUP_PATH:-}
-      - WEBDAV_BACKUP_KEEP=${WEBDAV_BACKUP_KEEP:-7}
+      - WEBDAV_BACKUP_KEEP=${WEBDAV_BACKUP_KEEP:-}
       # Currency rates for subscriptions (optional, free tier available)
       - FIXER_API_KEY=${FIXER_API_KEY:-}
       # Google Calendar (optional)
@@ -130,7 +137,7 @@ services:
       - DOCUMENT_STORAGE_LOCAL_ENABLED=${DOCUMENT_STORAGE_LOCAL_ENABLED:-false}
       - DOCUMENT_STORAGE_LOCAL_PATH=${DOCUMENT_STORAGE_LOCAL_PATH:-/documents}
       # WebDAV document storage (optional)
-      - DOCUMENT_STORAGE_WEBDAV_ENABLED=${DOCUMENT_STORAGE_WEBDAV_ENABLED:-false}
+      - DOCUMENT_STORAGE_WEBDAV_ENABLED=${DOCUMENT_STORAGE_WEBDAV_ENABLED:-}
       - DOCUMENT_STORAGE_WEBDAV_URL=${DOCUMENT_STORAGE_WEBDAV_URL:-}
       - DOCUMENT_STORAGE_WEBDAV_USERNAME=${DOCUMENT_STORAGE_WEBDAV_USERNAME:-}
       - DOCUMENT_STORAGE_WEBDAV_PASSWORD=${DOCUMENT_STORAGE_WEBDAV_PASSWORD:-}
@@ -142,6 +149,8 @@ services:
       - SYNC_INTERVAL_MINUTES=${SYNC_INTERVAL_MINUTES:-15}
       # Set true only for ICS calendar feeds on a private/local network.
       - ICS_SUBSCRIPTION_ALLOW_PRIVATE_NETWORK=${ICS_SUBSCRIPTION_ALLOW_PRIVATE_NETWORK:-false}
+      # Set true only for recipe provider (Mealie/Tandoor) mirrors on a private/local network.
+      - RECIPE_PROVIDER_ALLOW_PRIVATE_NETWORK=${RECIPE_PROVIDER_ALLOW_PRIVATE_NETWORK:-false}
       # Rate limiting
       - RATE_LIMIT_WINDOW_MS=${RATE_LIMIT_WINDOW_MS:-60000}
       - RATE_LIMIT_MAX_ATTEMPTS=${RATE_LIMIT_MAX_ATTEMPTS:-5}

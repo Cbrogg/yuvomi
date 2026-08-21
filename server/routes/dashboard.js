@@ -9,10 +9,83 @@ import express from 'express';
 import * as db from '../db.js';
 import { hydrateBirthday } from '../services/birthdays.js';
 import { getUpcomingEvents } from '../services/calendar-events.js';
+import { getCountdowns } from '../services/countdowns.js';
 import { visibilityWhere } from '../services/visibility.js';
 import { resolveBudgetMode } from '../services/budget-visibility.js';
+import { deniedModules } from '../permissions.js';
 
 const log = createLogger('Dashboard');
+
+/**
+ * WAS EIN GESPERRTES MODUL LIEFERT — und warum das hier steht und nicht in
+ * fünfzehn verstreuten Zweigen.
+ *
+ * Diese Route filterte jede Zeile über `visibilityWhere`, also über die
+ * ZEILEN-Privatsphäre (all/assignees/private). Die zweite Achse fehlte: die
+ * Modulrechte pro Rolle und Mitglied (#467). Ein Kind, dem der Kalender auf
+ * `none` steht, bekam über /dashboard weiterhin Termintitel, Beschreibung, Ort
+ * und Anhangsnamen geliefert — die App fiel nicht auf, weil der Browser die
+ * Kachel über `canSeeWidget` ausblendet, aber die Daten lagen auf der Leitung,
+ * im Netzwerk-Tab und im Service-Worker-Cache. Die SPEC sagt zu #467
+ * „Enforcement is server-side"; für diesen Endpoint stimmte das nicht.
+ *
+ * DIE PFAD-MIDDLEWARE KANN ES NICHT ÜBERNEHMEN. Der Guard in server/index.js
+ * schlägt den Pfad in scopes.js nach; /dashboard ergibt den Schlüssel
+ * `dashboard`, und der ist kein Permissions-Modul. Der Guard lässt die Anfrage
+ * also immer durch — er kennt keinen Endpunkt, der ein Dutzend Module auf
+ * einmal ausliefert. Genau deshalb muss die Route selbst aussortieren.
+ *
+ * ALS TABELLE UND NICHT ALS FALLUNTERSCHEIDUNG JE ZWEIG: welcher Teil der
+ * Antwort zu welchem Modul gehört, ist die eigentliche Aussage dieses Fixes,
+ * und sie gehört an EINE Stelle, an der sie sich lesen und prüfen lässt. Wer
+ * ein Feld hinzufügt, sieht hier, dass es eine Modulzuordnung braucht.
+ *
+ * Der Wert ist jeweils die LEERE Fassung, nicht das fehlende Feld: die Antwort
+ * behält damit ihre Form (`/api/v1` ist zugesagte Oberfläche für Drittmodule),
+ * und kein Client stolpert über ein undefined, wo er eine Liste erwartet. Es
+ * ist dieselbe Fassung, die auch der Fehlerpfad jedes Blocks schreibt.
+ */
+const DENIED_PAYLOAD = Object.freeze({
+  // Geburtstage gehören zum Kalender-Modul, nicht zu einem eigenen — dieselbe
+  // Zuordnung wie in PERMISSION_MODULES (navIds) und im Client (NAV_TO_MODULE).
+  calendar: () => ({ upcomingEvents: [], birthdays: [], birthdayCount: 0 }),
+  tasks: () => ({
+    urgentTasks: [], openTaskCount: 0, overdueTaskCount: 0,
+    memberTodayTasks: [], tasksDoneToday: 0,
+  }),
+  meals: () => ({ todayMeals: [] }),
+  notes: () => ({ pinnedNotes: [], pinnedNotesCount: 0 }),
+  shopping: () => ({ shoppingLists: [], shoppingOpenCount: 0, shoppingOpenLists: 0 }),
+  // Der Monat bleibt stehen: er ist keine Budgetzahl, sondern der Zeitraum, auf
+  // den die Kachel beschriftet ist — und er steht ohnehin im Kalender.
+  budget: ({ month }) => ({ budget: emptyBudget(month) }),
+  rewards: () => ({ rewards: { standings: [], participantCount: 0, pending: 0 } }),
+  health: () => ({
+    health: {
+      hasMeds: false, dosesTotal: 0, dosesTaken: 0, dosesSkipped: 0,
+      nextDose: null, lowStockCount: 0,
+    },
+  }),
+  housekeeping: () => ({
+    housekeeping: {
+      configured: false, present: false, presentSince: null, workerName: null,
+      visitsThisMonth: 0, unpaidAmount: 0, lastVisit: null,
+    },
+  }),
+});
+
+function emptyBudget(month) {
+  return {
+    month,
+    income: 0,
+    expenses: 0,
+    balance: 0,
+    entryCount: 0,
+    topExpenseCategory: null,
+    topExpenseAmount: 0,
+    savingsGoal: null,
+  };
+}
 
 const ASSIGNED_USERS_SQL = `(
   SELECT json_group_array(json_object(
@@ -42,7 +115,10 @@ const router = express.Router();
  *   urgentTasks:    Task[],            // High/Urgent mit Fälligkeit ≤ 48h
  *   todayMeals:     Meal[],            // Mahlzeiten für heute
  *   pinnedNotes:    Note[],            // Angepinnte Notizen (max. 3)
- *   users:          User[]             // Alle User (für Avatar-Farben)
+ *   users:          User[],            // Alle User (für Avatar-Farben)
+ *   memberTodayTasks: {user_id, open_count}[], // Heute fällige/überfällige offene Aufgaben je Mitglied
+ *   tasksDoneToday: number,            // Heute fällige, bereits erledigte Aufgaben
+ *   countdowns:     Countdown[]        // Als Countdown markierte Termine + Aufgaben (#647)
  * }
  */
 router.get('/', (req, res) => {
@@ -51,22 +127,38 @@ router.get('/', (req, res) => {
   const result = {};
   const userId = req.authUserId || req.session.userId;
 
-  // Heute und +48h als ISO-Strings
   const now = new Date();
-  const todayStr = now.toISOString().slice(0, 10);
-  const currentMonth = todayStr.slice(0, 7);
-  const deadline48h = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
-  // Lokaler Datums-/Wochentagsschlüssel für das Health-Widget: die Fälligkeit einer
-  // Dosis hängt am lokalen Kalendertag (nicht UTC), sonst driftet die days_mask westlich
-  // von UTC um einen Tag. Konvention wie public/utils/health-meds.js: Montag = 0 … Sonntag = 6.
+  // Lokaler Datums-/Wochentagsschlüssel: die Fälligkeit einer Dosis hängt am lokalen
+  // Kalendertag (nicht UTC), sonst driftet die days_mask westlich von UTC um einen Tag.
+  // Konvention wie public/utils/health-meds.js: Montag = 0 … Sonntag = 6.
+  //
+  // Dieser Schlüssel gilt für ALLES, was der Nutzer als Kalendertag eingegeben hat -
+  // Mahlzeitendatum, Fälligkeiten, Budget-Monat. Bis 2026-08-18 zog sich die Route
+  // daneben ein zweites `todayStr` aus `toISOString()`, also den UTC-Tag, und verglich
+  // ihn mit lokal gespeicherten Werten. Östlich von UTC lieferte das Dashboard dadurch
+  // in den frühen Morgenstunden die Mahlzeiten des VORTAGS (in CEST zwischen 00:00 und
+  // 02:00), westlich davon am späten Abend die von morgen; am Monatsersten traf es
+  // zusätzlich den Budget-Monat. Die CI läuft in UTC, wo beide Schlüssel gleich sind -
+  // deshalb war der Fehler dort nie zu sehen (CLAUDE.md führt genau diese Falle).
   const todayLocalKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
   const localWeekdayIdx = (now.getDay() + 6) % 7;
+  const currentMonth = todayLocalKey.slice(0, 7);
+  const deadline48h = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
+
+  // Modulrechte des Betrachters (#467, siehe DENIED_PAYLOAD oben). Gelesen aus
+  // dem, was die Auth-Schicht schon aufgelöst hat: null für Admins und für
+  // unbeschränkte Mitglieder. Was gesperrt ist, steht vor der ersten Abfrage
+  // fest und wird gar nicht erst geholt - ein nachgelagerter Filter hätte die
+  // Daten erst gelesen und dann weggeworfen.
+  const denied = deniedModules(req.sessionModuleAccess);
+  for (const key of denied) Object.assign(result, DENIED_PAYLOAD[key]?.({ month: currentMonth }));
+  const allows = (moduleKey) => !denied.has(moduleKey);
 
   // Anstehende Termine (nächste 5, ab jetzt).
   // Geteilte Logik mit /calendar/upcoming: expandiert wiederkehrende Serien,
   // sodass auch Termine erscheinen, deren Master-Start in der Vergangenheit liegt.
-  try {
+  if (allows('calendar')) try {
     result.upcomingEvents = getUpcomingEvents(d, { userId, limit: 5, fromToday: true })
       .map(({ assigned_users_json, ...event }) => {
         event.assigned_users = assigned_users_json ? JSON.parse(assigned_users_json) : [];
@@ -84,8 +176,12 @@ router.get('/', (req, res) => {
   //   3. ties broken by priority rank (urgent=0..none=4)
   // due_sort = due_date + due_time, falling back to 23:59:59 when only a date is set,
   // and NULL when there is no due_date at all.
-  try {
-    const nowIso = `${todayStr}T${now.toISOString().slice(11, 19)}`;
+  if (allows('tasks')) try {
+    // Lokal, nicht UTC: verglichen wird gegen `due_date || 'T' || due_time`, und
+    // beide stehen als lokale Eingabewerte in der DB. Ein UTC-Zeitstempel verschob
+    // die Grenze „überfällig" um den Zonen-Offset.
+    const nowIso = `${todayLocalKey}T${String(now.getHours()).padStart(2, '0')}`
+      + `:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
     result.urgentTasks = d.prepare(`
       SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
         ${ASSIGNED_USERS_SQL},
@@ -115,8 +211,53 @@ router.get('/', (req, res) => {
     result.urgentTasks = [];
   }
 
+  // ZÄHLSTÄNDE FÜR DIE KENNZAHL-KACHELN.
+  //
+  // Sie lassen sich NICHT aus den Listen oben ableiten: `urgentTasks` schneidet
+  // bei 5 ab und `shoppingLists` bei drei Listen mit offenen Posten. Wer daraus
+  // zählte, zeigte auf der Kachel „5 offen", solange zwölf offen sind - eine
+  // Zahl, die genau bis zu ihrer Obergrenze stimmt, ist die gefährlichste Sorte.
+  // Sichtbarkeit wie überall: der Betrachter zählt nur, was er sehen darf.
+  if (allows('tasks')) try {
+    result.openTaskCount = d.prepare(`
+      SELECT COUNT(*) AS n FROM tasks t
+      WHERE t.status != 'done' AND t.archived_at IS NULL
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+    `).get({ me: userId }).n;
+  } catch (err) {
+    log.error('openTaskCount error:', err.message);
+    result.openTaskCount = null;
+  }
+
+  // Überfällig ist die Zweitzeile der Aufgaben-Kachel: „7 offen" allein sagt
+  // nicht, ob etwas brennt.
+  if (allows('tasks')) try {
+    result.overdueTaskCount = d.prepare(`
+      SELECT COUNT(*) AS n FROM tasks t
+      WHERE t.status != 'done' AND t.archived_at IS NULL
+        AND t.due_date IS NOT NULL AND t.due_date < @today
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+    `).get({ today: todayLocalKey, me: userId }).n;
+  } catch (err) {
+    log.error('overdueTaskCount error:', err.message);
+    result.overdueTaskCount = null;
+  }
+
+  if (allows('shopping')) try {
+    const row = d.prepare(`
+      SELECT COUNT(*) AS items, COUNT(DISTINCT si.list_id) AS lists
+      FROM shopping_items si WHERE si.is_checked = 0
+    `).get();
+    result.shoppingOpenCount = row.items;
+    result.shoppingOpenLists = row.lists;
+  } catch (err) {
+    log.error('shoppingOpenCount error:', err.message);
+    result.shoppingOpenCount = null;
+    result.shoppingOpenLists = 0;
+  }
+
   // Heutiges Essen (gefiltert nach haushaltweiten Mahlzeit-Typ-Einstellungen)
-  try {
+  if (allows('meals')) try {
     const ALL_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
     const prefRow = d.prepare('SELECT value FROM sync_config WHERE key = ?').get('visible_meal_types');
     const visibleTypes = prefRow
@@ -134,14 +275,14 @@ router.get('/', (req, res) => {
           WHEN 'dinner'    THEN 2
           WHEN 'snack'     THEN 3
         END
-    `).all(todayStr, ...visibleTypes);
+    `).all(todayLocalKey, ...visibleTypes);
   } catch (err) {
     log.error('todayMeals error:', err.message);
     result.todayMeals = [];
   }
 
   // Neueste Notizen (gepinnte zuerst, dann aktuellste)
-  try {
+  if (allows('notes')) try {
     result.pinnedNotes = d.prepare(`
       SELECT n.*, u.display_name AS author_name, u.avatar_color AS author_color
       FROM notes n
@@ -149,13 +290,21 @@ router.get('/', (req, res) => {
       ORDER BY n.pinned DESC, n.updated_at DESC
       LIMIT 3
     `).all();
+    /* `pinnedNotes` HEISST SO, IST ES ABER NICHT: die Liste sortiert Gepinntes
+     * nach vorn und schneidet bei drei ab - sie filtert nicht. Fuer die Vorschau
+     * ist das richtig (sie zeigt, was oben liegt), als ZAHL war es zweimal
+     * falsch: ein Haushalt ohne einen einzigen Pin las "3 angepinnt", einer mit
+     * fuenf Pins ebenfalls "3" (Codex-Review zu PR #754). Die Kennzahlkachel
+     * braucht deshalb eine eigene, echte Zahl. */
+    result.pinnedNotesCount = d.prepare('SELECT COUNT(*) AS n FROM notes WHERE pinned = 1').get().n;
   } catch (err) {
     log.error('pinnedNotes error:', err.message);
     result.pinnedNotes = [];
+    result.pinnedNotesCount = 0;
   }
 
   // Einkaufslisten mit offenen Artikeln (max. 3 Listen, je bis zu 6 offene Items)
-  try {
+  if (allows('shopping')) try {
     const lists = d.prepare(`
       SELECT sl.id, sl.name,
         (SELECT COUNT(*) FROM shopping_items si WHERE si.list_id = sl.id AND si.is_checked = 0) AS open_count,
@@ -192,12 +341,27 @@ router.get('/', (req, res) => {
     result.users = [];
   }
 
-  try {
-    const rows = d.prepare('SELECT * FROM birthdays ORDER BY name COLLATE NOCASE ASC').all();
+  if (allows('calendar')) try {
+    // family_user_color: die Identitaetsfarbe des verknuepften Mitglieds. Das
+    // Widget zeigt Familien-Geburtstage damit in derselben Farbsprache wie die
+    // Familien-Kachel; Kontakte ohne Verknuepfung bleiben NULL und behalten im
+    // Frontend die neutrale Modul-Toenung (Etappe 4, Critique 2026-08-17).
+    const rows = d.prepare(`
+      SELECT b.*, u.avatar_color AS family_user_color
+        FROM birthdays b
+        LEFT JOIN users u ON u.id = b.family_user_id
+       ORDER BY b.name COLLATE NOCASE ASC
+    `).all();
     result.birthdays = rows
       .map((row) => hydrateBirthday(row))
       .sort((a, b) => a.days_until - b.days_until || a.name.localeCompare(b.name))
-      .slice(0, 3);
+      // FUENF, WEIL DIE KACHEL ZWEI HOCH SEIN DARF. Der Schnitt stand auf drei
+      // und war damit die Obergrenze fuer JEDE Kachelgroesse: in der
+      // 1x2-Standardgroesse blieb darunter rund ein Drittel der Karte leer, weil
+      // der Server gar nicht mehr hergab. Wie viele Zeilen wirklich erscheinen,
+      // entscheidet die Kachel (`listRowCap` in public/pages/dashboard.js) - der
+      // Server liefert nur den Vorrat fuer die groesste Fassung.
+      .slice(0, 5);
     result.birthdayCount = rows.length;
   } catch (err) {
     log.error('birthdays error:', err.message);
@@ -205,7 +369,36 @@ router.get('/', (req, res) => {
     result.birthdayCount = 0;
   }
 
+  // Countdowns (#647): Termine und Aufgaben, die jemand als Countdown markiert
+  // hat, in EINER nach Nähe sortierten Liste. `todayLocalKey` und nicht der
+  // UTC-Tag: „noch 1 Tag" gegenüber „heute" entscheidet sich am Kalendertag des
+  // Betrachters, und westlich von UTC ist der ein anderer.
+  //
+  // DER EINZIGE TEIL DER ANTWORT, DER ZWEI MODULEN GEHÖRT, und deshalb steht
+  // seine Sperre nicht als Zeile in DENIED_PAYLOAD, sondern als Argument: wem
+  // der Kalender entzogen ist, dem fallen die Termin-Countdowns heraus und die
+  // Aufgaben-Countdowns bleiben. Ein Alles-oder-nichts hätte die Kachel schon
+  // beim Sperren EINES der beiden Module verschwinden lassen - dieselbe Falle,
+  // die der haushaltweite Modulschalter im Review zu PR #793 gestellt hat. Die
+  // Gesamtzahl entsteht in `getCountdowns` hinter demselben Filter, damit
+  // Schnitt und Zahl dieselbe Menge meinen.
   try {
+    const countdowns = getCountdowns(d, {
+      userId,
+      todayKey: todayLocalKey,
+      hiddenModules: denied,
+    });
+    result.countdowns = countdowns.items;
+    // Wie `birthdayCount` neben `birthdays`: die Liste ist der Vorrat für die
+    // größte Kachelfassung, die Zahl ist die Wahrheit über den Bestand.
+    result.countdownTotal = countdowns.total;
+  } catch (err) {
+    log.error('countdowns error:', err.message);
+    result.countdowns = [];
+    result.countdownTotal = 0;
+  }
+
+  if (allows('budget')) try {
     const from = `${currentMonth}-01`;
     const to = `${currentMonth}-31`;
     // Persönlich/geteilt (#476/#505): im personal-Modus zeigt das Dashboard-Widget
@@ -267,7 +460,7 @@ router.get('/', (req, res) => {
 
   // Belohnungen: Familien-Punktestand (Top 5 aktive Teilnehmer nach Ledger-Saldo)
   // plus offene Freigaben — ein glanceable Mini-Ranking für den Familienalltag.
-  try {
+  if (allows('rewards')) try {
     const MEMBER_FILTER = 'NOT EXISTS (SELECT 1 FROM housekeeping_workers hw WHERE hw.user_id = u.id)';
     const standings = d.prepare(`
       SELECT u.id, u.display_name, u.avatar_color, u.avatar_data, u.family_role,
@@ -292,7 +485,7 @@ router.get('/', (req, res) => {
   // bleiben der Health-Seite vorbehalten. Fälligkeit inline berechnet (days_mask, Zeitraum,
   // Log-Status), da public/utils/health-meds.js browser-Pfade importiert und serverseitig
   // nicht ladbar ist.
-  try {
+  if (allows('health')) try {
     const meds = d.prepare(`
       SELECT id, name, stock_qty, refill_threshold
       FROM medications
@@ -352,7 +545,7 @@ router.get('/', (req, res) => {
 
   // Haushaltshilfe: Anwesenheitsstatus (offene Sitzung), Besuche im laufenden Monat,
   // offener Zahlbetrag und letzter Besuch — ein kompakter Status statt einer Liste.
-  try {
+  if (allows('housekeeping')) try {
     const openSession = d.prepare(`
       SELECT hws.check_in, u.display_name AS worker_name
       FROM housekeeping_work_sessions hws
@@ -385,6 +578,39 @@ router.get('/', (req, res) => {
   } catch (err) {
     log.error('housekeeping error:', err.message);
     result.housekeeping = { configured: false, present: false, presentSince: null, workerName: null, visitsThisMonth: 0, unpaidAmount: 0, lastVisit: null };
+  }
+
+  // „Heute dran"-Karte: pro Mitglied die Zahl der heute fälligen oder über-
+  // fälligen offenen Aufgaben. Eigene Aggregation statt Zählung aus urgentTasks,
+  // dessen 5er-Limit die Zahlen je Mitglied verfälschen würde. Sichtbarkeit wie
+  // überall: der Betrachter zählt nur, was er sehen darf.
+  if (allows('tasks')) try {
+    result.memberTodayTasks = d.prepare(`
+      SELECT ta.user_id AS user_id, COUNT(*) AS open_count
+      FROM tasks t JOIN task_assignments ta ON ta.task_id = t.id
+      WHERE t.status != 'done' AND t.archived_at IS NULL
+        AND t.due_date IS NOT NULL AND t.due_date <= @today
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+      GROUP BY ta.user_id
+    `).all({ today: todayLocalKey, me: userId });
+  } catch (err) {
+    log.error('memberTodayTasks error:', err.message);
+    result.memberTodayTasks = [];
+  }
+
+  // „Alles erledigt"-Zustand des Tagesprogramms: nur mit der Zahl heute fälliger,
+  // bereits erledigter Aufgaben lässt sich „alles geschafft" von „heute stand nie
+  // etwas an" unterscheiden - die offene Liste allein kann das nicht.
+  if (allows('tasks')) try {
+    result.tasksDoneToday = d.prepare(`
+      SELECT COUNT(*) AS n FROM tasks t
+      WHERE t.status = 'done' AND t.archived_at IS NULL
+        AND t.due_date = @today
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+    `).get({ today: todayLocalKey, me: userId }).n;
+  } catch (err) {
+    log.error('tasksDoneToday error:', err.message);
+    result.tasksDoneToday = 0;
   }
 
   res.json(result);

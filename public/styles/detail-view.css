@@ -140,7 +140,7 @@
 }
 
 .detail-subtask:focus-visible {
-  outline: var(--focus-ring-width) solid var(--active-module-accent, var(--color-accent));
+  outline: var(--focus-ring-width) solid var(--color-accent);
   outline-offset: var(--focus-ring-offset);
 }
 
@@ -176,7 +176,7 @@
   width: 100%;
   max-height: calc(var(--space-16) * 3);
   object-fit: cover;
-  border-radius: var(--radius-glass-inner);
+  border-radius: var(--radius-md);
   border: var(--space-px) solid var(--color-border-subtle);
 }
 

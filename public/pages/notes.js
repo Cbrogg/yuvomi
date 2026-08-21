@@ -9,21 +9,22 @@ import { openModal as openSharedModal, closeModal, btnError, advancedSection, re
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { t } from '/i18n.js';
 import { esc, renderMarkdownLight } from '/utils/html.js';
-import { getReadableTextColor } from '/utils/color.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { findPageFab } from '/utils/fab.js';
+import { AVATAR_FALLBACK_COLOR } from '/utils/color.js';
 
 // --------------------------------------------------------
 // Konstanten
 // --------------------------------------------------------
 
-// Gedämpfte, paper-kompatible Sticker-Palette. Die frühere Material-Primär-
-// Palette (#FFEB3B/#80DEEA/#CE93D8 …) las gegen Warm-Paper, Violett-Akzent
-// und Plus Jakarta Sans wie eine billigere App (Critique P3). Diese Töne sind
-// hell + niedrig gesättigt, damit getReadableTextColor() dunklen Text wählt
-// und die Karten zur warmen Marken-Umgebung passen. Bestehende Notizen mit
-// alten Hex-Werten rendern weiterhin korrekt; die Palette gilt für neue Wahl.
+// Gedämpfte Sticker-Palette. Die frühere Material-Primär-Palette
+// (#FFEB3B/#80DEEA/#CE93D8 …) las wie eine billigere App (Critique P3).
+// Seit dem HIG-Rollout tragen diese Werte die Karte nicht mehr als Vollfläche,
+// sondern nur noch als 16-%-Tönung darauf (siehe .note-card in notes.css) -
+// die Lesbarkeit hängt damit an keiner dieser Farben mehr, auch nicht an
+// Alt-Hex-Werten ausserhalb der Palette. Die Palette bleibt trotzdem gedämpft:
+// bei 16 % soll sie eine leise Ordnungshilfe sein, kein Signal.
 const NOTE_COLORS = [
   '#EFE3BE', '#E7D2A9', '#D2DEC6', '#C7DED9',
   '#CAD8E4', '#D8D0E2', '#EBD1C2', '#FBFAF7',
@@ -61,16 +62,16 @@ export async function render(container, { user }) {
       <div class="page-toolbar notes-toolbar">
         <h1 class="page-toolbar__title">${t('notes.title')}</h1>
         ${renderPageSearch({ id: 'notes-search', label: t('notes.searchPlaceholder'), placeholder: t('notes.searchPlaceholder'), value: state.filterQuery, clearLabel: t('common.searchClear'), className: 'notes-toolbar__search' })}
-        <button class="btn btn--primary toolbar-new-btn" id="notes-add-btn">
+        <button class="btn btn--primary toolbar-new-btn" id="notes-add-btn" aria-label="${t('notes.addNoteLabel')}">
           <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>
-          ${t('notes.addNoteLabel')}
+          <span class="toolbar-new-btn__label">${t('newLabel.notes')}</span>
         </button>
       </div>
       <div class="notes-filters" id="notes-filters" role="group" aria-label="${t('notes.filterCreatorLabel')}" hidden></div>
-      <div class="notes-scroll">
+      <div class="notes-scroll page-scrollport">
         <div id="notes-grid" class="notes-grid" aria-busy="true">${renderSkeletonList({ rows: 5, lines: 3 })}</div>
       </div>
-      <button class="page-fab" id="fab-new-note" aria-label="${t('notes.addNoteLabel')}">
+      <button class="page-fab" id="fab-new-note" aria-label="${t('notes.addNoteLabel')}" data-dock-label="${t('newLabel.notes')}">
         <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
       </button>
     </div>
@@ -237,18 +238,22 @@ function renderGrid() {
 }
 
 function renderNoteCard(note) {
-  const initials = note.creator_name
-    ? note.creator_name.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 2)
-    : '?';
-
-  const textColor = getReadableTextColor(note.color);
-  const avatarColor = note.creator_color || '#8E8E93';
-  const avatarTextColor = getReadableTextColor(avatarColor);
+  // KEINE INITIALEN AUF EINER 16px-SCHEIBE (Initialen-Schwelle-Regel).
+  //
+  // Hier standen bis zuletzt zwei Buchstaben auf einer 16-%-Waschung - unter der
+  // 20px-Schwelle, ab der die Regel Text überhaupt erlaubt, und direkt neben dem
+  // ausgeschriebenen Namen, den sie abkürzten. Die Scheibe trägt ihre Identität
+  // jetzt so, wie die Regel es vorsieht: als Farbe allein, im Vollton. Der Name
+  // steht unverändert daneben, es geht also nichts verloren.
+  //
+  // Die Zettelfarbe darüber bleibt beim gemessenen 16-%-Rezept - sie ist eine
+  // ganze Inhaltsfläche, und für die gilt die User-Farben-Regel weiter.
+  const avatarColor = note.creator_color || AVATAR_FALLBACK_COLOR;
 
   return `
     <div class="note-card ${note.pinned ? 'note-card--pinned' : ''}"
          data-id="${note.id}"
-         style="background-color:${esc(note.color)};color:${textColor};">
+         style="--note-color:${esc(note.color)};">
       <button class="note-card__pin" data-action="pin" data-id="${note.id}"
               aria-label="${note.pinned ? t('notes.unpinAction') : t('notes.pinAction')}">
         <i data-lucide="${note.pinned ? 'pin-off' : 'pin'}" class="icon-sm" aria-hidden="true"></i>
@@ -258,10 +263,10 @@ function renderNoteCard(note) {
       <div class="note-card__footer">
         <div class="note-card__creator">
           <span class="note-card__avatar"
-                style="background-color:${esc(avatarColor)};color:${avatarTextColor}">
+                style="--avatar-color:${esc(avatarColor)};">
             ${note.creator_avatar
               ? `<img src="${esc(note.creator_avatar)}" alt="${esc(note.creator_name || '')}" loading="lazy">`
-              : initials}
+              : ''}
           </span>
           <span>${esc(note.creator_name || '')}</span>
         </div>
@@ -504,7 +509,7 @@ function openNoteModal({ mode, note = null }) {
              placeholder="${t('notes.titlePlaceholder')}" value="${esc(isEdit && note.title ? note.title : '')}">
     </div>
     <div class="form-group">
-      <label class="form-label" for="note-content">${t('notes.contentLabel')} <span style="font-weight:400;color:var(--text-tertiary);font-size:.85em;">${t('notes.contentMarkdownHint')}</span></label>
+      <label class="form-label" for="note-content">${t('notes.contentLabel')} <span class="form-label__hint">${t('notes.contentMarkdownHint')}</span></label>
       ${renderFormatToolbar()}
       <textarea class="form-input" id="note-content" rows="6"
                 placeholder="${t('notes.contentPlaceholder')}"

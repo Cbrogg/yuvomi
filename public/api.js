@@ -6,6 +6,8 @@
 
 import { clearApiCache } from '/sw-register.js';
 import { setPermissions, clearPermissions } from '/permissions.js';
+import { setHouseholdSize, clearHouseholdSize } from '/utils/household.js';
+import { forgetLayoutHint } from '/utils/dashboard-layout-hint.js';
 
 const API_BASE = '/api/v1';
 
@@ -169,6 +171,7 @@ const auth = {
   login: async (username, password) => {
     const res = await api.post('/auth/login', { username, password });
     setPermissions(res?.permissions);
+    setHouseholdSize(res?.householdSize);
     return res;
   },
   logout: async () => {
@@ -176,24 +179,46 @@ const auth = {
       return await api.post('/auth/logout');
     } finally {
       clearPermissions();
+      clearHouseholdSize();
       // API-Cache IMMER leeren — auch wenn der Logout-Request offline oder bei
       // nicht erreichbarem Server fehlschlägt. Der Settings-Handler navigiert in
       // seinem finally trotzdem zu /login, daher darf hier kein offline gecachter
       // Stand des vorigen Nutzers am selben Gerät zurückbleiben.
       clearApiCache();
+      // Aus demselben Grund der Layout-Hinweis der Übersicht: seit die
+      // Anordnung jeder Person gehört (#585), sagt er am geteilten Tablett
+      // sonst das Raster des vorigen Nutzers voraus.
+      forgetLayoutHint();
     }
   },
   me: async () => {
     const res = await api.get('/auth/me');
     setPermissions(res?.permissions);
+    // Neben den Rechten die zweite Angabe, die JEDE Seite braucht und die
+    // niemand einzeln holen soll: die Haushaltsgroesse (utils/household.js).
+    setHouseholdSize(res?.householdSize);
     return res;
   },
   setup: (username, display_name, password) => api.post('/auth/setup', { username, display_name, password }),
   getUsers: () => api.get('/auth/users'),
-  createUser: (data) => api.post('/auth/users', data),
+  // DER HAUSHALT KANN SICH AENDERN, UND DANN AENDERT SICH, WAS GEFRAGT WIRD.
+  // `householdSize` kommt sonst nur aus /auth/me und /auth/login, wird also
+  // erst beim naechsten Kaltstart neu gezaehlt - ein Haushalt, der gerade sein
+  // zweites Mitglied bekommen hat, bliebe bis dahin in der Solo-Darstellung
+  // und zeigte weder Sichtbarkeit noch Zuweisung. Ein Rundweg bei einer
+  // Handlung, die ein Haushalt selten macht, ist dafuer der billige Preis.
+  createUser: async (data) => {
+    const res = await api.post('/auth/users', data);
+    await auth.me().catch(() => {});
+    return res;
+  },
   updateUser: (id, data) => api.patch(`/auth/users/${id}`, data),
   updateProfile: (data) => api.patch('/auth/me/profile', data),
-  deleteUser: (id) => api.delete(`/auth/users/${id}`),
+  deleteUser: async (id) => {
+    const res = await api.delete(`/auth/users/${id}`);
+    await auth.me().catch(() => {});
+    return res;
+  },
   forgotPassword: (identifier) => api.post('/auth/forgot-password', { identifier }),
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
   // Einladungen: die ersten drei sind Admin-Routen, die letzten beiden öffentlich
@@ -225,17 +250,17 @@ const notifications = {
 };
 
 // --------------------------------------------------------
-// Mealie – Rezept-Mirror-Sync
+// Recipe Providers – Rezept-Mirror-Sync (Mealie, Tandoor, ...)
 // --------------------------------------------------------
 
-const mealie = {
-  listAccounts: () => api.get('/mealie/accounts'),
-  createAccount: (body) => api.post('/mealie/accounts', body),
-  updateAccount: (id, body) => api.patch(`/mealie/accounts/${id}`, body),
-  deleteAccount: (id) => api.delete(`/mealie/accounts/${id}`),
-  testAccount: (id) => api.post(`/mealie/accounts/${id}/test`, {}),
-  syncAccount: (id) => api.post(`/mealie/accounts/${id}/sync`, {}),
-  getStatus: () => api.get('/mealie/status'),
+const recipeProviders = {
+  listAccounts: () => api.get('/recipe-providers/accounts'),
+  createAccount: (body) => api.post('/recipe-providers/accounts', body),
+  updateAccount: (id, body) => api.patch(`/recipe-providers/accounts/${id}`, body),
+  deleteAccount: (id) => api.delete(`/recipe-providers/accounts/${id}`),
+  testAccount: (id) => api.post(`/recipe-providers/accounts/${id}/test`, {}),
+  syncAccount: (id) => api.post(`/recipe-providers/accounts/${id}/sync`, {}),
+  getStatus: () => api.get('/recipe-providers/status'),
 };
 
-export { api, auth, email, notifications, mealie, ApiError };
+export { api, auth, email, notifications, recipeProviders, ApiError };

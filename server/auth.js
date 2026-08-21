@@ -32,6 +32,34 @@ const FAMILY_ROLES = ['dad', 'mom', 'parent', 'child', 'grandparent', 'relative'
 // Platzhalter-Hash für den Timing-Attack-Schutz beim Login unbekannter Benutzer.
 const DUMMY_PASSWORD_HASH = '$2b$12$invalidhashfortimingprotection000000000000000000000';
 const MAX_AVATAR_DATA_LENGTH = 768 * 1024;
+/**
+ * WIEVIELE MENSCHEN IM HAUSHALT LEBEN, und warum der Server das sagt.
+ *
+ * PRODUCT.md fuehrt seit 2026-08-06 Solo-Nutzer als bestaetigte zweite
+ * Zielgruppe. Die Oberflaeche wusste davon nichts: das prominenteste Widget
+ * zeigte eine grosse 1 mit „im Haushalt", jede Aufgabe trug ein Pflichtfeld
+ * „Sichtbarkeit: Alle Familienmitglieder" mit genau einer sinnvollen Belegung,
+ * jede Dokumentkarte wiederholte „Ganze Familie" (Critique 2026-08-10).
+ *
+ * Die Regel dagegen ist eine, keine Liste: WAS NUR EINE SINNVOLLE BELEGUNG HAT,
+ * WIRD NICHT GEFRAGT. Damit sie ueberall gleich faellt, braucht der Client eine
+ * Zahl, und die gehoert an `/auth/me` - dieselbe Antwort, die er ohnehin bei
+ * jedem Start holt, statt eines zweiten Rundwegs pro Modul.
+ *
+ * SPLIT-GAeSTE ZAEHLEN NICHT MIT. Sie sind externe Beteiligte einer
+ * Ausgabenteilung, keine Haushaltsmitglieder - dieselbe Grenze, die
+ * `access_scope` schon zieht. Ein Haushalt von einer Person mit drei
+ * Reisebekanntschaften ist ein Solo-Haushalt.
+ */
+const HOUSEHOLD_SIZE_SQL = `
+  SELECT COUNT(*) AS n FROM users
+  WHERE NOT EXISTS (SELECT 1 FROM split_expense_guest_users sg WHERE sg.user_id = users.id)
+`;
+
+function householdSize(database) {
+  return database.prepare(HOUSEHOLD_SIZE_SQL).get()?.n ?? 1;
+}
+
 const USER_PUBLIC_COLUMNS = `
   id,
   username,
@@ -230,6 +258,8 @@ function publicApiToken(row) {
     token_prefix: row.token_prefix,
     created_by: row.created_by,
     creator_name: row.creator_name,
+    subject_user_id: row.effective_subject_user_id ?? row.subject_user_id ?? row.created_by,
+    subject_name: row.subject_name ?? row.creator_name,
     scopes: parseScopes(row.scopes),
     expires_at: row.expires_at,
     revoked_at: row.revoked_at,
@@ -413,9 +443,15 @@ function authenticateApiToken(req) {
 
   const tokenHash = hashApiToken(token);
   const row = db.get().prepare(`
-    SELECT t.*, u.role, u.username, u.display_name, u.avatar_color, u.avatar_data, u.family_role
+    SELECT t.*,
+      subject.id AS effective_subject_user_id,
+      subject.role, subject.username, subject.display_name, subject.avatar_color,
+      subject.avatar_data, subject.family_role,
+      creator.display_name AS creator_name,
+      subject.display_name AS subject_name
     FROM api_tokens t
-    JOIN users u ON u.id = t.created_by
+    JOIN users subject ON subject.id = COALESCE(t.subject_user_id, t.created_by)
+    JOIN users creator ON creator.id = t.created_by
     WHERE t.token_hash = ?
       AND t.revoked_at IS NULL
       AND (t.expires_at IS NULL OR t.expires_at > strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
@@ -428,7 +464,7 @@ function authenticateApiToken(req) {
 
   req.apiToken = publicApiToken(row);
   req.user = {
-    id: row.created_by,
+    id: row.effective_subject_user_id,
     username: row.username,
     display_name: row.display_name,
     avatar_color: row.avatar_color,
@@ -443,6 +479,25 @@ function authenticateApiToken(req) {
 // Auth-Guard Middleware
 // --------------------------------------------------------
 
+function applyRoleModuleAccess(req) {
+  // Rollen-/Mitglied-basierte Modulrechte (#467) gelten unabhängig davon, ob
+  // das Subjekt interaktiv oder über ein Integrationstoken authentifiziert ist.
+  // Admins: null = Vollzugriff. Token-Scopes bleiben eine zusätzliche
+  // Least-Privilege-Grenze und können diese Rechte niemals erweitern.
+  req.sessionModuleAccess = null;
+  if (req.authRole === 'admin') return;
+  try {
+    const user = db.get()
+      .prepare('SELECT id, role, family_role FROM users WHERE id = ?')
+      .get(req.authUserId);
+    if (user) {
+      req.sessionModuleAccess = buildSessionModuleAccess(resolvePermissions(db.get(), user));
+    }
+  } catch (err) {
+    log.error('Permission resolution failed:', err.message);
+  }
+}
+
 /**
  * Prüft ob der Request authentifiziert ist.
  * Schützt alle API-Routen außer /auth/login.
@@ -451,10 +506,11 @@ function requireAuth(req, res, next) {
   const apiToken = authenticateApiToken(req);
   if (apiToken) {
     req.authMethod = 'api_token';
-    req.authUserId = apiToken.created_by;
+    req.authUserId = apiToken.effective_subject_user_id ?? apiToken.subject_user_id ?? apiToken.created_by;
     req.authRole = apiToken.role;
     // null = kein Scoping (voller rollenbasierter Zugriff, Legacy-Token).
     req.authScopes = parseScopes(apiToken.scopes);
+    applyRoleModuleAccess(req);
     return next();
   }
 
@@ -464,19 +520,7 @@ function requireAuth(req, res, next) {
     req.authRole = req.session.role;
     // Interaktive Sessions kennen kein Token-Scoping.
     req.authScopes = null;
-    // Rollen-/Mitglied-basierte Modulrechte (#467). Admins: null = Vollzugriff.
-    // Nur für Nicht-Admins auflösen; die Modul→Access-Map wertet die
-    // /api/v1-Middleware in server/index.js aus. Fehlerfrei fail-open (nur bei
-    // Auflösungsfehlern — echte Denies stammen aus gesetzten Rechten).
-    req.sessionModuleAccess = null;
-    if (req.authRole !== 'admin') {
-      try {
-        const u = db.get().prepare('SELECT id, role, family_role FROM users WHERE id = ?').get(req.authUserId);
-        if (u) req.sessionModuleAccess = buildSessionModuleAccess(resolvePermissions(db.get(), u));
-      } catch (err) {
-        log.error('Permission resolution failed:', err.message);
-      }
-    }
+    applyRoleModuleAccess(req);
     return next();
   }
   res.status(401).json({ error: 'Not authenticated.', code: 401 });
@@ -690,6 +734,11 @@ router.post('/login', loginLimiter, async (req, res) => {
           access_scope: db.get().prepare('SELECT 1 FROM split_expense_guest_users WHERE user_id = ?').get(user.id) ? 'split_guest' : 'family',
         },
         permissions: clientPermissions(db.get(), user),
+        // Auch hier, nicht nur an /me: nach dem Login navigiert der Router
+        // direkt weiter, ohne /me noch einmal zu fragen. Ohne diese Zeile
+        // stuende ein Solo-Haushalt bis zum naechsten Kaltstart wieder voller
+        // Familienfelder.
+        householdSize: householdSize(db.get()),
         csrfToken: req.session.csrfToken,
       });
     } catch (sessionErr) {
@@ -1228,7 +1277,11 @@ router.get('/me', requireAuth, (req, res) => {
     }
 
     if (req.authMethod === 'api_token') {
-      return res.json({ user: publicUser(user), permissions: clientPermissions(db.get(), user) });
+      return res.json({
+        user: publicUser(user),
+        permissions: clientPermissions(db.get(), user),
+        householdSize: householdSize(db.get()),
+      });
     }
 
     // CSRF-Token erneuern falls vorhanden (wichtig fuer iOS-PWA-Resume:
@@ -1244,7 +1297,12 @@ router.get('/me', requireAuth, (req, res) => {
       maxAge: 1000 * 60 * 60 * 24 * 7,
     });
 
-    res.json({ user: publicUser(user), permissions: clientPermissions(db.get(), user), csrfToken: req.session.csrfToken });
+    res.json({
+      user: publicUser(user),
+      permissions: clientPermissions(db.get(), user),
+      householdSize: householdSize(db.get()),
+      csrfToken: req.session.csrfToken,
+    });
   } catch (err) {
     log.error('/me error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -1279,12 +1337,23 @@ router.get('/users', requireAuth, (req, res) => {
 router.get('/api-tokens', requireAuth, requireAdmin, (req, res) => {
   try {
     const rows = db.get().prepare(`
-      SELECT t.*, u.display_name AS creator_name
+      SELECT t.*, creator.display_name AS creator_name,
+        subject.id AS effective_subject_user_id,
+        subject.display_name AS subject_name
       FROM api_tokens t
-      LEFT JOIN users u ON u.id = t.created_by
+      LEFT JOIN users creator ON creator.id = t.created_by
+      LEFT JOIN users subject ON subject.id = COALESCE(t.subject_user_id, t.created_by)
       ORDER BY t.created_at DESC
     `).all();
-    res.json({ data: rows.map(publicApiToken) });
+    const subjects = db.get().prepare(`
+      SELECT u.id, u.username, u.display_name
+      FROM users u
+      WHERE NOT EXISTS (
+        SELECT 1 FROM split_expense_guest_users sg WHERE sg.user_id = u.id
+      )
+      ORDER BY u.display_name
+    `).all();
+    res.json({ data: rows.map(publicApiToken), subjects });
   } catch (err) {
     log.error('API token list error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -1327,16 +1396,35 @@ router.post('/api-tokens', requireAuth, requireAdmin, csrfMiddleware, (req, res)
     const tokenHash = hashApiToken(token);
     const tokenPrefix = token.slice(0, 12);
     const normalizedExpiresAt = expiresAt ? new Date(expiresAt).toISOString() : null;
+    let subjectUserId = req.authUserId;
+    if (req.body.subject_user_id !== undefined && req.body.subject_user_id !== null) {
+      subjectUserId = Number(req.body.subject_user_id);
+      if (!Number.isSafeInteger(subjectUserId) || subjectUserId < 1) {
+        return res.status(400).json({ error: 'subject_user_id must be a valid user ID.', code: 400 });
+      }
+    }
+    const subject = db.get().prepare(`
+      SELECT u.id,
+        EXISTS(SELECT 1 FROM split_expense_guest_users sg WHERE sg.user_id = u.id) AS is_split_guest
+      FROM users u WHERE u.id = ?
+    `).get(subjectUserId);
+    if (!subject) return res.status(400).json({ error: 'Token subject user was not found.', code: 400 });
+    if (subject.is_split_guest) {
+      return res.status(400).json({ error: 'A split-expense guest cannot be an API token subject.', code: 400 });
+    }
 
     const result = db.get().prepare(`
-      INSERT INTO api_tokens (name, token_hash, token_prefix, created_by, expires_at, scopes)
-      VALUES (?, ?, ?, ?, ?, ?)
-    `).run(name, tokenHash, tokenPrefix, req.authUserId, normalizedExpiresAt, serializedScopes);
+      INSERT INTO api_tokens (name, token_hash, token_prefix, created_by, subject_user_id, expires_at, scopes)
+      VALUES (?, ?, ?, ?, ?, ?, ?)
+    `).run(name, tokenHash, tokenPrefix, req.authUserId, subjectUserId, normalizedExpiresAt, serializedScopes);
 
     const row = db.get().prepare(`
-      SELECT t.*, u.display_name AS creator_name
+      SELECT t.*, creator.display_name AS creator_name,
+        subject.id AS effective_subject_user_id,
+        subject.display_name AS subject_name
       FROM api_tokens t
-      LEFT JOIN users u ON u.id = t.created_by
+      LEFT JOIN users creator ON creator.id = t.created_by
+      LEFT JOIN users subject ON subject.id = COALESCE(t.subject_user_id, t.created_by)
       WHERE t.id = ?
     `).get(result.lastInsertRowid);
 

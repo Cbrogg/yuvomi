@@ -1,9 +1,12 @@
 FROM node:24-slim AS build
 
-# Toolchain als Fallback für native Module: better-sqlite3-multiple-ciphers zieht
-# normalerweise ein Prebuild (node-v127-linux-{x64,arm64}); schlägt der Download
-# fehl, kompiliert node-gyp aus dem Quellcode. Die Cipher-Schicht steckt im Modul
-# selbst - ein System-SQLCipher wird nicht mehr benötigt.
+# Toolchain als Notnagel für native Module. Seit v13 ist
+# better-sqlite3-multiple-ciphers auf Node-API gebaut und liefert die Binaries
+# im Paket mit (linux-{x64,arm64}, glibc und musl) - es gibt keinen
+# ABI-spezifischen Prebuild-Download mehr, den ein Quell-Build auffangen müsste.
+# Erst wenn eine Plattform ohne mitgeliefertes Binary baut, greift node-gyp.
+# Die Cipher-Schicht steckt im Modul selbst - ein System-SQLCipher wird nicht
+# benötigt.
 RUN apt-get update && apt-get install -y \
     python3 \
     make \

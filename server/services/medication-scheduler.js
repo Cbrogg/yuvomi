@@ -11,6 +11,7 @@ import * as dbModule from '../db.js';
 import { pushService as defaultPushService } from './push.js';
 import { createNotificationChannelStore } from './notification-channels.js';
 import { defaultProviders } from './notifications.js';
+import { resolveHouseholdLocale, translate } from '../utils/i18n.js';
 
 const log = createLogger('MedicationScheduler');
 const APP_NAME = 'Yuvomi';
@@ -111,9 +112,14 @@ export async function processDueMedications({
     newlyDue.push({ ownerId: s.owner_id, medName: s.med_name, medicationId: s.medication_id, scheduledAt });
   }
 
+  // Herkunft im Titel statt des App-Namens - Begruendung bei REMINDER_TITLE_KEYS
+  // in notifications.js. „Yuvomi / Ibuprofen" sagte nicht, worum es geht;
+  // „Medikamente / Ibuprofen" tut es, und zwar auf jeder Plattform.
+  const originTitle = translate(resolveHouseholdLocale(activeDb), 'health.tabs.meds');
+
   for (const dose of newlyDue) {
     const payload = {
-      title: APP_NAME,
+      title: originTitle || APP_NAME,
       body: dose.medName || FALLBACK_BODY,
       url: '/health/meds',
       tag: `medication-${dose.medicationId}-${dose.scheduledAt}`,

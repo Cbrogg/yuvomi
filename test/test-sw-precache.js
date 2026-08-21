@@ -24,6 +24,10 @@
  *   - jeder gelistete Pfad existiert (c.addAll() ist All-or-Nothing: eine
  *     fehlende Datei lässt den kompletten SW-Install scheitern)
  *   - der transitive Import-Graph aller precachten Module ist selbst precacht
+ *   - jedes von index.html eager geladene Stylesheet ist precacht. Der
+ *     Modulgraph oben sieht nur JS; CSS hängt an keinem `import`, und so lagen
+ *     11 der 18 eager geladenen Stylesheets außerhalb des Precache, ohne dass
+ *     eine Zeile dieser Datei das bemerken konnte
  *   - Precache-Bucket und fetch-Routing stimmen überein (ein im SHELL_CACHE
  *     abgelegtes Modul darf nicht aus dem PAGES_CACHE bedient werden)
  *   - keine Doppeleinträge zwischen den Listen
@@ -120,6 +124,29 @@ test('der transitive Modulgraph ist vollständig precacht (#616)', () => {
   );
 });
 
+test('jedes eager geladene Stylesheet aus index.html ist precacht', () => {
+  const html = readFileSync(PUBLIC_DIR + 'index.html', 'utf8');
+  // Nur `rel="stylesheet"` ohne `media`/`onload`-Umweg: das sind die, die den
+  // ersten Render blockieren. Ein per Router nachgeladenes Seiten-CSS zählt
+  // nicht - es kommt erst, wenn die Shell schon steht.
+  const eager = [...html.matchAll(/<link\b[^>]*\brel=["']stylesheet["'][^>]*>/g)]
+    .map((m) => m[0])
+    .filter((tag) => !/\bmedia=/.test(tag) && !/\bonload=/.test(tag))
+    .map((tag) => tag.match(/\bhref=["']([^"']+)["']/)?.[1])
+    .filter(Boolean);
+
+  // Reichweiten-Nachweis: findet das Muster nichts, prüft die Assertion nichts.
+  assert.ok(eager.length >= 10, `Nur ${eager.length} eager geladene Stylesheets gefunden - das Muster greift nicht mehr`);
+
+  const shell = new Set(APP_SHELL);
+  const missing = eager.filter((href) => !shell.has(href));
+  assert.deepEqual(
+    missing, [],
+    'Diese Stylesheets lädt index.html eager, der Service Worker precacht sie aber nicht. '
+    + `Der allererste Offline-Start rendert damit ungestylt:\n  ${missing.join('\n  ')}`,
+  );
+});
+
 test('Precache-Bucket und fetch-Routing stimmen überein', () => {
   // Der fetch-Handler leitet /pages/, /settings/ und alles in PAGE_MODULE_SET in
   // den PAGES_CACHE, den Rest über isMutableAppResource() in den SHELL_CACHE.
@@ -138,4 +165,31 @@ test('keine Doppeleinträge zwischen den Precache-Listen', () => {
   const all = [...APP_SHELL, ...PAGE_MODULES, ...APP_LOCALES];
   const dupes = all.filter((p, i) => all.indexOf(p) !== i);
   assert.deepEqual([...new Set(dupes)], [], `Mehrfach precacht: ${dupes.join(', ')}`);
+});
+
+test('jedes Settings-Blatt der Registry ist precacht', () => {
+  // Schwesterregel zum Modulgraph-Guard oben, und die Lücke, die er offen
+  // lässt: er folgt Importen ab den precachten Modulen, ein Blatt aber wird
+  // per dynamischem `loader: () => import(...)` geladen und steht damit in
+  // keinem statischen Importbaum. Ein nicht precachtes Blatt ist deshalb kein
+  // Mischzustand, sondern schlicht offline nicht erreichbar - stumm, weil es
+  // online immer geht. Gemessen am 2026-08-15 fehlten sechs von 28, vier davon
+  // seit längerem: admin-email, admin-permissions, personal-health und
+  // personal-weather.
+  //
+  // Kanonische Quelle ist die Registry, nicht das Verzeichnis: ein Blatt, das
+  // dort nicht steht, ist tot und muss nicht precacht sein.
+  const registry = readFileSync(new URL('../public/settings/registry.js', import.meta.url), 'utf8');
+  const leaves = [...registry.matchAll(/loader:\s*\(\)\s*=>\s*import\('([^']+)'\)/g)].map((m) => m[1]);
+
+  assert.ok(leaves.length >= 20,
+    `Nur ${leaves.length} Blätter in der Registry gefunden - das Muster greift nicht mehr`);
+
+  const precached = new Set([...APP_SHELL, ...PAGE_MODULES]);
+  const missing = leaves.filter((path) => !precached.has(path));
+  assert.deepEqual(
+    missing, [],
+    'Diese Settings-Blätter stehen in der Registry, werden aber nicht precacht '
+    + `und sind damit offline nicht erreichbar:\n  ${missing.join('\n  ')}`,
+  );
 });

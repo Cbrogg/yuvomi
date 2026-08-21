@@ -666,3 +666,21 @@ test('ein unbekannter Zielkalender lässt den Termin, wo er ist', async () => {
   assert.equal(client.deletes.length, 0);
   assert.equal(reload(before.id).outbound_move_to, null, 'die Vormerkung läuft nicht ewig nach');
 });
+
+test('patchICSEvent setzt genau ein RRULE-Präfix, egal welche Schreibweise ankommt (#761)', async () => {
+  // Ein Termin trägt seine Regel in zwei Schreibweisen: lokal angelegt als
+  // nackter Körper, aus ICS/CalDAV eingelesen mit `RRULE:` davor. Der Patch-Pfad
+  // bekommt beide und muss beide auf dieselbe eine Zeile bringen - sonst landet
+  // beim Server, was Home Assistant im Feed abgewiesen hat.
+  const { patchICSEvent } = await import('../server/utils/ics-patch.js');
+  const original = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'BEGIN:VEVENT', 'UID:abc',
+    'DTSTART:20260105T070000Z', 'SUMMARY:Alt', 'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+
+  for (const rule of ['FREQ=DAILY;INTERVAL=2', 'RRULE:FREQ=DAILY;INTERVAL=2']) {
+    const out = patchICSEvent(original, 'abc', { RRULE: rule });
+    const lines = out.split('\r\n').filter((l) => /^RRULE/i.test(l));
+    assert.deepEqual(lines, ['RRULE:FREQ=DAILY;INTERVAL=2'], `Eingabe: ${rule}`);
+  }
+});

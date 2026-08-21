@@ -163,8 +163,8 @@ function updateHousekeepingFab() {
 function renderShell(container) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <section class="housekeeping-page" aria-labelledby="housekeeping-title">
-      <header class="page-toolbar housekeeping-toolbar">
+    <section class="housekeeping-page page-measure--narrow" aria-labelledby="housekeeping-title">
+      <header class="page-toolbar page-toolbar--narrow housekeeping-toolbar">
         <h1 class="page-toolbar__title" id="housekeeping-title">${esc(t('housekeeping.title'))}</h1>
         <nav class="housekeeping-tabs" role="tablist" aria-label="${esc(t('housekeeping.bottomNav'))}">
           ${renderTabButton('dashboard', 'layout-dashboard', t('housekeeping.dashboard'))}
@@ -232,16 +232,14 @@ async function toggleSession(container, workerId) {
 function renderWorkerSummary() {
   if (!state.workers.length) {
     return `
-      <section class="housekeeping-card housekeeping-worker-empty">
-        <i data-lucide="user-plus" aria-hidden="true"></i>
-        <div>
-          <h2>${esc(t('housekeeping.noWorkerTitle'))}</h2>
-          <p>${esc(t('housekeeping.noWorkerHint'))}</p>
-          <button class="btn btn--primary housekeeping-worker-empty__cta" type="button" id="housekeeping-create-profile">
-            <i data-lucide="plus" aria-hidden="true"></i>
-            <span>${esc(t('housekeeping.setupProfileAction'))}</span>
-          </button>
-        </div>
+      <section class="empty-state">
+        <i data-lucide="user-plus" class="empty-state__icon" aria-hidden="true"></i>
+        <h2 class="empty-state__title">${esc(t('housekeeping.noWorkerTitle'))}</h2>
+        <p class="empty-state__description">${esc(t('housekeeping.noWorkerHint'))}</p>
+        <button class="btn btn--primary empty-state__cta" type="button" id="housekeeping-create-profile">
+          <i data-lucide="plus" aria-hidden="true"></i>
+          <span>${esc(t('housekeeping.setupProfileAction'))}</span>
+        </button>
       </section>
     `;
   }
@@ -282,16 +280,31 @@ function renderDashboard(content) {
     });
     return;
   }
-  const lastVisit = data.last_visit?.check_in ? `${formatDate(data.last_visit.check_in)} · ${formatTime(data.last_visit.check_in)}` : t('housekeeping.noVisits');
+  // DATUM ALS WERT, UHRZEIT ALS FUSSNOTE.
+  // Beides zusammen in der Kennzahl ergab „18.08.2026 · 08:30" und lief in
+  // Title 1 gemessen 38px ueber die Kartenkante - eine Kennzahl traegt EINE
+  // Aussage, die Praezisierung darunter gehoert in `.metric-card__note`
+  // (dieselbe Rolle wie „7 aktiv" bei den Abos).
+  const hasLastVisit = Boolean(data.last_visit?.check_in);
+  const lastVisit = hasLastVisit ? formatDate(data.last_visit.check_in) : t('housekeeping.noVisits');
+  const lastVisitTime = hasLastVisit ? formatTime(data.last_visit.check_in) : '';
   const maxPayment = Math.max(1, ...(data.monthly_payments || []).map((row) => row.total));
   const bars = (data.monthly_payments || []).map((row) => {
-    const height = Math.max(8, Math.round((row.total / maxPayment) * 88));
+    // ANTEIL, KEINE PIXELHOEHE. Hier stand `style="height:${...}px"` mit einer
+    // im JS gerechneten Zahl - ein hartkodierter Designwert im Markup, und der
+    // Balken skalierte deshalb nicht mit seiner Karte. Der Wert ist DATEN
+    // (0..1), die Geometrie gehoert dem Stylesheet; dieselbe Bauart wie
+    // `--span-from/--span-to` am Wetterbalken und `--bar-scale` im Budget.
+    // Der Mindestanteil haelt einen Monat ohne Zahlung sichtbar.
+    const scale = Math.max(0.06, row.total / maxPayment);
     // Wert sichtbar am Balken statt nur im Hover-title: das Chart trug sonst
     // keine ablesbare Achse oder Zahl (Audit A2-23).
     return `
       <div class="housekeeping-chart__bar-wrap">
         <span class="housekeeping-chart__value">${esc(money(row.total))}</span>
-        <div class="housekeeping-chart__bar" style="height:${height}px" title="${esc(formatMonthLabel(row.month))} ${esc(money(row.total))}"></div>
+        <div class="housekeeping-chart__track" title="${esc(formatMonthLabel(row.month))} ${esc(money(row.total))}">
+          <div class="housekeeping-chart__bar" style="--bar-scale:${scale.toFixed(4)}"></div>
+        </div>
         <span>${esc(formatMonthLabel(row.month, { month: 'short' }))}</span>
       </div>
     `;
@@ -299,16 +312,15 @@ function renderDashboard(content) {
 
   const recentVisits = (state.reports || []).slice(0, 5);
   const recentRows = recentVisits.map((visit) => `
-    <article class="housekeeping-staff-log-row">
-      <div>
-        <strong>${esc(formatDate(visit.check_in))}</strong>
-        <span>${esc(visit.worker_name || t('housekeeping.staff'))} · ${esc(money(visit.total_amount))} · ${esc(visit.paid_at ? t('housekeeping.paymentPaid') : t('housekeeping.paymentPending'))}</span>
+    <article class="list-row housekeeping-staff-log-row">
+      <div class="list-row__main">
+        <div class="list-row__name">${esc(formatDate(visit.check_in))}</div>
+        <div class="list-row__meta">${esc(visit.worker_name || t('housekeeping.staff'))} · ${esc(money(visit.total_amount))} · ${esc(visit.paid_at ? t('housekeeping.paymentPaid') : t('housekeeping.paymentPending'))}</div>
       </div>
-      <div class="housekeeping-staff-log-row__actions">
-        <button class="btn btn--secondary housekeeping-log-action" type="button" data-edit-visit="${esc(visit.id)}"
-                aria-label="${esc(t('housekeeping.editVisit'))}">
-          <i data-lucide="edit-2" aria-hidden="true"></i>
-          <span>${esc(t('housekeeping.editVisit'))}</span>
+      <div class="list-row__actions">
+        <button class="row-action" type="button" data-edit-visit="${esc(visit.id)}"
+                aria-label="${esc(t('housekeeping.editVisit'))}: ${esc(formatDate(visit.check_in))}">
+          <i data-lucide="edit-2" class="icon-md" aria-hidden="true"></i>
         </button>
       </div>
     </article>
@@ -316,22 +328,23 @@ function renderDashboard(content) {
 
   content.insertAdjacentHTML('beforeend', `
     ${renderWorkerSummary()}
-    <section class="housekeeping-metrics">
-      <article class="housekeeping-metric">
-        <span>${esc(t('housekeeping.visitsThisMonth'))}</span>
-        <strong>${esc(data.visits_this_month ?? 0)}</strong>
+    <section class="metric-grid metric-grid--quad">
+      <article class="metric-card">
+        <div class="metric-card__label">${esc(t('housekeeping.visitsThisMonth'))}</div>
+        <div class="metric-card__value">${esc(data.visits_this_month ?? 0)}</div>
       </article>
-      <article class="housekeeping-metric">
-        <span>${esc(t('housekeeping.lastVisit'))}</span>
-        <strong>${esc(lastVisit)}</strong>
+      <article class="metric-card">
+        <div class="metric-card__label">${esc(t('housekeeping.lastVisit'))}</div>
+        <div class="metric-card__value">${esc(lastVisit)}</div>
+        ${lastVisitTime ? `<div class="metric-card__note">${esc(lastVisitTime)}</div>` : ''}
       </article>
-      <article class="housekeeping-metric">
-        <span>${esc(t('housekeeping.pendingChores'))}</span>
-        <strong>${esc(data.pending_tasks ?? 0)}</strong>
+      <article class="metric-card">
+        <div class="metric-card__label">${esc(t('housekeeping.pendingChores'))}</div>
+        <div class="metric-card__value">${esc(data.pending_tasks ?? 0)}</div>
       </article>
-      <article class="housekeeping-metric">
-        <span>${esc(t('housekeeping.finishedChores'))}</span>
-        <strong>${esc(data.finished_tasks_this_month ?? 0)}</strong>
+      <article class="metric-card">
+        <div class="metric-card__label">${esc(t('housekeeping.finishedChores'))}</div>
+        <div class="metric-card__value">${esc(data.finished_tasks_this_month ?? 0)}</div>
       </article>
     </section>
     <section class="housekeeping-card">
@@ -440,7 +453,7 @@ function renderTasks(content) {
         </button>
       </form>
     </section>
-    <section class="housekeeping-task-list">
+    <section class="housekeeping-task-list row-carrier">
       ${taskRows || `
         <div class="empty-state">
           <i class="empty-state__icon" data-lucide="list-checks" aria-hidden="true"></i>
@@ -560,18 +573,18 @@ function renderReports(content) {
         <h2>${esc(t('housekeeping.visitReports'))}</h2>
         <span>${esc(formatMonthLabel(state.visitReport?.month || ''))}</span>
       </div>
-      <section class="housekeeping-metrics housekeeping-metrics--compact">
-        <article class="housekeeping-metric">
-          <span>${esc(t('housekeeping.visitsThisMonth'))}</span>
-          <strong>${esc(visits.length)}</strong>
+      <section class="metric-grid">
+        <article class="metric-card metric-card--inset">
+          <div class="metric-card__label">${esc(t('housekeeping.visitsThisMonth'))}</div>
+          <div class="metric-card__value">${esc(visits.length)}</div>
         </article>
-        <article class="housekeeping-metric">
-          <span>${esc(t('housekeeping.pendingPayments'))}</span>
-          <strong>${esc(money(totals.pending || 0))}</strong>
+        <article class="metric-card metric-card--inset">
+          <div class="metric-card__label">${esc(t('housekeeping.pendingPayments'))}</div>
+          <div class="metric-card__value">${esc(money(totals.pending || 0))}</div>
         </article>
-        <article class="housekeeping-metric">
-          <span>${esc(t('housekeeping.paymentPaid'))}</span>
-          <strong>${esc(money(totals.paid || 0))}</strong>
+        <article class="metric-card metric-card--inset">
+          <div class="metric-card__label">${esc(t('housekeeping.paymentPaid'))}</div>
+          <div class="metric-card__value">${esc(money(totals.paid || 0))}</div>
         </article>
       </section>
     </section>
@@ -767,25 +780,30 @@ function renderStaffVisitLog() {
   if (!worker) return '';
   const rows = state.staffVisits.map((visit) => {
     const paid = !!visit.paid_at;
+    /* Die Zeile des Personal-Protokolls ist DIESELBE wie die der Übersicht -
+     * die drei Aktionen sind der einzige Unterschied, und sie stehen in der
+     * geteilten Bedienzone. Der Zahlstatus geht dabei nicht verloren: er steht
+     * in der Metazeile, wo er die Zeile beschreibt, statt nur als Beschriftung
+     * eines Knopfs, der ausgegraut ist. */
+    const visitDate = formatDate(visit.check_in);
     return `
-      <article class="housekeeping-staff-log-row">
-        <div>
-          <strong>${esc(formatDate(visit.check_in))}</strong>
-          <span>${esc(money(visit.total_amount))} · ${esc(paid ? t('housekeeping.paymentPaid') : t('housekeeping.paymentPending'))}</span>
+      <article class="list-row housekeeping-staff-log-row">
+        <div class="list-row__main">
+          <div class="list-row__name">${esc(visitDate)}</div>
+          <div class="list-row__meta">${esc(money(visit.total_amount))} · ${esc(paid ? t('housekeeping.paymentPaid') : t('housekeeping.paymentPending'))}</div>
         </div>
-        <div class="housekeeping-staff-log-row__actions">
-          <button class="btn btn--secondary housekeeping-log-action" type="button" data-pay-visit="${visit.id}" ${paid ? 'disabled' : ''}
-                  aria-label="${esc(t('housekeeping.markPaid'))}">
-            <i data-lucide="badge-dollar-sign" aria-hidden="true"></i>
-            <span>${esc(paid ? t('housekeeping.paymentPaid') : t('housekeeping.markPaid'))}</span>
+        <div class="list-row__actions">
+          <button class="row-action" type="button" data-pay-visit="${visit.id}" ${paid ? 'disabled' : ''}
+                  aria-label="${esc(paid ? t('housekeeping.paymentPaid') : t('housekeeping.markPaid'))}: ${esc(visitDate)}">
+            <i data-lucide="badge-dollar-sign" class="icon-md" aria-hidden="true"></i>
           </button>
-          <button class="btn btn--secondary housekeeping-log-action" type="button" data-edit-visit="${visit.id}" aria-label="${esc(t('housekeeping.editVisit'))}">
-            <i data-lucide="edit-2" aria-hidden="true"></i>
-            <span>${esc(t('housekeeping.editVisit'))}</span>
+          <button class="row-action" type="button" data-edit-visit="${visit.id}"
+                  aria-label="${esc(t('housekeeping.editVisit'))}: ${esc(visitDate)}">
+            <i data-lucide="edit-2" class="icon-md" aria-hidden="true"></i>
           </button>
-          <button class="btn btn--danger-outline housekeeping-log-action" type="button" data-delete-visit="${visit.id}" aria-label="${esc(t('housekeeping.deleteVisit'))}">
-            <i data-lucide="trash-2" aria-hidden="true"></i>
-            <span>${esc(t('housekeeping.deleteVisit'))}</span>
+          <button class="row-action row-action--danger" type="button" data-delete-visit="${visit.id}"
+                  aria-label="${esc(t('housekeeping.deleteVisit'))}: ${esc(visitDate)}">
+            <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
           </button>
         </div>
       </article>
@@ -1207,7 +1225,7 @@ function openStaffModal(worker, content, options = {}) {
 export async function render(container) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <section class="housekeeping-page housekeeping-page--loading" aria-busy="true">
+    <section class="housekeeping-page page-measure--narrow housekeeping-page--loading" aria-busy="true">
       ${renderSkeletonList({ rows: 6, lines: 2 })}
     </section>
   `);
@@ -1230,7 +1248,7 @@ export async function render(container) {
   } catch (err) {
     container.replaceChildren();
     container.insertAdjacentHTML('beforeend', `
-      <section class="housekeeping-page">
+      <section class="housekeeping-page page-measure--narrow">
         <div class="empty-state">
           <div class="empty-state__title">${esc(t('common.errorOccurred'))}</div>
           <div class="empty-state__description">${esc(err.message)}</div>

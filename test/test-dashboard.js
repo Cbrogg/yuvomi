@@ -8,11 +8,13 @@ process.env.DB_PATH = ':memory:';
 process.env.SESSION_SECRET = process.env.SESSION_SECRET || 'test-secret';
 
 import { DatabaseSync } from 'node:sqlite';
+import { readFileSync } from 'node:fs';
 import { register } from 'node:module';
 import * as nodeAssert from 'node:assert/strict';
 import express from 'express';
 import { MIGRATIONS_SQL } from '../server/db-schema-test.js';
 import { addLocalDays, toLocalDateKey } from '../public/utils/date.js';
+import { withoutBlockComments } from './source-text.js';
 
 // Dynamisch geladen, weil beide Module inzwischen server/db.js in ihren
 // Import-Graphen ziehen: statische Imports laufen vor der DB_PATH-Zuweisung
@@ -67,12 +69,17 @@ const u2 = db.prepare(`INSERT INTO users (username, display_name, password_hash,
 const uid1 = u1.lastInsertRowid;
 const uid2 = u2.lastInsertRowid;
 
-const today = new Date().toISOString().slice(0, 10);
-const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+// Lokale Kalendertage, nicht UTC: die Route liest Mahlzeitendatum, due_date und
+// Geburtstage als lokale Kalenderwerte. Seedete der Test dagegen den UTC-Tag,
+// fielen beide oestlich von UTC in den fruehen Morgenstunden auseinander und die
+// Suite war zwischen 00:00 und 02:00 CEST rot - in UTC (CI) dagegen immer gruen.
+// `inOneHour` bleibt ein echter Instant und damit korrekt in UTC.
+const today = toLocalDateKey();
+const tomorrow = addLocalDays(today, 1);
 const currentMonth = today.slice(0, 7);
 const inOneHour = new Date(Date.now() + 3600000).toISOString();
-const in30h = new Date(Date.now() + 30 * 3600000).toISOString().slice(0, 10);
-const in72h = new Date(Date.now() + 72 * 3600000).toISOString().slice(0, 10);
+const in30h = toLocalDateKey(new Date(Date.now() + 30 * 3600000));
+const in72h = toLocalDateKey(new Date(Date.now() + 72 * 3600000));
 
 // Aufgaben
 db.prepare(`INSERT INTO tasks (title, priority, status, due_date, created_by, assigned_to)
@@ -191,6 +198,135 @@ test('Today-Highlights filtert Termine auf den heutigen Tag', async () => {
 
   assert(result.eventCount === 1, `Erwartet 1 Termin für heute, erhalten ${result.eventCount}`);
   assert(result.nextEvent.title === 'Termin Heute', 'Erwartet "Termin Heute" als nächsten Termin');
+});
+
+test('Tagesprogramm: Termin, Aufgabe und Mahlzeit mischen sich chronologisch', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+
+  const result = __test.buildTodayProgram({
+    upcomingEvents: [{ id: 11, title: 'Zahnarzt', start_datetime: `${todayStr}T14:00:00` }],
+    urgentTasks: [{ id: 22, title: 'Zettel abgeben', due_date: todayStr, due_time: '09:30:00', status: 'open' }],
+    // Nur dinner geplant: selectTodayMeal fällt zu jeder Tageszeit auf dinner
+    // vor (deterministisch, kein withHour nötig).
+    todayMeals: [{ id: 33, meal_type: 'dinner', title: 'Pasta' }],
+  });
+
+  const kinds = result.rows.map((r) => r.kind);
+  nodeAssert.deepEqual(kinds, ['task', 'event', 'meal'], 'Aufgabe 09:30 → Termin 14:00 → Abendessen (nominal 18:30)');
+  nodeAssert.deepEqual(result.rows.map((r) => r.objectId), [22, 11, 33], 'jede Zeile trägt ihre Objekt-ID (Deep-Link-Anker, Paket 2)');
+  const sorted = [...result.rows.map((r) => r.sortKey)].sort();
+  nodeAssert.deepEqual(result.rows.map((r) => r.sortKey), sorted, 'Sortierschlüssel sind aufsteigend');
+  nodeAssert.equal(result.nextUpcoming, null, 'kein Termin über heute hinaus');
+});
+
+test('Tagesprogramm: Überfälliges zuerst, Ganztägiges vor zeitlosen Aufgaben', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const yesterdayStr = addLocalDays(todayStr, -1);
+
+  const result = __test.buildTodayProgram({
+    upcomingEvents: [{ id: 1, title: 'Ferienbeginn', start_datetime: todayStr, all_day: 1 }],
+    urgentTasks: [
+      { id: 2, title: 'Ohne Uhrzeit', due_date: todayStr, status: 'open' },
+      { id: 3, title: 'Längst fällig', due_date: yesterdayStr, status: 'open' },
+    ],
+  });
+
+  nodeAssert.deepEqual(
+    result.rows.map((r) => r.title),
+    ['Längst fällig', 'Ferienbeginn', 'Ohne Uhrzeit'],
+    'Reihenfolge: überfällig (00:00) → ganztägig (00:01) → heute ohne Uhrzeit (00:02)',
+  );
+  nodeAssert.equal(result.rows[0].overdue, true, 'überfällige Zeile ist markiert');
+});
+
+test('formatDueDate: „Morgen fällig" erfindet ohne due_time keine Uhrzeit', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const tomorrowStr = addLocalDays(toLocalDateKey(new Date()), 1);
+  // Ohne due_time ist 23:59:59 nur die interne Sortier-Krücke - sie darf nie
+  // als „Morgen fällig – 23:59" im UI landen.
+  const noTime = __test.formatDueDate(tomorrowStr, null);
+  nodeAssert.ok(!/\d{1,2}:\d{2}/.test(noTime.text), `keine erfundene Uhrzeit, erhalten: ${noTime.text}`);
+  const withTime = __test.formatDueDate(tomorrowStr, '09:30:00');
+  nodeAssert.match(withTime.text, /09:30/, 'eine echte Uhrzeit bleibt sichtbar');
+});
+
+test('Tagesprogramm: Ausblick kennt die nächste fällige Aufgabe über heute hinaus', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const tomorrowStr = addLocalDays(todayStr, 1);
+  const result = __test.buildTodayProgram({
+    urgentTasks: [{ id: 5, title: 'Zettel abgeben', due_date: tomorrowStr, status: 'open' }],
+  });
+  nodeAssert.equal(result.rows.length, 0, 'morgen Fälliges erzeugt keine Heute-Zeile');
+  nodeAssert.equal(result.nextDueTask?.id, 5, 'die nächste Frist steht als Ausblick bereit');
+});
+
+test('Cockpit-Coda nennt die morgen fällige Aufgabe statt falscher Entwarnung', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const tomorrowStr = addLocalDays(todayStr, 1);
+  const prevWindow = global.window;
+  global.window = { yuvomi: null };
+  try {
+    // Programm hat eine Heute-Zeile UND morgen ist etwas fällig → Coda-Variante.
+    const withTomorrow = __test.renderTodayCockpit({
+      upcomingEvents: [{ id: 1, title: 'Heute Abend', start_datetime: `${todayStr}T20:00:00` }],
+      urgentTasks: [{ id: 5, title: 'Zettel abgeben', due_date: tomorrowStr, status: 'open' }],
+    }, []);
+    nodeAssert.match(withTomorrow, /todayNothingElseTomorrow/, 'Coda warnt vor der Morgen-Frist');
+    // Leerer Tag, nur die Morgen-Aufgabe → Zustandszeile trägt sie als Ausblick.
+    const stateRow = __test.renderTodayCockpit({
+      urgentTasks: [{ id: 5, title: 'Zettel abgeben', due_date: tomorrowStr, status: 'open' }],
+    }, []);
+    nodeAssert.match(stateRow, /todayFree/, 'leerer Tag zeigt die Zustandszeile');
+    nodeAssert.match(stateRow, /todayNextUp/, 'der Ausblick nennt die Morgen-Aufgabe');
+  } finally {
+    global.window = prevWindow;
+  }
+});
+
+test('Notiz-Widget: nur der Auszug landet im DOM, nie der Volltext (Paket 3)', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  // line-clamp kürzt rein visuell - Screenreader lasen die komplette Notiz vor.
+  const secret = 'GEHEIMES-WLAN-PASSWORT-AM-ENDE';
+  const long = `${'Wort '.repeat(60)}${secret}`;
+  const html = __test.renderPinnedNotes([{ title: 'WLAN', content: long, color: '#FFEB3B', pinned: 1 }]);
+  nodeAssert.ok(!html.includes(secret), 'der Volltext (inkl. Ende) steht nicht im DOM');
+  nodeAssert.match(html, /…/, 'der Auszug endet mit einer Ellipse');
+});
+
+test('Tagesprogramm: Aufgaben-Zeile trägt den Quick-Action-Anker (Paket 2)', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const prevWindow = global.window;
+  global.window = { yuvomi: null };
+  try {
+    const html = __test.renderTodayCockpit({
+      urgentTasks: [{ id: 7, title: 'Zettel abgeben', due_date: todayStr, status: 'open' }],
+    }, []);
+    nodeAssert.match(html, /data-object-kind="task"/, 'Zeile deklariert ihre Objektart');
+    nodeAssert.match(html, /data-object-id="7"/, 'Zeile trägt die Aufgaben-ID für das Quick-Action-Modal');
+  } finally {
+    global.window = prevWindow;
+  }
+});
+
+test('Tagesprogramm: leerer Tag liefert Ausblick (nextUpcoming) und Erledigt-Zähler', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const todayStr = toLocalDateKey(new Date());
+  const tomorrowStr = addLocalDays(todayStr, 1);
+
+  const result = __test.buildTodayProgram({
+    upcomingEvents: [{ id: 9, title: 'Elternabend', start_datetime: `${tomorrowStr}T19:00:00` }],
+    urgentTasks: [{ id: 4, title: 'Erst übermorgen', due_date: addLocalDays(todayStr, 2), status: 'open' }],
+    tasksDoneToday: 2,
+  });
+
+  nodeAssert.equal(result.rows.length, 0, 'keine Programmzeilen an einem leeren Tag');
+  nodeAssert.equal(result.nextUpcoming?.id, 9, 'der nächste kommende Termin ist der Ausblick');
+  nodeAssert.equal(result.tasksDoneToday, 2, 'der Erledigt-Zähler wird durchgereicht');
 });
 
 test('eventStartDate: ganztägige Termine (date-only) landen auf dem lokalen Kalendertag (Issue #466)', async () => {
@@ -734,6 +870,14 @@ test('Dashboard-Endpoint: dringende Aufgaben, anstehende Termine, Einkaufslisten
   routeDb.prepare('INSERT INTO shopping_items (list_id, name, is_checked) VALUES (?, ?, 0)').run(listId, 'Brot');
   routeDb.prepare('INSERT INTO shopping_items (list_id, name, is_checked) VALUES (?, ?, 1)').run(listId, 'Butter (erledigt)');
 
+  // Heute fällige, bereits erledigte Aufgabe → deckt tasksDoneToday („Alles
+  // erledigt"-Zustand des Tagesprogramms). Lokaler Datumsschlüssel, nicht UTC:
+  // der Server vergleicht mit todayLocalKey (exakte Gleichheit).
+  routeDb.prepare(`
+    INSERT INTO tasks (title, priority, status, due_date, visibility, created_by, assigned_to)
+    VALUES ('Widget Erledigt', 'medium', 'done', ?, 'all', ?, ?)
+  `).run(toLocalDateKey(new Date()), owner, owner);
+
   // Monats-Sparziel (Budgetplan) → deckt den savingsGoal-Zweig.
   routeDb.prepare("INSERT INTO budget_plans (category, amount) VALUES ('__savings__', 500)").run();
 
@@ -767,6 +911,14 @@ test('Dashboard-Endpoint: dringende Aufgaben, anstehende Termine, Einkaufslisten
     nodeAssert.ok(list.items.every((i) => i.is_checked === 0), 'kein erledigter Artikel in der Items-Liste');
 
     nodeAssert.equal(body.budget.savingsGoal, 500, 'Sparziel wird aus dem Budgetplan gelesen');
+
+    // „Heute dran"-Karte: die Pro-Mitglied-Last kommt serverseitig aggregiert,
+    // nicht aus dem 5er-Limit von urgentTasks.
+    const memberLoad = body.memberTodayTasks.find((m) => m.user_id === owner);
+    nodeAssert.ok(memberLoad, 'Pro-Mitglied-Zeile für den Owner vorhanden');
+    nodeAssert.equal(memberLoad.open_count, 1, 'genau die eine offene, heute fällige Aufgabe zählt (Abgelegtes zählt nicht)');
+
+    nodeAssert.equal(body.tasksDoneToday, 1, 'heute fällige erledigte Aufgabe wird gezählt');
   } finally {
     await new Promise((resolve) => server.close(resolve));
     routeDb.prepare("DELETE FROM budget_plans WHERE category = '__savings__'").run();
@@ -1182,6 +1334,586 @@ test('maybeUpdateAutoLocation skips when disabled', async () => {
     putPreferences: () => { throw new Error('should not be called'); },
   });
   nodeAssert.equal(ok, false);
+});
+
+// --------------------------------------------------------
+// Wand-Modus (Block D)
+// --------------------------------------------------------
+
+/** Programmzeilen für einen vollen Tag: N fällige Aufgaben mit Uhrzeit. */
+function wallTasks(count, { assignTo = null, from = 8 } = {}) {
+  const todayStr = toLocalDateKey(new Date());
+  return Array.from({ length: count }, (_, i) => ({
+    id: i + 1,
+    title: `Aufgabe ${i + 1}`,
+    due_date: todayStr,
+    due_time: `${String(from + i).padStart(2, '0')}:00`,
+    status: 'open',
+    assigned_users: assignTo?.(i) ? [assignTo(i)] : [],
+  }));
+}
+
+/** Der Wand-Modus rendert ohne DOM; `window.yuvomi` fragt er nur nach Modulen. */
+async function withWallWindow(fn) {
+  const prevWindow = global.window;
+  global.window = { yuvomi: null };
+  try {
+    return await fn();
+  } finally {
+    global.window = prevWindow;
+  }
+}
+
+test('Wand-Modus: die Programmzeilen sind reine Anzeige - kein Link, kein Button', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const html = __test.renderWallSurface({ urgentTasks: wallTasks(3), users: [] }, null, {});
+    const list = html.slice(html.indexOf('wall-program__list'), html.indexOf('</ol>'));
+    // Reichweite zuerst: ein Selektor, der nichts findet, meldet sonst
+    // fehlerfrei „keine Verstöße".
+    const rows = list.match(/class="wall-row /g) ?? [];
+    nodeAssert.equal(rows.length, 3, 'drei Programmzeilen gelesen');
+    nodeAssert.ok(!/<a\b|href=|data-route=|<button/.test(list),
+      'eine Zeile im Wand-Modus navigiert nicht und öffnet kein Modal');
+    // Der EINE Bedienpunkt der Fläche liegt außerhalb der Liste.
+    nodeAssert.match(html, /id="wall-exit"/, 'der Ausstieg ist da');
+  });
+});
+
+test('Wand-Modus: der Ausstieg steht in JEDEM Zustand im DOM', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const states = {
+      laden:  __test.renderWallSurface(null, null, { loading: true }),
+      fehler: __test.renderWallSurface(null, null, { failed: true }),
+      normal: __test.renderWallSurface({ urgentTasks: wallTasks(1), users: [] }, null, {}),
+      leer:   __test.renderWallSurface({ urgentTasks: [], upcomingEvents: [], users: [] }, null, {}),
+    };
+    const ohne = Object.entries(states).filter(([, html]) => !/id="wall-exit"/.test(html)).map(([k]) => k);
+    nodeAssert.equal(Object.keys(states).length, 4, 'vier Zustände geprüft');
+    nodeAssert.deepEqual(ohne, [], 'ein unsichtbarer Ausstieg wäre eine Falle');
+  });
+});
+
+test('Wand-Modus: der Fehlerzustand trägt keinen Retry-Knopf, aber die Uhr', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const html = __test.renderWallSurface(null, null, { failed: true });
+    nodeAssert.match(html, /wall__error-title/, 'der Fehler spricht als eigener Zustand');
+    // Am Wandtablet drückt niemand „erneut versuchen" - geheilt wird von selbst.
+    nodeAssert.ok(!/dashboard-retry|widget-retry/.test(html), 'kein Retry-Knopf auf zwei Metern');
+    nodeAssert.match(html, /clock-widget--wall/, 'die Uhr bleibt: sie braucht kein Netz');
+  });
+});
+
+test('Wand-Modus: der Deckel greift, und der Überlauf sagt die Wahrheit', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const data = { urgentTasks: wallTasks(9), users: [] };
+    const html = __test.renderWallSurface(data, null, {});
+    const rows = html.match(/class="wall-row /g) ?? [];
+    nodeAssert.ok(rows.length > 0, 'Reichweite: Zeilen wurden überhaupt gelesen');
+    nodeAssert.equal(rows.length, __test.WALL_ROW_CAP, 'der Wand-Deckel greift');
+    nodeAssert.ok(__test.WALL_ROW_CAP < __test.PROGRAM_ROW_CAP,
+      'die Wand zeigt weniger Zeilen als das Cockpit - sie muss ohne Scrollen passen');
+    nodeAssert.match(html, /wall-program__foot/, 'der Überlauf spricht als Fußzeile');
+
+    // Die Zahl zählt gegen ALLE Zeilen des Tages, nicht gegen die gezeigten.
+    // Am Modell geprüft und nicht am Text: `t()` ist in dieser Suite nicht
+    // initialisiert und gäbe den Schlüssel zurück - eine Zusicherung über den
+    // gerenderten Satz wäre eine über den Schlüsselnamen.
+    const model = __test.buildTodayCockpitModel(data, [], { cap: __test.WALL_ROW_CAP });
+    nodeAssert.equal(model.allRows.length, 9, 'das Modell kennt den ganzen Tag');
+    nodeAssert.equal(model.overflow, 9 - __test.WALL_ROW_CAP, 'der Überlauf nennt die echte Restzahl');
+  });
+});
+
+test('Wand-Modus: „Wer heute dran ist" zählt den ganzen Tag, nicht nur die sichtbaren Zeilen', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    // Mia hat GENAU EINE Aufgabe, und die liegt hinter dem Deckel. Zählte der
+    // Abschnitt nur die gezeigten Zeilen, verschwände sie aus der Antwort.
+    const spaet = { id: 42, display_name: 'Mia Muster', avatar_color: '#CE2A63' };
+    const tasks = wallTasks(8, { assignTo: (i) => (i === 7 ? spaet : null) });
+    const html = __test.renderWallSurface({ urgentTasks: tasks, users: [spaet] }, null, {});
+    nodeAssert.match(html, /wall-who__member/, 'Reichweite: der Abschnitt wurde gebaut');
+    nodeAssert.match(html, /Mia/, 'wer hinter dem Deckel steht, steht trotzdem in der Antwort');
+    nodeAssert.match(html, /wall-who__count/, 'die Zahl beantwortet „wie viel"');
+  });
+});
+
+test('Wand-Modus: „Wer heute dran ist" entfällt im Solo-Haushalt', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const { setHouseholdSize, clearHouseholdSize } = await import('../public/utils/household.js');
+  const prevDocument = global.document;
+  global.document = { documentElement: { classList: { toggle() {}, add() {}, remove() {} } } };
+  try {
+    await withWallWindow(() => {
+      const alleine = { id: 1, display_name: 'Miriam Solo', avatar_color: '#6C3AED' };
+      const data = { urgentTasks: wallTasks(2, { assignTo: () => alleine }), users: [alleine] };
+
+      setHouseholdSize(2);
+      nodeAssert.match(__test.renderWallSurface(data, null, {}), /wall-who__member/,
+        'Reichweite: im Mehrpersonen-Haushalt steht der Abschnitt da');
+
+      setHouseholdSize(1);
+      nodeAssert.ok(!/wall__who/.test(__test.renderWallSurface(data, null, {})),
+        'was nur eine sinnvolle Belegung hat, wird nicht gezeigt');
+    });
+  } finally {
+    clearHouseholdSize();
+    global.document = prevDocument;
+  }
+});
+
+test('Wand-Modus: leerer Tag spricht, statt zu verschwinden', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const html = __test.renderWallSurface({ urgentTasks: [], upcomingEvents: [], users: [] }, null, {});
+    // Eine leere Fläche liest sich aus zwei Metern wie ein Defekt.
+    nodeAssert.match(html, /wall-row--state/, 'der leere Tag bekommt seine eigene Zeile');
+  });
+});
+
+test('Wand-Modus und Cockpit erzählen denselben Tag (ein Modell, zwei Formen)', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const data = { urgentTasks: wallTasks(3), users: [] };
+    const titles = (html) => (html.match(/Aufgabe \d+/g) ?? []);
+    const wand = titles(__test.renderWallSurface(data, null, {}));
+    const cockpit = titles(__test.renderTodayCockpit(data, []));
+    nodeAssert.equal(wand.length, 3, 'Reichweite: die Wand hat drei Zeilen gelesen');
+    nodeAssert.deepEqual(wand, cockpit.slice(0, wand.length),
+      'dieselben Zeilen in derselben Reihenfolge - keine zweite Wahrheit');
+  });
+});
+
+test('Wand-Modus: das Nachtfenster läuft über Mitternacht (22:00 bis 06:00)', async () => {
+  const { isWallNight, isWallRoute, WALL_NIGHT_FROM, WALL_NIGHT_TO } = await import('../public/utils/wall-mode.js');
+  const at = (h, m = 0) => new Date(2026, 7, 11, h, m);
+  const probe = [
+    [21, 59, false], [22, 0, true], [23, 30, true],
+    [0, 15, true], [3, 0, true], [5, 59, true], [6, 0, false], [12, 0, false],
+  ];
+  const falsch = probe.filter(([h, m, soll]) => isWallNight(at(h, m)) !== soll)
+    .map(([h, m]) => `${h}:${String(m).padStart(2, '0')}`);
+  nodeAssert.equal(probe.length, 8, 'acht Uhrzeiten geprüft');
+  nodeAssert.deepEqual(falsch, [], 'ODER statt UND - sonst reißt das Fenster um Mitternacht');
+  nodeAssert.equal(WALL_NIGHT_FROM, 22);
+  nodeAssert.equal(WALL_NIGHT_TO, 6);
+
+  // Der Modus ist ein Zustand DES DASHBOARDS, keine eigene Route.
+  nodeAssert.equal(isWallRoute('/'), true);
+  nodeAssert.deepEqual(['/tasks', '/settings', '/calendar'].filter(isWallRoute), []);
+});
+
+// --------------------------------------------------------
+// Widget-Konfiguration (public/utils/dashboard-widgets.js)
+//
+// ANLASS: `normalizeDashboardConfig` und `isUserOrderedConfig` tragen zusammen
+// eine Zusicherung - ein Bestandslayout, dem eine inzwischen neu bekannte
+// Widget-Id fehlt, darf sich NICHT als Nutzer-Umsortierung lesen. Tut es das,
+// schaltet das Raster von der dichten Packung auf preserve-order und der
+// Weissraum aus Audit A1-03 ist zurueck, ohne dass jemand etwas umsortiert hat.
+// Sie war bis 2026-08-13 durch keinen Test gedeckt und hing an einer
+// Vereinbarung ueber die Reihenfolge von WIDGET_IDS.
+// --------------------------------------------------------
+
+const widgets = await import('../public/utils/dashboard-widgets.js');
+
+// Ein Bestandslayout, dem genau `missing` fehlt - sonst der unveraenderte
+// Default, so wie es ein Haushalt gespeichert hat, bevor es diese Id gab.
+function layoutOhne(missing) {
+  return widgets.DEFAULT_WIDGET_CONFIG
+    .filter((w) => w.id !== missing)
+    .map((w, i) => ({ ...w, order: i }));
+}
+
+test('Widget-Merge: eine fehlende Id landet an ihrer Default-Position, nicht hinten', () => {
+  const geprueft = widgets.WIDGET_IDS.length;
+  assert(geprueft === 16, `Reichweite: ${geprueft} Ids geprueft, nicht die erwarteten 16`);
+  const falsch = widgets.WIDGET_IDS.filter((id) => {
+    const merged = widgets.normalizeDashboardConfig(layoutOhne(id));
+    return merged.map((w) => w.id).join(',') !== widgets.WIDGET_IDS.join(',');
+  });
+  assert(falsch.length === 0,
+    `An die falsche Stelle einsortiert: ${falsch.join(', ')} - erwartet ist die Default-Position`);
+});
+
+test('Widget-Merge: ein Bestandslayout ohne eine Id ist KEINE Nutzer-Umsortierung (A1-03)', () => {
+  // Der eigentliche Punkt. Vor dem Merge-Fix ist das fuer jede Id rot, die
+  // nicht die LETZTE sichtbare in WIDGET_IDS ist - angehaengt steht sie hinter
+  // Widgets, vor denen sie im Default steht.
+  const falsch = widgets.WIDGET_IDS.filter((id) =>
+    widgets.isUserOrderedConfig(widgets.normalizeDashboardConfig(layoutOhne(id))));
+  assert(falsch.length === 0,
+    `Als umsortiert gelesen, obwohl nur eine Id fehlte: ${falsch.join(', ')} - das Raster faellt dort auf preserve-order`);
+});
+
+test('Widget-Merge: zwei fehlende Ids behalten ihre Reihenfolge zueinander', () => {
+  const zwei = widgets.DEFAULT_WIDGET_CONFIG
+    .filter((w) => !['meals', 'shopping'].includes(w.id))
+    .map((w, i) => ({ ...w, order: i }));
+  const merged = widgets.normalizeDashboardConfig(zwei).map((w) => w.id);
+  assert(merged.join(',') === widgets.WIDGET_IDS.join(','),
+    `Zwei benachbarte Neuzugaenge kamen durcheinander: ${merged.join(',')}`);
+  assert(!widgets.isUserOrderedConfig(merged.map((id, i) => ({ id, visible: true, order: i, size: '1x1' }))),
+    'zwei fehlende Ids lesen sich als Umsortierung');
+});
+
+test('Widget-Merge: eine fehlende Id am Anfang der Liste landet vorn, nicht hinten', () => {
+  // Der Fall ohne Vorgaenger - `tasks` ist WIDGET_IDS[0]. Die Rueckwaertssuche
+  // findet nichts und muss auf Position 0 fallen.
+  const merged = widgets.normalizeDashboardConfig(layoutOhne('tasks'));
+  assert(merged[0].id === 'tasks', `Erste Id landete auf Position ${merged.findIndex((w) => w.id === 'tasks')}`);
+});
+
+test('Widget-Merge: ein umsortiertes Layout laesst den Neuzugang seinem Vorgaenger folgen', () => {
+  // Der Anlassfall ist der Demo-Haushalt (gemessen 2026-08-13): `weather` steht
+  // dort ganz vorn, `clock` und `metrics` fehlen. Ein umsortiertes Layout hat
+  // keine Default-Position mehr, nur noch Nachbarn - der Neuzugang haengt sich
+  // an seinen Vorgaenger, nicht ans Ende. Das ist die Entscheidung, und sie
+  // steht hier, weil sie sonst niemandem auffaellt.
+  const demo = ['weather', 'family', 'budget', 'birthdays', 'rewards', 'notes',
+    'tasks', 'calendar', 'shopping', 'meals', 'housekeeping', 'health', 'cycle']
+    .map((id, i) => ({ id, order: i, visible: i < 6, size: '1x1' }));
+  const merged = widgets.normalizeDashboardConfig(demo);
+  const sichtbar = merged.filter((w) => w.visible).map((w) => w.id);
+  // `countdown` ist der zweite Neuzugang in diesem Layout (#647) und belegt
+  // dieselbe Zusicherung ein zweites Mal: sein Vorgaenger in WIDGET_IDS ist
+  // `birthdays`, und dorthin gehoert er - nicht ans Ende.
+  assert(sichtbar.join(',') === 'weather,metrics,family,budget,birthdays,countdown,rewards,notes',
+    `Neuzugang an unerwarteter Stelle: ${sichtbar.join(',')}`);
+  assert(widgets.isUserOrderedConfig(merged),
+    'ein echt umsortiertes Layout muss umsortiert bleiben - sonst packt dense es um');
+});
+
+test('isUserOrderedConfig erkennt eine ECHTE Umsortierung weiterhin', () => {
+  // Gegenprobe zur Zusicherung oben: sie darf nicht dadurch halten, dass die
+  // Funktion nie mehr `true` sagt. Zwei sichtbare Widgets tauschen.
+  const sichtbar = widgets.DEFAULT_WIDGET_CONFIG.filter((w) => w.visible).map((w) => w.id);
+  assert(sichtbar.length >= 2, `Reichweite: nur ${sichtbar.length} sichtbare Widgets im Default`);
+  const getauscht = widgets.DEFAULT_WIDGET_CONFIG.map((w) => ({ ...w }));
+  const a = getauscht.findIndex((w) => w.id === sichtbar[0]);
+  const b = getauscht.findIndex((w) => w.id === sichtbar[1]);
+  [getauscht[a].order, getauscht[b].order] = [getauscht[b].order, getauscht[a].order];
+  assert(widgets.isUserOrderedConfig(getauscht),
+    `Tausch von ${sichtbar[0]} und ${sichtbar[1]} wurde nicht als Umsortierung erkannt`);
+  assert(!widgets.isUserOrderedConfig(widgets.DEFAULT_WIDGET_CONFIG),
+    'der unveraenderte Default liest sich als Umsortierung');
+});
+
+test('isUserOrderedConfig: ein reiner Sichtbarkeits-Toggle ist keine Umsortierung', () => {
+  const versteckt = widgets.DEFAULT_WIDGET_CONFIG.map((w) => (w.id === 'notes' ? { ...w, visible: false } : w));
+  assert(!widgets.isUserOrderedConfig(versteckt), 'Ausblenden wurde als Umsortierung gelesen');
+  // Und eine abgeschaffte Id aus einem alten Stand ebenso wenig.
+  const alt = [{ id: 'ancient', visible: true, order: -1 }, ...widgets.DEFAULT_WIDGET_CONFIG];
+  assert(!widgets.isUserOrderedConfig(alt), 'eine unbekannte Alt-Id wurde als Umsortierung gelesen');
+});
+
+test('Widget-Merge: gespeicherte Reihenfolge gewinnt ueber die Array-Position', () => {
+  // `order` und Array-Position koennen auseinanderlaufen; eingefuegt wird an
+  // einer Position, also muss vorher sortiert sein.
+  const gemischt = widgets.DEFAULT_WIDGET_CONFIG
+    .filter((w) => w.id !== 'notes')
+    .map((w, i) => ({ ...w, order: i }))
+    .reverse();
+  const merged = widgets.normalizeDashboardConfig(gemischt).map((w) => w.id);
+  assert(merged.join(',') === widgets.WIDGET_IDS.join(','),
+    `Array-Position statt order gelesen: ${merged.join(',')}`);
+});
+
+test('Widget-Merge: Groesse und Sichtbarkeit eines Bestandseintrags bleiben unberuehrt', () => {
+  const gespeichert = widgets.DEFAULT_WIDGET_CONFIG
+    .filter((w) => w.id !== 'metrics')
+    .map((w) => ({ ...w, visible: w.id === 'tasks' ? true : w.visible, size: w.id === 'tasks' ? '2x2' : w.size }));
+  const merged = widgets.normalizeDashboardConfig(gespeichert);
+  const tasks = merged.find((w) => w.id === 'tasks');
+  assert(tasks.size === '2x2' && tasks.visible === true, 'gespeicherte Groesse/Sichtbarkeit ueberschrieben');
+  // Der Neuzugang erbt dagegen seinen Default - Opt-in-Module erscheinen nicht ungefragt.
+  const health = widgets.normalizeDashboardConfig(layoutOhne('health')).find((w) => w.id === 'health');
+  assert(health.visible === false, 'ein neu ergaenztes Opt-in-Widget kam sichtbar herein');
+});
+
+// --------------------------------------------------------
+// Kennzahlreihe: sie zeigt, was sonst NIRGENDS steht
+//
+// Anlass (Critique 2026-08-13, P1): im Standard-Layout waren alle vier Kacheln
+// Echos. „2.504 EUR Saldo" stand 800px neben dem Budget-Widget mit derselben
+// Zahl, „17 Tage / Tante Claire Becker" ueber dem Geburtstage-Widget mit
+// demselben Namen, „23 Artikel" und „4 ueberfaellig" in den Cockpit-Zeilen.
+// PRODUCT.md fuehrt das „ueberlastete Feature-Dashboard" als Anti-Referenz.
+//
+// GEPRUEFT WIRD DIE AUSWAHL, NICHT DAS MARKUP: was die Reihe zeigt, ist die
+// Zusage - dass sie es in einem <a> zeigt, ist ihre Form.
+// --------------------------------------------------------
+
+const METRIC_DATA = {
+  openTaskCount: 5, overdueTaskCount: 2,
+  shoppingOpenCount: 23, shoppingOpenLists: 2,
+  budget: { entryCount: 9, balance: 2504, income: 3000 },
+  birthdays: [{ name: 'Tante Claire', days_until: 17 }],
+  todayMeals: [{ title: 'Suppe' }],
+  // `pinnedNotes` ist die VORSCHAU (gepinnt zuerst, dann aktuellste, drei
+  // Stueck) - die Zahl der gepinnten steht daneben, weil die Liste nicht
+  // filtert. Die Vorlage fuehrt beides, sonst prueft sie eine Nutzlast, die es
+  // so nicht gibt (Codex-Review zu PR #754).
+  pinnedNotes: [{ title: 'Urlaub', pinned: 1 }],
+  pinnedNotesCount: 1,
+  rewards: { standings: [{ display_name: 'Leo', balance: 60 }] },
+  health: { hasMeds: true, dosesTotal: 3, dosesTaken: 1, dosesSkipped: 0, nextDose: { name: 'Vitamin D3' }, lowStockCount: 0 },
+  housekeeping: { configured: true, visitsThisMonth: 4, present: true },
+};
+
+test('Kennzahlreihe wiederholt nicht, was das Cockpit schon sagt', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const ids = __test.selectMetricTiles(METRIC_DATA, 'EUR', new Set()).map((t) => t.id);
+  for (const covered of ['tasks', 'calendar', 'shopping', 'meals']) {
+    assert(!ids.includes(covered),
+      `„${covered}" wird vom Cockpit schon zusammengefasst und gehoert nicht zusaetzlich in die Reihe`);
+  }
+  assert(ids.length >= 2, 'ohne sichtbare Widgets muss die Reihe etwas zu zeigen haben');
+});
+
+test('Kennzahlreihe wiederholt nicht, was ein sichtbares Widget schon sagt', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const ohne = __test.selectMetricTiles(METRIC_DATA, 'EUR', new Set()).map((t) => t.id);
+  assert(ohne.includes('budget'), 'ohne Budget-Widget gehoert die Budget-Kachel in die Reihe');
+
+  const mit = __test.selectMetricTiles(METRIC_DATA, 'EUR', new Set(['budget', 'birthdays'])).map((t) => t.id);
+  assert(!mit.includes('budget'), 'neben einem sichtbaren Budget-Widget ist die Budget-Kachel dessen Echo');
+  assert(!mit.includes('birthdays'), 'dasselbe gilt fuer die Geburtstage');
+
+  // ES IST EIN FILTER, KEINE ZWEITE LISTE: wer ein Widget ausblendet, bekommt
+  // dessen Kachel zurueck. Ohne diese Gegenrichtung waere ein Guard gruen, der
+  // die Reihe schlicht leert.
+  //
+  // NICHT UEBER DIE LAENGE - das war die erste Fassung und die falsche Frage:
+  // `slice(0, METRIC_TILE_COUNT)` deckelt beide Mengen auf vier, also sind sie
+  // gleich lang, obwohl sich ihr Inhalt unterscheidet. Die Zusage ist, dass der
+  // Filter AUSTAUSCHT statt zu leeren.
+  assert(mit.length === ohne.length,
+    'faellt ein Kandidat weg, rueckt der naechste nach - die Reihe wird nicht kuerzer');
+  assert(mit.some((id) => !ohne.includes(id)),
+    'und der Nachrueckende ist einer, der vorher nicht dran war');
+});
+
+test('Kennzahlreihe fuehrt mit den Modulen, die sonst kein Widget zeigen', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  // Die drei Opt-in-Module sind im Werks-Layout unsichtbar (DEFAULT_HIDDEN_WIDGETS)
+  // - genau deshalb sind sie die eigentlichen Kandidaten der Reihe.
+  for (const id of ['rewards', 'health', 'housekeeping']) {
+    assert(__test.METRIC_TILE_ORDER.includes(id),
+      `„${id}" zeigt im Standard-Layout kein Widget und gehoert damit in die Kandidaten`);
+  }
+  // Und ohne Daten gibt es keine Kachel - eine leere Zahl ist keine Kennzahl.
+  const leer = __test.selectMetricTiles(
+    { ...METRIC_DATA, health: { hasMeds: false }, housekeeping: { configured: false }, rewards: { standings: [] } },
+    'EUR', new Set(['budget', 'birthdays', 'notes']),
+  );
+  assert(leer.length === 0, 'ohne Daten und ohne Kandidaten bleibt die Reihe weg, statt leer dazustehen');
+});
+
+test('Kennzahlreihe ist eine Zeile, kein Block', async () => {
+  const widgets = await import('../public/utils/dashboard-widgets.js');
+  // 671px hoch fuer vier Zahlen war der Anlass; die Mitteilung zum Bau sagte
+  // „in der Hoehe, die ein Widget-Kopf kostet".
+  assert(widgets.defaultWidgetSize('metrics') === '2x1',
+    'die Reihe startet als Zeile - 2x2 war der Block, der 671px fuer 80px Inhalt nahm');
+});
+
+test('Kennzahlreihe bezieht ihre Hoehe aus ihrem Inhalt, nicht von aussen', () => {
+  // ZWEITER ANLAUF (Critique 2026-08-13). Nach dem ersten Fix stand die Reihe
+  // mobil bei 105px - und auf dem Desktop weiter bei 361px je Kachel, fuer 71px
+  // Inhalt. Die Zahl `2x1` oben war dabei die ganze Zeit gruen: sie prueft das
+  // Raster-Kaestchen, nicht die gerenderte Hoehe. Ein Zielwert, der an dem
+  // Viewport gruen ist, an dem der Defekt nicht lebt, ist keine Zusicherung.
+  //
+  // Statisch pruefbar ist die URSACHE, und die sind genau zwei Deklarationen,
+  // die Hoehe von aussen beziehen: `flex: 1` laesst die Reihe die Hoehe ihres
+  // Wrappers erben (und der ist so hoch wie die hoechste Karte SEINER
+  // Rasterzeile), `align-content: stretch` verteilt den Ueberschuss auf die
+  // einzige Rasterzeile. Beides zusammen war der Faktor 4,5.
+  const css = readFileSync(new URL('../public/styles/dashboard.css', import.meta.url), 'utf8');
+  const block = (selector) => {
+    const at = css.indexOf(`\n${selector} {`);
+    return at === -1 ? '' : css.slice(at, css.indexOf('\n}', at));
+  };
+
+  const wrapper = block('.widget-wrapper > .metric-tiles');
+  assert(wrapper, '.widget-wrapper > .metric-tiles muss es geben - sonst prueft dieser Guard nichts');
+  assert(!/flex:\s*1\b/.test(wrapper),
+    'die Kennzahlreihe darf ihre Hoehe nicht vom Wrapper erben (flex: 1) - gemessen wurden daraus 361px je Kachel fuer 71px Inhalt');
+
+  const tiles = block('.metric-tiles');
+  assert(tiles, '.metric-tiles muss es geben');
+  assert(!/align-content:\s*stretch/.test(tiles),
+    'align-content: stretch gibt der einzigen Rasterzeile allen Ueberschuss - die Reihe waechst auf ihren Inhalt, nicht auf ihren Platz');
+
+  // UND DIE ZELLE, NICHT NUR DIE REIHE (Critique 2026-08-13, zweite Runde).
+  //
+  // Die zwei Zusicherungen darueber haben die Reihe repariert und die Zelle
+  // stehen lassen: `.widget-wrapper { align-self: stretch }` liess sie weiter
+  // die Hoehe der hoechsten Karte ihrer Rasterzeile beanspruchen, gemessen
+  // 753x360,5px fuer eine 105px hohe Reihe. Die Leere war nicht verschwunden,
+  // sie war aus der getoenten Kachel auf den Grund gewandert - und dieser
+  // Guard hat es nicht gesehen, weil er dieselbe Ebene prueft wie der Fix,
+  // den er begleitet. Das ist das Muster, das diese Runde dreimal gefunden
+  // hat: die Sonde steht dort, wo repariert wurde, nicht dort, wo es weh tat.
+  assert(/\.widget-wrapper:has\(>\s*\.metric-tiles\)\s*\{[^}]*align-self:\s*start/.test(css),
+    'die ZELLE der Kennzahlreihe muss auf ihren Inhalt schrumpfen - sonst steht die Reihe richtig und die Buehne darunter ist leer');
+});
+
+// --------------------------------------------------------
+// Wetterlage, Gangart und Temperaturband (#Wetter-Kur 2026-08-17)
+// --------------------------------------------------------
+
+/**
+ * DIE ICON-LISTE KOMMT VOM SERVER, NICHT AUS DIESER DATEI. `wmoIcon()` in
+ * server/routes/weather.js ist die einzige Stelle, die entscheidet, welche
+ * Lucide-Namen je aus Open-Meteo herausfallen koennen - eine Liste hier waere
+ * die zweite Wahrheit und liefe beim naechsten WMO-Code auseinander, ohne rot
+ * zu werden. Der Guard liest deshalb die Rueckgabewerte der Funktion.
+ *
+ * DIESER GUARD KOMMT AUS EINEM GEMESSENEN FEHLER, nicht aus Vorsicht: die
+ * Sonne bekam ihre Rotation nie, weil `'sun'.endsWith('n')` wahr ist und die
+ * Tag/Nacht-Pruefung der OWM-Codes auf den Lucide-Zweig durchschlug. Ein
+ * Struktur-Guard ueber die CSS-Regeln sah das nicht - die Regel existierte,
+ * das Attribut kam nur nie an. Die Ebene muss die AUSGABE sein.
+ */
+test('jedes Wetter-Icon des Servers findet eine Lage, und die Sonne dreht sich', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const routeSrc = readFileSync(new URL('../server/routes/weather.js', import.meta.url), 'utf8');
+  const wmoFn = routeSrc.match(/function wmoIcon\([\s\S]*?\n}/);
+  assert(wmoFn, 'wmoIcon() nicht gefunden - die Quelle der Icon-Namen ist weg');
+  const icons = [...new Set([...wmoFn[0].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]))];
+  assert(icons.length >= 8, `Nur ${icons.length} Icon-Namen gelesen - die Signatur greift nicht mehr`);
+
+  const untoned = icons.filter((icon) => !__test.weatherToneKey(icon));
+  assert(untoned.length === 0, `Ohne Wetterton: ${untoned.join(', ')}`);
+
+  // Und der OWM-Legacy-Zweig, der dieselbe Funktion benutzt.
+  const owm = ['01d', '01n', '02d', '02n', '03d', '04d', '09d', '10d', '11d', '13d', '50d'];
+  const untonedOwm = owm.filter((code) => !__test.weatherToneKey(code));
+  assert(untonedOwm.length === 0, `OWM-Code ohne Wetterton: ${untonedOwm.join(', ')}`);
+
+  assert(__test.weatherMotionAttr('sun').includes('rays'), 'die Sonne muss ihre Strahlen drehen');
+  assert(__test.weatherMotionAttr('01d').includes('rays'), 'OWM-Tagsonne muss ihre Strahlen drehen');
+  assert(__test.weatherMotionAttr('01n') === '', 'die klare Nacht bewegt sich nicht');
+  assert(__test.weatherMotionAttr('moon') === '', 'der Mond zieht nicht');
+  assert(__test.weatherMotionAttr('cloud-rain').includes('fall'), 'Regen faellt');
+  assert(__test.weatherMotionAttr('cloud-lightning').includes('flash'), 'das Gewitter leuchtet');
+  assert(__test.weatherMotionAttr('cloud').includes('drift'), 'die Wolke zieht');
+});
+
+/**
+ * Der Wand-Modus rendert das Wetter aus denselben Bausteinen, aber in einer
+ * eigenen Komposition - und genau dort geht so etwas verloren. Aus zwei Metern
+ * ist der Ton die schnellere Auskunft als die Form, deshalb traegt hier JEDER
+ * Vorhersagetag seinen eigenen (anders als auf der Karte, wo der Balken das
+ * uebernimmt).
+ */
+test('der Wand-Modus faerbt jeden Wettertag, nicht nur den aktuellen', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  await withWallWindow(() => {
+    const weather = {
+      provider: 'open-meteo', city: 'Dortmund', units: 'metric',
+      current: { temp: 21, icon: 'cloud-lightning', desc: 'wmo.95', feels_like: 20, humidity: 70, wind_speed: 9 },
+      forecast: [
+        { date: '2026-08-17', icon: 'cloud-lightning', desc: 'wmo.95', temp_min: 16, temp_max: 21 },
+        { date: '2026-08-18', icon: 'sun', desc: 'wmo.0', temp_min: 14, temp_max: 26 },
+        { date: '2026-08-19', icon: 'cloud-snow', desc: 'wmo.71', temp_min: -2, temp_max: 1 },
+      ],
+    };
+    const html = __test.renderWallSurface({ urgentTasks: [], upcomingEvents: [], users: [] }, weather, {});
+    const section = html.slice(html.indexOf('wall__weather'));
+    const tones = [...section.matchAll(/data-weather-tone="([a-z]+)"/g)].map((m) => m[1]);
+    // Die Sektion selbst + drei Tage. Ohne die Reichweitenpruefung meldete ein
+    // leerer Treffer fehlerfrei „alles gut".
+    nodeAssert.equal(tones.length, 4, `vier Toene erwartet, gelesen: ${tones.join(', ')}`);
+    nodeAssert.deepEqual(tones, ['storm', 'storm', 'clear', 'snow'],
+      'die Sektion traegt die aktuelle Lage, jeder Tag seine eigene');
+    nodeAssert.match(section, /data-weather-motion="flash"/, 'die Wand kennt die Gangart der aktuellen Lage');
+  });
+});
+
+test('die Temperaturbaender liegen in jeder Einheit auf denselben Grenzen', async () => {
+  const { __test: { weatherTempBand } } = await import('../public/pages/dashboard.js');
+  // Dieselbe Wetterlage, drei Einheiten: -1 °C ist 30,2 °F ist 272,15 K, und
+  // alle drei muessen „eisig" heissen. Genau diese Kette bricht, wenn jemand
+  // eine Celsius-Schwelle im Code umrechnet statt sie auszuschreiben.
+  for (const [units, freezing, mild, hot] of [
+    ['metric', -1, 15, 30],
+    ['imperial', 30, 59, 86],
+    ['standard', 272, 288, 303],
+  ]) {
+    assert(weatherTempBand(freezing, units) === 'icy', `${units}: ${freezing} muss eisig sein`);
+    assert(weatherTempBand(mild, units) === 'mild', `${units}: ${mild} muss mild sein`);
+    assert(weatherTempBand(hot, units) === 'hot', `${units}: ${hot} muss heiss sein`);
+  }
+  assert(weatherTempBand(null, 'metric') === null, 'ohne Zahl kein Band');
+  assert(weatherTempBand('x', 'metric') === null, 'ohne Zahl kein Band');
+  // Eine unbekannte Einheit faellt auf metrisch zurueck statt auf undefined.
+  assert(weatherTempBand(25, 'kelvinish') === 'warm', 'unbekannte Einheit faellt auf metrisch');
+});
+
+test('die Spanne der Vorhersage bleibt ein Balken, auch wenn die Woche flach ist', async () => {
+  const { __test: { weatherSpanModel } } = await import('../public/pages/dashboard.js');
+  const flat = weatherSpanModel([
+    { temp_min: 10, temp_max: 10 }, { temp_min: 10, temp_max: 10 },
+  ]);
+  const one = flat({ temp_min: 10, temp_max: 10 });
+  assert(one.to - one.from >= 0.13, 'eine flache Woche darf keinen unsichtbaren Balken ergeben');
+  assert(one.from >= 0 && one.to <= 1, 'der Balken bleibt in seiner Spur');
+
+  const week = weatherSpanModel([
+    { temp_min: 0, temp_max: 10 }, { temp_min: 10, temp_max: 20 }, { temp_min: 5, temp_max: 15 },
+  ]);
+  const cold = week({ temp_min: 0, temp_max: 10 });
+  const warm = week({ temp_min: 10, temp_max: 20 });
+  assert(cold.from === 0 && warm.to === 1, 'die Woche spannt von ihrem Minimum bis zu ihrem Maximum');
+  assert(warm.from > cold.from, 'der waermere Tag liegt weiter rechts');
+
+  assert(weatherSpanModel([]) === null, 'ohne Vorhersage kein Modell');
+  assert(weatherSpanModel([{ temp_min: 'x', temp_max: 'y' }]) === null, 'ohne Zahlen kein Modell');
+});
+
+// --------------------------------------------------------
+// Kalendertag der Route: lokal, nie UTC
+// --------------------------------------------------------
+
+/* Die Dashboard-Route darf einen KALENDERTAG nicht aus `toISOString()` ziehen.
+ *
+ * CLAUDE.md fuehrt diese Falle: `.toISOString().slice(0,10)` liefert den
+ * UTC-Tag, verglichen wird aber gegen Werte, die der Nutzer als lokalen
+ * Kalendertag eingegeben hat (Mahlzeitendatum, due_date, Budget-Monat).
+ * Oestlich von UTC lieferte das Dashboard dadurch in den fruehen Morgenstunden
+ * die Mahlzeiten des VORTAGS, westlich davon am spaeten Abend die von morgen.
+ *
+ * Warum dieser Guard und nicht der Verhaltenstest daneben: der faellt nur auf,
+ * wenn die Testmaschine gerade in einer Zone UND zu einer Stunde laeuft, in der
+ * die beiden Tage auseinanderfallen. Die CI laeuft in UTC, wo sie IMMER gleich
+ * sind - der Fehler war dort per Konstruktion unsichtbar und stand ueber
+ * mehrere Releases gruen im Build.
+ *
+ * `.toISOString()` ohne den Datums-Schnitt bleibt erlaubt: ein echter Instant
+ * (z.B. eine 48h-Grenze) ist in UTC korrekt aufgehoben. */
+test('die Route zieht ihren Kalendertag lokal, nicht aus toISOString()', () => {
+  const src = readFileSync(new URL('../server/routes/dashboard.js', import.meta.url), 'utf8');
+  // Kommentare raus, sonst findet der Guard die Beschreibung der Falle im
+  // Quelltext, die dort absichtlich steht.
+  const code = withoutBlockComments(src)
+    .split('\n')
+    .filter((line) => !/^\s*(\/\/|\*)/.test(line))
+    .join('\n');
+
+  const treffer = [...code.matchAll(/toISOString\(\)\s*\.slice\(\s*0\s*,\s*10\s*\)/g)];
+  assert(
+    treffer.length === 0,
+    `server/routes/dashboard.js zieht an ${treffer.length} Stelle(n) einen Kalendertag aus `
+    + 'toISOString() - das ist der UTC-Tag. Fuer alles, was der Nutzer als Kalendertag '
+    + 'eingegeben hat, gilt todayLocalKey.',
+  );
 });
 
 // --------------------------------------------------------

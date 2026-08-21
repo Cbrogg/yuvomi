@@ -24,24 +24,24 @@ export async function render(container) {
   const token = new URLSearchParams(window.location.search).get('token') || '';
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <main class="login-page" id="main-content">
-      <div class="login-card card card--padded">
-        <h1 class="login-card__title">${esc(t('join.title'))}</h1>
-        <p class="login-card__intro" id="join-intro">${esc(t('join.intro'))}</p>
-        <div class="login-error" id="join-error" role="alert" tabindex="-1" hidden></div>
-        <div class="login-success" id="join-success" role="status" aria-live="polite" hidden></div>
-        <form class="login-form" id="join-form" novalidate>
+    <main class="auth-page" id="main-content">
+      <div class="auth-card card card--padded">
+        <h1 class="auth-card__title">${esc(t('join.title'))}</h1>
+        <p class="auth-card__intro" id="join-intro">${esc(t('join.intro'))}</p>
+        <div class="form-error" id="join-error" role="alert" tabindex="-1" hidden></div>
+        <div class="form-success" id="join-success" role="status" aria-live="polite" hidden></div>
+        <form class="auth-form" id="join-form" novalidate>
           <div class="form-group">
             <label class="label" for="join-username">${esc(t('join.usernameLabel'))}</label>
             <input class="input" type="text" id="join-username" name="username"
               autocomplete="username" autocapitalize="none" spellcheck="false" required />
-            <p class="login-form__hint" id="join-username-hint" hidden>${esc(t('join.fieldFixed'))}</p>
+            <p class="auth-form__hint" id="join-username-hint" hidden>${esc(t('join.fieldFixed'))}</p>
           </div>
           <div class="form-group">
             <label class="label" for="join-display-name">${esc(t('join.displayNameLabel'))}</label>
             <input class="input" type="text" id="join-display-name" name="displayName"
               autocomplete="name" maxlength="128" />
-            <p class="login-form__hint" id="join-display-name-hint" hidden>${esc(t('join.fieldFixed'))}</p>
+            <p class="auth-form__hint" id="join-display-name-hint" hidden>${esc(t('join.fieldFixed'))}</p>
           </div>
           <div class="form-group">
             <label class="label" for="join-password">${esc(t('join.passwordLabel'))}</label>
@@ -53,11 +53,11 @@ export async function render(container) {
             <input class="input" type="password" id="join-confirm" name="confirm"
               autocomplete="new-password" required />
           </div>
-          <button type="submit" class="btn btn--primary login-form__submit" id="join-btn">
+          <button type="submit" class="btn btn--primary auth-form__submit" id="join-btn">
             ${esc(t('join.submit'))}
           </button>
         </form>
-        <p class="login-form__forgot"><a href="/login" data-link>${esc(t('forgotPassword.backToLogin'))}</a></p>
+        <p class="auth-form__forgot"><a href="/login" data-link>${esc(t('forgotPassword.backToLogin'))}</a></p>
       </div>
     </main>
   `);

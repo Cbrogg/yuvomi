@@ -304,6 +304,55 @@ test('PATCH /external-calendars — setzt Standard-Zuweisung (#459)', async () =
   assert.equal(cleared.body.data.default_assignee_user_id, null);
 });
 
+// ────────────────────────────────────────────────────────────────────────────
+// #730: Die Zuweisung war genau so lange nicht setzbar, wie sie etwas bewirkt
+// hätte. Der Picker erschien erst, wenn die external_calendars-Zeile existierte
+// - und die entstand beim ersten Sync, also nachdem der erste Schwung Termine
+// bereits ohne Zuweisung hereingekommen war.
+// ────────────────────────────────────────────────────────────────────────────
+
+test('PATCH /external-calendars — legt die Zeile für einen bekannten, noch nicht synchronisierten Kalender an (#730)', async () => {
+  // So weit ist der Nutzer, wenn er den Haken setzt: Der Kalender steht in der
+  // Auswahlliste seines Kontos, synchronisiert wurde er noch nicht.
+  db.prepare(`
+    INSERT INTO caldav_accounts (name, caldav_url, username, password)
+    VALUES ('Mailbox', 'https://dav.example/', 'u', 'p')
+  `).run();
+  db.prepare(`
+    INSERT INTO caldav_calendar_selection (account_id, calendar_url, calendar_name, calendar_color, enabled)
+    VALUES ((SELECT id FROM caldav_accounts WHERE name = 'Mailbox'), 'https://dav.example/privat/', 'Privat', '#4A90E2', 1)
+  `).run();
+
+  try {
+    const res = await call('PATCH', '/external-calendars', {
+      body: { source: 'caldav', external_id: 'https://dav.example/privat/', default_assignee_user_id: 2 },
+    });
+    assert.equal(res.status, 200, 'vorher antwortete der Server hier mit 404');
+
+    const row = db.prepare(
+      "SELECT name, default_assignee_user_id AS a FROM external_calendars WHERE source='caldav' AND external_id='https://dav.example/privat/'"
+    ).get();
+    assert.equal(row.a, 2);
+    assert.equal(row.name, 'Privat', 'der Name kommt aus der Auswahlliste, nicht aus dem Request');
+  } finally {
+    // Die Datenbank wird über die ganze Datei geteilt, und ein Nachbartest
+    // erwartet die Kontenliste leer. Aufräumen statt Reihenfolge annehmen.
+    db.prepare("DELETE FROM external_calendars WHERE external_id = 'https://dav.example/privat/'").run();
+    db.prepare("DELETE FROM caldav_calendar_selection WHERE calendar_url = 'https://dav.example/privat/'").run();
+    db.prepare("DELETE FROM caldav_accounts WHERE name = 'Mailbox'").run();
+  }
+});
+
+test('PATCH /external-calendars — ein unbekannter Kalender bleibt 404 (#730)', async () => {
+  // Die Schranke zum Test darüber: Die Zeile entsteht nur für einen Kalender,
+  // den ein verbundenes Konto tatsächlich anbietet. Sonst legte jeder Aufruf
+  // beliebige Zeilen an.
+  const res = await call('PATCH', '/external-calendars', {
+    body: { source: 'caldav', external_id: 'https://dav.example/fremd/', default_assignee_user_id: 2 },
+  });
+  assert.equal(res.status, 404);
+});
+
 test('PUT /google/readonly — 400 non-boolean + Happy', async () => {
   assert.equal((await call('PUT', '/google/readonly', { body: { readonly: 'yes' } })).status, 400);
   const ok = await call('PUT', '/google/readonly', { body: { readonly: true } });
@@ -359,6 +408,21 @@ test('POST /subscriptions — Validierungs-400s (name/url/protokoll/color)', asy
   const badProto = await call('POST', '/subscriptions', { body: { name: 'F', url: 'http://x/f.ics', color: '#FF0000' } });
   assert.equal(badProto.status, 400, 'http:// ohne Private-Network-Opt-in abgelehnt');
   assert.equal((await call('POST', '/subscriptions', { body: { name: 'F', url: 'https://x/f.ics', color: 'red' } })).status, 400);
+});
+
+test('POST /subscriptions — prüft die Standard-Zuweisung schon beim Anlegen (#730)', async () => {
+  // Das Anlegen synchronisiert unmittelbar; wer die Zuweisung erst danach im
+  // Bearbeiten-Dialog setzen kann, verpasst die erste - oft größte - Ladung.
+  // Netzfrei prüfbar ist die Annahme des Feldes: Beide Fälle scheitern an der
+  // Validierung, bevor irgendein Abruf beginnt.
+  const badType = await call('POST', '/subscriptions', {
+    body: { name: 'F', url: 'https://x/f.ics', color: '#FF0000', default_assignee_user_id: 'abc' },
+  });
+  assert.equal(badType.status, 400);
+  const unknownUser = await call('POST', '/subscriptions', {
+    body: { name: 'F', url: 'https://x/f.ics', color: '#FF0000', default_assignee_user_id: 999999 },
+  });
+  assert.equal(unknownUser.status, 400, 'eine unbekannte Nutzer-ID darf nicht bis zum Anlegen durchrutschen');
 });
 
 test('PATCH /subscriptions/:id — 400/404/403/Happy', async () => {

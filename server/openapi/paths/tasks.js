@@ -49,6 +49,13 @@ export function tasksPaths() {
       put: op({ summary: 'Rename task category', tag: 'Tasks', params: [stringPathParam('key', 'Category key')], stateChanging: true, requestBody: jsonBody(null) }),
       delete: op({ summary: 'Delete task category', tag: 'Tasks', params: [stringPathParam('key', 'Category key')], stateChanging: true }),
     },
+    '/api/v1/tasks/sync-targets': {
+      get: op({
+        summary: 'List selectable CalDAV reminder lists for the task editor',
+        tag: 'Tasks',
+        description: 'Available to every authenticated user (#695). Returns `{ data: { caldav: [{ accountId, accountName, listUrl, listName }] } }`, restricted to reminder lists the household has enabled **for tasks** - a list pointing at shopping is omitted, because a task sent there would come back as a shopping item. Carries no credentials or server URLs; account management stays admin-only. The identifier for `sync_target` on POST/PUT /tasks is `caldav:<accountId>|<listUrl>`.',
+      }),
+    },
     '/api/v1/tasks/tags': {
       get: op({ summary: 'List task tags', tag: 'Tasks', description: 'Every visible tag in use with its task count. Tags are free-form and have no registry: the list follows from the tasks themselves. Mirrored from VTODO CATEGORIES on CalDAV task lists, and distinct from the single category a task carries. Tags on tasks the caller cannot see are omitted, counts included.' }),
     },
@@ -73,6 +80,14 @@ export function tasksPaths() {
     '/api/v1/tasks/{id}/documents': {
       get: op({ summary: 'List documents linked to a task', tag: 'Tasks', params: [idParam()], description: 'Returns family documents linked to the task that are visible to the current user.' }),
       put: op({ summary: 'Set documents linked to a task', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'Replace-set of document_ids; only documents visible to the user are linked.' }),
+    },
+    '/api/v1/tasks/{id}/comments': {
+      get: op({ summary: 'List comments on a task', tag: 'Tasks', params: [idParam()], description: 'Oldest first. Anyone who may see the task may read its comments; a task the caller cannot see answers 404.' }),
+      post: op({ summary: 'Comment on a task', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'Body: { comment }. `@Name` mentions are read from the text and push-notify the mentioned members that may see the task.' }),
+    },
+    '/api/v1/tasks/{id}/comments/{commentId}': {
+      patch: op({ summary: 'Edit a comment', tag: 'Tasks', params: [idParam(), idParam('commentId', 'Comment ID')], stateChanging: true, requestBody: jsonBody(null), description: 'Body: { comment }. The author only; sets updated_at.' }),
+      delete: op({ summary: 'Delete a comment', tag: 'Tasks', params: [idParam(), idParam('commentId', 'Comment ID')], stateChanging: true, description: 'The author, or an admin moderating.' }),
     },
   };
 }

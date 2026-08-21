@@ -7,7 +7,7 @@ import { describe, it, before } from 'node:test';
 import assert from 'node:assert/strict';
 import { DatabaseSync } from 'node:sqlite';
 import { readFileSync } from 'node:fs';
-import { toICSDatetime, sync } from '../server/services/caldav-sync.js';
+import { toICSDatetime, sync, getCalendars, updateAccount, updateCalendarSelection, deleteAccount, countAccountEvents, addAccount } from '../server/services/caldav-sync.js';
 import { pruneDeletedEvents } from '../server/services/calendar-prune.js';
 import { _setTestDatabase, _resetTestDatabase } from '../server/db.js';
 
@@ -1083,6 +1083,375 @@ describe('CalDAV: eine Aufgabenliste bleibt kein Terminziel (#617)', () => {
 
       await sync({ createClient: silent });
       assert.deepStrictEqual(enabledUrls(d), [TODO_URL, EVENT_URL].sort());
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+});
+
+// --------------------------------------------------------
+// #732: „Kalender aktualisieren" holt die Liste, es setzt die Auswahl nicht
+// zurück. Vorher lief hier ein DELETE mit anschließendem INSERT auf enabled=1,
+// und jeder bewusst abgewählte Kalender kam ungefragt in den Sync zurück -
+// mitsamt seinen Terminen beim nächsten Lauf.
+// --------------------------------------------------------
+describe('CalDAV: die Kalenderauswahl überlebt das Aktualisieren (#732)', () => {
+  const KEEP_URL = 'https://dav.example/privat/';
+  const DROP_URL = 'https://dav.example/arbeit/';
+  const NEW_URL  = 'https://dav.example/neu/';
+
+  function buildDb() {
+    const d = new DatabaseSync(':memory:');
+    d.exec(`
+      CREATE TABLE caldav_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT, caldav_url TEXT, username TEXT, password TEXT, last_sync TEXT
+      );
+      CREATE TABLE caldav_calendar_selection (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER, calendar_url TEXT, calendar_name TEXT,
+        calendar_color TEXT, enabled INTEGER NOT NULL DEFAULT 1
+      );
+      CREATE TABLE external_calendars (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL, external_id TEXT NOT NULL, name TEXT, color TEXT,
+        default_assignee_user_id INTEGER,
+        UNIQUE(source, external_id)
+      );
+
+      INSERT INTO caldav_accounts (name, caldav_url, username, password)
+        VALUES ('Mailbox', 'https://dav.example/', 'u', 'p');
+      INSERT INTO caldav_calendar_selection
+        (account_id, calendar_url, calendar_name, calendar_color, enabled)
+        VALUES (1, '${KEEP_URL}', 'Privat', '#4A90E2', 1),
+               (1, '${DROP_URL}', 'Arbeit', '#4A90E2', 0);
+    `);
+    return d;
+  }
+
+  // Der Server meldet einen Kalender mehr als beim letzten Mal - so unterscheidet
+  // der Test den Umgang mit NEUEN von dem mit BEKANNTEN Kalendern. Seit dem
+  // Opt-in (#732) kommen beide Gruppen abgewaehlt heraus, wenn niemand sie
+  // angehakt hat; der Test haelt fest, dass ein bekannter Stand ueberlebt.
+  const client = async () => ({
+    fetchCalendars: async () => [
+      { url: KEEP_URL, displayName: 'Privat', components: ['VEVENT'] },
+      { url: DROP_URL, displayName: 'Arbeit', components: ['VEVENT'] },
+      { url: NEW_URL,  displayName: 'Neu',    components: ['VEVENT'] },
+    ],
+  });
+
+  const selection = (d) => Object.fromEntries(
+    d.prepare('SELECT calendar_url, enabled FROM caldav_calendar_selection ORDER BY calendar_url')
+      .all().map((r) => [r.calendar_url, r.enabled])
+  );
+
+  it('lässt einen abgewählten Kalender abgewählt und aktiviert nur neue', async () => {
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      const result = await getCalendars(1, { refresh: true, createClient: client });
+
+      assert.deepStrictEqual(selection(d), {
+        [KEEP_URL]: 1,
+        [DROP_URL]: 0,   // der Kern des Fehlers: stand nach dem Refresh auf 1
+        [NEW_URL]:  0,   // unbekannt = abgewaehlt, dieselbe Opt-in-Regel wie beim Anlegen (#732)
+      });
+
+      // Auch die Rückgabe an die Oberfläche muss den echten Stand tragen - sonst
+      // steht dort ein Haken, den die Datenbank nicht kennt.
+      assert.deepStrictEqual(
+        Object.fromEntries(result.map((c) => [c.calendarUrl, c.enabled])),
+        { [KEEP_URL]: true, [DROP_URL]: false, [NEW_URL]: false }
+      );
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  it('hält die Abwahl auch beim Wechsel der Zugangsdaten (zweiter Fundort)', async () => {
+    // Derselbe Rücksetzer stand ein zweites Mal in updateAccount: neue
+    // Zugangsdaten heißen neue Kalenderliste, nicht neue Auswahl.
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      await updateAccount(1, { password: 'neues-passwort', createClient: client });
+      assert.equal(selection(d)[DROP_URL], 0, 'ein Passwortwechsel darf keinen Kalender einschalten');
+      assert.equal(selection(d)[NEW_URL], 0, 'auch ein neu gemeldeter Kalender kommt abgewaehlt');
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+});
+
+// --------------------------------------------------------
+// #732: Abwählen und Kontolöschung räumen auf Wunsch auf. Der Melder nutzt
+// CalDAV als Quelle der Wahrheit: ein abgewählter Kalender soll auch seine
+// Termine mitnehmen können, statt sie von Hand einzeln löschen zu müssen.
+// --------------------------------------------------------
+describe('CalDAV: das Aufräumen beim Abwählen ist eine Wahl (#732)', () => {
+  const CAL_A = 'https://dav.example/privat/';
+  const CAL_B = 'https://dav.example/arbeit/';
+
+  function buildDb() {
+    const d = new DatabaseSync(':memory:');
+    d.exec(`
+      CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, display_name TEXT);
+      INSERT INTO users (display_name) VALUES ('Owner');
+
+      CREATE TABLE caldav_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT, caldav_url TEXT, username TEXT, password TEXT, last_sync TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE caldav_calendar_selection (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER, calendar_url TEXT, calendar_name TEXT,
+        calendar_color TEXT, enabled INTEGER NOT NULL DEFAULT 1
+      );
+      CREATE TABLE external_calendars (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL, external_id TEXT NOT NULL, name TEXT, color TEXT,
+        default_assignee_user_id INTEGER,
+        UNIQUE(source, external_id)
+      );
+      CREATE TABLE calendar_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        title TEXT NOT NULL, start_datetime TEXT,
+        external_calendar_id TEXT, external_source TEXT NOT NULL DEFAULT 'local',
+        calendar_ref_id INTEGER, created_by INTEGER,
+        user_modified INTEGER NOT NULL DEFAULT 0,
+        target_caldav_calendar_url TEXT
+      );
+      CREATE TABLE caldav_todo_pending_deletions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, account_id INTEGER
+      );
+      CREATE TABLE calendar_pending_deletions (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL, calendar_external_id TEXT NOT NULL,
+        event_external_id TEXT NOT NULL,
+        UNIQUE(source, calendar_external_id, event_external_id)
+      );
+      -- detachAccountRows() entkoppelt die gespiegelten Aufgaben/Einkaufsposten
+      -- und braucht dafuer deren volle Outbound-Spalten.
+      CREATE TABLE tasks (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        external_source TEXT NOT NULL DEFAULT 'local', external_uid TEXT,
+        external_account_id INTEGER, external_object_url TEXT,
+        outbound_dirty INTEGER NOT NULL DEFAULT 0, outbound_attempts INTEGER NOT NULL DEFAULT 0
+      );
+      CREATE TABLE shopping_items (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        external_source TEXT NOT NULL DEFAULT 'local', external_uid TEXT,
+        external_account_id INTEGER, external_object_url TEXT,
+        outbound_dirty INTEGER NOT NULL DEFAULT 0, outbound_attempts INTEGER NOT NULL DEFAULT 0
+      );
+
+      INSERT INTO caldav_accounts (name, caldav_url, username, password)
+        VALUES ('Mailbox', 'https://dav.example/', 'u', 'p');
+      INSERT INTO caldav_calendar_selection (account_id, calendar_url, calendar_name, calendar_color, enabled)
+        VALUES (1, '${CAL_A}', 'Privat', '#4A90E2', 1),
+               (1, '${CAL_B}', 'Arbeit', '#4A90E2', 1);
+      INSERT INTO external_calendars (source, external_id, name)
+        VALUES ('caldav', '${CAL_A}', 'Privat'), ('caldav', '${CAL_B}', 'Arbeit');
+
+      -- Zwei gespiegelte Termine im abzuwaehlenden Kalender, einer davon lokal
+      -- bearbeitet; dazu ein Termin im NACHBARkalender und ein rein lokaler,
+      -- der diesen Kalender nur als Hochladeziel traegt.
+      INSERT INTO calendar_events (title, start_datetime, external_calendar_id, external_source, calendar_ref_id, created_by, user_modified)
+        VALUES ('Gespiegelt',  '2026-08-14T10:00', 'uid-1', 'caldav', 1, 1, 0),
+               ('Bearbeitet',  '2026-08-15T10:00', 'uid-2', 'caldav', 1, 1, 1),
+               ('Nachbar',     '2026-08-16T10:00', 'uid-3', 'caldav', 2, 1, 0);
+      INSERT INTO calendar_events (title, start_datetime, external_source, created_by, target_caldav_calendar_url)
+        VALUES ('Eigener Termin', '2026-08-17T10:00', 'local', 1, '${CAL_A}');
+      -- Der Fall, der den source-Filter ueberhaupt erst pruefbar macht: ein
+      -- NICHT gespiegelter Termin, der trotzdem an diesem Kalender haengt. Ohne
+      -- ihn liefe die Sonde ueber calendar_ref_id allein und waere blind dafuer,
+      -- ob der Filter etwas tut (gegengeprueft: er blieb gruen, als ich ihn
+      -- entfernte).
+      INSERT INTO calendar_events (title, start_datetime, external_source, calendar_ref_id, created_by)
+        VALUES ('Lokal am Kalender', '2026-08-18T10:00', 'local', 1, 1);
+    `);
+    // `node:sqlite` kennt kein `.transaction()`; die App laeuft auf
+    // better-sqlite3, das eine mitbringt. Der Shim bildet nur deren Semantik ab
+    // (Rueckgabe einer aufrufbaren Funktion, Rollback bei Fehler) - ohne ihn
+    // testet diese Suite den Transaktionspfad von deleteAccount gar nicht.
+    d.transaction = (fn) => (...args) => {
+      d.exec('BEGIN');
+      try {
+        const out = fn(...args);
+        d.exec('COMMIT');
+        return out;
+      } catch (err) {
+        d.exec('ROLLBACK');
+        throw err;
+      }
+    };
+    return d;
+  }
+
+  const titles = (d) => d.prepare('SELECT title FROM calendar_events ORDER BY title').all().map((r) => r.title);
+
+  it('lässt die Termine stehen, solange niemand das Aufräumen wählt', async () => {
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      updateCalendarSelection(1, CAL_A, false);
+      assert.deepEqual(titles(d), ['Bearbeitet', 'Eigener Termin', 'Gespiegelt', 'Lokal am Kalender', 'Nachbar'],
+        'ohne deleteEvents bleibt alles liegen - das ist die Vorgabe');
+      assert.equal(d.prepare('SELECT enabled FROM caldav_calendar_selection WHERE calendar_url = ?').get(CAL_A).enabled, 0);
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  it('räumt auf Wunsch genau diesen Kalender auf, inklusive bearbeiteter Termine', async () => {
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      const result = updateCalendarSelection(1, CAL_A, false, { deleteEvents: true });
+      assert.equal(result.removed, 2, 'beide gespiegelten Termine dieses Kalenders');
+      assert.deepEqual(titles(d), ['Eigener Termin', 'Lokal am Kalender', 'Nachbar'],
+        'Nachbarkalender und beide lokalen Termine bleiben unberührt - auch der, '
+        + 'der an genau diesem Kalender haengt');
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  it('meldet den entfernten Kalender NICHT nach aussen', async () => {
+    // Der teuerste denkbare Fehler an dieser Stelle: Wer seine lokale Kopie
+    // wegräumt, würde damit den Kalender bei allen anderen Clients der Familie
+    // leeren. Lokales Aufräumen darf keinen Tombstone hinterlassen.
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      updateCalendarSelection(1, CAL_A, false, { deleteEvents: true });
+      assert.equal(d.prepare('SELECT COUNT(*) AS n FROM calendar_pending_deletions').get().n, 0,
+        'kein Tombstone - der Fremdkalender bleibt unberührt');
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  it('räumt beim Löschen des Kontos alle seine Kalender auf, wenn gewählt', async () => {
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      const result = deleteAccount(1, { deleteEvents: true });
+      assert.equal(result.removed, 3, 'beide Kalender des Kontos');
+      assert.deepEqual(titles(d), ['Eigener Termin', 'Lokal am Kalender']);
+      assert.equal(d.prepare('SELECT COUNT(*) AS n FROM calendar_pending_deletions').get().n, 0);
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  it('lässt beim Löschen des Kontos ohne die Wahl alles stehen (Bestandsverhalten)', async () => {
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      const result = deleteAccount(1);
+      assert.equal(result.removed, 0);
+      assert.equal(titles(d).length, 5, 'die Termine bleiben sichtbar, wie bisher');
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  it('zählt für die Rückfrage, was tatsächlich verschwinden würde', async () => {
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      // Die Zahl im Dialog muss der späteren Löschung entsprechen, sonst nennt
+      // die Frage eine andere Menge als die Antwort entfernt.
+      assert.equal(countAccountEvents(1), 3, 'gespiegelte Termine beider Kalender, ohne den lokalen');
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+});
+
+// --------------------------------------------------------
+// #732: Ein neues Konto bringt seine Kalender ABGEWÄHLT mit. Vorher lief nach
+// dem Verbinden jeder gefundene Kalender sofort in den Haushalt - inklusive
+// Arbeits-, Geburtstags- und Feiertagskalendern, die niemand bestellt hat.
+// --------------------------------------------------------
+describe('CalDAV: neue Kalender sind opt-in (#732)', () => {
+  function buildDb() {
+    const d = new DatabaseSync(':memory:');
+    d.exec(`
+      CREATE TABLE caldav_accounts (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT, caldav_url TEXT, username TEXT, password TEXT, last_sync TEXT,
+        created_at TEXT NOT NULL DEFAULT (datetime('now'))
+      );
+      CREATE TABLE caldav_calendar_selection (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        account_id INTEGER, calendar_url TEXT, calendar_name TEXT,
+        calendar_color TEXT, enabled INTEGER NOT NULL DEFAULT 1
+      );
+      CREATE TABLE external_calendars (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        source TEXT NOT NULL, external_id TEXT NOT NULL, name TEXT, color TEXT,
+        default_assignee_user_id INTEGER, UNIQUE(source, external_id)
+      );
+      CREATE TABLE calendar_events (
+        id INTEGER PRIMARY KEY AUTOINCREMENT, title TEXT NOT NULL,
+        calendar_ref_id INTEGER, external_source TEXT NOT NULL DEFAULT 'local'
+      );
+    `);
+    return d;
+  }
+
+  const client = async () => ({
+    fetchCalendars: async () => [
+      { url: 'https://dav.example/privat/',    displayName: 'Privat',     components: ['VEVENT'] },
+      { url: 'https://dav.example/arbeit/',    displayName: 'Arbeit',     components: ['VEVENT'] },
+      { url: 'https://dav.example/feiertage/', displayName: 'Feiertage',  components: ['VEVENT'] },
+    ],
+  });
+
+  it('legt ein neues Konto mit lauter abgewählten Kalendern an', async () => {
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      const { calendars } = await addAccount('Mailbox', 'https://dav.example/', 'u', 'p', { createClient: client });
+      assert.equal(calendars.length, 3);
+      assert.deepEqual(calendars.map((c) => c.enabled), [false, false, false],
+        'nichts läuft, bis jemand es anhakt');
+      assert.equal(
+        d.prepare('SELECT COUNT(*) AS n FROM caldav_calendar_selection WHERE enabled = 1').get().n, 0,
+        'auch in der Datenbank, nicht nur in der Rückgabe'
+      );
+    } finally {
+      _resetTestDatabase();
+      d.close();
+    }
+  });
+
+  it('lässt einen angehakten Kalender beim Auffrischen angehakt', async () => {
+    // Die Gegenrichtung: Opt-in gilt für NEUE Kalender, es setzt keine
+    // getroffene Wahl zurück (das war der Fehler aus derselben Ausgabe).
+    const d = buildDb();
+    _setTestDatabase(d);
+    try {
+      await addAccount('Mailbox', 'https://dav.example/', 'u', 'p', { createClient: client });
+      d.prepare("UPDATE caldav_calendar_selection SET enabled = 1 WHERE calendar_url = ?")
+        .run('https://dav.example/privat/');
+
+      const refreshed = await getCalendars(1, { refresh: true, createClient: client });
+      const state = Object.fromEntries(refreshed.map((c) => [c.calendarName, c.enabled]));
+      assert.deepEqual(state, { Privat: true, Arbeit: false, Feiertage: false });
     } finally {
       _resetTestDatabase();
       d.close();

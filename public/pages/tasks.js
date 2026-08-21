@@ -6,19 +6,24 @@
 
 import { api } from '/api.js';
 import { renderRRuleFields, bindRRuleEvents, getRRuleValues, recurrenceRow } from '/rrule-ui.js';
-import { openModal as openSharedModal, closeModal, wireBlurValidation, validateAll, btnSuccess, btnError, btnLoading, promptModal, advancedSection } from '/components/modal.js';
+import { openModal as openSharedModal, closeModal, wireBlurValidation, validateAll, btnSuccess, btnError, btnLoading, promptModal, confirmModal, advancedSection } from '/components/modal.js';
 import { openDetailView, closeDetailView, visibilityRow, assignedRow } from '/components/detail-view.js';
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
-import { t, getLocale, formatDate, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
-import { esc } from '/utils/html.js';
+import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
+import { t, getLocale, formatDate, formatDayMonth, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
+import { esc, renderMarkdownLight } from '/utils/html.js';
 import { refresh as refreshReminders } from '/reminders.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
 import { resolveReminderPreset, parseRemindAtAsUtc } from '/utils/reminder-offset.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { isPreviewable } from '/utils/document-preview.js';
+import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
+import { splitMentions, applyMention } from '/utils/mentions.js';
 import '/components/category-manager.js';
 import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
+import { isSoloHousehold } from '/utils/household.js';
+import { isNavModuleReadOnly } from '/permissions.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -70,12 +75,18 @@ const PRIORITY_LABELS = () => Object.fromEntries(PRIORITIES().map((p) => [p.valu
 const STATUS_LABELS   = () => Object.fromEntries(FILTER_STATUSES().map((s) => [s.value, s.label]));
 
 // --------------------------------------------------------
-// Verknüpfte Dokumente (#503)
-// Working-Set des aktuell offenen Modals: index = id → Dokument-Metadaten,
-// selected = geordnete Liste der verknüpften Dokument-IDs. Wird beim Öffnen
-// des Modals in wireDocumentSection() neu aufgebaut und beim Speichern
-// (handleFormSubmit) per PUT /tasks/:id/documents als Replace-Set übernommen.
-let modalDocuments = { index: new Map(), selected: [] };
+// Verknüpfte Dokumente (#503, #733)
+//
+// Das Feld ist seit #733 die geteilte Komponente aus components/document-attach.js
+// - dieselbe, die Budget, Gemeinsame Ausgaben und Inventar benutzen. Vorher
+// führten die Aufgaben als einziges Modul eine eigene Auswahlliste, und die
+// konnte nur verknüpfen, was schon abgelegt war: eine Datei AN der Aufgabe
+// hochzuladen ging nirgends, obwohl der Baustein dafür seit #583 im Haus liegt.
+//
+// `taskDocuments` ist der Controller des offenen Formulars. commit() lädt
+// wartende Dateien hoch und liefert die vollständige ID-Liste, die
+// handleFormSubmit als Replace-Set an PUT /tasks/:id/documents gibt.
+let taskDocuments = null;
 
 function docMime(doc) {
   return String(doc.mime_type || '').split(';')[0].trim().toLowerCase();
@@ -128,7 +139,22 @@ function formatDueDate(dateStr, timeStr, isDone = false) {
   const calDayDiff = Math.round((dueDay - today) / (1000 * 60 * 60 * 24));
 
   const timeLabel = timeStr ? ` – ${formatTime(dueDate)}` : '';
-  const fullLabel = timeStr ? `${formatDate(dueDate)}, ${formatTime(dueDate)}` : formatDate(dueDate);
+
+  /* DAS JAHR STEHT NUR DA, WO ES ETWAS UNTERSCHEIDET.
+   *
+   * Gemessen bei 390px: die Metazeile hat 228px, und „Überfällig – 11.08.2026"
+   * allein belegte 154px davon - mit dem Prioritäts-Chip davor lief die Zeile
+   * über und schnitt sich selbst an („11.08.202|6"). Das Jahr war dabei die
+   * einzige Angabe, die nichts beitrug: eine Aufgabe, die dieses Jahr fällig
+   * ist, sagt mit „11.08." dasselbe in 35px weniger.
+   *
+   * Über `formatDayMonth` und nicht per slice: die Reihenfolge und das
+   * Trennzeichen hängen an der Datumsformat-Präferenz (dmy, mdy, ymd), und ein
+   * abgeschnittener String hätte sie in drei von sieben Formaten verdreht. */
+  const dateLabel = dueDay.getFullYear() === today.getFullYear()
+    ? formatDayMonth(dueDate)
+    : formatDate(dueDate);
+  const fullLabel = timeStr ? `${dateLabel}, ${formatTime(dueDate)}` : dateLabel;
 
   // Erledigte/archivierte Aufgaben können nicht überfällig sein - neutrales Datum.
   if (isDone) {
@@ -188,9 +214,12 @@ function groupBy(tasks, mode) {
 // Render-Bausteine
 // --------------------------------------------------------
 
+// Die Stufe steht am PUNKT, nicht am Etikett: seit die Fuellung entfallen ist
+// (Skalen-Regel, DESIGN.md) traegt `.priority-badge` keine Farbe mehr, und eine
+// Modifier-Klasse ohne Regel ist tote Auszeichnung.
 function renderPriorityBadge(priority) {
   if (priority === 'none') return '';
-  return `<span class="priority-badge priority-badge--${priority}">
+  return `<span class="priority-badge">
     <span class="priority-dot priority-dot--${priority}"></span>
     ${PRIORITY_LABELS()[priority] ?? priority}
   </span>`;
@@ -219,11 +248,11 @@ function renderSwipeRow(task, innerHtml) {
   const isDone = task.status === 'done';
   return `
     <div class="swipe-row" data-swipe-id="${task.id}" data-swipe-status="${task.status}">
-      <div class="swipe-reveal swipe-reveal--done" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--done swipe-reveal--leading" aria-hidden="true">
         <i data-lucide="${isDone ? 'rotate-ccw' : 'check'}" class="icon-xl" aria-hidden="true"></i>
         <span>${isDone ? t('tasks.swipeOpen') : t('tasks.swipeDone')}</span>
       </div>
-      <div class="swipe-reveal swipe-reveal--edit" aria-hidden="true">
+      <div class="swipe-reveal swipe-reveal--edit swipe-reveal--trailing" aria-hidden="true">
         <i data-lucide="eye" class="icon-xl" aria-hidden="true"></i>
         <span>${t('tasks.swipeView')}</span>
       </div>
@@ -231,8 +260,128 @@ function renderSwipeRow(task, innerHtml) {
     </div>`;
 }
 
+// --------------------------------------------------------
+// Sync-Ziel einer neuen Aufgabe (#695)
+// --------------------------------------------------------
+
+/**
+ * Das Ziel-Feld des Aufgaben-Dialogs.
+ *
+ * Es fehlt in zwei Faellen, und beide sind Aussagen ueber die Aufgabe, nicht
+ * ueber die Oberflaeche:
+ *
+ * - Unteraufgaben tragen kein eigenes Ziel. Sie gehoeren zu ihrer Elternaufgabe,
+ *   und als eigenstaendiges VTODO stuenden sie auf dem Server gleichrangig
+ *   daneben.
+ * - Eine bereits hochgeladene Aufgabe kann ihre Liste nicht mehr wechseln: einen
+ *   Umzug zwischen Listen gibt es bewusst nicht. Statt eines toten Dropdowns
+ *   steht dort ein Satz, der sagt, dass sie abgeglichen wird - sonst sieht die
+ *   Maske aus, als haette man die Wahl vergessen.
+ */
+function syncTargetFieldHtml(task) {
+  if (task?.parent_task_id) return '';
+
+  if (task?.external_source === 'caldav') {
+    return `
+      <div class="form-group">
+        <span class="label">${t('tasks.syncTargetLabel')}</span>
+        <p class="form-hint">${t('tasks.syncTargetMirrored')}</p>
+      </div>
+`;
+  }
+
+  return `
+      <div class="form-group">
+        <label class="label" for="task-sync-target">${t('tasks.syncTargetLabel')}</label>
+        <select class="input" id="task-sync-target" name="sync_target">
+          <option value="">${t('tasks.syncTargetLocal')}</option>
+        </select>
+        <small class="form-hint">${t('tasks.syncTargetHint')}</small>
+      </div>
+`;
+}
+
+/**
+ * Fuellt das Ziel-Feld aus /tasks/sync-targets.
+ *
+ * Faellt der Aufruf aus, bleibt die einzige Option "nur lokal" stehen - das ist
+ * derselbe Zustand wie ohne eingerichtete Erinnerungsliste und verliert nichts:
+ * ein nicht gesetztes Ziel laesst die Aufgabe lokal, so wie bisher jede.
+ *
+ * Ein gespeichertes, aber nicht mehr angebotenes Ziel wird nachgetragen, damit
+ * die Maske nicht "nur lokal" behauptet, waehrend die Aufgabe auf eine Liste
+ * wartet. Der persoenliche Standard dagegen wird NICHT nachgetragen: er soll
+ * eine neue Aufgabe nicht auf eine Liste richten, die es nicht mehr gibt.
+ */
+async function wireSyncTarget(panel, task) {
+  const select = panel.querySelector('#task-sync-target');
+  if (!select) return;
+
+  let lists = [];
+  try {
+    const res = await api.get('/tasks/sync-targets');
+    lists = res.data?.caldav ?? [];
+  } catch (err) {
+    console.warn('[Tasks] Sync-Ziele nicht ladbar:', err.message);
+  }
+
+  const current = task?.target_caldav_account_id && task?.target_caldav_list_url
+    ? `caldav:${task.target_caldav_account_id}|${task.target_caldav_list_url}`
+    : '';
+
+  const byAccount = new Map();
+  for (const list of lists) {
+    if (!byAccount.has(list.accountName)) byAccount.set(list.accountName, []);
+    byAccount.get(list.accountName).push(list);
+  }
+
+  for (const [accountName, group] of byAccount) {
+    const optgroup = document.createElement('optgroup');
+    optgroup.label = accountName;
+    for (const list of group) {
+      const option = document.createElement('option');
+      option.value = `caldav:${list.accountId}|${list.listUrl}`;
+      option.textContent = list.listName || list.listUrl;
+      optgroup.appendChild(option);
+    }
+    select.appendChild(optgroup);
+  }
+
+  if (current && !Array.from(select.options).some((o) => o.value === current)) {
+    const option = document.createElement('option');
+    option.value = current;
+    option.textContent = t('tasks.syncTargetUnavailable');
+    select.appendChild(option);
+  }
+
+  const wanted = current || (task ? '' : state.defaultSyncTarget);
+  if (wanted && Array.from(select.options).some((o) => o.value === wanted)) {
+    select.value = wanted;
+  }
+}
+
+/**
+ * EINE Metazeile, und sie bricht nicht um.
+ *
+ * Die Zeile trug bis zu acht Elemente mit `flex-wrap: wrap` und wurde damit je
+ * nach Aufgabe zwei- bis dreizeilig - der eigentliche Höhentreiber der Liste,
+ * nicht die Polsterung. Drei Regeln nehmen das zurück, ohne Information zu
+ * verstecken, die es nur hier gibt:
+ *
+ * 1. ZWEI DATEN SIND EINS ZU VIEL. Das Startdatum erscheint nur, wenn es keine
+ *    Fälligkeit gibt. Steht beides an, ist die Fälligkeit die Frage, die die
+ *    Liste beantwortet; der Beginn steht in der Detailfläche.
+ * 2. DIE KATEGORIE STEHT NICHT ZWEIMAL. Beim Gruppieren nach Kategorie ist der
+ *    Gruppenkopf darüber schon die Antwort - das Etikett wiederholte ihn in
+ *    jeder Zeile der Gruppe.
+ * 3. EIN TAG STATT DREI, der Rest als „+N". Der Marker existiert bereits
+ *    (.task-tag--more) und sagt, dass etwas fehlt - das tut ein Abschnitt nicht.
+ *
+ * Anhänge werden zur reinen Glyphe: die Zahl daneben war die einzige Stelle der
+ * Zeile, an der eine Anzahl OHNE ihren Gegenstand stand.
+ */
 function renderTaskCard(task, opts = {}) {
-  const { expandedSubtasks = false, showCheckbox = false, isChecked = false } = opts;
+  const { expandedSubtasks = false, showCheckbox = false, isChecked = false, showCategory = true } = opts;
   const isDone = task.status === 'done';
   const archived = isArchived(task);
   const progress = task.subtask_total > 0
@@ -249,12 +398,24 @@ function renderTaskCard(task, opts = {}) {
             ${s.status === 'done' ? '<i data-lucide="check" class="subtask-item__checkbox-icon" aria-hidden="true"></i>' : ''}
           </button>
           <span class="subtask-item__title">${esc(s.title)}</span>
+          <div class="subtask-item__actions">
+            <button class="btn btn--ghost btn--icon btn--icon-sm subtask-item__action"
+                    data-action="rename-subtask" data-id="${s.id}" data-title="${esc(s.title)}"
+                    aria-label="${t('tasks.subtaskRename', { title: esc(s.title) })}">
+              <i data-lucide="pencil" aria-hidden="true"></i>
+            </button>
+            <button class="btn btn--ghost btn--icon btn--icon-sm subtask-item__action"
+                    data-action="delete-subtask" data-id="${s.id}" data-title="${esc(s.title)}"
+                    aria-label="${t('tasks.subtaskDelete', { title: esc(s.title) })}">
+              <i data-lucide="trash-2" aria-hidden="true"></i>
+            </button>
+          </div>
         </div>`).join('')
     : '';
 
   return `
     <div class="task-card ${isDone ? 'task-card--done' : ''} ${archived ? 'task-card--archived' : ''}" data-task-id="${task.id}">
-      <div class="task-card__main">
+      <div class="list-row list-row--roomy task-card__main">
         ${showCheckbox ? `
         <input type="checkbox" class="task-bulk-checkbox" data-task-id="${task.id}"
                ${isChecked ? 'checked' : ''} aria-label="${t('tasks.selectTask')}">
@@ -266,19 +427,25 @@ function renderTaskCard(task, opts = {}) {
         </button>
 
         <div class="task-card__body">
-          <button type="button" class="task-card__title u-card-title" data-action="open-task" data-id="${task.id}">
+          <button type="button" class="task-card__title u-card-title u-compact" data-action="open-task" data-id="${task.id}">
             ${esc(task.title)}
           </button>
           <div class="task-card__meta">
             ${archived ? `<span class="due-date task-card__archived"><i data-lucide="archive" class="icon-sm" aria-hidden="true"></i>${t('tasks.statusArchived')}</span>` : ''}
             ${renderPriorityBadge(task.priority)}
-            ${renderStartDateBadge(task.start_date)}
+            ${task.due_date ? '' : renderStartDateBadge(task.start_date)}
             ${renderDueDate(task.due_date, task.due_time, isDone || archived)}
-            ${task.is_recurring ? `<span class="due-date" aria-label="${t('tasks.recurring')}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>` : ''}
-            ${task.document_count > 0 ? `<span class="due-date task-card__docs" aria-label="${t('tasks.documentsCount', { count: task.document_count })}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i>${task.document_count}</span>` : ''}
+            ${/* `role="img"`, sonst wertet keine Hilfstechnik das `aria-label` aus:
+                an einem generischen <span> ohne Rolle ist es wirkungslos. Solange
+                die Ziffer noch danebenstand, las der Screenreader wenigstens sie -
+                seit der Dichte-Runde traegt das Label die Anzahl allein. Dieselbe
+                Marke im Budget (budget.js, `.budget-recur-mark`) macht es richtig;
+                hier standen zwei Kopien ohne Rolle (PR-Review #754). */ ''}
+            ${task.is_recurring ? `<span class="due-date" role="img" aria-label="${esc(t('tasks.recurring'))}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>` : ''}
+            ${task.document_count > 0 ? `<span class="due-date task-card__docs" role="img" aria-label="${esc(t('tasks.documentsCount', { count: task.document_count }))}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i></span>` : ''}
             ${renderVisibilityBadge(task.visibility)}
-            ${task.category !== FALLBACK_CATEGORY ? `<span class="due-date task-card__category">${esc(catLabel(task.category))}</span>` : ''}
-            ${renderTagBadges(task.tags)}
+            ${showCategory && task.category !== FALLBACK_CATEGORY ? `<span class="due-date task-card__category">${esc(catLabel(task.category))}</span>` : ''}
+            ${renderTagBadges(task.tags, ROW_TAG_BADGES_VISIBLE, task.priority)}
           </div>
         </div>
 
@@ -371,16 +538,31 @@ function renderTaskGroups(tasks, groupMode) {
   return groups.map(([name, groupTasks]) => {
     const sorted = [...groupTasks].sort((a, b) => sortTasks(a, b, now));
     return `
-    <div class="task-group">
-      <div class="task-group__header">
-        <span class="task-group__title">${esc(groupMode === 'category' ? catLabel(name) : name)}</span>
-        <span class="task-group__count">${groupTasks.length}</span>
+    <div class="task-group list-group">
+      <!-- Gruppenkopf als echte Ueberschrift (Critique 2026-08-10): /tasks
+           hatte genau EIN h-Element im ganzen Dokument, und wer per H-Taste
+           navigiert, kam damit auf den Seitentitel und nicht weiter. Der
+           Seitentitel ist h1, die Gruppe darunter also h2.
+
+           Die FORM kommt seit der Zusammenfuehrung aus der geteilten
+           Gruppen-Grammatik (styles/list-row.css), wie im Einkauf und im
+           Vorrat: Label und Zaehlstand stehen NEBENEINANDER. Vorher trug der
+           Kopf ein eigenes space-between und schob die Zahl an die rechte
+           Traegerkante - auf 1280px stand sie damit 640px vom Gruppennamen
+           entfernt und las sich als unverbundener Wert. Genau diesen Befund
+           hatte der Einkauf am 2026-07-30 schon einmal. -->
+      <h2 class="list-group__title">
+        ${esc(groupMode === 'category' ? catLabel(name) : name)}
+        <span class="list-group__count">${groupTasks.length}</span>
+      </h2>
+      <div class="list-rows">
+        ${sorted.map((t) => renderSwipeRow(t, renderTaskCard(t, {
+          showCheckbox: state.bulkSelectMode,
+          isChecked: state.selectedTaskIds.has(t.id),
+          expandedSubtasks: state.subtasksExpandedByDefault,
+          showCategory: groupMode !== 'category',
+        }))).join('')}
       </div>
-      ${sorted.map((t) => renderSwipeRow(t, renderTaskCard(t, {
-        showCheckbox: state.bulkSelectMode,
-        isChecked: state.selectedTaskIds.has(t.id),
-        expandedSubtasks: state.subtasksExpandedByDefault,
-      }))).join('')}
     </div>`;
   }).join('');
 }
@@ -496,6 +678,11 @@ function wireTagEditor(panel) {
 // Avatar-Stack: eine Karte, die 32 Etiketten ausrollt, ist keine Karte mehr.
 const TAG_BADGES_VISIBLE = 3;
 
+/* In der LISTENZEILE steht genau ein Etikett, im Kanban bleiben es drei: dort
+ * ist die Karte die ganze Darstellung der Aufgabe und hat die Höhe dafür, hier
+ * teilt sich das Etikett die Zeile mit Priorität, Fälligkeit und Avatar. */
+const ROW_TAG_BADGES_VISIBLE = 1;
+
 /**
  * Tag-Chips einer Aufgabe für Karten und Kanban.
  *
@@ -504,9 +691,33 @@ const TAG_BADGES_VISIBLE = 3;
  * Den Klick fängt die Delegation in wireTagBadgeFilter ab, die ihn auch vom
  * Karten-Klick (Aufgabe öffnen) trennt.
  */
-function renderTagBadges(tags) {
+/**
+ * @param {string} [priority]  Die Priorität der Aufgabe, deren Etiketten das
+ *   hier sind. Ein Etikett, das GENAU SO heisst wie sie, wird weggelassen.
+ *
+ * WARUM: gemessen stand auf /tasks der Prioritäts-Chip „• Dringend" direkt
+ * neben dem gespiegelten CalDAV-Etikett „dringend" - zwei Formen, dasselbe
+ * Wort, in einer Metazeile, die seit dem Zeilenschnitt einzeilig ist und jedes
+ * Element bezahlt. Beide kommen aus derselben Quelle: eine VTODO trägt ihre
+ * Dringlichkeit als PRIORITY und noch einmal als CATEGORIES.
+ *
+ * NUR DIE EIGENE PRIORITÄT, nicht jedes Prioritätswort: trägt eine Aufgabe mit
+ * Priorität „hoch" ein Etikett „dringend", ist das keine Doppelung, sondern ein
+ * Widerspruch - und den soll man sehen.
+ *
+ * Verglichen wird gegen das ANGEZEIGTE Label, nicht gegen den Schlüssel: das
+ * Etikett kommt aus einer fremden Liste und ist in der Sprache geschrieben, in
+ * der der Nutzer es dort angelegt hat.
+ */
+function renderTagBadges(tags, limit = TAG_BADGES_VISIBLE, priority = null) {
   if (!tags?.length) return '';
-  const shown = tags.slice(0, TAG_BADGES_VISIBLE);
+  const eigenes = priority && priority !== 'none' ? PRIORITY_LABELS()[priority] : null;
+  if (eigenes) {
+    const norm = (s) => String(s).trim().toLocaleLowerCase();
+    tags = tags.filter((tag) => norm(tag) !== norm(eigenes));
+    if (!tags.length) return '';
+  }
+  const shown = tags.slice(0, limit);
   const rest  = tags.length - shown.length;
   const chips = shown.map((tag) => `
     <button type="button" class="task-tag task-tag--filter" data-tag-filter="${esc(tag)}"
@@ -515,7 +726,7 @@ function renderTagBadges(tags) {
   // also gäbe es auch nichts, worauf ein Klick filtern könnte.
   if (rest > 0) {
     chips.push(`<span class="task-tag task-tag--more"
-                      title="${esc(tags.slice(TAG_BADGES_VISIBLE).join(', '))}">+${rest}</span>`);
+                      title="${esc(tags.slice(limit).join(', '))}">+${rest}</span>`);
   }
   return chips.join('');
 }
@@ -554,36 +765,54 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
     `<option value="${p.value}" ${(task?.priority ?? 'none') === p.value ? 'selected' : ''}>${p.label}</option>`
   ).join('');
 
-  // Sekundärfelder: hinter „Weitere Einstellungen". Beim Bearbeiten automatisch
-  // geöffnet, falls bereits Werte abseits der Defaults gesetzt sind.
-  const advancedFieldsOpen = isEdit && (
-    !!task.description
-    || (!!task.priority && task.priority !== 'none')
-    || (!!task.category && task.category !== FALLBACK_CATEGORY)
-    || !!task.start_date
-    || (Number(task.points) > 0)
-    || !!task.tags?.length
-  );
-
-  // Punkte neuer Aufgaben mit dem Haushalt-Standard vorbelegen (#578). Der Wert
-  // ist per Definition KEIN Abweichler, der Aufklapper bleibt deshalb zu — damit
-  // er trotzdem auffindbar bleibt, nennt die Zusammenfassung den Punktwert.
+  // Punkte neuer Aufgaben mit dem Haushalt-Standard vorbelegen (#578).
   const prefillPoints = !isEdit && state.defaultPoints > 0 ? state.defaultPoints : 0;
   const pointsValue = isEdit
     ? (Number(task?.points) > 0 ? Number(task.points) : '')
     : (prefillPoints || '');
-  const advancedLabel = prefillPoints
-    ? `${t('modal.moreSettings')} · ${t('tasks.pointsSummary', { count: prefillPoints })}`
+
+  /* WAS IN DER SEKTION STEHT, NENNT IHRE ZUSAMMENFASSUNG - dann muss sie nicht
+   * auf (Critique 2026-08-10, P1 „Enterprise-SaaS-Antireferenz").
+   *
+   * Das Formular mass 29 Labels und `scrollHeight 1410` in `clientHeight 528`,
+   * also 2,7 Bildschirme, um eine Aufgabe zu aendern - die haeufigste Handlung
+   * der App auf ihrem ueberladensten Screen. Die progressive Offenlegung war
+   * dabei nicht etwa nicht gebaut: sie war gebaut und abgeschaltet, und der
+   * Schalter war diese eine Zeile.
+   *
+   * `advancedFieldsOpen` verlangte „einen Wert abseits der Defaults", zaehlte
+   * dazu aber `category !== FALLBACK_CATEGORY`. Eine Kategorie hat fast jede
+   * Aufgabe - die Bedingung war also praktisch immer wahr, und die Sektion kam
+   * praktisch immer offen. Eine Regel, die jeden Fall zur Ausnahme erklaert,
+   * hat keine Ausnahme mehr.
+   *
+   * Der Grund hinter der Bedingung war richtig: ein gesetzter Wert darf nicht
+   * unsichtbar sein. Nur ist Aufklappen dafuer die teuerste Antwort. Das Muster
+   * fuer die billige stand schon zwei Zeilen weiter unten - bei den
+   * vorbelegten Punkten, wo der Aufklapper ZU blieb und die Zusammenfassung den
+   * Wert nannte. Es gilt jetzt fuer alle Sekundaerfelder.
+   *
+   * Die Beschreibung traegt die Zusammenfassung nicht: sie ist Freitext, und
+   * eine gekuerzte Notiz im Summary waere eine schlechtere Notiz. Sie steht
+   * deshalb OBEN beim Titel - Titel und Notiz sichtbar, alles andere hinter
+   * einem Einstieg, genau wie Apple Erinnerungen es haelt. */
+  const advancedSummary = [];
+  if (isEdit && task.priority && task.priority !== 'none') {
+    advancedSummary.push(PRIORITY_LABELS()[task.priority] ?? task.priority);
+  }
+  if (isEdit && task.category && task.category !== FALLBACK_CATEGORY) {
+    advancedSummary.push(catLabel(task.category));
+  }
+  if (isEdit && task.start_date) advancedSummary.push(formatDate(task.start_date));
+  const summaryPoints = isEdit ? Number(task.points) : prefillPoints;
+  if (summaryPoints > 0) advancedSummary.push(t('tasks.pointsSummary', { count: summaryPoints }));
+  if (isEdit && task.tags?.length) advancedSummary.push(task.tags.join(', '));
+
+  const advancedLabel = advancedSummary.length
+    ? `${t('modal.moreSettings')} · ${advancedSummary.join(' · ')}`
     : undefined;
 
   const advancedFieldsHtml = `
-      <div class="form-group">
-        <label class="label" for="task-description">${t('tasks.descriptionLabel')}</label>
-        <textarea class="input" id="task-description" name="description"
-                  rows="2" placeholder="${t('tasks.descriptionPlaceholder')}"
-                 >${esc(task?.description)}</textarea>
-      </div>
-
       <div class="modal-grid modal-grid--2">
         <div class="form-group">
           <label class="label" for="task-priority">${t('tasks.priorityLabel')}</label>
@@ -650,6 +879,19 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         </div>
       </div>
 
+      <!-- Notiz steht beim Titel, nicht hinter dem Aufklapper: sie ist sein
+           Gegenstueck, und eine Zusammenfassung kann Freitext nicht tragen.
+           Genau deshalb sind zwei Zeilen zu wenig gewesen (#731): das Feld war
+           auf die Groesse einer Zusammenfassung gebaut, obwohl der Kommentar
+           darueber das Gegenteil begruendet. -->
+      <div class="form-group">
+        <label class="label" for="task-description">${t('tasks.descriptionLabel')}</label>
+        <textarea class="input" id="task-description" name="description"
+                  rows="6" placeholder="${t('tasks.descriptionPlaceholder')}"
+                 >${esc(task?.description)}</textarea>
+        <small class="form-hint">${t('tasks.descriptionMarkdownHint')}</small>
+      </div>
+${syncTargetFieldHtml(task)}
       <div class="modal-grid modal-grid--2">
         <div class="form-group">
           <label class="label" for="task-due-date">${t('tasks.dueDateLabel')}</label>
@@ -663,12 +905,31 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         </div>
       </div>
 
-      <div class="form-group" style="margin-top:var(--space-4)">
+      <!-- „Zugewiesen an" bot einer Solo-Nutzerin eine Chip-Reihe mit ihr selbst
+           und „- Niemand -" (Critique 2026-08-10). Das Feld bleibt im DOM und
+           behaelt seinen Wert, es wird nur verborgen - der Absende-Pfad liest
+           es unveraendert (utils/household.js). -->
+      <div class="form-group" style="margin-top:var(--space-4)"${isSoloHousehold() ? ' hidden' : ''}>
         ${renderUserMultiSelect(users, selectedIds, 'task_assigned', 'tasks.assignedLabel')}
       </div>
 
-      ${users.length > 1 ? `
-      <div class="form-group" style="margin-top:var(--space-4)">
+      <!-- EINE QUELLE, NICHT ZWEI: die Bedingung war "users.length > 1" und
+           beantwortete dieselbe Frage wie der Solo-Schalter, nur aus einer
+           anderen Zahl - der geladenen Nutzerliste dieses Moduls statt der
+           gezaehlten Haushaltsgroesse. Zwei Quellen fuer eine Frage laufen
+           auseinander, sobald eine von beiden einen Sonderfall bekommt
+           (Split-Gaeste zaehlen in der Nutzerliste mit, im Haushalt nicht).
+
+           UND VERBORGEN, NICHT ENTFERNT - das ist hier kein Stilfrage, sondern
+           die Regel selbst. Der Absende-Pfad liest
+           "#task-visibility?.value || 'all'" (unten): ohne den Knoten schreibt
+           JEDES Speichern im Solo-Haushalt "all" ueber den gespeicherten Wert,
+           und eine als "private" angelegte Aufgabe verliert ihre Sichtbarkeit
+           stillschweigend. Der Fehler steckte schon in der alten
+           users.length-Bedingung; die Solo-Regel sagt ausdruecklich, dass sie
+           keine Daten aendert (utils/household.js), also muss der Knoten
+           stehenbleiben. Dokumente machen es an ihrer Stelle genauso. --> 
+      <div class="form-group" style="margin-top:var(--space-4)"${isSoloHousehold() ? ' hidden' : ''}>
         <label class="label" for="task-visibility">${t('common.visibility.label')}</label>
         <select class="input" id="task-visibility" name="visibility">
           <option value="all"       ${visibility === 'all'       ? 'selected' : ''}>${t('common.visibility.all')}</option>
@@ -677,9 +938,32 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
         </select>
         <p class="task-field-hint">${t('common.visibility.hint')}</p>
         <p class="task-field-hint field-hint--warn" id="task-visibility-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('common.visibility.assigneesNobodyHint')}</span></p>
-      </div>` : ''}
+      </div>
 
-      ${advancedSection(advancedFieldsHtml, { open: advancedFieldsOpen, label: advancedLabel })}
+      <!-- #647: die Haelfte, die @jamespurnama1 beschrieben hat. Fuehrerschein
+           und Luftfilter sind keine Termine, und ihre Ruecksetzung haengt an
+           einer DAUER, nicht an einem Datum - das ist genau eine wiederkehrende
+           Aufgabe „ab Erledigung" (#658), die es hier schon gibt. Der Schalter
+           haengt deshalb an der Aufgabe und nicht an einem dritten Objekt.
+           Im Hauptbereich aus demselben Grund wie im Kalender: hinter dem
+           Aufklapper faende ihn niemand, der nicht danach sucht. -->
+      <div class="form-group" style="margin-top:var(--space-4)">
+        <label class="toggle" style="margin:0">
+          <input type="checkbox" id="task-countdown" name="countdown" aria-describedby="task-countdown-hint"
+                 ${task?.countdown ? 'checked' : ''}>
+          <span class="toggle__track"></span>
+          <span>${t('tasks.countdownToggle')}</span>
+        </label>
+        <p class="task-field-hint" id="task-countdown-hint">${t('tasks.countdownHint')}</p>
+        <!-- DER SCHALTER SPERRT SICH SELBST, statt sich auf die Zeile darueber
+             zu verlassen. Ein Hinweis ist keine Fehlervermeidung: ohne
+             Faelligkeit war der Schalter voll bedienbar, speicherte, meldete
+             „Aufgabe erstellt." - und der Countdown erschien nie. Wer sich
+             darauf verlaesst, erfaehrt es, wenn die Frist vorbei ist. -->
+        <p class="task-field-hint field-hint--warn" id="task-countdown-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('tasks.countdownNeedsDue')}</span></p>
+      </div>
+
+      ${advancedSection(advancedFieldsHtml, { label: advancedLabel })}
 
       ${isEdit ? `
         <div class="form-group">
@@ -698,19 +982,12 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
 
       ${renderReminderSection(task, reminder)}
 
-      <div class="form-group task-documents" id="task-documents-section" style="margin-top:var(--space-4)">
-        <label class="label">${t('tasks.documentsLabel')}</label>
-        <p class="task-field-hint">${t('tasks.documentsHint')}</p>
-        <div class="task-documents__list" id="task-documents-list" role="list"></div>
-        <div class="task-documents__add">
-          <label class="sr-only" for="task-document-add">${t('tasks.documentAdd')}</label>
-          <select class="input" id="task-document-add">
-            <option value="">${t('tasks.documentAddPlaceholder')}</option>
-          </select>
-        </div>
-      </div>
+      ${renderDocumentAttachField({
+        attachments: (task?.documents ?? []).map((doc) => ({ document_id: doc.id, name: doc.name, mime_type: doc.mime_type })),
+        label: t('tasks.documentsLabel'),
+      })}
 
-      <div id="task-form-error" class="login-error" hidden></div>
+      <div id="task-form-error" class="form-error" hidden></div>
 
       <div class="modal-panel__footer modal-panel__footer--plain">
         ${isEdit ? `
@@ -735,6 +1012,7 @@ let state = {
   allTags:         [],       // [{ tag, count }] für Filterleiste und Vorschläge (#586)
   defaultPoints:   0,        // Haushalt-Standard für neue Aufgaben (#578), 0 = aus
   currentUserId:   null,
+  isAdmin:         false,    // darf fremde Kommentare entfernen (#734)
   // `tags` ist eine Liste, keine Auswahl: mehrere Tags engen UND-verknüpft ein,
   // wie jeder andere Filter in dieser Leiste auch (#586).
   // Status, Priorität und Person halten mehrere Werte (#671); innerhalb einer
@@ -744,6 +1022,9 @@ let state = {
   viewMode:        'list',       // 'list' | 'kanban' (resolved at render time)
   showFuture:      false,
   subtasksExpandedByDefault: false,
+  // Persönliche Standard-Erinnerungsliste für neue Aufgaben (#695), leer = nur
+  // lokal. Wird beim Öffnen des Dialogs als Vorauswahl gesetzt.
+  defaultSyncTarget: '',
   expandedTasks:   new Set(),
   dragTaskId:      null,
   filterPanelOpen: false,
@@ -916,88 +1197,38 @@ function wireVisibilityWarning(panel, selectSel, msName, warnSel) {
   update();
 }
 
-// Chip für ein verknüpftes Dokument: Name öffnet Vorschau/Download, X entfernt.
-function renderTaskDocChip(doc) {
-  return `
-    <span class="task-doc-chip" role="listitem" data-doc-id="${doc.id}">
-      <i data-lucide="${docIcon(doc)}" class="task-doc-chip__icon icon-sm" aria-hidden="true"></i>
-      <a class="task-doc-chip__name" href="${docHref(doc)}" target="_blank" rel="noopener"
-         title="${esc(doc.name)}">${esc(doc.name)}</a>
-      <button type="button" class="task-doc-chip__remove" data-action="unlink-doc"
-              data-doc-id="${doc.id}" aria-label="${t('tasks.documentRemove')}">
-        <i data-lucide="x" class="icon-sm" aria-hidden="true"></i>
-      </button>
-    </span>`;
-}
-
-// Dokument-Sektion befüllen: verfügbare + bereits verknüpfte Dokumente laden,
-// das Working-Set (modalDocuments) aufbauen und Add/Remove-Interaktion binden.
-async function wireDocumentSection(panel, task) {
-  const section = panel.querySelector('#task-documents-section');
-  if (!section) return;
-  const listEl = panel.querySelector('#task-documents-list');
-  const addSel = panel.querySelector('#task-document-add');
-  modalDocuments = { index: new Map(), selected: [] };
-
-  const render = () => {
-    const chips = modalDocuments.selected
-      .map((id) => modalDocuments.index.get(id))
-      .filter(Boolean)
-      .map(renderTaskDocChip)
-      .join('');
-    listEl.replaceChildren();
-    listEl.insertAdjacentHTML('beforeend',
-      chips || `<p class="task-documents__empty">${t('tasks.documentsEmpty')}</p>`);
-
-    const available = [...modalDocuments.index.values()]
-      .filter((d) => d.selectable && !modalDocuments.selected.includes(d.id))
-      .sort((a, b) => a.name.localeCompare(b.name));
-    addSel.replaceChildren();
-    const placeholder = document.createElement('option');
-    placeholder.value = '';
-    placeholder.textContent = t('tasks.documentAddPlaceholder');
-    addSel.appendChild(placeholder);
-    for (const d of available) {
-      const opt = document.createElement('option');
-      opt.value = String(d.id);
-      opt.textContent = d.name;
-      addSel.appendChild(opt);
-    }
-    addSel.disabled = available.length === 0;
-    window.lucide?.createIcons({ el: listEl });
+/**
+ * Der Countdown-Schalter haengt an der Faelligkeit (#647).
+ *
+ * GESPERRT UND NICHT NUR BESCHRIFTET. Die Hilfszeile sagte „Braucht ein
+ * Faelligkeitsdatum" und der Schalter liess sich trotzdem setzen: gespeichert
+ * wurde `countdown: 1` bei `due_date: null`, der Toast meldete Erfolg, und der
+ * Eintrag erschien nie auf der Uebersicht. Ein Hinweis erklaert einen Fehler,
+ * er verhindert ihn nicht.
+ *
+ * Der Haken wird beim Sperren MITGENOMMEN, nicht stehengelassen: ein
+ * abgehakter, grauer Schalter behauptet einen Zustand, den der Server nicht
+ * kennt. Wer die Faelligkeit wieder setzt, findet ihn aus - das ist ehrlicher
+ * als ein Haken, der zurueckkommt, ohne dass jemand ihn gesetzt hat.
+ *
+ * `yuvomi-datepicker` meldet seine Aenderung als `change` am eigenen Element;
+ * `input` kommt aus dem inneren Feld beim Tippen. Beide anhoeren, sonst haengt
+ * der Schalter je nach Bedienweg (Kalenderblatt vs. Tastatur) hinterher.
+ */
+function wireCountdownGate(panel) {
+  const toggle = panel.querySelector('#task-countdown');
+  const due    = panel.querySelector('#task-due-date');
+  const warn   = panel.querySelector('#task-countdown-warning');
+  if (!toggle || !due) return;
+  const update = () => {
+    const hasDue = !!parseDateInput(due.value || '');
+    if (!hasDue && toggle.checked) toggle.checked = false;
+    toggle.disabled = !hasDue;
+    if (warn) warn.hidden = hasDue;
   };
-
-  try {
-    const [availRes, linkedRes] = await Promise.all([
-      api.get('/documents'),
-      task?.id ? api.get(`/tasks/${task.id}/documents`) : Promise.resolve({ data: [] }),
-    ]);
-    for (const d of (availRes.data ?? [])) {
-      modalDocuments.index.set(d.id, { id: d.id, name: d.name, mime_type: d.mime_type, selectable: true });
-    }
-    for (const d of (linkedRes.data ?? [])) {
-      const existing = modalDocuments.index.get(d.id);
-      if (existing) { existing.name = d.name; existing.mime_type = d.mime_type; }
-      else modalDocuments.index.set(d.id, { id: d.id, name: d.name, mime_type: d.mime_type, selectable: false });
-      if (!modalDocuments.selected.includes(d.id)) modalDocuments.selected.push(d.id);
-    }
-  } catch { /* Dokumente-Modul nicht erreichbar - Sektion bleibt leer/inaktiv */ }
-
-  render();
-
-  addSel.addEventListener('change', () => {
-    const id = Number(addSel.value);
-    if (id && !modalDocuments.selected.includes(id)) modalDocuments.selected.push(id);
-    addSel.value = '';
-    render();
-  });
-  listEl.addEventListener('click', (e) => {
-    const btn = e.target.closest('[data-action="unlink-doc"]');
-    if (!btn) return;
-    const id = Number(btn.dataset.docId);
-    modalDocuments.selected = modalDocuments.selected.filter((x) => x !== id);
-    render();
-  });
+  due.addEventListener('change', update);
+  due.addEventListener('input', update);
+  update();
 }
 
 function openTaskModal({ task = null, users = [], reminder = null } = {}, container) {
@@ -1019,19 +1250,68 @@ function openTaskModal({ task = null, users = [], reminder = null } = {}, contai
  * Orten entsteht: als eigenes Modal (neue Aufgabe) und als zweites Pane der
  * Detailansicht, das erst beim Wechsel gemountet wird.
  */
+/**
+ * Die Dokument-Sichtbarkeit, die zur Sichtbarkeit der Aufgabe passt.
+ *
+ * Die beiden Vokabulare sind nicht dasselbe: eine Aufgabe kennt
+ * `all|assignees|private`, ein Dokument `family|restricted|private`. Uebersetzt
+ * wird auf die jeweils engere Entsprechung - eine offene Aufgabe teilt ihren
+ * Anhang mit dem Haushalt, eine private behaelt ihn, und „nur Beteiligte" wird
+ * zur ausdruecklichen Freigabeliste.
+ */
+function taskDocumentVisibility(panel) {
+  const value = panel.querySelector('#task-visibility')?.value || 'all';
+  if (value === 'private') return 'private';
+  if (value === 'assignees') return 'restricted';
+  return 'family';
+}
+
 function wireTaskForm(panel, { task = null, container }) {
   panel.querySelector('.modal-panel__body')?.classList.add('modal-panel__body--tasks-fit');
   // RRULE-Events binden
   bindRRuleEvents(document, 'task');
   bindUserMultiSelect(panel, 'task_assigned');
   wireVisibilityWarning(panel, '#task-visibility', 'task_assigned', '#task-visibility-warning');
+  wireCountdownGate(panel);
 
   // Tag-Editor (#586)
   renderTagChips(panel);
   wireTagEditor(panel);
 
-  // Verknüpfte Dokumente laden + Add/Remove binden (#503)
-  wireDocumentSection(panel, task);
+  // Verknüpfte Dokumente: hochladen oder ein abgelegtes wählen (#503, #733).
+  // Die Vorbelegung steckt bereits im Markup (task.documents aus GET /tasks/:id),
+  // hier wird nur noch verdrahtet.
+  taskDocuments = bindDocumentAttachField(panel, {
+    category: 'other',
+    folderName: t('documents.tasksFolder'),
+    // Die Datei erbt die Sichtbarkeit ihrer Aufgabe. Ohne das laege der Beleg
+    // einer PRIVATEN Aufgabe als familiensichtbares Dokument im Dokumente-Modul:
+    // die Aufgabe waere verborgen, der Zettel darin fuer alle lesbar. Bei
+    // „nur Beteiligte" traegt das Dokument dieselbe Liste - `restricted` mit den
+    // zugewiesenen Personen. Ausgewertet wird erst beim Hochladen, weil das
+    // Sichtbarkeitsfeld bis dahin noch umgestellt werden kann.
+    //
+    // Eine MOMENTAUFNAHME, kein Dauerabgleich: wechselt die Aufgabe spaeter ihre
+    // Sichtbarkeit oder ihre Zuweisungen, bleibt die Freigabe des Dokuments
+    // stehen. Sie nachzuziehen hiesse, in Dokumente hineinzuschreiben, wo die
+    // Datei danach lebt und wo sie jemand bewusst anders freigegeben haben kann
+    // - eine Aufgabenzuweisung darf keine fremde Freigabe ueberschreiben.
+    visibility: () => taskDocumentVisibility(panel),
+    // Wer die Aufgabe sieht, sieht ihren Anhang: bei „nur Beteiligte" sind das
+    // die Zugewiesenen UND die Person, die die Aufgabe angelegt hat. Ohne sie
+    // laedt eine zugewiesene Person eine Datei hoch, und der Ersteller - der die
+    // Aufgabe oeffnen darf - findet dort eine Zeile weniger als vorhanden ist.
+    allowedMemberIds: () => {
+      const ids = getSelectedUserIds(panel, 'task_assigned').map(Number);
+      const creator = Number(task?.created_by ?? state.currentUserId);
+      if (Number.isInteger(creator) && !ids.includes(creator)) ids.push(creator);
+      return ids;
+    },
+  });
+
+  // Sync-Ziel nachladen (#695). Ohne await: die Liste kommt aus dem Netz, und
+  // bis sie da ist, steht "nur lokal" - das ist der richtige Zwischenzustand.
+  wireSyncTarget(panel, task);
 
   // Blur-Validierung für required-Felder aktivieren
   wireBlurValidation(panel);
@@ -1073,7 +1353,7 @@ const NEXT_STATUS = {
 function priorityNode(priority) {
   if (!priority || priority === 'none') return null;
   const badge = document.createElement('span');
-  badge.className = `priority-badge priority-badge--${priority}`;
+  badge.className = 'priority-badge';
   const dot = document.createElement('span');
   dot.className = `priority-dot priority-dot--${priority}`;
   badge.append(dot, document.createTextNode(PRIORITY_LABELS()[priority] ?? priority));
@@ -1161,12 +1441,417 @@ function subtaskListNode(task, container) {
   return wrap;
 }
 
-/** Verknüpfte Dokumente beim Namen nennen, nicht nur zählen. */
+/**
+ * Verknüpfte Dokumente in der Leseansicht (#733).
+ *
+ * Zwei Korrekturen an einer Stelle: Die alte Fassung las `doc.title` und
+ * `doc.filename` - beides Felder, die ein Dokument nie hatte (es heißt `name`
+ * bzw. `original_name`), und sie bekam ohnehin nie eine Liste, weil die API das
+ * Feld gar nicht füllte. Die Zeile war also doppelt leer.
+ *
+ * Bilder stehen als Vorschau statt als Wort: an einer Aufgabe hängt meist ein
+ * abfotografierter Zettel, und ein Dateiname beantwortet die Frage nicht, wegen
+ * der man das Foto angehängt hat. Alles andere bleibt ein Chip mit Link.
+ */
 function documentListNode(docs) {
-  return chipListNode(
-    Array.isArray(docs) ? docs : [],
-    (doc) => doc.title || doc.filename || String(doc.id),
-  );
+  const list = Array.isArray(docs) ? docs : [];
+  if (!list.length) return null;
+
+  const images = list.filter((doc) => docMime(doc).startsWith('image/'));
+  const rest = list.filter((doc) => !docMime(doc).startsWith('image/'));
+
+  const wrap = document.createElement('div');
+  wrap.className = 'task-detail__docs';
+
+  if (images.length) {
+    const grid = document.createElement('div');
+    grid.className = 'task-detail__doc-previews';
+    for (const doc of images) {
+      const link = document.createElement('a');
+      link.className = 'task-detail__doc-preview';
+      link.href = docHref(doc);
+      link.target = '_blank';
+      link.rel = 'noopener';
+      link.title = doc.name || '';
+      const img = document.createElement('img');
+      img.src = `/api/v1/documents/${doc.id}/preview`;
+      img.alt = doc.name || '';
+      img.loading = 'lazy';
+      link.appendChild(img);
+      grid.appendChild(link);
+    }
+    wrap.appendChild(grid);
+  }
+
+  for (const doc of rest) {
+    const chip = document.createElement('a');
+    chip.className = 'task-doc-chip';
+    chip.href = docHref(doc);
+    chip.target = '_blank';
+    chip.rel = 'noopener';
+    const icon = document.createElement('i');
+    icon.dataset.lucide = docIcon(doc);
+    icon.className = 'task-doc-chip__icon icon-sm';
+    icon.setAttribute('aria-hidden', 'true');
+    const label = document.createElement('span');
+    label.className = 'task-doc-chip__name';
+    label.textContent = doc.name || doc.original_name || String(doc.id);
+    chip.append(icon, label);
+    wrap.appendChild(chip);
+  }
+
+  if (window.lucide) window.lucide.createIcons({ el: wrap });
+  return wrap;
+}
+
+// --------------------------------------------------------
+// Kommentare an einer Aufgabe (#734)
+//
+// „Damit die Absprache dort steht, wo die Sache steht." Der Abschnitt lädt
+// selbst nach: die Detailansicht öffnet sofort, die Unterhaltung kommt in dem
+// Moment dazu, in dem sie da ist - das ist billiger als ein Ladebalken vor der
+// ganzen Ansicht.
+// --------------------------------------------------------
+
+/** Kommentartext als DOM, Erwähnungen hervorgehoben. Kein innerHTML nötig. */
+function commentTextNode(text) {
+  const box = document.createElement('div');
+  box.className = 'task-comment__text';
+  for (const segment of splitMentions(text, state.users)) {
+    if (segment.type !== 'mention') {
+      box.appendChild(document.createTextNode(segment.text));
+      continue;
+    }
+    const chip = document.createElement('span');
+    // Die eigene Erwähnung sticht heraus: „mich hat jemand gemeint" ist die
+    // Information, wegen der man den Kommentar überhaupt liest.
+    chip.className = segment.user.id === state.currentUserId
+      ? 'task-comment__mention task-comment__mention--me'
+      : 'task-comment__mention';
+    chip.textContent = segment.text;
+    box.appendChild(chip);
+  }
+  return box;
+}
+
+/** Eine Zeile der Unterhaltung. */
+function commentRowNode(comment, { onChanged }) {
+  const row = document.createElement('article');
+  row.className = 'task-comment';
+
+  const head = document.createElement('div');
+  head.className = 'task-comment__head';
+
+  const author = document.createElement('span');
+  author.className = 'task-comment__author';
+  author.textContent = comment.author_name || t('tasks.commentUnknownAuthor');
+
+  const when = document.createElement('span');
+  when.className = 'task-comment__when';
+  const at = new Date(comment.updated_at || comment.created_at);
+  when.textContent = comment.updated_at
+    ? t('tasks.commentEditedAt', { date: formatDate(at), time: formatTime(at) })
+    : `${formatDate(at)} ${formatTime(at)}`;
+
+  head.append(author, when);
+
+  const mine = comment.user_id === state.currentUserId;
+  if ((mine || state.isAdmin) && !isNavModuleReadOnly('tasks')) {
+    const actions = document.createElement('div');
+    actions.className = 'task-comment__actions';
+
+    // Ändern darf nur der Autor - ein Admin moderiert, er schreibt nicht um.
+    if (mine) {
+      const edit = document.createElement('button');
+      edit.type = 'button';
+      edit.className = 'task-comment__action';
+      edit.setAttribute('aria-label', t('tasks.commentEdit'));
+      edit.title = t('tasks.commentEdit');
+      const editIcon = document.createElement('i');
+      editIcon.dataset.lucide = 'pencil';
+      editIcon.className = 'icon-sm';
+      editIcon.setAttribute('aria-hidden', 'true');
+      edit.appendChild(editIcon);
+      edit.addEventListener('click', () => startCommentEdit(row, comment, { onChanged }));
+      actions.appendChild(edit);
+    }
+
+    const del = document.createElement('button');
+    del.type = 'button';
+    del.className = 'task-comment__action task-comment__action--danger';
+    del.setAttribute('aria-label', t('tasks.commentDelete'));
+    del.title = t('tasks.commentDelete');
+    const delIcon = document.createElement('i');
+    delIcon.dataset.lucide = 'trash-2';
+    delIcon.className = 'icon-sm';
+    delIcon.setAttribute('aria-hidden', 'true');
+    del.appendChild(delIcon);
+    // Kein Bestätigungsdialog, sondern der Rückgängig-Toast, den diese Seite
+    // schon fürs Löschen einer Aufgabe benutzt. Zwei Gründe: Eine Rückfrage
+    // wäre hier ein Modal über einem Modal - `confirmModal` verdrängt die
+    // Detailansicht, `confirmOverModal` schließt sie beim Bestätigen (beides
+    // gemessen, man stand danach wieder in der Liste). Und ein Kommentar ist
+    // kein Datensatz mit Anhängseln: Zurücknehmen ist die ehrlichere Antwort
+    // als Vorher-Fragen.
+    del.addEventListener('click', () => {
+      row.hidden = true;
+      scheduleUndoableDelete({
+        message: t('tasks.commentDeletedToast'),
+        commit: async ({ keepalive }) => {
+          await api.delete(`/tasks/${comment.task_id}/comments/${comment.id}`, { keepalive });
+          if (keepalive) return; // Seite verschwindet - kein Nachladen mehr
+          await onChanged();
+        },
+        restore: (err) => {
+          row.hidden = false;
+          if (err) window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+        },
+      });
+    });
+    actions.appendChild(del);
+    head.appendChild(actions);
+  }
+
+  row.append(head, commentTextNode(comment.comment));
+  return row;
+}
+
+/** Eine Zeile gegen ein Eingabefeld tauschen, ohne die Liste neu zu laden. */
+function startCommentEdit(row, comment, { onChanged }) {
+  const form = document.createElement('form');
+  form.className = 'task-comment__edit';
+
+  const field = document.createElement('textarea');
+  field.className = 'input task-comment__input';
+  field.rows = 3;
+  field.maxLength = 5000;
+  field.value = comment.comment;
+
+  const actions = document.createElement('div');
+  actions.className = 'task-comment__edit-actions';
+  const cancel = document.createElement('button');
+  cancel.type = 'button';
+  cancel.className = 'btn btn--ghost btn--sm';
+  cancel.textContent = t('common.cancel');
+  const save = document.createElement('button');
+  save.type = 'submit';
+  save.className = 'btn btn--primary btn--sm';
+  save.textContent = t('common.save');
+  actions.append(cancel, save);
+
+  cancel.addEventListener('click', () => {
+    // Die zurueckgeholte Zeile bringt ihre Icons als `data-lucide` mit, nicht
+    // als fertiges SVG - ohne diesen Aufruf stuenden Bearbeiten und Loeschen
+    // als leere Kaesten da, und zwar bis zum naechsten Nachladen.
+    const restored = commentRowNode(comment, { onChanged });
+    row.replaceWith(restored);
+    if (window.lucide) window.lucide.createIcons({ el: restored });
+  });
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const value = field.value.trim();
+    if (!value) return;
+    save.disabled = true;
+    try {
+      await api.patch(`/tasks/${comment.task_id}/comments/${comment.id}`, { comment: value });
+      await onChanged();
+    } catch (err) {
+      save.disabled = false;
+      window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+    }
+  });
+
+  form.append(field, actions);
+  row.replaceChildren(form);
+  wireMentionSuggest(field);
+  field.focus();
+}
+
+/**
+ * Vorschläge beim Tippen eines @.
+ *
+ * Komfort, keine Bedingung: wer den Namen ausschreibt, wird genauso erwähnt -
+ * gelesen wird am Ende der Text, nicht die Auswahl (utils/mentions.js).
+ */
+function wireMentionSuggest(field) {
+  let box = null;
+  let matches = [];
+  let active = 0;
+
+  const close = () => { box?.remove(); box = null; matches = []; };
+
+  /** Das angefangene @-Wort links vom Cursor, oder null. */
+  const currentQuery = () => {
+    const upto = field.value.slice(0, field.selectionStart);
+    const at = upto.lastIndexOf('@');
+    if (at === -1) return null;
+    if (at > 0 && /[\p{L}\p{N}_]/u.test(upto[at - 1])) return null;
+    const typed = upto.slice(at + 1);
+    // Ein Zeilenumbruch beendet die Suche; ein Leerzeichen darf drin bleiben,
+    // weil Anzeigenamen zwei Wörter haben können.
+    if (/[\n\r]/.test(typed) || typed.length > 40) return null;
+    return { at, typed };
+  };
+
+  const apply = (user) => {
+    // Die Frage wird hier NOCH EINMAL gestellt, statt sich auf den Stand vom
+    // letzten Tastendruck zu verlassen: liegt der Cursor inzwischen woanders,
+    // gibt es nichts zu ersetzen, und ein blindes Einfuegen zerschnitte den
+    // Text an einer Stelle, die niemand gemeint hat.
+    const next = applyMention(field.value, field.selectionStart, user.display_name);
+    if (!next) { close(); return; }
+    field.value = next.text;
+    field.setSelectionRange(next.caret, next.caret);
+    close();
+    field.focus();
+  };
+
+  const render = () => {
+    if (!box) {
+      box = document.createElement('div');
+      box.className = 'task-comment__suggest';
+      box.setAttribute('role', 'listbox');
+      field.parentElement.appendChild(box);
+    }
+    box.replaceChildren();
+    matches.forEach((user, index) => {
+      const option = document.createElement('button');
+      option.type = 'button';
+      option.className = index === active
+        ? 'task-comment__suggest-item is-active'
+        : 'task-comment__suggest-item';
+      option.setAttribute('role', 'option');
+      option.setAttribute('aria-selected', String(index === active));
+      option.textContent = user.display_name;
+      // mousedown statt click: ein Klick käme erst nach dem blur, und das
+      // schließt die Liste, bevor der Treffer übernommen wäre.
+      option.addEventListener('mousedown', (e) => { e.preventDefault(); apply(user); });
+      box.appendChild(option);
+    });
+  };
+
+  /** Vorschlaege zur aktuellen Cursorposition neu bestimmen. */
+  const sync = () => {
+    const query = currentQuery();
+    if (!query) { close(); return; }
+    const needle = query.typed.toLowerCase();
+    matches = state.users
+      .filter((u) => u.display_name && u.display_name.toLowerCase().startsWith(needle))
+      .slice(0, 6);
+    active = 0;
+    if (!matches.length) { close(); return; }
+    render();
+  };
+
+  field.addEventListener('input', sync);
+
+  // Der Cursor wandert auch ohne Eingabe - mit Pfeiltasten, per Klick, per
+  // Auswahl. Ohne diese beiden Zeilen bliebe die Liste offen, waehrend sie sich
+  // laengst auf ein anderes Wort bezieht: Enter fuegte den Namen dann an der
+  // NEUEN Position ein (aus „@Ann" mit Cursor hinter dem zweiten Zeichen wurde
+  // „@Anna nn"), und am Textanfang verschluckte sie stumm den Zeilenumbruch.
+  field.addEventListener('keyup', (e) => {
+    if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Home', 'End'].includes(e.key)) sync();
+  });
+  field.addEventListener('click', sync);
+
+  field.addEventListener('keydown', (e) => {
+    if (!box || !matches.length) return;
+    if (e.key === 'ArrowDown')      { e.preventDefault(); active = (active + 1) % matches.length; render(); }
+    else if (e.key === 'ArrowUp')   { e.preventDefault(); active = (active - 1 + matches.length) % matches.length; render(); }
+    else if (e.key === 'Enter' || e.key === 'Tab') { e.preventDefault(); apply(matches[active]); }
+    else if (e.key === 'Escape')    { e.stopPropagation(); close(); }
+  });
+
+  field.addEventListener('blur', () => setTimeout(close, 0));
+}
+
+/** Der ganze Abschnitt: Liste, Eingabe, Nachladen. */
+function commentsNode(task) {
+  const wrap = document.createElement('div');
+  wrap.className = 'task-comments';
+
+  const list = document.createElement('div');
+  list.className = 'task-comments__list';
+  const status = document.createElement('p');
+  status.className = 'task-comments__status';
+  status.textContent = t('common.loading');
+  list.appendChild(status);
+
+  const load = async () => {
+    try {
+      const res = await api.get(`/tasks/${task.id}/comments`);
+      const comments = res.data ?? [];
+      list.replaceChildren();
+      if (!comments.length) {
+        const empty = document.createElement('p');
+        empty.className = 'task-comments__status';
+        empty.textContent = t('tasks.commentsEmpty');
+        list.appendChild(empty);
+      } else {
+        for (const comment of comments) list.appendChild(commentRowNode(comment, { onChanged: load }));
+      }
+      if (window.lucide) window.lucide.createIcons({ el: list });
+    } catch {
+      list.replaceChildren();
+      const failed = document.createElement('p');
+      failed.className = 'task-comments__status';
+      failed.textContent = t('tasks.commentsLoadError');
+      list.appendChild(failed);
+    }
+  };
+
+  // Wer die Aufgaben nur LESEN darf, bekommt die Unterhaltung zu sehen und kein
+  // Eingabefeld: die API weist seinen POST mit 403 ab, und ein Formular, das
+  // zum Schreiben einlaedt und dann nicht abschickt, ist dieselbe leere Zusage
+  // wie der fehlende Knopf, der #700 ausgeloest hat.
+  if (isNavModuleReadOnly('tasks')) {
+    wrap.append(list);
+    load();
+    return wrap;
+  }
+
+  const form = document.createElement('form');
+  form.className = 'task-comments__form';
+  const field = document.createElement('textarea');
+  field.className = 'input task-comment__input';
+  field.rows = 2;
+  field.maxLength = 5000;
+  field.placeholder = t('tasks.commentPlaceholder');
+  field.setAttribute('aria-label', t('tasks.commentsLabel'));
+  const submit = document.createElement('button');
+  submit.type = 'submit';
+  // Bewusst nicht `--primary`: der auffälligste Knopf im Panel gehört der
+  // Fußzeile („Starten", „Ablegen"). Ein leuchtendes „Kommentieren" mitten im
+  // Blatt zöge die Aufmerksamkeit auf die Nebensache.
+  submit.className = 'btn btn--secondary btn--sm task-comments__submit';
+  submit.textContent = t('tasks.commentSubmit');
+  const fieldBox = document.createElement('div');
+  // Eigener Träger: die Vorschlagsliste hängt relativ darin, nicht am Formular.
+  fieldBox.className = 'task-comments__field';
+  fieldBox.appendChild(field);
+  form.append(fieldBox, submit);
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const value = field.value.trim();
+    if (!value) return;
+    submit.disabled = true;
+    try {
+      await api.post(`/tasks/${task.id}/comments`, { comment: value });
+      field.value = '';
+      await load();
+    } catch (err) {
+      window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+    } finally {
+      submit.disabled = false;
+    }
+  });
+
+  wireMentionSuggest(field);
+  wrap.append(list, form);
+  load();
+  return wrap;
 }
 
 /** Erinnerung im Klartext, aus dem gespeicherten Zeitpunkt. */
@@ -1202,8 +1887,42 @@ function renderTaskDetail(task, reminders = [], container = null) {
     { icon: 'paperclip', label: t('tasks.documentsLabel'), node: documentListNode(task.documents) },
     { icon: 'bell', label: t('reminders.sectionTitle'), value: taskReminderSummary(reminders) },
     visibilityRow(task.visibility),
-    { icon: 'align-left', label: t('tasks.descriptionLabel'), value: task.description ?? '', multiline: true },
+    // Nur wenn markiert (#647) - eine Zeile „Countdown: nein" an jeder Aufgabe
+    // erklärte ein Feld, statt eine Frage zu beantworten.
+    //
+    // UND NUR MIT FÄLLIGKEIT, weil die Zeile sonst etwas Unwahres sagt. Sie hing
+    // allein an `task.countdown` und behauptete „Zählt auf der Übersicht
+    // herunter" auch dann, wenn es nichts gab, worauf gezählt werden konnte -
+    // eine Falschaussage in der Leseansicht wiegt schwerer als der fehlende
+    // Riegel im Formular, weil sie den Irrtum bestätigt statt ihn zu verhindern.
+    // Der Riegel steht jetzt trotzdem auch dort (`wireCountdownGate`).
+    { icon: 'hourglass', label: t('dashboard.countdownTitle'), value: task.countdown && task.due_date ? t('tasks.countdownDetail') : '' },
+    { icon: 'align-left', label: t('tasks.descriptionLabel'), node: descriptionNode(task.description), multiline: true },
+    // Ganz unten und immer sichtbar: die Unterhaltung ist der einzige Abschnitt,
+    // der auch dann etwas anbietet, wenn er leer ist - nämlich das Eingabefeld.
+    { icon: 'message-square', label: t('tasks.commentsLabel'), node: commentsNode(task), multiline: true },
   ];
+}
+
+/**
+ * Die Notiz als gerendertes Markdown (#731).
+ *
+ * `renderMarkdownLight` liegt seit Langem in utils/html.js und wird von den
+ * Notizen und vom Dashboard benutzt - die Aufgaben waren die einzige Stelle, die
+ * denselben Freitext als rohen String ausgab. Es ist also kein neuer Baustein,
+ * sondern ein nicht angeschlossener; entsprechend teilen sich beide auch die
+ * `note-md-*`-Klassen, damit eine Liste hier nicht anders aussieht als dort.
+ *
+ * Der Renderer maskiert selbst, deshalb ist insertAdjacentHTML hier zulaessig -
+ * dieselbe Zusicherung, auf der notes.js und dashboard.js bereits stehen.
+ */
+function descriptionNode(description) {
+  const text = (description ?? '').trim();
+  if (!text) return null;
+  const box = document.createElement('div');
+  box.className = 'task-detail__note';
+  box.insertAdjacentHTML('beforeend', renderMarkdownLight(text));
+  return box;
 }
 
 /**
@@ -1493,8 +2212,14 @@ async function handleFormSubmit(e, container) {
     is_recurring:    rrule.is_recurring ? 1 : 0,
     recurrence_rule: rrule.recurrence_rule,
     recurrence_from_completion: rrule.recurrence_from_completion ? 1 : 0,
+    countdown:       form.querySelector('#task-countdown')?.checked ? 1 : 0,
     points:          Math.max(0, Math.trunc(Number(form.points?.value)) || 0),
   };
+  // Das Feld fehlt bei Unteraufgaben und bei bereits gespiegelten Aufgaben - in
+  // beiden Fällen soll gar kein Ziel mitgeschickt werden, sonst nähme der Server
+  // das Fehlen als "auf lokal zurücksetzen" (#695).
+  const syncTargetField = form.querySelector('#task-sync-target');
+  if (syncTargetField) body.sync_target = syncTargetField.value;
   const dueTimeRaw = form.due_time?.value || '';
   const dueTime = parseTimeInput(dueTimeRaw);
   const resetSubmit = (msg) => {
@@ -1534,6 +2259,21 @@ async function handleFormSubmit(e, container) {
     remindAt = new Date(dueDateTime.getTime() - offsetMs).toISOString().slice(0, 19);
   }
 
+  // Wartende Uploads VOR dem Speichern der Aufgabe (#733): scheitert der
+  // Upload, soll die Aufgabe nicht mit dem Gefühl gespeichert sein, der Beleg
+  // hänge dran. Dasselbe Vorgehen wie bei den Belegen im Budget.
+  // null heißt „kein Feld im Formular" und ist NICHT dasselbe wie „keine
+  // Dokumente": ein PUT mit leerer Liste löscht als Replace-Set alles, was an
+  // der Aufgabe hängt.
+  let documentIds = null;
+  try {
+    documentIds = taskDocuments ? await taskDocuments.commit() : null;
+  } catch (err) {
+    resetSubmit(err.message || t('common.errorGeneric'));
+    btnError(submitBtn);
+    return;
+  }
+
   try {
     let savedTaskId = taskId;
     if (taskId) {
@@ -1558,9 +2298,30 @@ async function handleFormSubmit(e, container) {
       }
 
       // Dokument-Verknüpfungen als Replace-Set übernehmen (#503).
-      try {
-        await api.put(`/tasks/${savedTaskId}/documents`, { document_ids: modalDocuments.selected });
-      } catch { /* Verknüpfen fehlgeschlagen - nicht blockierend für den Task-Save */ }
+      //
+      // Der Fehler wird nicht mehr verschluckt: seit hier hochgeladen werden
+      // kann (#733), liegt bei einem Fehlschlag eine frische Datei unverknüpft
+      // im Dokumente-Modul, während die Aufgabe sich als gespeichert meldet -
+      // der Nutzer glaubt, der Zettel hänge dran. Die Aufgabe IST gespeichert,
+      // deshalb bleibt das kein Abbruch, sondern eine Meldung, die den einen
+      // Teil benennt, der nicht geklappt hat.
+      if (documentIds) {
+        try {
+          await api.put(`/tasks/${savedTaskId}/documents`, { document_ids: documentIds });
+        } catch (err) {
+          console.error('[Tasks] document link error:', err);
+          // Das Formular bleibt STEHEN: die Aufgabe ist gespeichert, aber die
+          // Datei haengt nicht an ihr, und ein zuklappendes Modal mit gruenem
+          // Haken behauptete das Gegenteil. So bleibt der Weg zum zweiten
+          // Versuch offen - die Chips sind noch da, ein erneutes Speichern
+          // schickt dieselbe Liste.
+          resetSubmit(t('tasks.documentsLinkFailed'));
+          btnError(submitBtn);
+          await refreshTags();
+          await loadTasks(container);
+          return;
+        }
+      }
     }
 
     btnSuccess(submitBtn, originalLabel);
@@ -1602,6 +2363,39 @@ async function handleAddSubtask(parentId, container) {
   if (!title) return;
   try {
     await api.post('/tasks', { title, parent_task_id: parentId });
+    await loadTasks(container);
+  } catch (err) {
+    window.yuvomi.showToast(err.message, 'danger');
+  }
+}
+
+// Ein Teilschritt ist eine gewöhnliche Aufgabe mit parent_task_id, also tragen
+// Umbenennen und Löschen die vorhandenen Task-Routen (#748). Bis dahin war der
+// einzige Weg zu einem Tippfehler: abhaken und neu tippen.
+async function handleRenameSubtask(id, currentTitle, container) {
+  const title = await promptModal(t('tasks.subtaskRenamePrompt'), currentTitle);
+  // Abbruch (null) und "unverändert" gehen beide ohne Request weiter; ein
+  // leergeräumtes Feld ist kein gültiger Titel und wird wie Abbruch behandelt.
+  if (!title || title.trim() === currentTitle) return;
+  try {
+    await api.put(`/tasks/${id}`, { title: title.trim() });
+    await loadTasks(container);
+  } catch (err) {
+    window.yuvomi.showToast(err.message, 'danger');
+  }
+}
+
+async function handleDeleteSubtask(id, title, container) {
+  // Rückfrage, weil Löschen der einzige Weg ohne Rückweg ist - abhaken lässt
+  // sich zurücknehmen, das hier nicht.
+  const ok = await confirmModal(t('tasks.subtaskDeleteConfirm', { title }), {
+    confirmLabel: t('common.delete'),
+    danger: true,
+    detail: t('tasks.subtaskDeleteDetail'),
+  });
+  if (!ok) return;
+  try {
+    await api.delete(`/tasks/${id}`);
     await loadTasks(container);
   } catch (err) {
     window.yuvomi.showToast(err.message, 'danger');
@@ -1700,7 +2494,7 @@ function renderKanbanCard(task) {
       <div class="kanban-card__meta">
         ${renderPriorityBadge(task.priority)}
         ${due ? `<span class="due-date ${due.cls}"><i data-lucide="clock" class="icon-sm" aria-hidden="true"></i> ${due.label}</span>` : ''}
-        ${renderTagBadges(task.tags)}
+        ${renderTagBadges(task.tags, TAG_BADGES_VISIBLE, task.priority)}
       </div>
       <div class="kanban-card__footer">
         ${renderAvatarStack(task.assigned_users ?? [], { size: 22 }) || '<span></span>'}
@@ -2135,7 +2929,11 @@ function renderFilters(container) {
 
   const toggleBtn = document.createElement('button');
   toggleBtn.id = 'filter-toggle-btn';
-  toggleBtn.className = `filter-toggle-btn${state.filterPanelOpen ? ' filter-toggle-btn--open' : ''}${activeCount > 0 ? ' filter-toggle-btn--active' : ''}`;
+  // `filter-chip` trägt die Form, `filter-toggle-btn` nur noch die Abweichung:
+  // der Knopf stand mit einer eigenen, zeichengleichen Kopie derselben vierzehn
+  // Deklarationen daneben (siehe tasks.css) und war damit der vierte Chip, den
+  // die geteilte Datei eigentlich abgelöst hat.
+  toggleBtn.className = `filter-chip filter-toggle-btn${state.filterPanelOpen ? ' filter-toggle-btn--open' : ''}${activeCount > 0 ? ' filter-toggle-btn--active' : ''}`;
   toggleBtn.setAttribute('aria-expanded', String(state.filterPanelOpen));
   toggleBtn.setAttribute('aria-controls', 'filter-panel');
 
@@ -2309,12 +3107,6 @@ function updateOverdueBadge() {
 // Swipe-Gesten (Mobil: links = erledigt, rechts = bearbeiten)
 // --------------------------------------------------------
 
-const SWIPE_THRESHOLD    = 80;   // px - Mindestweg für Aktion
-const SWIPE_MAX_VERT     = 12;   // px - vertikaler Bewegungs-Toleranzbereich (darunter: kein Scroll-Abbruch)
-const SWIPE_LOCK_VERT    = 30;   // px - ab diesem Weg gilt es als Scroll (Swipe abgebrochen)
-
-const SWIPE_HINT_KEY  = 'yuvomi:swipeHintSeen';
-const SWIPE_HINT_MAX  = 3;
 const RECENT_FILTERS_KEY = 'yuvomi:recentTaskFilters';
 const RECENT_FILTERS_MAX = 3;
 const SHOW_FUTURE_KEY = 'yuvomi:taskShowFuture';
@@ -2414,125 +3206,50 @@ function wireSwipeGestures(container) {
   const listEl = container.querySelector('#task-list');
   if (!listEl) return;
 
-  listEl.querySelectorAll('.swipe-row').forEach((row) => {
-    let startX = 0, startY = 0;
-    let dx = 0;
-    let locked = false;    // false = unentschieden, 'swipe' | 'scroll'
-    let thresholdHit = false; // Haptic-Feedback am Threshold nur einmal
-    const card = row.querySelector('.task-card');
-    if (!card) return;
-
-    function resetCard(animate = true) {
-      card.style.transition = animate ? 'transform 0.25s ease' : '';
-      card.style.transform  = '';
-      row.classList.remove('swipe-row--swiping');
-      // Reveal-Panels zurücksetzen
-      row.querySelector('.swipe-reveal--done').style.opacity = '0';
-      row.querySelector('.swipe-reveal--edit').style.opacity = '0';
-    }
-
-    row.addEventListener('touchstart', (e) => {
-      // Geste ignorieren wenn Modal offen
-      if (document.getElementById('shared-modal-overlay')) return;
-      startX = e.touches[0].clientX;
-      startY = e.touches[0].clientY;
-      dx     = 0;
-      locked = false;
-      thresholdHit = false;
-      card.style.transition = '';
-    }, { passive: true });
-
-    row.addEventListener('touchmove', (e) => {
-      if (locked === 'scroll') return;
-
-      const currentX = e.touches[0].clientX;
-      const currentY = e.touches[0].clientY;
-      dx = currentX - startX;
-      const dy = Math.abs(currentY - startY);
-
-      // Scroll-Richtung früh erkennen
-      if (locked === false) {
-        if (dy > SWIPE_MAX_VERT && Math.abs(dx) < dy) {
-          locked = 'scroll';
-          resetCard(false);
-          return;
-        }
-        if (Math.abs(dx) > SWIPE_MAX_VERT) {
-          locked = 'swipe';
-        }
-      }
-
-      if (locked !== 'swipe') return;
-
-      // Vertikalen Scroll verhindern sobald Swipe erkannt
-      if (dy < SWIPE_LOCK_VERT) e.preventDefault();
-
-      // Karte verschieben (gedämpft nach THRESHOLD)
-      const dampened = dx > 0
-        ? Math.min(dx, SWIPE_THRESHOLD + (dx - SWIPE_THRESHOLD) * 0.2)
-        : Math.max(dx, -(SWIPE_THRESHOLD + (-dx - SWIPE_THRESHOLD) * 0.2));
-
-      card.style.transform = `translateX(${dampened}px)`;
-      row.classList.add('swipe-row--swiping');
-
-      // Reveal-Panels einblenden (0 → 1 über Threshold)
-      const progress = Math.min(Math.abs(dx) / SWIPE_THRESHOLD, 1);
-      if (dx < 0) {
-        row.querySelector('.swipe-reveal--done').style.opacity = String(progress);
-        row.querySelector('.swipe-reveal--edit').style.opacity = '0';
-      } else {
-        row.querySelector('.swipe-reveal--edit').style.opacity = String(progress);
-        row.querySelector('.swipe-reveal--done').style.opacity = '0';
-      }
-
-      // Haptic-Feedback beim Erreichen des Schwellwerts
-      if (!thresholdHit && Math.abs(dx) >= SWIPE_THRESHOLD) {
-        thresholdHit = true;
-        vibrate(15);
-      }
-    }, { passive: false });
-
-    row.addEventListener('touchend', async () => {
-      if (locked !== 'swipe') { resetCard(false); return; }
-
-      const taskId = row.dataset.swipeId;
-      const status = row.dataset.swipeStatus;
-
-      if (dx < -SWIPE_THRESHOLD) {
-        // Swipe links → Status-Toggle (offen ↔ erledigt)
-        card.style.transition = 'transform 0.2s ease';
-        card.style.transform  = 'translateX(-110%)';
-        vibrate(40);
-        const capturedStatus = status;
+  wireSwipeRows(listEl, {
+    card: '.task-card',
+    // Vor 2.0.0 öffnete derselbe Wisch hier den Bearbeiten-Dialog: eine der
+    // zwei Listen, in denen die Seiten wirklich getauscht haben.
+    sidesSwapped: true,
+    // Zeilenanfang: Status umschalten - die primäre positive Aktion der Liste
+    // (§2: dieselbe Kante trägt sie in jeder Liste). Die Karte fliegt hinaus,
+    // weil die Zeile danach in einer anderen Gruppe steht - ohne den Flug
+    // spränge sie einfach weg.
+    leading: {
+      reveal: '.swipe-reveal--done',
+      flyOut: true,
+      run: async (row) => {
+        const taskId = row.dataset.swipeId;
+        const capturedStatus = row.dataset.swipeStatus;
         const nextStatus = capturedStatus === 'done' ? 'open' : 'done';
-        setTimeout(async () => {
-          resetCard(false);
-          try {
-            await toggleTaskStatus(taskId, capturedStatus);
-            await loadTasks(container);
-            window.yuvomi.showToast(
-              t(nextStatus === 'done' ? 'tasks.swipedDoneToast' : 'tasks.swipedOpenToast'),
-              'default',
-              5000,
-              async () => {
-                try {
-                  await toggleTaskStatus(taskId, nextStatus);
-                  await loadTasks(container);
-                } catch (err) {
-                  window.yuvomi.showToast(err.message, 'danger');
-                }
-              },
-            );
-          } catch (err) {
-            window.yuvomi.showToast(err.message, 'danger');
-            await loadTasks(container);
-          }
-        }, 200);
-
-      } else if (dx > SWIPE_THRESHOLD) {
-        // Swipe rechts → Detailansicht
-        resetCard(true);
-        vibrate(20);
+        try {
+          await toggleTaskStatus(taskId, capturedStatus);
+          await loadTasks(container);
+          window.yuvomi.showToast(
+            t(nextStatus === 'done' ? 'tasks.swipedDoneToast' : 'tasks.swipedOpenToast'),
+            'default',
+            5000,
+            async () => {
+              try {
+                await toggleTaskStatus(taskId, nextStatus);
+                await loadTasks(container);
+              } catch (err) {
+                window.yuvomi.showToast(err.message, 'danger');
+              }
+            },
+          );
+        } catch (err) {
+          window.yuvomi.showToast(err.message, 'danger');
+          await loadTasks(container);
+        }
+      },
+    },
+    // Zeilenende: Detailansicht - hier die sekundäre Aktion, weil die Liste
+    // eine positive führt. Die Zeile bleibt, also federt die Karte zurueck.
+    trailing: {
+      reveal: '.swipe-reveal--edit',
+      run: async (row) => {
+        const taskId = row.dataset.swipeId;
         try {
           const [task, reminder] = await Promise.all([
             loadTaskForEdit(taskId),
@@ -2542,33 +3259,9 @@ function wireSwipeGestures(container) {
         } catch (err) {
           window.yuvomi.showToast(t('tasks.loadError'), 'danger');
         }
-
-      } else {
-        resetCard(true);
-      }
-    }, { passive: true });
+      },
+    },
   });
-}
-
-// --------------------------------------------------------
-// Swipe-Affordance Hint (Long Loop)
-// Zeigt den Nudge-Hinweis maximal 3x (gespeichert in localStorage).
-// --------------------------------------------------------
-
-function maybeShowSwipeHint(container) {
-  if (window.innerWidth >= 1024) return; // Desktop: Swipe nicht relevant
-  const count = parseInt(localStorage.getItem(SWIPE_HINT_KEY) ?? '0', 10);
-  if (count >= SWIPE_HINT_MAX) return;
-
-  const firstRow = container.querySelector('.swipe-row');
-  if (!firstRow) return;
-
-  firstRow.classList.add('swipe-row--hint');
-  firstRow.addEventListener('animationend', () => {
-    firstRow.classList.remove('swipe-row--hint');
-  }, { once: true });
-
-  localStorage.setItem(SWIPE_HINT_KEY, String(count + 1));
 }
 
 // --------------------------------------------------------
@@ -2631,6 +3324,21 @@ function wireFilterChips(container) {
 function wireViewToggle(container) {
   const toggle = container.querySelector('#view-toggle');
   if (!toggle) return;
+  // Der Kopf fluchtet mit dem Körper, den er überschreibt - und der wechselt
+  // hier die Breite. Die Liste ist aufs Lesemaß gekappt (720px), das
+  // Kanban-Board nimmt die volle Content-Spalte (gemessen 1156px bei 1440px
+  // Fensterbreite); ein fester Modifier im Markup stimmte in genau einer der
+  // beiden Ansichten (Critique 2026-08-13).
+  //
+  // Der Anfangswert steht hier und NICHT als Interpolation im class-Attribut:
+  // zwei Guards lesen die Rail-Aliasse per Regex aus `class="..."`, und ein
+  // `${...}` darin macht aus `?`, `===` und `'list'` je einen Klassennamen -
+  // `.?` als Rail traf danach jeden Selektor der App. Ein Markup-Attribut, das
+  // statisch gelesen wird, bleibt statisch geschrieben.
+  const toolbarEl = container.querySelector('.tasks-toolbar');
+  const syncToolbarWidth = () =>
+    toolbarEl?.classList.toggle('page-toolbar--narrow', state.viewMode === 'list');
+  syncToolbarWidth();
   toggle.querySelectorAll('[data-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.viewMode = btn.dataset.view;
@@ -2641,6 +3349,7 @@ function wireViewToggle(container) {
         b.classList.toggle('group-toggle__btn--active', on);
         b.setAttribute('aria-pressed', String(on));
       });
+      syncToolbarWidth();
       // Sichtbarkeit über [hidden] statt style.display: ein Zustand, den auch
       // assistive Technik als „nicht vorhanden" liest.
       const groupToggle = container.querySelector('#group-mode-toggle');
@@ -2890,6 +3599,14 @@ function wireTaskList(container) {
     if (action === 'add-subtask') {
       await handleAddSubtask(target.dataset.parent, container);
     }
+
+    if (action === 'rename-subtask') {
+      await handleRenameSubtask(id, target.dataset.title, container);
+    }
+
+    if (action === 'delete-subtask') {
+      await handleDeleteSubtask(id, target.dataset.title, container);
+    }
   });
 }
 
@@ -2899,6 +3616,9 @@ function wireTaskList(container) {
 
 export async function render(container, { user }) {
   state.currentUserId = user?.id ?? null;
+  // Die Rolle entscheidet nur darüber, ob ein fremder Kommentar entfernt werden
+  // darf (#734) - der Server prüft dieselbe Bedingung noch einmal.
+  state.isAdmin = user?.role === 'admin';
 
   // „Mir zugewiesen" pro Gerät wiederherstellen (setzt assigned_to auf die eigene ID)
   try {
@@ -2924,7 +3644,7 @@ export async function render(container, { user }) {
   // Initiales Skeleton (all values are from i18n keys or hardcoded constants, no user data)
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
-    <div class="tasks-page">
+    <div class="tasks-page page-measure--narrow">
       <div class="page-toolbar page-toolbar--wrap tasks-toolbar">
         <h1 class="page-toolbar__title">${t('tasks.title')}</h1>
         ${renderPageSearch({
@@ -2936,7 +3656,7 @@ export async function render(container, { user }) {
           className: 'tasks-toolbar__search page-toolbar__center',
         })}
         <div class="page-toolbar__actions">
-          <div class="group-toggle" id="view-toggle" role="group" aria-label="${t('tasks.viewToggleLabel')}">
+          <div class="group-toggle group-toggle--icons" id="view-toggle" role="group" aria-label="${t('tasks.viewToggleLabel')}">
             <button type="button" class="group-toggle__btn ${isKanban ? '' : 'group-toggle__btn--active'}" data-view="list"
                     title="${t('tasks.listView')}" aria-label="${t('tasks.listView')}" aria-pressed="${!isKanban}">
               <i data-lucide="list" class="icon-md" aria-hidden="true"></i>
@@ -2961,8 +3681,9 @@ export async function render(container, { user }) {
                   aria-label="${t('tasks.manageTags')}" title="${t('tasks.manageTags')}">
             <i data-lucide="tags" class="icon-lg" aria-hidden="true"></i>
           </button>
-          <button class="btn btn--primary toolbar-new-btn" id="btn-new-task" style="gap:var(--space-1)">
-            <i data-lucide="plus" class="icon-lg" aria-hidden="true"></i> ${t('tasks.newTask')}
+          <button class="btn btn--primary toolbar-new-btn" id="btn-new-task" style="gap:var(--space-1)"
+                  aria-label="${t('tasks.newTask')}">
+            <i data-lucide="plus" class="icon-lg" aria-hidden="true"></i> <span class="toolbar-new-btn__label">${t('newLabel.tasks')}</span>
           </button>
         </div>
       </div>
@@ -2971,12 +3692,24 @@ export async function render(container, { user }) {
         <div class="tasks-filters-row">
           <div class="tasks-filters" id="filter-bar" role="group" aria-label="${t('tasks.filterBtn')}"></div>
           <div class="tasks-filters__end">
+            <!-- Icon PLUS Label, nicht Icon ODER Label: unter 640px faellt das
+                 Label weg (Label-Verlust-Regel, tasks.css), und dann traegt das
+                 Icon allein. Das aria-label steht deshalb IMMER da - der
+                 zugaengliche Name darf nicht an einer Media-Query haengen. -->
             <div class="group-toggle" id="group-mode-toggle" role="group"
                  aria-label="${t('tasks.groupToggleLabel')}" ${isKanban ? 'hidden' : ''}>
               <button type="button" class="group-toggle__btn group-toggle__btn--active"
-                      data-mode="category" aria-pressed="true">${t('tasks.categoryLabel')}</button>
+                      data-mode="category" aria-pressed="true"
+                      aria-label="${t('tasks.categoryLabel')}">
+                <i data-lucide="folder" class="group-toggle__icon" aria-hidden="true"></i>
+                <span class="group-toggle__label">${t('tasks.categoryLabel')}</span>
+              </button>
               <button type="button" class="group-toggle__btn"
-                      data-mode="due" aria-pressed="false">${t('tasks.dueDateLabel')}</button>
+                      data-mode="due" aria-pressed="false"
+                      aria-label="${t('tasks.dueDateLabel')}">
+                <i data-lucide="calendar-clock" class="group-toggle__icon" aria-hidden="true"></i>
+                <span class="group-toggle__label">${t('tasks.dueDateLabel')}</span>
+              </button>
             </div>
           </div>
         </div>
@@ -3019,7 +3752,7 @@ export async function render(container, { user }) {
               <div class="skeleton skeleton-line skeleton-line--short" style="height:12px"></div>
             </div>`).join('')}
         </div>
-        <button class="page-fab" id="fab-new-task" aria-label="${t('tasks.newTask')}">
+        <button class="page-fab" id="fab-new-task" aria-label="${t('tasks.newTask')}" data-dock-label="${t('newLabel.tasks')}">
           <i data-lucide="plus" class="icon-xl" aria-hidden="true"></i>
         </button>
       </div>
@@ -3043,6 +3776,7 @@ export async function render(container, { user }) {
     state.allTags = metaData.tags ?? [];
     state.defaultPoints = Number(metaData.default_points) || 0;
     state.subtasksExpandedByDefault = preferencesData.data?.tasks_subtasks_expanded === true;
+    state.defaultSyncTarget = preferencesData.data?.tasks_default_target || '';
   } catch (err) {
     console.error('[Tasks] Ladefehler:', err.message);
     window.yuvomi.showToast(t('tasks.loadError'), 'danger');
@@ -3052,6 +3786,7 @@ export async function render(container, { user }) {
     state.allTags = [];
     state.defaultPoints = 0;
     state.subtasksExpandedByDefault = false;
+    state.defaultSyncTarget = '';
   }
 
   // UI verdrahten

@@ -461,3 +461,361 @@ test('Ablegen storniert keine Punkte-Gutschrift', async () => {
   await call('PATCH', `/${id}/archive`, { as: admin, body: { archived: true } });
   assert.equal(earned(), 7, 'Ablegen ist keine Rücknahme des Erledigens');
 });
+
+// --------------------------------------------------------
+// Sync-Ziel einer neuen Aufgabe (#695)
+// --------------------------------------------------------
+
+function seedReminderList({ module = 'tasks', enabled = 1, url = 'https://dav.example/dav/u/reminders/' } = {}) {
+  // Ein eigenes Konto je Aufruf: (caldav_url, username) ist eindeutig.
+  const user = `u-${randomUUID().slice(0, 8)}`;
+  const accountId = db.prepare(`
+    INSERT INTO caldav_accounts (name, caldav_url, username, password)
+    VALUES ('Synology', 'https://dav.example/', ?, 'p')
+  `).run(user).lastInsertRowid;
+  db.prepare(`
+    INSERT INTO caldav_reminder_selection (account_id, list_url, list_name, target_module, enabled)
+    VALUES (?, ?, 'Inbox', ?, ?)
+  `).run(accountId, url, module, enabled);
+  return { accountId, url };
+}
+
+test('GET /sync-targets liefert nur die fuer Aufgaben freigegebenen Listen', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const tasksList = seedReminderList();
+  seedReminderList({ module: 'shopping', url: 'https://dav.example/dav/u/einkauf/' });
+  seedReminderList({ enabled: 0, url: 'https://dav.example/dav/u/aus/' });
+
+  const r = await call('GET', '/sync-targets', { as: admin });
+  assert.equal(r.status, 200);
+  const urls = r.body.data.caldav.map((entry) => entry.listUrl);
+  assert.ok(urls.includes(tasksList.url));
+  assert.ok(!urls.includes('https://dav.example/dav/u/einkauf/'),
+    'Eine Einkaufsliste als Ziel brächte die Aufgabe als Einkaufsposten zurück');
+  assert.ok(!urls.includes('https://dav.example/dav/u/aus/'));
+  // Kein Feld, das mehr verrät als das Dropdown braucht.
+  for (const entry of r.body.data.caldav) {
+    assert.deepEqual(Object.keys(entry).sort(), ['accountId', 'accountName', 'listName', 'listUrl']);
+  }
+});
+
+test('POST mit Sync-Ziel merkt die Aufgabe fuer den Upload vor', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId, url } = seedReminderList({ url: 'https://dav.example/dav/u/ziel-ok/' });
+
+  const r = await call('POST', '/', {
+    as: admin,
+    body: { title: 'Reifen wechseln', sync_target: `caldav:${accountId}|${url}` },
+  });
+  assert.equal(r.status, 201);
+
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(r.body.data.id);
+  assert.equal(row.target_caldav_account_id, accountId);
+  assert.equal(row.target_caldav_list_url, url);
+  // Sie bleibt bis zum Upload lokal - erst der Sync macht sie zum Spiegel.
+  assert.equal(row.external_source, 'local');
+});
+
+test('POST ohne Sync-Ziel laesst die Aufgabe lokal, wie jede bisher', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const r = await call('POST', '/', { as: admin, body: { title: 'Nur hier' } });
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(r.body.data.id);
+  assert.equal(row.target_caldav_account_id, null);
+  assert.equal(row.target_caldav_list_url, null);
+});
+
+test('POST mit einer nicht freigegebenen Liste → 400 statt stiller Wartestellung', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId } = seedReminderList({ enabled: 0, url: 'https://dav.example/dav/u/abgewaehlt/' });
+
+  const r = await call('POST', '/', {
+    as: admin,
+    body: { title: 'Ins Leere', sync_target: `caldav:${accountId}|https://dav.example/dav/u/abgewaehlt/` },
+  });
+  assert.equal(r.status, 400);
+});
+
+test('POST mit einem Google-Ziel → 400: Aufgaben gleichen nur ueber CalDAV ab', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const r = await call('POST', '/', { as: admin, body: { title: 'Falsches Ziel', sync_target: 'google:primary' } });
+  assert.equal(r.status, 400);
+});
+
+test('POST mit kaputtem Ziel-Format → 400', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const r = await call('POST', '/', { as: admin, body: { title: 'Kaputt', sync_target: 'caldav:' } });
+  assert.equal(r.status, 400);
+});
+
+test('Eine Unteraufgabe bekommt kein eigenes Ziel, auch wenn eines mitkommt', async () => {
+  // Als eigenstaendiges VTODO stuende sie gleichrangig neben ihrer Elternaufgabe.
+  // Das Feld wird deshalb still verworfen statt mit 400 mitten im Anlegen einer
+  // Checkliste abgewiesen.
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId, url } = seedReminderList({ url: 'https://dav.example/dav/u/sub/' });
+  const parent = await call('POST', '/', { as: admin, body: { title: 'Umzug' } });
+
+  const sub = await call('POST', '/', {
+    as: admin,
+    body: { title: 'Kartons', parent_task_id: parent.body.data.id, sync_target: `caldav:${accountId}|${url}` },
+  });
+  assert.equal(sub.status, 201);
+  const row = db.prepare('SELECT * FROM tasks WHERE id = ?').get(sub.body.data.id);
+  assert.equal(row.target_caldav_account_id, null);
+});
+
+test('PUT setzt ein Ziel nach und nimmt es mit leerem Wert zurueck', async () => {
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId, url } = seedReminderList({ url: 'https://dav.example/dav/u/nachtraeglich/' });
+  const created = await call('POST', '/', { as: admin, body: { title: 'Spaeter doch' } });
+  const id = created.body.data.id;
+
+  await call('PUT', `/${id}`, { as: admin, body: { title: 'Spaeter doch', sync_target: `caldav:${accountId}|${url}` } });
+  assert.equal(db.prepare('SELECT target_caldav_list_url AS u FROM tasks WHERE id = ?').get(id).u, url);
+
+  await call('PUT', `/${id}`, { as: admin, body: { title: 'Spaeter doch', sync_target: '' } });
+  assert.equal(db.prepare('SELECT target_caldav_list_url AS u FROM tasks WHERE id = ?').get(id).u, null);
+});
+
+test('Eine bereits hochgeladene Aufgabe wechselt ihre Liste nicht', async () => {
+  // Einen Umzug zwischen Listen gibt es bewusst nicht. Das Feld wird still
+  // ignoriert, weil der Dialog es in diesem Zustand gar nicht als Auswahl zeigt.
+  const admin = { id: ALICE, role: 'admin' };
+  const { accountId, url } = seedReminderList({ url: 'https://dav.example/dav/u/schon-oben/' });
+  const created = await call('POST', '/', { as: admin, body: { title: 'Laengst oben' } });
+  const id = created.body.data.id;
+  db.prepare(`
+    UPDATE tasks SET external_source = 'caldav', external_uid = 'x@y', external_account_id = ?
+     WHERE id = ?
+  `).run(accountId, id);
+
+  const r = await call('PUT', `/${id}`, { as: admin, body: { title: 'Laengst oben', sync_target: `caldav:${accountId}|${url}` } });
+  assert.equal(r.status, 200);
+  assert.equal(db.prepare('SELECT target_caldav_list_url AS u FROM tasks WHERE id = ?').get(id).u, null);
+});
+
+test('eine private Unteraufgabe bleibt in der Liste fremd und unantastbar (#748-Review)', async () => {
+  const alice = { id: ALICE, role: 'admin' };
+  const bob   = { id: BOB, role: 'member' };
+
+  // Geteilte Elternaufgabe, darunter eine PRIVATE Unteraufgabe von Alice.
+  const parent = await call('POST', '/', {
+    as: alice, body: { title: 'Umzug', category: CATEGORY, visibility: 'all' },
+  });
+  assert.equal(parent.status, 201);
+  const sub = await call('POST', '/', {
+    as: alice,
+    body: { title: 'Geheim: Kaution zurueckfordern', category: CATEGORY, parent_task_id: parent.body.data.id, visibility: 'private' },
+  });
+  assert.equal(sub.status, 201);
+  const subId = sub.body.data.id;
+
+  // 1) Die LISTE gab den Titel samt ID heraus, obwohl die Detailansicht ihn
+  //    korrekt zurueckhielt - und zaehlte ihn im Fortschritt mit.
+  const list = await call('GET', '/', { as: bob });
+  assert.equal(list.status, 200);
+  const seen = list.body.data.find((t) => t.id === parent.body.data.id);
+  assert.ok(seen, 'die geteilte Elternaufgabe muss Bob erreichen');
+  assert.deepEqual(seen.subtasks, [], 'fremde private Unteraufgabe in der Liste');
+  assert.equal(seen.subtask_total, 0, 'fremde private Unteraufgabe im Zaehler');
+  assert.equal(seen.subtask_done, 0);
+
+  // 2) Und selbst mit der ID in der Hand kommt Bob nicht heran.
+  assert.equal((await call('PUT', `/${subId}`, { as: bob, body: { title: 'entfuehrt' } })).status, 404);
+  assert.equal((await call('DELETE', `/${subId}`, { as: bob })).status, 404);
+
+  // 3) Fuer Alice ist alles unveraendert da.
+  const own = await call('GET', '/', { as: alice });
+  const mine = own.body.data.find((t) => t.id === parent.body.data.id);
+  assert.equal(mine.subtask_total, 1);
+  assert.deepEqual(mine.subtasks.map((s) => s.id), [subId]);
+  assert.equal((await call('PUT', `/${subId}`, { as: alice, body: { title: 'Kaution zurueckfordern' } })).status, 200);
+});
+
+test('auch eine gewoehnliche fremde Aufgabe ist nicht loeschbar (#748-Review)', async () => {
+  // Der Befund haengt nicht an Unteraufgaben: PUT und DELETE luden die Zeile per
+  // id und arbeiteten darauf, ohne die Sichtbarkeit zu fragen.
+  const priv = await call('POST', '/', {
+    as: { id: ALICE, role: 'admin' },
+    body: { title: 'Privat', category: CATEGORY, visibility: 'private' },
+  });
+  const id = priv.body.data.id;
+  assert.equal((await call('PUT', `/${id}`, { as: { id: BOB, role: 'member' }, body: { title: 'x' } })).status, 404);
+  assert.equal((await call('DELETE', `/${id}`, { as: { id: BOB, role: 'member' } })).status, 404);
+  // Sie steht danach unveraendert da.
+  const still = await call('GET', `/${id}`, { as: { id: ALICE, role: 'admin' } });
+  assert.equal(still.body.data.title, 'Privat');
+});
+
+// --------------------------------------------------------
+// Kommentare an Aufgaben (#734)
+// --------------------------------------------------------
+
+let COMMENT_TASK, COMMENT_ID;
+
+test('Kommentare: anlegen, lesen, in Reihenfolge', async () => {
+  const task = await call('POST', '/', { as: { id: ALICE, role: 'admin' }, body: { title: 'Küche streichen' } });
+  COMMENT_TASK = task.body.data.id;
+
+  const first = await call('POST', `/${COMMENT_TASK}/comments`, {
+    as: { id: ALICE, role: 'admin' }, body: { comment: 'Farbe ist gekauft.' },
+  });
+  assert.equal(first.status, 201);
+  assert.equal(first.body.data.comment, 'Farbe ist gekauft.');
+  assert.equal(first.body.data.author_name, 'alice');
+  assert.equal(first.body.data.updated_at, null);
+  COMMENT_ID = first.body.data.id;
+
+  await call('POST', `/${COMMENT_TASK}/comments`, {
+    as: { id: BOB, role: 'member' }, body: { comment: 'Ich bringe die Rolle mit.' },
+  });
+
+  // Eine Unterhaltung liest sich vorwärts - ältester Beitrag zuerst.
+  const list = await call('GET', `/${COMMENT_TASK}/comments`, { as: { id: BOB, role: 'member' } });
+  assert.equal(list.status, 200);
+  assert.deepEqual(list.body.data.map((c) => c.comment),
+    ['Farbe ist gekauft.', 'Ich bringe die Rolle mit.']);
+});
+
+test('Kommentare: leer oder nur Leerzeichen → 400', async () => {
+  for (const comment of ['', '   ', null]) {
+    const res = await call('POST', `/${COMMENT_TASK}/comments`, {
+      as: { id: ALICE, role: 'admin' }, body: { comment },
+    });
+    assert.equal(res.status, 400, `"${comment}" hätte 400 geben müssen`);
+  }
+});
+
+test('Kommentare: ändern darf nur, wer geschrieben hat', async () => {
+  const fremd = await call('PATCH', `/${COMMENT_TASK}/comments/${COMMENT_ID}`, {
+    as: { id: BOB, role: 'member' }, body: { comment: 'Übernommen' },
+  });
+  assert.equal(fremd.status, 403);
+
+  const eigen = await call('PATCH', `/${COMMENT_TASK}/comments/${COMMENT_ID}`, {
+    as: { id: ALICE, role: 'admin' }, body: { comment: 'Farbe ist gekauft (2 Eimer).' },
+  });
+  assert.equal(eigen.status, 200);
+  assert.equal(eigen.body.data.comment, 'Farbe ist gekauft (2 Eimer).');
+  // Erst die Nachbesserung setzt den Stempel - sonst trüge jeder Beitrag einen.
+  assert.ok(eigen.body.data.updated_at, 'updated_at fehlt nach dem Ändern');
+});
+
+test('Kommentare: löschen darf der Autor, und ein Admin zum Moderieren', async () => {
+  const bobs = await call('POST', `/${COMMENT_TASK}/comments`, {
+    as: { id: BOB, role: 'member' }, body: { comment: 'Doppelt geschrieben.' },
+  });
+  const bobsId = bobs.body.data.id;
+
+  // Alice ist Admin und darf entfernen, obwohl sie nicht geschrieben hat.
+  const moderiert = await call('DELETE', `/${COMMENT_TASK}/comments/${bobsId}`, { as: { id: ALICE, role: 'admin' } });
+  assert.equal(moderiert.status, 200);
+
+  const eigener = await call('POST', `/${COMMENT_TASK}/comments`, {
+    as: { id: BOB, role: 'member' }, body: { comment: 'Und wieder weg.' },
+  });
+  const selbst = await call('DELETE', `/${COMMENT_TASK}/comments/${eigener.body.data.id}`, { as: { id: BOB, role: 'member' } });
+  assert.equal(selbst.status, 200);
+
+  const rest = await call('GET', `/${COMMENT_TASK}/comments`, { as: { id: ALICE, role: 'admin' } });
+  assert.equal(rest.body.data.length, 2);
+});
+
+test('Kommentare: ein Mitglied ohne Admin-Rolle moderiert nicht', async () => {
+  const alices = await call('POST', `/${COMMENT_TASK}/comments`, {
+    as: { id: ALICE, role: 'admin' }, body: { comment: 'Steht hier.' },
+  });
+  const res = await call('DELETE', `/${COMMENT_TASK}/comments/${alices.body.data.id}`, { as: { id: BOB, role: 'member' } });
+  assert.equal(res.status, 403);
+});
+
+test('Kommentare: eine private Aufgabe teilt ihre Unterhaltung nicht', async () => {
+  const privat = await call('POST', '/', {
+    as: { id: ALICE, role: 'admin' }, body: { title: 'Geheim', visibility: 'private' },
+  });
+  const id = privat.body.data.id;
+  await call('POST', `/${id}/comments`, { as: { id: ALICE, role: 'admin' }, body: { comment: 'Nur für mich.' } });
+
+  assert.equal((await call('GET', `/${id}/comments`, { as: { id: BOB, role: 'member' } })).status, 404);
+  assert.equal((await call('POST', `/${id}/comments`, { as: { id: BOB, role: 'member' }, body: { comment: 'Hallo?' } })).status, 404);
+});
+
+test('Kommentare: eine gelöschte Aufgabe nimmt ihre Unterhaltung mit', async () => {
+  const task = await call('POST', '/', { as: { id: ALICE, role: 'admin' }, body: { title: 'Verschwindet' } });
+  const id = task.body.data.id;
+  await call('POST', `/${id}/comments`, { as: { id: ALICE, role: 'admin' }, body: { comment: 'Bleibt nicht.' } });
+  await call('DELETE', `/${id}`, { as: { id: ALICE, role: 'admin' } });
+  assert.equal(db.prepare('SELECT COUNT(*) AS c FROM task_comments WHERE task_id = ?').get(id).c, 0);
+});
+
+test('Kommentare: erwähnt wird gegen dieselbe Personenliste wie im Browser', async () => {
+  // Der Server las für die Benachrichtigung ALLE Nutzer, der Browser hebt gegen
+  // `meta/options` hervor - und dort sind Haushaltskräfte ausgenommen. Ein Name,
+  // den die Ansicht nicht markiert, darf auch keine Push-Meldung mit dem Titel
+  // der Aufgabe und dem Kommentartext auslösen.
+  const options = await call('GET', '/meta/options', { as: { id: ALICE, role: 'admin' } });
+  const sichtbar = options.body.users.map((u) => u.id);
+  assert.ok(!sichtbar.includes(WORKER), 'Vorbedingung: die Haushaltskraft steht nicht in meta/options');
+
+  const { mentionedUserIds } = await import('../public/utils/mentions.js');
+  const alleNutzer = db.prepare('SELECT id, display_name FROM users').all();
+  const wieDerServer = db.prepare(`
+    SELECT id, display_name FROM users u
+    WHERE NOT EXISTS (SELECT 1 FROM housekeeping_workers hw WHERE hw.user_id = u.id)
+  `).all();
+
+  const text = '@worker kannst du das übernehmen?';
+  assert.deepEqual(mentionedUserIds(text, alleNutzer), [WORKER], 'Vorbedingung: der Name träfe ohne Ausschluss');
+  assert.deepEqual(mentionedUserIds(text, wieDerServer), [], 'Haushaltskraft wird nicht benachrichtigt');
+});
+
+test('Kommentare: eine beim Bearbeiten dazugekommene Erwähnung wird gemeldet', async () => {
+  // Wer beim Korrigieren jemanden dazuholt, meint ihn genauso wie beim
+  // Schreiben - vorher lief die Benachrichtigung nur im POST-Pfad.
+  const task = await call('POST', '/', { as: { id: ALICE, role: 'admin' }, body: { title: 'Erwähnung nachtragen' } });
+  const created = await call('POST', `/${task.body.data.id}/comments`, {
+    as: { id: ALICE, role: 'admin' }, body: { comment: 'Wer macht das?' },
+  });
+  const patched = await call('PATCH', `/${task.body.data.id}/comments/${created.body.data.id}`, {
+    as: { id: ALICE, role: 'admin' }, body: { comment: '@bob machst du das?' },
+  });
+  assert.equal(patched.status, 200);
+  assert.equal(patched.body.data.comment, '@bob machst du das?');
+
+  // Die Route liest die Empfänger aus dem Text und nur die NEUEN: eine zweite
+  // Korrektur an derselben Erwähnung darf nicht noch einmal melden.
+  const { mentionedUserIds } = await import('../public/utils/mentions.js');
+  const users = db.prepare('SELECT id, display_name FROM users').all();
+  const vorher = mentionedUserIds('Wer macht das?', users);
+  const nachher = mentionedUserIds('@bob machst du das?', users);
+  assert.deepEqual(nachher.filter((id) => !vorher.includes(id)), [BOB]);
+  assert.deepEqual(nachher.filter((id) => !nachher.includes(id)), []);
+});
+
+test('Kommentare: wem das Modul entzogen ist, bekommt keine Erwähnungs-Meldung', async () => {
+  // Sichtbarkeit der Zeile ist nicht die einzige Hürde: wem das Aufgaben-Modul
+  // auf `none` steht, der kommt an die Aufgabe gar nicht heran - und bekäme mit
+  // dem Push trotzdem ihren Titel und den Anfang des Kommentars zugestellt.
+  const { resolvePermissions } = await import('../server/permissions.js');
+  // subject_id wird als TEXT gehalten und auch so abgefragt (`loadSubjectRows`)
+  db.prepare(`
+    INSERT OR REPLACE INTO access_permissions (subject_type, subject_id, resource_type, resource_key, access)
+    VALUES ('user', ?, 'module', 'tasks', 'none')
+  `).run(String(BOB));
+
+  const bob = db.prepare('SELECT id, role, family_role FROM users WHERE id = ?').get(BOB);
+  const perms = resolvePermissions(db, bob);
+  assert.equal(perms.modules.tasks, 'none', 'Vorbedingung: Bob darf die Aufgaben nicht sehen');
+
+  // Die Aufgabe selbst bleibt für ihn sichtbar (visibility `all`) - genau
+  // deshalb reicht `findVisibleTask` als Prüfung nicht aus.
+  const task = await call('POST', '/', { as: { id: ALICE, role: 'admin' }, body: { title: 'Ohne Modulzugriff' } });
+  const posted = await call('POST', `/${task.body.data.id}/comments`, {
+    as: { id: ALICE, role: 'admin' }, body: { comment: '@bob liest das nicht' },
+  });
+  assert.equal(posted.status, 201);
+
+  db.prepare("DELETE FROM access_permissions WHERE subject_id = ? AND resource_key = 'tasks'").run(String(BOB));
+  const wieder = resolvePermissions(db, bob);
+  assert.notEqual(wieder.modules.tasks, 'none', 'Aufräumen: Bobs Zugriff ist wiederhergestellt');
+});
