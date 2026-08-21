@@ -7,6 +7,60 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The module grid on the project website had fallen out of its container.** A single stray
+  `</div>` in the module section closed the page's content wrapper instead of the feature grid,
+  so everything after it - the fourteen module cards, their intro line, the phone row and the
+  closing paragraph - rendered at full viewport width instead of the 1152px every other block
+  uses. On a phone the cards sat flush against both screen edges with their corners clipped,
+  which made the one section meant to show "eighteen modules, neatly sorted" the only one that
+  looked broken. Four review passes had missed it because they all asked about overflow, and a
+  block at full viewport width does not overflow; browsers repair markup like this silently, so
+  the console stayed empty too. The landing-page test suite now checks that every section closes
+  exactly the elements it opens.
+- **The quick-start copy button handed out one secret where the next paragraph asked for two.**
+  The visible code block carried the note "run twice - one value for SESSION_SECRET, one for
+  DB_ENCRYPTION_KEY", but the button copied the command without it and only once, while the
+  warning two lines below asked readers to replace both placeholders with "the two values you
+  just generated". The likely outcomes were the same secret in both fields, or
+  `DB_ENCRYPTION_KEY` left on the placeholder the page itself describes as a key printed on a
+  public website - and encrypting a database is not reversible. The command now appears twice
+  wherever two values are needed, in the copied text as well as on screen, and the same fix
+  landed in the install guide, the README and the installation docs.
+- **The privacy policy contradicted itself in German.** `datenschutz.html` gave its effective
+  date as 16.08.2026 at the top and 09.06.2026 in section 14; the English version was consistent
+  at both places.
+- **Screenshots on the landing page were served below the resolution they are displayed at.** The
+  phone capture in the hero and the gallery shares its source with the small module cards, and
+  the derivative was sized for the cards - so the hero, which shows it four times larger, was
+  upscaled even on a non-retina phone and delivered less than half the pixels a modern display
+  asks for. Lead images now get their own size, selected from the markup rather than from a list
+  in the build script.
+
+### Changed
+
+- **The site's closing copy no longer speaks only to families.** The hero already said "for a
+  family, a couple, or just you", but the closing call to action, its supporting line and the
+  footer all reverted to "your family's data" and "built for families" - so the last three blocks
+  a solo user reads told them, three times, that they were not the intended audience. All three
+  now speak of the household, which is the word the page already uses at its strongest points.
+- **Docker and Podman are one platform card instead of two.** The install guide has always
+  treated them as a single path - the compose file is the only difference, and its tab is named
+  for both - while the landing page listed them separately. Readers counted six platforms here
+  and found seven tabs there with no explanation for the gap. The card now names both runtimes,
+  and the two routes that belong to no platform at all (the guided web installer and installing
+  from source) are named in a line below the grid, so the two pages add up.
+- **The outbound claim can now be checked.** "One update check against the GitHub releases API,
+  nothing else" is the most verifiable statement on the page and was the only one that led
+  nowhere; it now links to the privacy page and to the server source that makes the request.
+- **Body text on the landing page has a reading measure.** Line lengths ran from 20 to 172
+  characters on the same page, and the longest of them was the warning about the irreversible
+  database key. Every paragraph now shares one named measure and lands between 70 and 75
+  characters.
+- The copy buttons announce their result to screen readers instead of only changing their own
+  label, and the page description now names one-person households alongside families and couples.
+
 ## [2.25.1] - 2026-08-20
 
 ### Security

@@ -114,7 +114,9 @@ drop-in module is covered in the [module guide](MODULES.md).
 curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docker-compose.yml
 curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/.env.example
 cp .env.example .env
-openssl rand -hex 32   # run twice: one value for SESSION_SECRET, one for DB_ENCRYPTION_KEY
+# two values: one for SESSION_SECRET, one for DB_ENCRYPTION_KEY
+openssl rand -hex 32
+openssl rand -hex 32
 ```
 
 > **Now open `.env` and replace both `REPLACE_WITH_…` placeholders** with the two values you just

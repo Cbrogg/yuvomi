@@ -225,9 +225,10 @@ Generate a secure value for each:
 
 ```bash
 openssl rand -hex 32
+openssl rand -hex 32
 ```
 
-Run this command **twice** and paste each result. See [Environment Variables](#environment-variables) for all options.
+That prints **two** values: paste one as `SESSION_SECRET` and the other as `DB_ENCRYPTION_KEY`. See [Environment Variables](#environment-variables) for all options.
 
 #### 3. Start the Container
 

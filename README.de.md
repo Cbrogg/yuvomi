@@ -115,7 +115,9 @@ Fotos laufen, wenn der Bildschirm still steht. Jedes Modul im Detail steht in de
 curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/docker-compose.yml
 curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/.env.example
 cp .env.example .env
-openssl rand -hex 32   # zweimal ausführen: ein Wert für SESSION_SECRET, einer für DB_ENCRYPTION_KEY
+# zwei Werte: einer für SESSION_SECRET, einer für DB_ENCRYPTION_KEY
+openssl rand -hex 32
+openssl rand -hex 32
 ```
 
 > **Öffne jetzt `.env` und ersetze beide `REPLACE_WITH_…`-Platzhalter** durch die zwei eben
