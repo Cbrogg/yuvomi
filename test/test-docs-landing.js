@@ -31,6 +31,18 @@
  *            ohne Eintrag rendert stumm den englischen Fallback, auch auf der
  *            deutschen Seite.
  *
+ *        (6) Jede Sektion schliesst genau die `div`s, die sie oeffnet.
+ *            Ein einziges ueberzaehliges `</div>` in `.showcase` schloss dort
+ *            `.wrap` statt `.feat-grid`; alles danach - Modulraster, Vorspann,
+ *            Telefonreihe, Abgrenzungsabsatz - fiel aus dem 1152px-Container.
+ *            `.mod-grid` mass danach `left:0 width:1440 padding:0`, mobil
+ *            klebten die Karten bei `left:0/right:390` an beiden Bildschirm-
+ *            raendern. Vier Prueflaeufe haben es nicht gesehen, weil alle nach
+ *            UEBERLAUF fragten: volle Viewport-Breite laeuft nicht ueber,
+ *            `scrollWidth > clientWidth` bleibt still. Der Browser repariert
+ *            solches Markup klaglos, deshalb ist auch die Konsole leer. Was
+ *            fehlte, war die Frage nach der BILANZ.
+ *
  * Ausführen: node --test test/test-docs-landing.js   (bzw. npm run test:docs-landing)
  */
 
@@ -431,3 +443,316 @@ for (const page of ['index.html', 'install.html']) {
     }
   });
 }
+
+// ── (6) Jede Sektion schliesst, was sie oeffnet ──────────────────────────────
+
+/**
+ * Kommentare, `<script>` und `<style>` werden MASKIERT statt entfernt: die
+ * Zeilennummern in der Fehlermeldung sollen auf die echte Datei zeigen, und die
+ * Woerterbuecher am Dateiende tragen Markup in Zeichenketten (`<code>`, `<a>`),
+ * das sonst als Struktur mitzaehlte. Ein `</div>` IM Kommentar ueber
+ * `.mod-shots` war genau die Falle, die beim Auffinden dieses Befunds zuerst
+ * einen Fehlalarm erzeugt hat.
+ */
+function maskNonMarkup(html) {
+  const blank = (m) => m.replace(/[^\n]/g, ' ');
+  return html
+    .replace(COMMENT, blank)
+    .replace(/<script\b[^>]*>[\s\S]*?<\/script>/gi, blank)
+    .replace(/<style\b[^>]*>[\s\S]*?<\/style>/gi, blank);
+}
+
+const classOf = (tag) => (tag.match(/class="([^"]*)"/) || [])[1] || '(ohne class)';
+
+/**
+ * Prueft je Sektion, ob sie genau die `div`s schliesst, die sie oeffnet.
+ *
+ * Die gemeldete Zeile ist der Punkt, an dem die BILANZ REISST - nicht die
+ * Fehlstelle. Das ist keine Nachlaessigkeit, sondern die Grenze der Methode:
+ * ein ueberzaehliges `</div>` sieht an seiner eigenen Stelle voellig gueltig
+ * aus, es schliesst nur das falsche Element. Beim echten Befund lag zwischen
+ * beidem fast das ganze Modulraster (Fehler Z1119, Riss Z1210).
+ *
+ * Zur Fehlstelle fuehren die `groundings`: die Stellen, an denen die Sektion
+ * auf ihre GRUNDTIEFE zurueckfaellt, also kein div mehr offen hat. Eine
+ * gesunde Sektion tut das genau einmal, mit ihrem letzten Tag. Kommt es
+ * frueher vor, ist genau dort ein `</div>` zu viel - beim echten Befund
+ * schloss Z1119 das `.wrap` von Z1038, waehrend `.feat-grid` noch offen sein
+ * musste. Eine simple Liste der letzten Schliessungen taugt dafuer NICHT: die
+ * Fehlstelle lag 91 Zeilen und zwei Dutzend Modulkarten vor dem Riss.
+ */
+function sectionDivBalance(html) {
+  const masked = maskNonMarkup(html);
+  const lineAt = (i) => masked.slice(0, i).split('\n').length;
+  const sections = [];
+  const divs = [];
+  const problems = [];
+
+  for (const m of masked.matchAll(/<(\/?)(section|div)\b[^>]*>/gi)) {
+    const closing = m[1] === '/';
+    const tag = m[2].toLowerCase();
+    const line = lineAt(m.index);
+
+    if (tag === 'section') {
+      if (closing) {
+        const sec = sections.pop();
+        if (!sec) continue;
+        if (divs.length !== sec.divDepth) {
+          problems.push({
+            kind: 'balance', section: sec.cls, line: sec.line, end: line,
+            delta: divs.length - sec.divDepth, groundings: sec.groundings,
+          });
+          while (divs.length > sec.divDepth) divs.pop();
+        }
+      } else {
+        sections.push({ cls: classOf(m[0]), line, divDepth: divs.length, groundings: [] });
+      }
+      continue;
+    }
+
+    const sec = sections[sections.length - 1];
+    if (!closing) { divs.push({ cls: classOf(m[0]), line }); continue; }
+
+    if (sec && divs.length <= sec.divDepth) {
+      problems.push({ kind: 'underflow', section: sec.cls, line, groundings: sec.groundings });
+      continue;
+    }
+    const opened = divs.pop();
+    // Nur die Rueckfaelle auf die Grundtiefe festhalten - siehe Kopfkommentar.
+    if (sec && opened && divs.length === sec.divDepth) {
+      sec.groundings.push(`Z${line} </div> schliesst .${opened.cls} von Z${opened.line}`);
+    }
+  }
+  return problems;
+}
+
+const describeProblems = (problems) => problems.map((p) => {
+  const head = p.kind === 'underflow'
+    ? `  <section class="${p.section}">: in Z${p.line} schliesst ein </div> ueber die Sektionsgrenze hinaus`
+    : `  <section class="${p.section}"> (Z${p.line}-${p.end}): Bilanz ${p.delta > 0 ? '+' : ''}${p.delta}` +
+      ` (${p.delta > 0 ? `${p.delta} div nicht geschlossen` : `${-p.delta} div zu viel geschlossen`})`;
+  // Der Riss steht oben, die Fehlstelle ist der erste ueberzaehlige Rueckfall.
+  if (p.groundings.length < 2) return head;
+  const list = p.groundings.map((t, i) => `      ${i === 0 ? '-> ' : '   '}${t}`).join('\n');
+  return `${head}\n    die Sektion steht ${p.groundings.length}x ohne offenes div da, gesund waere 1x`
+       + ` - der erste Rueckfall ist die Fehlstelle:\n${list}`;
+}).join('\n');
+
+for (const page of PAGES) {
+  test(`${page}: jede Sektion schliesst genau die divs, die sie oeffnet`, () => {
+    const problems = sectionDivBalance(read(page));
+    assert.equal(
+      problems.length, 0,
+      'Sektion mit unausgeglichener div-Bilanz - alles danach faellt aus seinem Container:\n' +
+      describeProblems(problems)
+    );
+  });
+}
+
+test('der Bilanz-Guard erkennt den Schaden, gegen den er gebaut ist', () => {
+  // Der ECHTE Stand vor dem Fix, verkuerzt: das </div> in Z7 schloss .wrap
+  // statt .feat-grid, .mod-grid stand danach ausserhalb des Containers.
+  const broken = [
+    '<section class="showcase" id="modules">',   // 1
+    '  <div class="wrap">',                      // 2
+    '    <div class="feat-grid">',               // 3
+    '      <div class="feat-row">',              // 4
+    '      </div>',                              // 5
+    '    </div>',                                // 6
+    '    </div>',                                // 7  <- die Fehlstelle
+    '    <div class="mod-grid">',                // 8
+    '    </div>',                                // 9
+    '  </div>',                                  // 10 <- hier reisst die Bilanz
+    '</section>',                                // 11
+  ].join('\n');
+
+  const problems = sectionDivBalance(broken);
+  assert.equal(problems.length, 1, 'der Bruch muss gefunden werden');
+  assert.equal(problems[0].kind, 'underflow');
+  assert.equal(problems[0].section, 'showcase');
+
+  // Der Riss wird dort gemeldet, wo er auffaellt - NICHT an der Fehlstelle.
+  // Diese Zusicherung haelt die Grenze der Methode fest, damit niemand die
+  // gemeldete Zeile fuer den Fehler haelt.
+  assert.equal(problems[0].line, 10, 'gemeldet wird der Riss, nicht die Fehlstelle');
+
+  // Zur Fehlstelle fuehren die Rueckfaelle auf die Grundtiefe: eine gesunde
+  // Sektion hat genau einen, hier sind es zwei, und der ERSTE ist der Fehler.
+  assert.equal(problems[0].groundings.length, 2, 'zwei Rueckfaelle statt einem');
+  assert.equal(problems[0].groundings[0], 'Z7 </div> schliesst .wrap von Z2',
+    `der erste Rueckfall muss die Fehlstelle sein, war:\n${problems[0].groundings.join('\n')}`);
+
+  // Gegenprobe zur Gegenprobe: der reparierte Stand ist still.
+  const fixed = broken.split('\n').filter((_, i) => i !== 6).join('\n');
+  assert.deepEqual(sectionDivBalance(fixed), [], 'ohne das ueberzaehlige Tag meldet der Guard nichts');
+});
+
+test('der Bilanz-Guard zaehlt kein Markup aus Kommentaren, Skripten und Woerterbuechern', () => {
+  // Alle drei Quellen haetten in dieser Datei einen Fehlalarm erzeugt: der
+  // Kommentar ueber .mod-shots ENTHAELT die Zeichenfolge </div>, und die
+  // Woerterbuecher tragen <code>- und <a>-Markup in Zeichenketten.
+  const noise = [
+    '<section class="platforms">',
+    '  <div class="wrap">',
+    '    <!-- The </div> above closes .mod-grid, which was missing. -->',
+    '    <script>var s = "<div class=\\"x\\">";</script>',
+    '    <style>.x::after { content: "</div>"; }</style>',
+    '  </div>',
+    '</section>',
+  ].join('\n');
+
+  assert.deepEqual(sectionDivBalance(noise), [], 'nur echtes Struktur-Markup zaehlt');
+});
+
+// ── (7) Eine Rechtsseite nennt ihren Stand nur EINMAL ────────────────────────
+
+/**
+ * `datenschutz.html` trug den Stand an zwei Stellen: im Untertitel oben
+ * (16.08.2026) und in Abschnitt 14 unten (09.06.2026). Zwei Monate
+ * Unterschied, in einem Dokument, dessen einziger Zweck Verbindlichkeit ist.
+ * Das englische Gegenstueck war an beiden Stellen konsistent - die deutsche
+ * Fassung widersprach also nur sich selbst, und keiner der bestehenden
+ * Zwillings-Guards konnte das sehen: sie vergleichen Klassen und
+ * Abschnittsstruktur, nicht Inhalte.
+ *
+ * Geprueft wird je Seite gegen sich selbst, nicht Seite gegen Seite: die
+ * Rechtstexte duerfen unterschiedliche Staende haben (das Impressum ist ein
+ * eigenes Dokument), eine einzelne Seite darf sich nur nicht widersprechen.
+ */
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june',
+  'july', 'august', 'september', 'october', 'november', 'december'];
+
+const D_NUM = String.raw`(\d{1,2})\.(\d{1,2})\.(\d{4})`;
+const D_WORD = String.raw`(\d{1,2})\s+(${MONTHS.join('|')})\s+(\d{4})`;
+
+/**
+ * Nur Daten zaehlen, die einen STAND nennen. Ein Rechtstext ist voller anderer
+ * Daten - `datenschutz.html` nennt den Angemessenheitsbeschluss vom 10.07.2023,
+ * und der ist ein Sachdatum, kein Stand. Die erste Fassung dieses Guards hat
+ * genau daran auf beiden Seiten falsch angeschlagen.
+ *
+ * `\bStand\b` steht bewusst als ganzes Wort: "Standardvertragsklauseln"
+ * enthaelt denselben Stamm und stand im selben Absatz wie das Sachdatum.
+ */
+function statedDates(html) {
+  const text = stripComments(html).replace(/<[^>]+>/g, ' ');
+  const found = new Map(); // ISO -> Originalschreibweise
+  const anchor = String.raw`(?:\bStand\b|last updated)[\s\S]{0,45}?`;
+
+  for (const m of text.matchAll(new RegExp(anchor + D_NUM, 'gi'))) {
+    found.set(`${m[3]}-${m[2].padStart(2, '0')}-${m[1].padStart(2, '0')}`, `${m[1]}.${m[2]}.${m[3]}`);
+  }
+  for (const m of text.matchAll(new RegExp(anchor + D_WORD, 'gi'))) {
+    const month = String(MONTHS.indexOf(m[2].toLowerCase()) + 1).padStart(2, '0');
+    found.set(`${m[3]}-${month}-${m[1].padStart(2, '0')}`, `${m[1]} ${m[2]} ${m[3]}`);
+  }
+  return found;
+}
+
+for (const page of ['datenschutz.html', 'privacy.html', 'impressum.html']) {
+  test(`${page}: nennt genau einen Stand`, () => {
+    const dates = statedDates(read(page));
+    assert.ok(dates.size > 0, 'die Seite muss einen Stand nennen');
+    assert.equal(
+      dates.size, 1,
+      `widersprechende Standsangaben in einem Dokument:\n` +
+      [...dates].map(([iso, raw]) => `  ${iso}  ("${raw}")`).join('\n')
+    );
+  });
+}
+
+test('der Stands-Guard erkennt den Schaden, gegen den er gebaut ist', () => {
+  // Der ECHTE Stand vor dem Fix, beide Schreibweisen gemischt.
+  const de = '<p class="subtitle">Stand: 16.08.2026</p><p>Diese Erklaerung hat den Stand vom <strong>09.06.2026</strong>.</p>';
+  const found = statedDates(de);
+  assert.equal(found.size, 2, 'der Widerspruch muss gefunden werden');
+  assert.deepEqual([...found.keys()].sort(), ['2026-06-09', '2026-08-16']);
+
+  // Beide Schreibweisen zaehlen als DASSELBE Datum, sonst schluege der Guard
+  // auf jeder englischen Seite grundlos an.
+  assert.equal(statedDates('<p>Stand: 16.08.2026</p><p>Last updated: 16 August 2026</p>').size, 1);
+
+  // Und ein Sachdatum ohne "Stand" davor bleibt aussen vor - das ist der Fall,
+  // an dem die erste Fassung dieses Guards falsch angeschlagen hat.
+  assert.equal(statedDates(
+    '<p>Stand: 16.08.2026</p><p>Angemessenheitsbeschluss der EU-Kommission vom 10.07.2023, '
+    + 'ergaenzt durch Standardvertragsklauseln nach Art. 46 DSGVO.</p>').size, 1);
+
+  // Und der reparierte Stand ist still.
+  assert.equal(statedDates(de.replace('09.06.2026', '16.08.2026')).size, 1);
+});
+
+// ── (8) Die Kapitelmarken bleiben in der Minderheit ──────────────────────────
+
+/**
+ * `docs/index.html` fuehrt zwei Sorten Sektionskopf, und die Regel steht dort
+ * ausformuliert im CSS: `.sec-head.lead` ist eine KAPITELMARKE (linksbuendig,
+ * unter einem Eyebrow, groesser gesetzt), `.sec-head.center` gehoert zum
+ * Kapitel darueber. Der Quelltext haelt ausdruecklich fest, dass die Zahl der
+ * Kapitelmarken nicht weiter wachsen darf: "ab der Haelfte ist die
+ * Unterscheidung wieder eine Liste."
+ *
+ * Genau diese Regel hat eine Design-Critique am 2026-08-20 als "Koepfe mal
+ * links, mal zentriert ohne erkennbares Kriterium" gemeldet und vorgeschlagen,
+ * alle Koepfe linksbuendig zu stellen - also den einen Schritt zu tun, vor dem
+ * der Kommentar warnt. Eine Regel, die nur als Prosa im Stylesheet steht, ist
+ * gegen so einen Vorschlag wehrlos; sie steht deshalb jetzt auch hier.
+ */
+function sectionHeads(html) {
+  const body = stripComments(html);
+  return [...body.matchAll(/<div class="sec-head([^"]*)"[^>]*>([\s\S]{0,400}?)<\/div>/g)].map((m) => ({
+    lead: /\blead\b/.test(m[1]),
+    centered: /\bcenter\b/.test(m[1]),
+    eyebrow: /class="eyebrow"/.test(m[2]),
+  }));
+}
+
+/**
+ * Gezaehlt werden SEKTIONEN, nicht Sektionskoepfe - das ist die Grundmenge, die
+ * der Kommentar im Stylesheet nennt ("vier von acht"). Zwei Flaechen tragen
+ * keinen `.sec-head` (der Hero und die CTA-Box) und wuerden als Nenner fehlen:
+ * gegen die Koepfe gerechnet stuenden dieselben vier Kapitelmarken bei 4 von 6
+ * und der Guard schluege auf dem gesunden Stand an. Der Hero zaehlt mit, er ist
+ * eine Flaeche der Seite wie die anderen.
+ */
+function sectionCount(html) {
+  const body = stripComments(html);
+  return (body.match(/<section\b/g) || []).length + (body.match(/<header class="hero"/g) || []).length;
+}
+
+test('index.html: Kapitelmarken bleiben hoechstens die Haelfte der Sektionen', () => {
+  const html = read('index.html');
+  const heads = sectionHeads(html);
+  const sections = sectionCount(html);
+  assert.ok(heads.length >= 6, `zu wenige Sektionskoepfe gefunden (${heads.length}) - Extraktor gebrochen?`);
+  assert.ok(sections >= 7, `zu wenige Sektionen gefunden (${sections}) - Extraktor gebrochen?`);
+  const lead = heads.filter((h) => h.lead).length;
+  assert.ok(
+    lead * 2 <= sections,
+    `${lead} von ${sections} Sektionen sind Kapitelmarken. Ab der Haelfte ist die `
+    + `Unterscheidung wieder eine Liste - siehe die Begruendung an .sec-head.lead.`
+  );
+});
+
+test('index.html: der Eyebrow markiert die Kapitelmarke, nicht die Folgesektion', () => {
+  const heads = sectionHeads(read('index.html'));
+  const leadOhne = heads.filter((h) => h.lead && !h.eyebrow).length;
+  const centerMit = heads.filter((h) => h.centered && h.eyebrow).length;
+  assert.equal(leadOhne, 0, 'eine Kapitelmarke ohne Eyebrow: der Leser sieht keinen Kapitelanfang');
+  assert.equal(centerMit, 0, 'eine zentrierte Folgesektion mit Eyebrow: sie gibt sich als Kapitel aus');
+});
+
+test('der Kapitelmarken-Guard erkennt den Schaden, gegen den er gebaut ist', () => {
+  // Genau der Vorschlag aus der Critique vom 2026-08-20: alle Koepfe linksbuendig.
+  const kopf = '<div class="sec-head lead"><span class="eyebrow">A</span></div>';
+  const alleLead = ('<section>' + kopf + '</section>').repeat(6);
+  assert.equal(sectionHeads(alleLead).filter((h) => h.lead).length, 6, 'Vorbedingung: sechs Kapitelmarken');
+  assert.ok(6 * 2 > sectionCount(alleLead), 'der Guard muss hier anschlagen');
+
+  // Der echte Stand ist still - und zwar KNAPP: vier von acht ist der Hoechststand,
+  // den der Kommentar erlaubt. Eine fuenfte Kapitelmarke laesst diesen Test fallen,
+  // und das ist die Absicht.
+  const html = read('index.html');
+  const lead = sectionHeads(html).filter((h) => h.lead).length;
+  assert.equal(lead * 2, sectionCount(html), 'der Stand liegt exakt auf der erlaubten Grenze');
+});
