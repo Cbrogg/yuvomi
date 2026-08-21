@@ -3105,7 +3105,17 @@ function wireEventForm(panel, { mode, event = null, reminder = null }) {
   // Load unified sync targets (Google + CalDAV)
   const syncTargetSelect = panel.querySelector('#event-sync-target');
   if (syncTargetSelect) {
-    loadSyncTargets(syncTargetSelect, event);
+    // Outlook ist der einzige One-way-Push: Aenderungen in Outlook werden beim
+    // naechsten Sync ueberschrieben. Der Hinweis gehoert an die Stelle der
+    // Zielwahl, nicht nur in die Sync-Einstellungen. Erst nach loadSyncTargets
+    // pruefen - die Vorauswahl eines bestehenden Outlook-Ziels setzt das select
+    // asynchron.
+    const outlookHint = panel.querySelector('#event-sync-target-outlook-hint');
+    const syncOutlookHint = () => {
+      if (outlookHint) outlookHint.hidden = !syncTargetSelect.value.startsWith('outlook:');
+    };
+    syncTargetSelect.addEventListener('change', syncOutlookHint);
+    loadSyncTargets(syncTargetSelect, event).then(syncOutlookHint);
   }
 
   // Enddatum dem Startdatum nachführen, damit das Verschieben des Starts
@@ -3256,6 +3266,7 @@ function buildEventModalContent({ mode, event, date, reminder = null, time = nul
         <option value="">${t('calendar.syncTargetLocal')}</option>
       </select>
       <small class="form-hint">${t('calendar.syncTargetHint')}</small>
+      <small class="form-hint" id="event-sync-target-outlook-hint" hidden>${t('settings.outlookPushHint')}</small>
     </div>
 
     <div class="form-group">

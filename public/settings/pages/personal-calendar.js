@@ -76,6 +76,7 @@ function syncTargetFieldHtml(options, current) {
           <label class="form-label" for="calendar-default-target">${t('settings.calendarDefaultTargetLabel')}</label>
           <select id="calendar-default-target" class="form-input">${html}</select>
           <p class="form-hint">${t('settings.calendarDefaultTargetHint')}</p>
+          <p class="form-hint" id="calendar-default-target-outlook-hint"${current.startsWith('outlook:') ? '' : ' hidden'}>${t('settings.outlookPushHint')}</p>
         </div>
   `;
 }
@@ -160,8 +161,15 @@ function bindEvents(container) {
   const targetSelect = container.querySelector('#calendar-default-target');
   if (targetSelect) {
     let persistedTarget = targetSelect.value;
+    // One-way-Warnung an der Zielwahl: nur Outlook ueberschreibt dort gemachte
+    // Aenderungen beim naechsten Sync.
+    const outlookHint = container.querySelector('#calendar-default-target-outlook-hint');
+    const syncOutlookHint = () => {
+      if (outlookHint) outlookHint.hidden = !targetSelect.value.startsWith('outlook:');
+    };
     targetSelect.addEventListener('change', async () => {
       const value = targetSelect.value;
+      syncOutlookHint();
       targetSelect.disabled = true;
       try {
         await savePreferences({ calendar_default_target: value });
@@ -169,6 +177,7 @@ function bindEvents(container) {
         window.yuvomi?.showToast(t('settings.calendarDefaultsSaved'), 'success');
       } catch (error) {
         targetSelect.value = persistedTarget;
+        syncOutlookHint();
         window.yuvomi?.showToast(error.message || t('common.errorGeneric'), 'danger');
       } finally {
         if (targetSelect.isConnected) targetSelect.disabled = false;
