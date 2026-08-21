@@ -114,11 +114,22 @@
   /* The code plate keeps ONE palette in both themes - it is a terminal, and a
      terminal does not turn white. It now borrows the app's dark neutrals so it
      reads as the same material as a dark-mode card. --code-accent doubles as
-     the focus ring there (5.66:1 on the plate), --code-comment holds 5.22:1. */
+     the focus ring there.
+
+     Ratios against --code-bg, recomputed 2026-08-20 - all four pass AA:
+       --code-text     13.94:1
+       --code-val      10.07:1
+       --code-accent    5.68:1   (was documented as 5.66)
+       --code-comment   4.76:1   (was documented as 5.22 - the comment
+                                  overstated it by 0.46 and no measurement
+                                  ever caught up with the note)
+     --code-val was a raw #7ee787 in install.html, the only one of the four
+     plate colours without a token. */
   --code-bg: #262422;
   --code-text: #F5F3ED;
   --code-comment: #948E85;
   --code-accent: #A78BFA;
+  --code-val: #7ee787;
 
   /* --r-xs is the inline-chip radius. It existed as a hardcoded 4px in five
      places and as a stray 5px in two more, on a scale that starts at 8px.

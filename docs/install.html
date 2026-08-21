@@ -45,12 +45,14 @@
       --success: #1E7B35; --success-soft: #DFF6E4;
       --warning: #A85D00; --warning-soft: #FFF0D9;
       --danger:  #D70015; --danger-soft:  #FFE3E3;
+      --danger-label: #B91C1C;
       --info:    #0663C7; --info-soft:    #E0EFFF;
     }
     [data-theme="dark"] {
       --success: #30D158; --success-soft: #0E2E17;
       --warning: #FF9F0A; --warning-soft: #33230A;
       --danger:  #FF6961; --danger-soft:  #3A1210;
+      --danger-label: #FCA5A5;
       --info:    #409CFF; --info-soft:    #10263E;
     }
     @media (prefers-color-scheme: dark) {
@@ -58,6 +60,7 @@
         --success: #30D158; --success-soft: #0E2E17;
         --warning: #FF9F0A; --warning-soft: #33230A;
         --danger:  #FF6961; --danger-soft:  #3A1210;
+        --danger-label: #FCA5A5;
         --info:    #409CFF; --info-soft:    #10263E;
       }
     }
@@ -262,7 +265,7 @@
        empty plate above them. */
     .code-wrap:has(> .copy-btn) .code-block { padding-top: 52px; }
     .code-block .cmd { color: var(--code-accent); font-weight: 600; }
-    .code-block .val { color: #7ee787; }
+    .code-block .val { color: var(--code-val); }
     .code-block .comment { color: var(--code-comment); }
     .copy-btn { position: absolute; top: 10px; right: 10px; display: inline-flex; align-items: center; justify-content: center; gap: 5px;
       background: rgba(255,255,255,0.08); border: 1px solid rgba(255,255,255,0.12); color: var(--code-text); cursor: pointer;
@@ -322,10 +325,15 @@
     .env-name { font-family: var(--ff-mono); font-size: 0.92rem; font-weight: 600; color: var(--accent); margin-bottom: 10px; word-break: break-all; }
     .env-label { font-size: 0.95rem; font-weight: 700; margin-bottom: 8px; display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
     .env-req { font-size: 0.7rem; font-weight: 700; letter-spacing: 0.05em; text-transform: uppercase; padding: 3px 8px; border-radius: var(--r-full);
-      background: color-mix(in srgb, var(--danger, #B91C1C) 14%, transparent); color: #B91C1C; }
-    [data-theme="dark"] .env-req { color: #FCA5A5; background: rgba(252,165,165,0.14); }
+      /* Beide Kanaele aus DEMSELBEN Token, und zwar aus --danger-label statt
+         --danger: die Signalfarbe der Seite (#D70015) misst auf dieser hellen
+         Flaeche nur 3.89:1 und faellt fuer 0.7rem-Versalien unter AA - gemessen,
+         nachdem genau diese Umstellung hier zuerst falsch gemacht wurde. Der
+         Etikettenton ist die dunklere Stufe. Weil das Token selbst
+         themengeschaltet ist, ersetzt diese eine Zeile die zwei gespiegelten
+         Dark-Regeln, die es dafuer brauchte. */
+      background: color-mix(in srgb, var(--danger-label) 14%, transparent); color: var(--danger-label); }
     @media (prefers-color-scheme: dark) {
-      :root:not([data-theme="light"]) .env-req { color: #FCA5A5; background: rgba(252,165,165,0.14); }
     }
     /* DB_ENCRYPTION_KEY is optional in fact - server/db.js runs an unencrypted
        SQLite file when the value is empty - but irreversible once set. Wearing the
@@ -623,8 +631,9 @@ curl -O https://raw.githubusercontent.com/ulsklyc/yuvomi/main/.env.example</div>
             <h3 class="step-title" data-t="step_a2_title">Create your configuration</h3>
             <p class="step-desc" data-t="step_a2_desc">Copy the template, then open <code>.env</code> in a text editor. <code>SESSION_SECRET</code> is required; <code>DB_ENCRYPTION_KEY</code> is optional but permanent.</p>
             <div class="code-wrap"><div class="code-block">cp .env.example .env</div><button class="copy-btn" data-copy="cp .env.example .env" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-t="copy">Copy</span></button></div>
-            <p class="step-desc" data-t="step_a2_gen">Generate a secure value for each secret by running this twice - paste one result as <code>SESSION_SECRET</code> and one as <code>DB_ENCRYPTION_KEY</code>:</p>
-            <div class="code-wrap"><div class="code-block">openssl rand -hex 32</div><button class="copy-btn" data-copy="openssl rand -hex 32" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-t="copy">Copy</span></button></div>
+            <p class="step-desc" data-t="step_a2_gen">This prints two secure values - paste one as <code>SESSION_SECRET</code> and the other as <code>DB_ENCRYPTION_KEY</code>:</p>
+            <div class="code-wrap"><div class="code-block">openssl rand -hex 32
+openssl rand -hex 32</div><button class="copy-btn" data-copy="openssl rand -hex 32&#10;openssl rand -hex 32" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-t="copy">Copy</span></button></div>
             <div class="callout callout-warning">
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
               <span data-t="step_a2_warning">Keep a backup of your <code>.env</code> file somewhere safe. If you lose the <code>DB_ENCRYPTION_KEY</code>, your data cannot be recovered.</span>
@@ -767,7 +776,9 @@ cd yuvomi</div><button class="copy-btn" data-copy="git clone https://github.com/
             <h3 class="step-title" data-t="step_a2_title">Create your configuration</h3>
             <p class="step-desc" data-t="step_a2_desc">Copy the template, then open <code>.env</code> in a text editor. <code>SESSION_SECRET</code> is required; <code>DB_ENCRYPTION_KEY</code> is optional but permanent.</p>
             <div class="code-wrap"><div class="code-block">cp .env.example .env
-openssl rand -hex 32  <span class="comment"># run twice → SESSION_SECRET + DB_ENCRYPTION_KEY</span></div><button class="copy-btn" data-copy="cp .env.example .env&#10;openssl rand -hex 32" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-t="copy">Copy</span></button></div>
+<span class="comment" data-t="px_gen_c"># two values: one for SESSION_SECRET, one for DB_ENCRYPTION_KEY</span>
+openssl rand -hex 32
+openssl rand -hex 32</div><button class="copy-btn" data-copy="cp .env.example .env&#10;openssl rand -hex 32&#10;openssl rand -hex 32" type="button"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg><span data-t="copy">Copy</span></button></div>
           </div>
         </div>
         <div class="step">
@@ -984,7 +995,7 @@ docker compose logs | grep "Server running"</div></div><p data-t="trouble_nginx_
         opt_docker_info:'No Git, no build step - just two files and a single command. Requires only Docker or Podman (Podman: use podman-compose.yml).',
         step_a1_title:'Download the configuration files', step_a1_desc:'Run these two commands. They download the Docker configuration and the template for your settings.',
         step_a2_title:'Create your configuration', step_a2_desc:'Copy the template, then open <code>.env</code> in a text editor. <code>SESSION_SECRET</code> is required; <code>DB_ENCRYPTION_KEY</code> is optional but permanent.',
-        step_a2_gen:'Generate a secure value for each secret by running this twice - paste one result as <code>SESSION_SECRET</code> and one as <code>DB_ENCRYPTION_KEY</code>:',
+        step_a2_gen:'This prints two secure values - paste one as <code>SESSION_SECRET</code> and the other as <code>DB_ENCRYPTION_KEY</code>:', px_gen_c:'# two values: one for SESSION_SECRET, one for DB_ENCRYPTION_KEY',
         step_a2_warning:'Keep a backup of your <code>.env</code> file somewhere safe. If you lose the <code>DB_ENCRYPTION_KEY</code>, your data cannot be recovered.',
         step_a3_title:'Start the container', step_a3_desc:'Docker downloads the Yuvomi image and starts it in the background. The first download takes a minute.',
         step_a3_success:'Check the logs with <code>docker compose logs -f</code>. You should see <code>Server running on port 3000</code>. The container keeps running in the background.',
@@ -1070,7 +1081,7 @@ docker compose logs | grep "Server running"</div></div><p data-t="trouble_nginx_
         opt_docker_info:'Kein Git, kein Build-Schritt - nur zwei Dateien und ein einziger Befehl. Nur Docker oder Podman erforderlich (Podman: podman-compose.yml verwenden).',
         step_a1_title:'Konfigurationsdateien herunterladen', step_a1_desc:'Führt diese zwei Befehle aus. Sie laden die Docker-Konfiguration und die Vorlage für eure Einstellungen herunter.',
         step_a2_title:'Konfiguration erstellen', step_a2_desc:'Kopiert die Vorlage, öffnet dann <code>.env</code> in einem Texteditor. <code>SESSION_SECRET</code> ist Pflicht; <code>DB_ENCRYPTION_KEY</code> ist optional, aber endgültig.',
-        step_a2_gen:'Generiert einen sicheren Wert für jedes Secret, indem ihr dies zweimal ausführt - ein Ergebnis als <code>SESSION_SECRET</code>, eines als <code>DB_ENCRYPTION_KEY</code>:',
+        step_a2_gen:'Das gibt zwei sichere Werte aus - einen als <code>SESSION_SECRET</code>, den anderen als <code>DB_ENCRYPTION_KEY</code> einsetzen:', px_gen_c:'# zwei Werte: einer für SESSION_SECRET, einer für DB_ENCRYPTION_KEY',
         step_a2_warning:'Behaltet eine Sicherungskopie eurer <code>.env</code>-Datei an einem sicheren Ort. Wenn ihr den <code>DB_ENCRYPTION_KEY</code> verliert, können eure Daten nicht wiederhergestellt werden.',
         step_a3_title:'Container starten', step_a3_desc:'Docker lädt das Yuvomi-Image herunter und startet es im Hintergrund. Der erste Download dauert eine Minute.',
         step_a3_success:'Prüft die Logs mit <code>docker compose logs -f</code>. Ihr solltet sehen: <code>Server running on port 3000</code>. Der Container läuft im Hintergrund weiter.',
