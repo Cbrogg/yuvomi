@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Takvim Senkronizasyonu",
-    "subtitle": "Yuvomi'u Google Takvim veya Apple iCloud'a bağlayın. İkisi de isteğe bağlı — yapılandırmak için genişletin.",
+    "subtitle": "Yuvomi’u Google Takvim, Apple iCloud veya Outlook’a bağlayın. Hepsi isteğe bağlı - yapılandırmak için genişletin.",
     "google": "Google Takvim",
     "googleHint": "{{link}} adresinde OAuth kimlik bilgileri oluşturun. Yönlendirme URI'si: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Uygulamaya özel parola",
     "appleUrlLabel": "CalDAV URL'si",
     "appleUrlOpt": "(isteğe bağlı)",
-    "appleUrlHint": "Sağlayıcınız farklı bir CalDAV uç noktası kullanmıyorsa boş bırakın."
+    "appleUrlHint": "Sağlayıcınız farklı bir CalDAV uç noktası kullanmıyorsa boş bırakın.",
+    "outlook": "Outlook Takvimi (Microsoft Graph)",
+    "outlookHint": "{{link}} adresinde ücretsiz bir Entra ID uygulama kaydı oluşturun (\"Yalnızca kişisel Microsoft hesapları\") - kurulum kılavuzuna bakın. Yönlendirme URI’si: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "İstemci kimliği",
+    "outlookSecretLabel": "İstemci gizli anahtarı",
+    "outlookNote": "Tek yönlü gönderim: Yuvomi kaynak olmaya devam eder - Outlook’ta yapılan değişikliklerin üzerine yazılır. Aile hesapları daha sonra uygulama ayarlarından bağlanır."
   },
   "review": {
     "title": "İnceleme",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "Takvim abonelikleri",
     "privateNetworkRecipes": "Tarifler",
     "privateNetworkWebdav": "WebDAV belgeleri",
-    "baseUrl": "Herkese açık adres"
+    "baseUrl": "Herkese açık adres",
+    "outlook": "Outlook Takvimi"
   },
   "docker": {
     "title": "Yuvomi başlatılıyor",

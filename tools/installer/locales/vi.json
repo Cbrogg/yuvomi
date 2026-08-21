@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Đồng bộ lịch",
-    "subtitle": "Kết nối Yuvomi với Google Calendar hoặc Apple iCloud. Cả hai đều tùy chọn — mở rộng để cấu hình.",
+    "subtitle": "Kết nối Yuvomi với Google Calendar, Apple iCloud hoặc Outlook. Tất cả đều tùy chọn - mở rộng để cấu hình.",
     "google": "Google Calendar",
     "googleHint": "Tạo thông tin xác thực OAuth tại {{link}}. URI chuyển hướng: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Mật khẩu dành riêng cho ứng dụng",
     "appleUrlLabel": "URL CalDAV",
     "appleUrlOpt": "(tùy chọn)",
-    "appleUrlHint": "Để trống trừ khi nhà cung cấp của bạn dùng điểm cuối CalDAV khác."
+    "appleUrlHint": "Để trống trừ khi nhà cung cấp của bạn dùng điểm cuối CalDAV khác.",
+    "outlook": "Lịch Outlook (Microsoft Graph)",
+    "outlookHint": "Tạo đăng ký ứng dụng Entra ID miễn phí (\"Chỉ tài khoản Microsoft cá nhân\") tại {{link}} - xem hướng dẫn cài đặt. URI chuyển hướng: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "Client ID",
+    "outlookSecretLabel": "Client Secret",
+    "outlookNote": "Đẩy một chiều: Yuvomi vẫn là nguồn chính - các thay đổi trong Outlook sẽ bị ghi đè. Tài khoản của gia đình được kết nối sau trong phần cài đặt ứng dụng."
   },
   "review": {
     "title": "Xem lại",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "Đăng ký lịch",
     "privateNetworkRecipes": "Công thức",
     "privateNetworkWebdav": "Tài liệu WebDAV",
-    "baseUrl": "Địa chỉ công khai"
+    "baseUrl": "Địa chỉ công khai",
+    "outlook": "Lịch Outlook"
   },
   "docker": {
     "title": "Đang khởi động Yuvomi",

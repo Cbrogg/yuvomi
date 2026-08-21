@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Sinkronisasi kalender",
-    "subtitle": "Sambungkan Yuvomi dengan Google Calendar atau Apple iCloud. Keduanya opsional — bentangkan untuk mengonfigurasi.",
+    "subtitle": "Sambungkan Yuvomi dengan Google Calendar, Apple iCloud, atau Outlook. Semuanya opsional - bentangkan untuk mengonfigurasi.",
     "google": "Google Calendar",
     "googleHint": "Buat kredensial OAuth di {{link}}. Redirect URI: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Kata sandi khusus aplikasi",
     "appleUrlLabel": "URL CalDAV",
     "appleUrlOpt": "(opsional)",
-    "appleUrlHint": "Biarkan kosong kecuali penyedia Anda menggunakan endpoint CalDAV yang berbeda."
+    "appleUrlHint": "Biarkan kosong kecuali penyedia Anda menggunakan endpoint CalDAV yang berbeda.",
+    "outlook": "Kalender Outlook (Microsoft Graph)",
+    "outlookHint": "Buat pendaftaran aplikasi Entra ID gratis (\"Hanya akun Microsoft pribadi\") di {{link}} - lihat panduan instalasi. Redirect URI: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "Client ID",
+    "outlookSecretLabel": "Client Secret",
+    "outlookNote": "Push satu arah: Yuvomi tetap menjadi sumber utama - perubahan di Outlook akan ditimpa. Akun keluarga dihubungkan nanti di pengaturan aplikasi."
   },
   "advanced": {
     "tag": "Lanjutan · opsional",
@@ -187,7 +193,8 @@
     "privateNetworkIcs": "Langganan kalender",
     "privateNetworkRecipes": "Resep",
     "privateNetworkWebdav": "Dokumen WebDAV",
-    "baseUrl": "Alamat publik"
+    "baseUrl": "Alamat publik",
+    "outlook": "Kalender Outlook"
   },
   "docker": {
     "title": "Yuvomi sedang dimulai",

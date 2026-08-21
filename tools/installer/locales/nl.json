@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Kalendersynchronisatie",
-    "subtitle": "Verbind Yuvomi met Google Agenda of Apple iCloud. Beide optioneel — uitklappen om te configureren.",
+    "subtitle": "Verbind Yuvomi met Google Agenda, Apple iCloud of Outlook. Alles optioneel - uitklappen om te configureren.",
     "google": "Google Agenda",
     "googleHint": "Maak OAuth-inloggegevens aan op {{link}}. Redirect-URI: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "App-specifiek wachtwoord",
     "appleUrlLabel": "CalDAV-URL",
     "appleUrlOpt": "(optioneel)",
-    "appleUrlHint": "Leeg laten tenzij je provider een ander CalDAV-eindpunt gebruikt."
+    "appleUrlHint": "Leeg laten tenzij je provider een ander CalDAV-eindpunt gebruikt.",
+    "outlook": "Outlook-agenda (Microsoft Graph)",
+    "outlookHint": "Maak een gratis Entra ID-appregistratie aan (\"Alleen persoonlijke Microsoft-accounts\") op {{link}} - zie de installatiehandleiding. Redirect-URI: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "Client-ID",
+    "outlookSecretLabel": "Client-secret",
+    "outlookNote": "Eenrichtingspush: Yuvomi blijft leidend - wijzigingen in Outlook worden overschreven. Gezinsaccounts worden later in de app-instellingen gekoppeld."
   },
   "advanced": {
     "tag": "Geavanceerd · optioneel",
@@ -187,7 +193,8 @@
     "privateNetworkIcs": "Agenda-abonnementen",
     "privateNetworkRecipes": "Recepten",
     "privateNetworkWebdav": "WebDAV-documenten",
-    "baseUrl": "Openbaar adres"
+    "baseUrl": "Openbaar adres",
+    "outlook": "Outlook-agenda"
   },
   "docker": {
     "title": "Yuvomi wordt gestart",

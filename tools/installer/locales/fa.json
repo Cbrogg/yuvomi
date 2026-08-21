@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "همگام‌سازی تقویم",
-    "subtitle": "Yuvomi را به Google Calendar یا Apple iCloud متصل کنید. هر دو اختیاری‌اند — برای پیکربندی باز کنید.",
+    "subtitle": "Yuvomi را به Google Calendar، Apple iCloud یا Outlook متصل کنید. همه اختیاری‌اند - برای پیکربندی باز کنید.",
     "google": "تقویم Google",
     "googleHint": "اعتبارنامه‌های OAuth را در {{link}} بسازید. Redirect URI: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "رمز عبور مخصوص برنامه",
     "appleUrlLabel": "نشانی CalDAV",
     "appleUrlOpt": "(اختیاری)",
-    "appleUrlHint": "خالی بگذارید مگر آنکه ارائه‌دهنده شما از نقطه پایانی CalDAV دیگری استفاده کند."
+    "appleUrlHint": "خالی بگذارید مگر آنکه ارائه‌دهنده شما از نقطه پایانی CalDAV دیگری استفاده کند.",
+    "outlook": "تقویم Outlook (Microsoft Graph)",
+    "outlookHint": "یک ثبت برنامه رایگان Entra ID («فقط حساب‌های شخصی Microsoft») در {{link}} بسازید - راهنمای نصب را ببینید. Redirect URI: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "شناسه کلاینت",
+    "outlookSecretLabel": "رمز کلاینت",
+    "outlookNote": "ارسال یک‌طرفه: Yuvomi مرجع باقی می‌ماند - تغییرات انجام‌شده در Outlook بازنویسی می‌شوند. حساب‌های خانواده بعداً در تنظیمات برنامه متصل می‌شوند."
   },
   "advanced": {
     "tag": "پیشرفته · اختیاری",
@@ -187,7 +193,8 @@
     "privateNetworkIcs": "اشتراک‌های تقویم",
     "privateNetworkRecipes": "دستورهای پخت",
     "privateNetworkWebdav": "اسناد WebDAV",
-    "baseUrl": "نشانی عمومی"
+    "baseUrl": "نشانی عمومی",
+    "outlook": "تقویم Outlook"
   },
   "docker": {
     "title": "Yuvomi در حال راه‌اندازی است",

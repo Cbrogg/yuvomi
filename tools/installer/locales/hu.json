@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Naptár szinkronizálás",
-    "subtitle": "Csatlakoztassa a Yuvomi-t a Google Naptárhoz vagy az Apple iCloudhoz. Mindkettő opcionális — bővítse a konfigurációhoz.",
+    "subtitle": "Csatlakoztassa a Yuvomi-t a Google Naptárhoz, az Apple iCloudhoz vagy az Outlookhoz. Mindegyik opcionális - bővítse a konfigurációhoz.",
     "google": "Google Naptár",
     "googleHint": "Hozzon létre OAuth hitelesítő adatokat itt: {{link}}. Átirányítási URI: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Alkalmazás-specifikus jelszó",
     "appleUrlLabel": "CalDAV URL",
     "appleUrlOpt": "(opcionális)",
-    "appleUrlHint": "Hagyja üresen, hacsak a szolgáltatója nem használ más CalDAV végpontot."
+    "appleUrlHint": "Hagyja üresen, hacsak a szolgáltatója nem használ más CalDAV végpontot.",
+    "outlook": "Outlook naptár (Microsoft Graph)",
+    "outlookHint": "Hozzon létre ingyenes Entra ID alkalmazásregisztrációt („csak személyes Microsoft-fiókok\") itt: {{link}} - lásd a telepítési útmutatót. Átirányítási URI: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "Ügyfél azonosító",
+    "outlookSecretLabel": "Ügyfél titkos kulcs",
+    "outlookNote": "Egyirányú push: a Yuvomi marad a mérvadó - az Outlookban tett módosítások felülíródnak. A családi fiókok később, az alkalmazás beállításaiban csatlakoztathatók."
   },
   "review": {
     "title": "Áttekintés",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "Naptár-feliratkozások",
     "privateNetworkRecipes": "Receptek",
     "privateNetworkWebdav": "WebDAV-dokumentumok",
-    "baseUrl": "Nyilvános cím"
+    "baseUrl": "Nyilvános cím",
+    "outlook": "Outlook naptár"
   },
   "docker": {
     "title": "Yuvomi indítása",

@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "कैलेंडर सिंक",
-    "subtitle": "Yuvomi को Google Calendar या Apple iCloud से कनेक्ट करें। दोनों वैकल्पिक हैं — कॉन्फ़िगर करने के लिए विस्तृत करें।",
+    "subtitle": "Yuvomi को Google Calendar, Apple iCloud या Outlook से कनेक्ट करें। सभी वैकल्पिक हैं - कॉन्फ़िगर करने के लिए विस्तृत करें।",
     "google": "Google कैलेंडर",
     "googleHint": "{{link}} पर OAuth क्रेडेंशियल बनाएँ। रीडायरेक्ट URI: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "ऐप-विशिष्ट पासवर्ड",
     "appleUrlLabel": "CalDAV URL",
     "appleUrlOpt": "(वैकल्पिक)",
-    "appleUrlHint": "जब तक आपका प्रदाता कोई अलग CalDAV एंडपॉइंट उपयोग न करे, इसे खाली छोड़ दें।"
+    "appleUrlHint": "जब तक आपका प्रदाता कोई अलग CalDAV एंडपॉइंट उपयोग न करे, इसे खाली छोड़ दें।",
+    "outlook": "Outlook कैलेंडर (Microsoft Graph)",
+    "outlookHint": "{{link}} पर एक निःशुल्क Entra ID ऐप पंजीकरण बनाएँ (\"केवल व्यक्तिगत Microsoft खाते\") - इंस्टॉलेशन गाइड देखें। रीडायरेक्ट URI: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "क्लाइंट ID",
+    "outlookSecretLabel": "क्लाइंट सीक्रेट",
+    "outlookNote": "एकतरफ़ा पुश: Yuvomi ही स्रोत बना रहता है - Outlook में किए गए बदलाव अधिलेखित हो जाते हैं। परिवार के खाते बाद में ऐप सेटिंग्स में जोड़े जाते हैं।"
   },
   "review": {
     "title": "समीक्षा",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "कैलेंडर सदस्यताएँ",
     "privateNetworkRecipes": "व्यंजन",
     "privateNetworkWebdav": "WebDAV दस्तावेज़",
-    "baseUrl": "सार्वजनिक पता"
+    "baseUrl": "सार्वजनिक पता",
+    "outlook": "Outlook कैलेंडर"
   },
   "docker": {
     "title": "Yuvomi शुरू हो रहा है",

@@ -822,7 +822,7 @@
       <div class="card-head">
         <div class="step-tag"></div>
         <h2 tabindex="-1" data-i18n="calendar.title">Calendar Sync</h2>
-        <p data-i18n="calendar.subtitle">Connect Yuvomi to Google Calendar or Apple iCloud. Both optional - expand to configure.</p>
+        <p data-i18n="calendar.subtitle">Connect Yuvomi to Google Calendar, Apple iCloud or Outlook. All optional - expand to configure.</p>
       </div>
       <div class="card-body">
         <div class="toggle-card">
@@ -883,6 +883,34 @@
               <input type="text" id="apple-url" placeholder="https://caldav.icloud.com">
               <div class="hint" data-i18n="calendar.appleUrlHint">Leave empty unless your provider uses a different CalDAV endpoint.</div>
             </div>
+          </div>
+        </div>
+        <div class="toggle-card">
+          <button type="button" class="toggle-head" data-toggle="outlook-body" aria-expanded="false" aria-controls="outlook-body">
+            <span data-i18n="calendar.outlook">Outlook Calendar (Microsoft Graph)</span>
+            <span class="toggle-badge" id="outlook-badge" data-i18n="common.optional">Optional</span>
+          </button>
+          <div class="toggle-body" id="outlook-body">
+            <p class="hint" id="outlook-hint" style="margin-bottom:12px">
+              Create a free Entra ID app registration ("Personal Microsoft accounts only") at <a href="https://entra.microsoft.com" target="_blank" rel="noopener">entra.microsoft.com</a> - see the installation guide.
+              Redirect URI: <code id="outlook-redirect-hint"></code>
+            </p>
+            <p class="hint" style="margin-bottom:12px">
+              <button type="button" class="btn btn-ghost btn-sm" data-copy="outlook-redirect-hint">
+                <svg class="icon-svg" viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                <span data-i18n="common.copyRedirect">Copy redirect URI</span>
+              </button>
+              <span class="copied-note" id="outlook-redirect-hint-copied" role="status" aria-live="polite"></span>
+            </p>
+            <div class="field">
+              <label for="outlook-id" data-i18n="calendar.outlookIdLabel">Application (client) ID</label>
+              <input type="text" id="outlook-id">
+            </div>
+            <div class="field">
+              <label for="outlook-secret" data-i18n="calendar.outlookSecretLabel">Client Secret</label>
+              <input type="password" id="outlook-secret">
+            </div>
+            <p class="hint" data-i18n="calendar.outlookNote">One-way push: Yuvomi stays the source of truth and overwrites changes made in Outlook. Family accounts are connected later in the app under Settings.</p>
           </div>
         </div>
       </div>
@@ -1260,6 +1288,7 @@
           <div class="review-key" data-i18n="review.weather">Weather</div>        <div id="rv-weather"></div>
           <div class="review-key" data-i18n="review.google">Google Calendar</div><div id="rv-google"></div>
           <div class="review-key" data-i18n="review.apple">Apple CalDAV</div>   <div id="rv-apple"></div>
+          <div class="review-key" data-i18n="review.outlook">Outlook Calendar</div><div id="rv-outlook"></div>
           <div class="review-key" data-i18n="review.email">Email</div>          <div id="rv-email"></div>
           <div class="review-key" data-i18n="review.oidc">Single Sign-On</div>  <div id="rv-oidc"></div>
           <div class="review-key" data-i18n="review.backups">Backups</div>       <div id="rv-backups"></div>
@@ -1516,6 +1545,9 @@ const gcalRedirectNode = document.createElement('code');
 // ohne sie fand [data-copy="gcal-redirect-hint"] nach dem ersten localize()
 // nichts mehr, und der Kopieren-Knopf tat still gar nichts.
 gcalRedirectNode.id = 'gcal-redirect-hint';
+// Dieselbe Bauart für die Outlook-Redirect-URI, aus demselben Grund.
+const outlookRedirectNode = document.createElement('code');
+outlookRedirectNode.id = 'outlook-redirect-hint';
 
 /** Alle statischen + dynamischen Übersetzungen anwenden; bei Sprachwechsel erneut aufrufbar. */
 // Muss VOR localize() stehen: localize() läuft beim Laden (weiter unten) und
@@ -1562,6 +1594,10 @@ function localize() {
   al.href = 'https://appleid.apple.com'; al.target = '_blank'; al.rel = 'noopener';
   al.textContent = t('calendar.appleLink');
   applyRich($('apple-hint'), 'calendar.appleHint', { link: al });
+  const ol = document.createElement('a');
+  ol.href = 'https://entra.microsoft.com'; ol.target = '_blank'; ol.rel = 'noopener';
+  ol.textContent = t('calendar.outlookLink');
+  applyRich($('outlook-hint'), 'calendar.outlookHint', { link: ol, redirect: outlookRedirectNode });
   // Die Prereq-Meldung trägt einen Platzhalter und einen Link, überlebt einen
   // Sprachwechsel also nur, wenn sie neu gebaut wird - wie die zwei Hints oben.
   renderPrereq();
@@ -1609,6 +1645,7 @@ const S = {
   GOOGLE_CLIENT_ID: '', GOOGLE_CLIENT_SECRET: '', GOOGLE_REDIRECT_URI: '',
   GOOGLE_DRIVE_CLIENT_ID: '', GOOGLE_DRIVE_CLIENT_SECRET: '', GOOGLE_DRIVE_REDIRECT_URI: '',
   APPLE_USERNAME: '', APPLE_APP_SPECIFIC_PASSWORD: '', APPLE_CALDAV_URL: '',
+  MS_CLIENT_ID: '', MS_CLIENT_SECRET: '', MS_REDIRECT_URI: '',
   EMAIL_SMTP_HOST: '', EMAIL_SMTP_PORT: '', EMAIL_SMTP_SECURE: '',
   EMAIL_SMTP_USER: '', EMAIL_SMTP_PASS: '', EMAIL_FROM_ADDRESS: '', EMAIL_FROM_NAME: '',
   SESSION_SECURE: '', TRUST_PROXY: '',
@@ -1726,6 +1763,8 @@ function buildEnv() {
     GOOGLE_DRIVE_REDIRECT_URI: S.GOOGLE_DRIVE_REDIRECT_URI,
     APPLE_USERNAME: S.APPLE_USERNAME, APPLE_APP_SPECIFIC_PASSWORD: S.APPLE_APP_SPECIFIC_PASSWORD,
     APPLE_CALDAV_URL: S.APPLE_CALDAV_URL,
+    MS_CLIENT_ID: S.MS_CLIENT_ID, MS_CLIENT_SECRET: S.MS_CLIENT_SECRET,
+    MS_REDIRECT_URI: S.MS_REDIRECT_URI,
     EMAIL_SMTP_HOST: S.EMAIL_SMTP_HOST, EMAIL_SMTP_PORT: S.EMAIL_SMTP_PORT,
     EMAIL_SMTP_SECURE: S.EMAIL_SMTP_SECURE, EMAIL_SMTP_USER: S.EMAIL_SMTP_USER,
     EMAIL_SMTP_PASS: S.EMAIL_SMTP_PASS, EMAIL_FROM_ADDRESS: S.EMAIL_FROM_ADDRESS,
@@ -1934,6 +1973,7 @@ function onEnterStep(name) {
     // HTTPS-Setup die falsche ein, und der Fehler zeigte sich erst beim ersten
     // OAuth-Versuch als redirect_uri_mismatch.
     gcalRedirectNode.textContent = `${plannedOrigin()}/api/v1/calendar/google/callback`;
+    outlookRedirectNode.textContent = `${plannedOrigin()}/api/v1/calendar/outlook/callback`;
   } else if (name === 'storage') {
     $('document-google-drive-redirect-hint').textContent =
       `${plannedOrigin()}/api/v1/documents/storage/google-drive/callback`;
@@ -2266,6 +2306,11 @@ $('cal-next').addEventListener('click', () => {
   S.APPLE_USERNAME = $('apple-user').value.trim();
   S.APPLE_APP_SPECIFIC_PASSWORD = $('apple-pass').value.trim();
   S.APPLE_CALDAV_URL = $('apple-url').value.trim();
+  S.MS_CLIENT_ID = $('outlook-id').value.trim();
+  S.MS_CLIENT_SECRET = $('outlook-secret').value.trim();
+  // Wie die Google-URI: vorläufig aus plannedOrigin(), adv-next zieht nach.
+  S.MS_REDIRECT_URI = S.MS_CLIENT_ID
+    ? `${plannedOrigin()}/api/v1/calendar/outlook/callback` : '';
 
   // Prefill the OIDC redirect URI from the chosen host/port as a starting point.
   // Auch hier aus plannedOrigin(): anders als die Google-URI wird diese NICHT in
@@ -2460,6 +2505,7 @@ $('adv-next').addEventListener('click', () => {
   // Sicherungen stehen einen Schritt davor.
   const origin = S.BASE_URL;
   if (S.GOOGLE_CLIENT_ID) S.GOOGLE_REDIRECT_URI = `${origin}/api/v1/calendar/google/callback`;
+  if (S.MS_CLIENT_ID) S.MS_REDIRECT_URI = `${origin}/api/v1/calendar/outlook/callback`;
 
   const oidcRedirectField = $('oidc-redirect');
   const redirectVal = oidcRedirectField.value.trim();
@@ -2522,6 +2568,7 @@ $('adv-next').addEventListener('click', () => {
     : '-';
   $('rv-google').textContent  = S.GOOGLE_CLIENT_ID ? t('review.configured') : '-';
   $('rv-apple').textContent   = S.APPLE_USERNAME || '-';
+  $('rv-outlook').textContent = S.MS_CLIENT_ID ? t('review.configured') : '-';
   $('rv-email').textContent   = S.EMAIL_SMTP_HOST ? (S.EMAIL_FROM_ADDRESS || t('review.configured')) : '-';
   $('rv-oidc').textContent    = S.OIDC_ISSUER ? t('review.configured') : '-';
   $('rv-backups').textContent = S.BACKUP_ENABLED === 'false' ? t('review.off') : t('review.on');

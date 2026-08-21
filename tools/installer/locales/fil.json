@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Pag-sync ng Kalendaryo",
-    "subtitle": "Ikonekta ang Yuvomi sa Google Calendar o Apple iCloud. Parehong opsyonal - palawakin para i-configure.",
+    "subtitle": "Ikonekta ang Yuvomi sa Google Calendar, Apple iCloud o Outlook. Lahat opsyonal - palawakin para i-configure.",
     "google": "Google Calendar",
     "googleHint": "Gumawa ng mga kredensyal na OAuth sa {{link}}. Redirect URI: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Password na Tanging sa App",
     "appleUrlLabel": "URL ng CalDAV",
     "appleUrlOpt": "(opsyonal)",
-    "appleUrlHint": "Iwanang blangko maliban kung ibang CalDAV endpoint ang gamit ng iyong provider."
+    "appleUrlHint": "Iwanang blangko maliban kung ibang CalDAV endpoint ang gamit ng iyong provider.",
+    "outlook": "Outlook Calendar (Microsoft Graph)",
+    "outlookHint": "Gumawa ng libreng Entra ID app registration (\"Personal Microsoft accounts only\") sa {{link}} - tingnan ang gabay sa pag-install. Redirect URI: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "Client ID",
+    "outlookSecretLabel": "Client Secret",
+    "outlookNote": "One-way push: nananatiling pinagmumulan ang Yuvomi - ang mga pagbabagong ginawa sa Outlook ay napapatungan. Ikokonekta ang mga account ng pamilya sa app settings sa ibang pagkakataon."
   },
   "advanced": {
     "tag": "Advanced · opsyonal",
@@ -187,7 +193,8 @@
     "privateNetworkIcs": "Mga subscription sa kalendaryo",
     "privateNetworkRecipes": "Mga resipe",
     "privateNetworkWebdav": "Mga dokumento sa WebDAV",
-    "baseUrl": "Pampublikong address"
+    "baseUrl": "Pampublikong address",
+    "outlook": "Outlook Calendar"
   },
   "docker": {
     "title": "Sinisimulan ang Yuvomi",

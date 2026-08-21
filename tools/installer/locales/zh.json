@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "日历同步",
-    "subtitle": "将 Yuvomi 连接到 Google 日历或 Apple iCloud。两者均为可选——展开以进行配置。",
+    "subtitle": "将 Yuvomi 连接到 Google 日历、Apple iCloud 或 Outlook。均为可选——展开以进行配置。",
     "google": "Google 日历",
     "googleHint": "在 {{link}} 创建 OAuth 凭据。重定向 URI：{{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "App 专用密码",
     "appleUrlLabel": "CalDAV 网址",
     "appleUrlOpt": "（可选）",
-    "appleUrlHint": "除非你的服务商使用不同的 CalDAV 端点，否则留空即可。"
+    "appleUrlHint": "除非你的服务商使用不同的 CalDAV 端点，否则留空即可。",
+    "outlook": "Outlook 日历 (Microsoft Graph)",
+    "outlookHint": "在 {{link}} 创建免费的 Entra ID 应用注册（仅限个人 Microsoft 帐户），详见安装指南。重定向 URI：{{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "客户端 ID",
+    "outlookSecretLabel": "客户端密钥",
+    "outlookNote": "单向推送：Yuvomi 保持为数据源，在 Outlook 中所做的更改会被覆盖。家庭帐户稍后在应用设置中连接。"
   },
   "review": {
     "title": "检查",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "日历订阅",
     "privateNetworkRecipes": "食谱",
     "privateNetworkWebdav": "WebDAV 文档",
-    "baseUrl": "公开地址"
+    "baseUrl": "公开地址",
+    "outlook": "Outlook 日历"
   },
   "docker": {
     "title": "正在启动 Yuvomi",
