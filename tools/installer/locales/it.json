@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Sincronizzazione calendario",
-    "subtitle": "Collega Yuvomi a Google Calendar o Apple iCloud. Entrambi facoltativi: espandi per configurare.",
+    "subtitle": "Collega Yuvomi a Google Calendar, Apple iCloud o Outlook. Tutti facoltativi: espandi per configurare.",
     "google": "Google Calendar",
     "googleHint": "Crea le credenziali OAuth su {{link}}. URI di reindirizzamento: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Password specifica per l'app",
     "appleUrlLabel": "URL CalDAV",
     "appleUrlOpt": "(opzionale)",
-    "appleUrlHint": "Lascia vuoto a meno che il tuo provider non usi un endpoint CalDAV diverso."
+    "appleUrlHint": "Lascia vuoto a meno che il tuo provider non usi un endpoint CalDAV diverso.",
+    "outlook": "Calendario Outlook (Microsoft Graph)",
+    "outlookHint": "Crea una registrazione app Entra ID gratuita (\"Solo account Microsoft personali\") su {{link}} - vedi la guida all’installazione. URI di reindirizzamento: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "ID client",
+    "outlookSecretLabel": "Client secret",
+    "outlookNote": "Invio in una sola direzione: Yuvomi resta la fonte principale - le modifiche fatte in Outlook vengono sovrascritte. Gli account della famiglia si collegano più tardi nelle impostazioni dell’app."
   },
   "review": {
     "title": "Revisione",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "Abbonamenti calendario",
     "privateNetworkRecipes": "Ricette",
     "privateNetworkWebdav": "Documenti WebDAV",
-    "baseUrl": "Indirizzo pubblico"
+    "baseUrl": "Indirizzo pubblico",
+    "outlook": "Calendario Outlook"
   },
   "docker": {
     "title": "Avvio di Yuvomi",

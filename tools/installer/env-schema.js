@@ -24,6 +24,12 @@ export const ENV_SCHEMA = [
   { key: 'APPLE_USERNAME',              type: 'user',    label: 'Apple ID (email)',          required: false, group: 'apple',   writeToEnv: true },
   { key: 'APPLE_APP_SPECIFIC_PASSWORD', type: 'user',    label: 'App-Specific Password',    required: false, group: 'apple',   writeToEnv: true },
   { key: 'APPLE_CALDAV_URL',            type: 'default', label: 'CalDAV URL',               default: 'https://caldav.icloud.com', group: 'apple', writeToEnv: true },
+  // Outlook-Push (Microsoft Graph), optional; alle drei zusammen oder keiner.
+  // Die Redirect-URI leitet der Wizard aus der geplanten Origin ab
+  // (.../api/v1/calendar/outlook/callback), wie bei Google Calendar.
+  { key: 'MS_CLIENT_ID',                type: 'user',    label: 'Microsoft Client ID',      required: false, group: 'outlook', writeToEnv: true },
+  { key: 'MS_CLIENT_SECRET',            type: 'user',    label: 'Microsoft Client Secret',  required: false, group: 'outlook', writeToEnv: true, secret: true },
+  { key: 'MS_REDIRECT_URI',             type: 'user',    label: 'Microsoft Redirect URI',   required: false, group: 'outlook', writeToEnv: true },
   { key: 'SYNC_INTERVAL_MINUTES',       type: 'default', label: 'Sync Interval (minutes)', default: '15',   group: 'sync',    writeToEnv: true },
   // ICS-Abos: der SSRF-Guard blockt Feeds im eigenen LAN (Home Assistant, *arr).
   // Ohne diesen Schalter scheitert genau der häufigste Self-Hoster-Fall stumm.

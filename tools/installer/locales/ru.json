@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Синхронизация календаря",
-    "subtitle": "Подключите Yuvomi к Google Календарю или Apple iCloud. Оба необязательны — разверните, чтобы настроить.",
+    "subtitle": "Подключите Yuvomi к Google Календарю, Apple iCloud или Outlook. Все необязательны - разверните, чтобы настроить.",
     "google": "Google Календарь",
     "googleHint": "Создайте учётные данные OAuth на {{link}}. URI перенаправления: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Пароль для приложения",
     "appleUrlLabel": "URL CalDAV",
     "appleUrlOpt": "(необязательно)",
-    "appleUrlHint": "Оставьте пустым, если ваш провайдер не использует другой эндпоинт CalDAV."
+    "appleUrlHint": "Оставьте пустым, если ваш провайдер не использует другой эндпоинт CalDAV.",
+    "outlook": "Календарь Outlook (Microsoft Graph)",
+    "outlookHint": "Создайте бесплатную регистрацию приложения Entra ID («только личные учётные записи Microsoft») на {{link}} - см. руководство по установке. URI перенаправления: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "Идентификатор клиента",
+    "outlookSecretLabel": "Секрет клиента",
+    "outlookNote": "Односторонняя отправка: Yuvomi остаётся источником данных - изменения в Outlook перезаписываются. Семейные учётные записи подключаются позже в настройках приложения."
   },
   "review": {
     "title": "Проверка",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "Подписки календаря",
     "privateNetworkRecipes": "Рецепты",
     "privateNetworkWebdav": "Документы WebDAV",
-    "baseUrl": "Публичный адрес"
+    "baseUrl": "Публичный адрес",
+    "outlook": "Календарь Outlook"
   },
   "docker": {
     "title": "Запуск Yuvomi",

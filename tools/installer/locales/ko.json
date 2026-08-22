@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "캘린더 동기화",
-    "subtitle": "Yuvomi를 Google 캘린더 또는 Apple iCloud에 연결하세요. 둘 다 선택 사항 — 구성하려면 펼치세요.",
+    "subtitle": "Yuvomi를 Google 캘린더, Apple iCloud 또는 Outlook에 연결하세요. 모두 선택 사항 - 구성하려면 펼치세요.",
     "google": "Google 캘린더",
     "googleHint": "{{link}}에서 OAuth 자격 증명을 만드세요. 리디렉션 URI: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "앱 전용 비밀번호",
     "appleUrlLabel": "CalDAV URL",
     "appleUrlOpt": "(선택 사항)",
-    "appleUrlHint": "제공자가 다른 CalDAV 엔드포인트를 사용하지 않는 한 비워 두세요."
+    "appleUrlHint": "제공자가 다른 CalDAV 엔드포인트를 사용하지 않는 한 비워 두세요.",
+    "outlook": "Outlook 캘린더 (Microsoft Graph)",
+    "outlookHint": "{{link}}에서 무료 Entra ID 앱 등록(\"개인 Microsoft 계정만\")을 만드세요 - 설치 가이드를 참고하세요. 리디렉션 URI: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "클라이언트 ID",
+    "outlookSecretLabel": "클라이언트 시크릿",
+    "outlookNote": "단방향 푸시: Yuvomi가 기준이며 Outlook에서의 변경 사항은 덮어쓰기됩니다. 가족 계정은 나중에 앱 설정에서 연결합니다."
   },
   "advanced": {
     "tag": "고급 · 선택 사항",
@@ -187,7 +193,8 @@
     "privateNetworkIcs": "캘린더 구독",
     "privateNetworkRecipes": "레시피",
     "privateNetworkWebdav": "WebDAV 문서",
-    "baseUrl": "공개 주소"
+    "baseUrl": "공개 주소",
+    "outlook": "Outlook 캘린더"
   },
   "docker": {
     "title": "Yuvomi 시작 중",

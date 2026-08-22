@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Synchronizace kalendáře",
-    "subtitle": "Propoj Yuvomi s Kalendářem Google nebo Apple iCloud. Obojí je volitelné – rozbal pro konfiguraci.",
+    "subtitle": "Propoj Yuvomi s Kalendářem Google, Apple iCloud nebo Outlookem. Vše volitelné - rozbal pro konfiguraci.",
     "google": "Kalendář Google",
     "googleHint": "Vytvoř OAuth přihlašovací údaje na {{link}}. Přesměrovací URI: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Heslo pro aplikaci",
     "appleUrlLabel": "URL CalDAV",
     "appleUrlOpt": "(volitelné)",
-    "appleUrlHint": "Nechej prázdné, pokud tvůj poskytovatel nepoužívá jiný koncový bod CalDAV."
+    "appleUrlHint": "Nechej prázdné, pokud tvůj poskytovatel nepoužívá jiný koncový bod CalDAV.",
+    "outlook": "Kalendář Outlook (Microsoft Graph)",
+    "outlookHint": "Vytvoř bezplatnou registraci aplikace Entra ID („pouze osobní účty Microsoft\") na {{link}} - viz instalační příručka. Přesměrovací URI: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "ID klienta",
+    "outlookSecretLabel": "Tajný klíč klienta",
+    "outlookNote": "Jednosměrný push: Yuvomi zůstává zdrojem pravdy - změny v Outlooku se přepíší. Rodinné účty se připojí později v nastavení aplikace."
   },
   "advanced": {
     "tag": "Pokročilé · volitelné",
@@ -187,7 +193,8 @@
     "privateNetworkIcs": "Odběry kalendáře",
     "privateNetworkRecipes": "Recepty",
     "privateNetworkWebdav": "Dokumenty WebDAV",
-    "baseUrl": "Veřejná adresa"
+    "baseUrl": "Veřejná adresa",
+    "outlook": "Kalendář Outlook"
   },
   "docker": {
     "title": "Spouštění Yuvomi",

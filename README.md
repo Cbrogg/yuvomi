@@ -79,7 +79,7 @@ Turn on what your household needs; the rest stays out of the way.
 | **Meals** | Weekly drag-and-drop planner with a recipe sidebar and direct export to the shopping list. |
 | **Recipes** | Create, duplicate and scale recipes, then pre-fill meal slots or send the ingredients to a shopping list. A Mealie or Tandoor instance can be mirrored read-only. |
 | **Pantry** | What is actually in the house: amount, storage location and best-before date, with expiry and low-stock filters. |
-| **Calendar** | Two-way sync with Google and CalDAV, calendar subscriptions, recurring events, holiday overlays and per-event visibility. |
+| **Calendar** | Two-way sync with Google and CalDAV, one-way Outlook push via Microsoft Graph, calendar subscriptions, recurring events, holiday overlays and per-event visibility. |
 | **Documents** | Upload, tag, preview and organize family files, with optional WebDAV or Google Drive storage. |
 | **Inventory** | What you own: purchase price, warranty, condition and storage location, with linked receipts and deadline reminders. Off by default; households turn it on. |
 | **Budget** | Income, expenses, accounts, loans, subscriptions and per-category planning, with a personal mode. |

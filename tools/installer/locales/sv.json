@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Kalendersynkronisering",
-    "subtitle": "Anslut Yuvomi till Google Kalender eller Apple iCloud. Båda är valfria — expandera för att konfigurera.",
+    "subtitle": "Anslut Yuvomi till Google Kalender, Apple iCloud eller Outlook. Alla valfria - expandera för att konfigurera.",
     "google": "Google Kalender",
     "googleHint": "Skapa OAuth-uppgifter på {{link}}. Omdirigerings-URI: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Appspecifikt lösenord",
     "appleUrlLabel": "CalDAV-URL",
     "appleUrlOpt": "(valfritt)",
-    "appleUrlHint": "Lämna tomt om inte din leverantör använder en annan CalDAV-slutpunkt."
+    "appleUrlHint": "Lämna tomt om inte din leverantör använder en annan CalDAV-slutpunkt.",
+    "outlook": "Outlook-kalender (Microsoft Graph)",
+    "outlookHint": "Skapa en kostnadsfri Entra ID-appregistrering (\"Endast personliga Microsoft-konton\") på {{link}} - se installationsguiden. Omdirigerings-URI: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "Klient-ID",
+    "outlookSecretLabel": "Klienthemlighet",
+    "outlookNote": "Enkelriktad push: Yuvomi förblir källan - ändringar gjorda i Outlook skrivs över. Familjens konton kopplas senare i appens inställningar."
   },
   "review": {
     "title": "Granskning",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "Kalenderprenumerationer",
     "privateNetworkRecipes": "Recept",
     "privateNetworkWebdav": "WebDAV-dokument",
-    "baseUrl": "Publik adress"
+    "baseUrl": "Publik adress",
+    "outlook": "Outlook-kalender"
   },
   "docker": {
     "title": "Startar Yuvomi",

@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "مزامنة التقويم",
-    "subtitle": "اربط Yuvomi بتقويم Google أو Apple iCloud. كلاهما اختياري — وسّع للتهيئة.",
+    "subtitle": "اربط Yuvomi بتقويم Google أو Apple iCloud أو Outlook. كلها اختيارية - وسّع للتهيئة.",
     "google": "تقويم Google",
     "googleHint": "أنشئ بيانات اعتماد OAuth على {{link}}. عنوان URI لإعادة التوجيه: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "كلمة مرور خاصة بالتطبيق",
     "appleUrlLabel": "عنوان CalDAV",
     "appleUrlOpt": "(اختياري)",
-    "appleUrlHint": "اتركه فارغًا ما لم يستخدم مزوّدك نقطة نهاية CalDAV مختلفة."
+    "appleUrlHint": "اتركه فارغًا ما لم يستخدم مزوّدك نقطة نهاية CalDAV مختلفة.",
+    "outlook": "تقويم Outlook (Microsoft Graph)",
+    "outlookHint": "أنشئ تسجيل تطبيق Entra ID مجانيًا (\"الحسابات الشخصية لـ Microsoft فقط\") على {{link}} - راجع دليل التثبيت. عنوان URI لإعادة التوجيه: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "معرّف العميل",
+    "outlookSecretLabel": "سرّ العميل",
+    "outlookNote": "دفع باتجاه واحد: يبقى Yuvomi هو المرجع - وتُستبدل التغييرات التي تُجرى في Outlook. تُربط حسابات العائلة لاحقًا من إعدادات التطبيق."
   },
   "review": {
     "title": "المراجعة",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "اشتراكات التقويم",
     "privateNetworkRecipes": "الوصفات",
     "privateNetworkWebdav": "مستندات WebDAV",
-    "baseUrl": "العنوان العام"
+    "baseUrl": "العنوان العام",
+    "outlook": "تقويم Outlook"
   },
   "docker": {
     "title": "جارٍ بدء Yuvomi",

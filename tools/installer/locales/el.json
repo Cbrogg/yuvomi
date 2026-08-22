@@ -58,7 +58,7 @@
   },
   "calendar": {
     "title": "Συγχρονισμός ημερολογίου",
-    "subtitle": "Συνδέστε το Yuvomi με το Ημερολόγιο Google ή το Apple iCloud. Και τα δύο προαιρετικά — αναπτύξτε για διαμόρφωση.",
+    "subtitle": "Συνδέστε το Yuvomi με το Ημερολόγιο Google, το Apple iCloud ή το Outlook. Όλα προαιρετικά - αναπτύξτε για διαμόρφωση.",
     "google": "Ημερολόγιο Google",
     "googleHint": "Δημιουργήστε διαπιστευτήρια OAuth στο {{link}}. URI ανακατεύθυνσης: {{redirect}}",
     "googleLink": "console.cloud.google.com",
@@ -72,7 +72,13 @@
     "applePassLabel": "Κωδικός πρόσβασης ειδικός για την εφαρμογή",
     "appleUrlLabel": "URL CalDAV",
     "appleUrlOpt": "(προαιρετικό)",
-    "appleUrlHint": "Αφήστε το κενό εκτός αν ο πάροχός σας χρησιμοποιεί διαφορετικό τελικό σημείο CalDAV."
+    "appleUrlHint": "Αφήστε το κενό εκτός αν ο πάροχός σας χρησιμοποιεί διαφορετικό τελικό σημείο CalDAV.",
+    "outlook": "Ημερολόγιο Outlook (Microsoft Graph)",
+    "outlookHint": "Δημιουργήστε μια δωρεάν καταχώριση εφαρμογής Entra ID («Μόνο προσωπικοί λογαριασμοί Microsoft») στο {{link}} - δείτε τον οδηγό εγκατάστασης. URI ανακατεύθυνσης: {{redirect}}",
+    "outlookLink": "entra.microsoft.com",
+    "outlookIdLabel": "Αναγνωριστικό πελάτη",
+    "outlookSecretLabel": "Μυστικό πελάτη",
+    "outlookNote": "Μονόδρομη αποστολή: το Yuvomi παραμένει η πηγή - οι αλλαγές στο Outlook αντικαθίστανται. Οι λογαριασμοί της οικογένειας συνδέονται αργότερα στις ρυθμίσεις της εφαρμογής."
   },
   "review": {
     "title": "Έλεγχος",
@@ -111,7 +117,8 @@
     "privateNetworkIcs": "Συνδρομές ημερολογίου",
     "privateNetworkRecipes": "Συνταγές",
     "privateNetworkWebdav": "Έγγραφα WebDAV",
-    "baseUrl": "Δημόσια διεύθυνση"
+    "baseUrl": "Δημόσια διεύθυνση",
+    "outlook": "Ημερολόγιο Outlook"
   },
   "docker": {
     "title": "Εκκίνηση του Yuvomi",
