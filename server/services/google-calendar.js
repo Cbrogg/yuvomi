@@ -644,7 +644,8 @@ async function runSync() {
         throw err;
       }
 
-      upsertGoogleEvents(response.data.items || [], calRefId, calColor, eventColorMap, { fullResync: !syncToken });
+      upsertGoogleEvents(response.data.items || [], calRefId, calColor, eventColorMap,
+        { fullResync: !syncToken, calTimeZone: meta?.timeZone ?? null });
       pageToken    = response.data.nextPageToken;
       newSyncToken = response.data.nextSyncToken || newSyncToken;
     } while (pageToken);
@@ -796,7 +797,7 @@ function originalStartDate(item) {
   return raw ? String(raw).slice(0, 10) : null;
 }
 
-function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, colorMap = {}, { fullResync = false } = {}) {
+function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, colorMap = {}, { fullResync = false, calTimeZone = null } = {}) {
   // Auf den meldenden Kalender eingegrenzt: wird ein Event in Google von Kalender
   // A nach B verschoben, meldet A es als 'cancelled', während B es als aktiv
   // liefert - bei beiden dieselbe Event-ID. Ein ID-only-DELETE löscht dann je
@@ -869,6 +870,12 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
     const endDt       = allDay
       ? googleAllDayEndToInclusive(item.end?.date)
       : (item.end?.dateTime || item.end?.date || null);
+    // Zeitzone der Serie (#829). Google liefert die IANA-Zone neben der Zeit;
+    // ohne sie wiederholt die Expansion den festen Offset des ersten Vorkommens
+    // und die Serie driftet über die Sommer-/Winterzeit-Grenze um eine Stunde -
+    // derselbe Fehler, der für CalDAV/Apple schon als #549 behoben wurde, nur
+    // hier nie nachgezogen. Ganztags-Termine tragen keine Zone.
+    const tzid        = allDay ? null : (item.start?.timeZone || calTimeZone || null);
     const title       = item.summary || '(kein Titel)';
     const description = item.description || null;
     const location    = item.location    || null;
@@ -904,12 +911,12 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
       // Umfärbung (user_modified) nicht als Unterschied zählt. Die Bindings der
       // SET-Liste kommen dafür ein zweites Mal.
       const values = [
-        title, description, startDt, endDt, allDay ? 1 : 0, location, rrule, evColor, calRefId,
+        title, description, startDt, endDt, allDay ? 1 : 0, location, rrule, tzid, evColor, calRefId,
       ];
       db.get().prepare(`
         UPDATE calendar_events
         SET title = ?, description = ?, start_datetime = ?, end_datetime = ?,
-            all_day = ?, location = ?, recurrence_rule = ?,
+            all_day = ?, location = ?, recurrence_rule = ?, tzid = ?,
             color = CASE WHEN user_modified = 0 THEN ? ELSE color END,
             calendar_ref_id = ?
         WHERE id = ?
@@ -920,6 +927,7 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
                OR all_day         IS NOT ?
                OR location        IS NOT ?
                OR recurrence_rule IS NOT ?
+               OR tzid            IS NOT ?
                OR color           IS NOT CASE WHEN user_modified = 0 THEN ? ELSE color END
                OR calendar_ref_id IS NOT ?
               )
@@ -928,9 +936,9 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
       const inserted = db.get().prepare(`
         INSERT INTO calendar_events
           (title, description, start_datetime, end_datetime, all_day,
-           location, color, external_calendar_id, external_source, recurrence_rule, calendar_ref_id, created_by)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'google', ?, ?, 1)
-      `).run(title, description, startDt, endDt, allDay ? 1 : 0, location, evColor, item.id, rrule, calRefId);
+           location, color, external_calendar_id, external_source, recurrence_rule, tzid, calendar_ref_id, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'google', ?, ?, ?, 1)
+      `).run(title, description, startDt, endDt, allDay ? 1 : 0, location, evColor, item.id, rrule, tzid, calRefId);
       assignDefaultToEvent(db.get(), inserted.lastInsertRowid, defaultAssignee);
     }
 

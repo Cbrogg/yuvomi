@@ -1,4 +1,4 @@
-<!-- version: 2.26.0 -->
+<!-- version: 2.27.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,28 +29,25 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: ein neues Feature, das NIEMAND ungefragt bekommt -
-  ohne eigene Zugangsdaten passiert gar nichts. Der Handlungs-Absatz ist
-  deshalb nicht "das musst du tun, sonst bricht etwas", sondern "das ist noetig,
-  falls du es willst". Er steht trotzdem an zweiter Stelle, weil die eigene
-  App-Registrierung bei Microsoft die Huerde ist, an der es sonst scheitert.
+  HINWEIS ZU DIESER VERSION: drei Fehlerbehebungen und eine Funktion. Der
+  Kalender-Absatz steht zuerst, weil er als einziger jemanden betrifft, der gar
+  nichts eingerichtet hat - fehlende Termine in einer Ansicht sind das, was im
+  Store zaehlt.
 
-  Der dritte Absatz ist der wichtigste und darf nicht wegredigiert werden: es
-  ist die erste Stelle, an der Yuvomi fremde Eingaben aktiv ueberschreibt. Wer
-  seine Termine bisher in Outlook gepflegt hat und das hier einschaltet,
-  verliert diese Aenderungen beim naechsten Abgleich. Das gehoert vor die
-  Entscheidung, nicht in eine Fehlermeldung danach.
+  Der Handlungs-Absatz ist der zur Anmeldung, wieder in der Form "noetig, falls
+  du es willst": ohne Single Sign-on aendert sich nichts. Er nennt ausdruecklich,
+  WO man es tut, weil genau dieser Weg bisher fehlte.
 
-  Draussen bleibt die Bauart: Microsoft Graph als Name der Schnittstelle, die
-  Erkennung ueber gespeicherte Aenderungsmarken, der Ausschluss bereits
-  synchronisierter Termine, die Zahl der Anfragen pro Lauf. Ebenso draussen
-  bleibt die halbe Version an Verbesserungen der Projektwebsite - die sieht im
-  Store niemand, der ein Update einspielt.
+  Draussen bleibt die Bauart: Zeitzonenkuerzel, das Ladefenster des Kalenders,
+  Zonen an Terminreihen, die Zielzuordnung der Einkaufsliste, Namen von
+  Schnittstellen und Feldern. Kurz gehalten bleibt auch, warum ein gleicher
+  Benutzername nicht verbindet - die Begruendung gehoert in die Anleitung, nicht
+  in einen Update-Dialog.
 -->
-Yuvomi kann Termine jetzt nach Outlook.com schicken. Wer ein privates Microsoft-Konto nutzt, sieht seine Yuvomi-Termine damit auch im Outlook-Kalender auf dem Handy, in der Uhr und ueberall dort, wo dieses Konto eingerichtet ist. Mehrere Konten lassen sich verbinden, jedes bekommt einen eigenen Zielkalender, und wer im Haushalt zu einem Termin eingeteilt ist, steht im Titel dahinter. Das schliesst eine Luecke, die es sonst nicht zu schliessen gab: Outlook.com bietet keinen der ueblichen Kalenderwege mehr an, und ein abonnierter Kalender wird dort erst nach Stunden aktualisiert.
+Die Tagesansicht des Kalenders zeigt wieder alle Termine. Wer westlich von Greenwich lebt, dem fehlten dort synchronisierte Termine am spaeten Nachmittag und Abend, waehrend Monat, Woche und Agenda dieselben Termine anzeigten - fuer den Abgleich gehoerte ein Abendtermin bereits zum naechsten Tag. Ausserdem behalten wiederkehrende Google-Termine ihre Uhrzeit jetzt ueber die Zeitumstellung hinweg; bisher verschoben sie sich ab dem Wechsel um eine Stunde.
 
-Wer das nutzen moechte, legt einmalig eine kostenlose eigene App-Registrierung bei Microsoft an und traegt die drei Zugangsdaten daraus in den Einstellungen ein; der Installationsassistent fragt sie auf Wunsch gleich mit ab. Ohne diese Angaben aendert sich nichts, und niemand muss etwas tun, der Outlook nicht verwendet.
+Die Einkaufsliste laeuft nicht mehr auseinander, wenn sie mit einer Erinnerungsliste auf einem eigenen Kalenderserver abgeglichen wird. Umbenennen, Abhaken und Loeschen wurden schon immer uebertragen, ein in Yuvomi neu hinzugefuegter Artikel blieb aber liegen und tauchte auf dem Handy nie auf. Neue Artikel gehen jetzt ebenfalls hinaus, sofort und beim naechsten Abgleich.
 
-Wichtig fuer die Entscheidung: der Abgleich laeuft nur in eine Richtung. Yuvomi gibt den Stand vor, und was in Outlook von Hand an einem uebertragenen Termin geaendert oder geloescht wird, wird beim naechsten Abgleich wieder auf den Yuvomi-Stand gesetzt. Wer seine Termine bisher in Outlook gepflegt hat, sollte dafuer deshalb einen eigenen, leeren Kalender anlegen und nicht den, in dem er bisher gearbeitet hat. Termine, die schon ueber Google, CalDAV oder ein Abo synchronisiert werden, bleibt der Abgleich fern, damit sie nicht doppelt erscheinen.
+Wer sich per Single Sign-on anmeldet, kann sein Anbieter-Konto nun selbst mit einem bestehenden Yuvomi-Konto verbinden. Bisher legte die erste Anmeldung ueber den Anbieter ein zweites Konto an, sobald Yuvomi die Person nicht sicher zuordnen konnte - die bisherigen Daten blieben dann im alten Konto liegen. Dafuer meldet man sich wie gewohnt in Yuvomi an und verbindet beide unter Einstellungen, Konto. Ein gleicher Benutzername verbindet weiterhin nicht von allein, denn er waere ein Weg, sich ein fremdes Konto zu nehmen.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.26.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.27.0

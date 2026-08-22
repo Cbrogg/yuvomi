@@ -935,8 +935,28 @@ function renderTaskChip(task, { interactive = true, icon = true } = {}) {
 // API
 // --------------------------------------------------------
 
+/**
+ * Ladefenster mit einem Tag Rand an beiden Seiten.
+ *
+ * Extern synchronisierte Termine liegen als UTC in der Datenbank
+ * (`2035-03-13T02:00:00Z`), der Serverfilter vergleicht deren UTC-Kalendertag
+ * gegen die lokalen Tagesschluessel dieser Ansicht. Westlich von UTC faellt ein
+ * Abendtermin dadurch auf den UTC-Folgetag und aus einem Fenster heraus, das
+ * genau die angezeigten Tage umfasst: in der Tagesansicht (Fenster = ein Tag)
+ * fehlte er komplett, in Woche und Monat nur am Rand (#824).
+ *
+ * Der Rand deckt jeden realen Zeitzonenversatz (UTC-12..UTC+14) ab. Welche
+ * Termine wirklich auf einen Tag gehoeren, entscheidet ohnehin erst
+ * buildDayIndex() lokal - dort klammert state.rangeFrom/rangeTo auf das
+ * Anzeigefenster, weshalb die Randtage nichts Fremdes einblenden.
+ */
+function fetchWindow(from, to) {
+  return { from: addLocalDays(from, -1), to: addLocalDays(to, 1) };
+}
+
 async function loadRange(from, to) {
-  const calPath = `/calendar?from=${from}&to=${to}`;
+  const win     = fetchWindow(from, to);
+  const calPath = `/calendar?from=${win.from}&to=${win.to}`;
   try {
     const [evRes, taskRes, holRes] = await Promise.all([
       api.get(calPath),
@@ -972,7 +992,8 @@ async function loadRange(from, to) {
 async function reloadCalendarEventsOnly() {
   if (!state.rangeFrom || !state.rangeTo) return;
   try {
-    const res = await api.get(`/calendar?from=${state.rangeFrom}&to=${state.rangeTo}`);
+    const win = fetchWindow(state.rangeFrom, state.rangeTo);
+    const res = await api.get(`/calendar?from=${win.from}&to=${win.to}`);
     state.events = (res.data ?? []).map(localizeBirthdayEvent);
   } catch (err) {
     console.error('[Calendar] reloadCalendarEventsOnly Fehler:', err);
@@ -2298,6 +2319,7 @@ async function openFoundEvent(ev) {
 }
 
 export const __test = {
+  fetchWindow,
   normalizeCalendarView,
   defaultCalendarViewFromState,
   newEventDefaultDate,

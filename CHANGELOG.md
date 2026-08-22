@@ -7,6 +7,48 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.27.0] - 2026-08-22
+
+### Added
+
+- **An OIDC account can now be linked to an existing local account.** Automatic matching happens
+  over the validated `sub` or a verified e-mail address only - a matching username deliberately
+  does not count, because anyone who names themselves `admin` at the identity provider would
+  otherwise take over the local admin account. That left people who genuinely own both accounts
+  without any route at all: the first SSO sign-in handed them a second account (`test1-1`) while
+  their data stayed in the first. Settings > Account now carries a Single sign-on card where a
+  signed-in user links their own account - the session names the local account and the validated
+  `sub` names the remote one, which together are the proof of ownership a shared username never
+  was. Linking is refused when the `sub` already belongs to another account or when this account
+  is linked to a different one. Unlinking is available too, except for an account created through
+  SSO: it carries no password, so the link is its only way in.
+
+### Fixed
+
+- **The day view dropped appointments late in the day west of UTC.** Externally synced events are
+  stored as UTC, and the server filters them by the UTC calendar day of their start while the
+  views ask in local calendar days. In America/Los_Angeles a 19:00 appointment is stored as
+  02:00 the next day UTC, so it fell outside a window that spans exactly the days on screen -
+  the day view, whose window is a single day, lost it entirely, while month, week and agenda kept
+  showing it because their windows are wide enough to still contain the shifted day. The calendar
+  now loads one day of margin on each side and decides locally which day an event belongs to, which
+  covers every real timezone offset (UTC-12 to UTC+14). The regression suite sets its timezone
+  explicitly: in a UTC CI no calendar day ever shifts, so a test without that would be green and
+  blind.
+- **Google recurring events drifted by an hour across a daylight-saving change.** Google sends the
+  IANA zone alongside the time, but Yuvomi never stored it, so the expansion repeated the fixed
+  offset of the first occurrence: a series set to 19:00 in Toronto showed 18:00 from November on.
+  The same defect was fixed for CalDAV and Apple as #549 and simply never carried over to Google.
+  The zone is now taken from the event, falling back to the calendar's, and existing rows pick it
+  up on the next sync.
+- **Shopping items created in Yuvomi never reached the CalDAV server.** Renaming, ticking off and
+  deleting had travelled outbound for a long time, but a newly added item stayed local forever, so
+  a list that is mirrored to a reminder list (Radicale, Apple, Nextcloud) drifted apart with every
+  new entry although the interface promises a two-way sync. Unlike a task, a shopping item carries
+  no target of its own - the list-to-list assignment is the target, which is why this needed neither
+  a migration nor a new setting. New items now go out both in the regular sync run and in the
+  immediate attempt right after they are added.
+
 ## [2.26.0] - 2026-08-22
 
 ### Added
