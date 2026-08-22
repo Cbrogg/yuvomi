@@ -5031,8 +5031,9 @@ test('die beiden Küchen-Editoren sind derselbe Dialog', () => {
 /**
  * DESIGN.md und tokens.css widersprachen sich über die Touch-Zielgröße.
  *
- * DESIGN.md: „size touch targets at 48px (mobile) or 40px (desktop) minimum. The
- * --target-lg and --target-md tokens encode this — never go below them."
+ * DESIGN.md (damals englisch, vor der Nachziehung `fab73ac0`): „size touch targets
+ * at 48px (mobile) or 40px (desktop) minimum. The --target-lg and --target-md
+ * tokens encode this - never go below them."
  * tokens.css: `--target-base: 44px` mit der Begründung „iOS-Minimum 44pt", benutzt
  * an 111 Stellen in 18 Modulen - darunter sechs der meistbenutzten Bedienelemente
  * der Küche (.sub-tab, .item-check, #item-qty-input, .quick-add__btn,
@@ -5048,25 +5049,75 @@ test('die beiden Küchen-Editoren sind derselbe Dialog', () => {
 test('die Touch-Zielgröße folgt DESIGN.md statt einer dritten Zahl', () => {
   const tokens = read('../public/styles/tokens.css');
 
-  // Die Quelle der Untergrenze ist DESIGN.md: „size touch targets at 48px (mobile)
-  // or 40px (desktop) minimum. The --target-lg and --target-md tokens encode this -
-  // never go below them on interactive elements."
+  // Die Quelle der Untergrenze ist DESIGN.md - und sie wird GELESEN, nicht zitiert.
   //
-  // Der Satz wird hier ZITIERT und nicht gelesen, und der Grund dafür hat
-  // gewechselt. Er war: DESIGN.md stand in .gitignore, lag also nur lokal und
-  // fehlte in der CI - ein Guard, der eine ignorierte Datei liest, ist lokal grün
-  // und im Build rot (so ist dieser Test beim Release v1.59.0 aufgefallen). Seit
-  // c0df06ec (2026-08-08) ist die Datei committed, das Argument gilt nicht mehr.
-  // Zitiert bleibt der Satz trotzdem: die Zahl gehört in die ASSERTION, damit ein
-  // Edit an DESIGN.md den Guard nicht stillschweigend mitverschiebt.
-  assert.match(tokens, /--target-base:\s*44px/, 'auf Zeigergeräten bleibt es bei 44px (über der 40er-Grenze)');
+  // Der Guard hat beide Begründungen fürs Zitieren überlebt. Die erste war
+  // sachlich: DESIGN.md stand in .gitignore, lag nur lokal und fehlte der CI - ein
+  // Guard, der eine ignorierte Datei liest, ist lokal grün und im Build rot (so ist
+  // dieser Test beim Release v1.59.0 aufgefallen). Seit c0df06ec (2026-08-08) ist
+  // die Datei committed, das Argument war damit erledigt.
+  //
+  // Die zweite hielt sich länger: die Zahl gehöre in die ASSERTION, damit ein Edit
+  // an DESIGN.md den Guard nicht stillschweigend mitverschiebt. Genau das ist
+  // schiefgegangen, nur andersherum. Der zitierte englische Satz existiert in
+  // DESIGN.md seit der deutschen Nachziehung `fab73ac0` (2026-08-15) nicht mehr;
+  // die Zitat-Fassung wurde am 2026-08-18 mit `455c00c2` noch einmal bekräftigt,
+  // drei Tage nach dem Tod des Satzes, und kein Test hat es gemerkt. Ein Zitat
+  // verschiebt sich nicht mit - es VERWAIST, und zwar grün.
+  //
+  // Gelesen fällt ein Drift auf BEIDEN Seiten auf. Gegen ein Mitverschieben sichert
+  // nicht mehr das Zitat, sondern --target-md: die Desktop-Untergrenze steht als
+  // Token und wird unten gegen die Zahl aus DESIGN.md geprüft.
+  const design = read('../DESIGN.md');
+  const bulletStart = design.indexOf('- **Touch-Targets:**');
+  assert.notStrictEqual(bulletStart, -1,
+    'DESIGN.md muss den Touch-Targets-Absatz führen - er ist die Quelle der Untergrenze');
+  const bulletEnd = design.indexOf('\n- ', bulletStart + 1);
+  const bullet = design
+    .slice(bulletStart, bulletEnd === -1 ? undefined : bulletEnd)
+    .replace(/\s+/g, ' ');
+
+  // Beide Zahlen kommen aus EINEM Match, damit die Zuordnung mitgeprüft wird: welche
+  // gilt am Zeiger, welche am Finger. Zwei getrennte Muster wären gegen ein
+  // Vertauschen blind. Die Umschrift ist tolerant, weil DESIGN.md in diesem Absatz
+  // ohne Umlaute schreibt - eine Rückumstellung auf „Zeigergeräten" ist kein Drift
+  // der Zusage.
+  const stated = bullet.match(
+    /`--target-base` (\d+)px auf Zeigerger[äa]e?ten.*?`@media \(hover: none\)` auf (\d+)px/);
+  assert.ok(stated,
+    `DESIGN.md muss beide Zielgrößen mit ihrem Kriterium nennen, gefunden: „${bullet}"`);
+  const pointerPx = Number(stated[1]);
+  const touchPx = Number(stated[2]);
+
+  // Die 40er-Grenze steht als Token, nicht als Prosa-Zahl: --target-md IST die
+  // Desktop-Untergrenze, und die Zeigergröße darf nicht darunter fallen. Das ist die
+  // Bremse gegen ein stilles Absenken über einen DESIGN.md-Edit.
+  const floor = tokens.match(/--target-md:\s*(\d+)px/);
+  assert.ok(floor, '--target-md ist die Desktop-Untergrenze und muss in tokens.css stehen');
+  assert.ok(pointerPx >= Number(floor[1]),
+    `die Zeigergröße aus DESIGN.md (${pointerPx}px) darf die Untergrenze --target-md `
+    + `(${floor[1]}px) nicht unterschreiten`);
+
+  // Zahl gegen Zahl, nicht Muster gegen Datei: ein Mismatch ist hier der erwartete
+  // Rot-Fall, und `assert.match` würde dafür die ganze tokens.css in die Meldung legen.
+  const base = tokens.match(/--target-base:\s*(\d+)px/);
+  assert.ok(base, '--target-base muss in tokens.css eine Zahl tragen');
+  assert.strictEqual(Number(base[1]), pointerPx,
+    `auf Zeigergeräten gilt die Zahl aus DESIGN.md (${pointerPx}px)`);
+  const lg = tokens.match(/--target-lg:\s*(\d+)px/);
+  assert.ok(lg, '--target-lg muss in tokens.css eine Zahl tragen');
+  assert.strictEqual(Number(lg[1]), touchPx,
+    `--target-lg muss die Fingergröße aus DESIGN.md tragen (${touchPx}px)`);
   assert.match(tokens, /@media \(hover: none\)\s*\{\s*:root\s*\{\s*--target-base:\s*var\(--target-lg\)/,
-    'auf Fingergeräten muss --target-base die 48px aus DESIGN.md erreichen');
+    `auf Fingergeräten muss --target-base die ${touchPx}px aus DESIGN.md erreichen`);
 
   // Das Kriterium ist die Zeigerfähigkeit, nicht die Breite: ein schmales
   // Desktop-Fenster wird mit der Maus bedient, ein 1180px-Tablet mit dem Finger.
-  const scope = tokens.slice(tokens.indexOf('Touch-Ziele auf Fingergeräten'));
-  assert.doesNotMatch(scope.slice(0, 1400), /--target-base[\s\S]{0,80}@media \(max-width/,
+  const anchor = tokens.indexOf('Touch-Ziele auf Fingergeräten');
+  assert.notStrictEqual(anchor, -1,
+    'der Abschnitt der Touch-Ziele muss in tokens.css auffindbar bleiben - ohne Anker '
+    + 'prüft die nächste Zusicherung das Dateiende');
+  assert.doesNotMatch(tokens.slice(anchor, anchor + 1400), /--target-base[\s\S]{0,80}@media \(max-width/,
     'die Touch-Größe darf nicht an einer Viewport-Breite hängen');
 });
 
