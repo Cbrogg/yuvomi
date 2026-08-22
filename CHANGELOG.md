@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **The document management connection now checks its target URL before contacting it.** Four other
+  outbound integrations (ICS subscriptions, recipe providers, WebDAV document storage, subscription
+  logos) validate the address they are about to reach; the Paperless-ngx and Papra adapters were the
+  ones that did not, and called an operator-supplied URL straight out. Only administrators can
+  configure that URL, so this was consistency rather than an open door, but it was the one outbound
+  path nobody was looking at. Every adapter method now runs through the check, including Papra's
+  connection test, which builds its own request and would otherwise have been the single hole.
+
+  **The new `DMS_ALLOW_PRIVATE_NETWORK` deliberately defaults to `true`, unlike the other three
+  flags of its kind.** A document management system is self-hosted by definition and in practice sits
+  on the same LAN or Docker network as Yuvomi, so shipping this as an opt-in would have cut off
+  essentially every existing connection on update. Nothing changes for existing installations. Set it
+  to `false` to enforce the same protection the other integrations have; only an explicit `false`
+  or `0` switches it on, so a typo leaves a working setup working.
+
 ## [2.28.0] - 2026-08-22
 
 ### Security

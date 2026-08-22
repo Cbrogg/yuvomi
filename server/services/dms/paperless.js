@@ -2,8 +2,13 @@
  * Module: Paperless-ngx DMS Adapter
  * Purpose: Wrap the Paperless-ngx REST API behind the DMS adapter interface
  *          (search, fetchContent, upload, testConnection). Token-authenticated.
- * Dependencies: global fetch (Node >=22)
+ *          base_url is operator-supplied, so every request funnels through
+ *          #fetch() and #fetch() alone checks the target (./guard.js). A method
+ *          that calls global fetch() directly would bypass the guard - that is
+ *          why testConnection() goes through #fetch() too.
+ * Dependencies: global fetch (Node >=22), ./guard.js
  */
+import { assertDmsTargetAllowed } from './guard.js';
 
 const REQUEST_TIMEOUT_MS = 8000;
 // Paperless-ngx handelt seine REST-API über einen versionierten Accept-Header aus.
@@ -44,6 +49,9 @@ export class PaperlessAdapter {
   }
 
   async #fetch(path, opts = {}) {
+    // Vor JEDEM Request, nicht einmalig im Konstruktor: die Prüfung ist async,
+    // und ein Konto kann seine base_url zwischen zwei Aufrufen geändert haben.
+    await assertDmsTargetAllowed(this.base);
     const url = `${this.base}${path}`;
     const res = await fetch(url, {
       ...opts,

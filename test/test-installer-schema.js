@@ -111,6 +111,13 @@ const INTENTIONALLY_NOT_IN_INSTALLER = {
     + 'die Variable unter environment pinnt - ein Host-Pfad aus der .env erreicht den Container '
     + 'also ungebremst. Wer Module ablegt, setzt den Mount in der Compose-Datei.',
   OIKOS_HTTP_BIND: 'Bindungsadresse für rootless Podman hinter Proxy. Ein falscher Wert macht die App unerreichbar, und der Default ist für jede vom Wizard erzeugte Installation richtig.',
+  DMS_ALLOW_PRIVATE_NETWORK:
+    'Der einzige *_ALLOW_PRIVATE_NETWORK-Schalter mit Default true (#809): ein DMS ist per '
+    + 'Definition selbst gehostet und steht meist im selben LAN oder Docker-Netz, ein Opt-in '
+    + 'haette jede Bestandsanbindung beim Update gekappt. Damit ist der Default bereits der '
+    + 'Wert, den der Wizard setzen wuerde. Wer ihn umdreht, HAERTET bewusst und fasst die .env '
+    + 'ohnehin von Hand an. Eine Checkbox waere hier ausserdem invertiert beschriftet ("private '
+    + 'Ziele SPERREN") und damit die einzige im Wizard, die man rueckwaerts liest.',
 
   // Werden zur Laufzeit erzeugt und in der Datenbank abgelegt.
   VAPID_PUBLIC_KEY: 'Wird bei Erstnutzung automatisch erzeugt; nur VAPID_SUBJECT ist konfigurierbar.',
