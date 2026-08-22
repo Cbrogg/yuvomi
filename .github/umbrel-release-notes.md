@@ -1,4 +1,4 @@
-<!-- version: 2.25.1 -->
+<!-- version: 2.26.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,25 +29,28 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: kein Handlungs-Absatz im engen Sinn - keine neue
-  Env-Variable, keine Migration, die jemand anstossen muesste. Der zweite
-  Absatz nennt trotzdem eine Handlung, weil es fuer einen Teil der Leser eine
-  gibt: wer die Schnittstelle wegen genau dieses Fehlers von normalen Konten
-  ferngehalten hat, kann sie jetzt wieder freigeben.
+  HINWEIS ZU DIESER VERSION: ein neues Feature, das NIEMAND ungefragt bekommt -
+  ohne eigene Zugangsdaten passiert gar nichts. Der Handlungs-Absatz ist
+  deshalb nicht "das musst du tun, sonst bricht etwas", sondern "das ist noetig,
+  falls du es willst". Er steht trotzdem an zweiter Stelle, weil die eigene
+  App-Registrierung bei Microsoft die Huerde ist, an der es sonst scheitert.
 
-  Der Text nennt zuerst, WEN es betrifft, und erst dann, was passiert war. Ein
-  Haushalt ohne eingeschraenkte Mitglieder und ohne Schnittstellen-Zugang ist
-  gar nicht betroffen, und das muss er nach einem Satz wissen, statt sich durch
-  eine Sicherheitsmeldung zu lesen, die ihn nichts angeht.
+  Der dritte Absatz ist der wichtigste und darf nicht wegredigiert werden: es
+  ist die erste Stelle, an der Yuvomi fremde Eingaben aktiv ueberschreibt. Wer
+  seine Termine bisher in Outlook gepflegt hat und das hier einschaltet,
+  verliert diese Aenderungen beim naechsten Abgleich. Das gehoert vor die
+  Entscheidung, nicht in eine Fehlermeldung danach.
 
-  Draussen bleibt die ganze Bauart: dass es zwei Zugangswege mit getrennten
-  Pruefungen waren, wo die Regel stand und wohin sie gewandert ist, wie die
-  Werkzeugliste gefiltert wird, welche Pruefschicht welchen Weg deckt. Ebenso
-  draussen bleibt das Kuerzel MCP: im Store liest das ein Haushalt, und
-  "Schnittstelle fuer KI-Assistenten" sagt ihm dasselbe.
+  Draussen bleibt die Bauart: Microsoft Graph als Name der Schnittstelle, die
+  Erkennung ueber gespeicherte Aenderungsmarken, der Ausschluss bereits
+  synchronisierter Termine, die Zahl der Anfragen pro Lauf. Ebenso draussen
+  bleibt die halbe Version an Verbesserungen der Projektwebsite - die sieht im
+  Store niemand, der ein Update einspielt.
 -->
-Wer einzelnen Mitgliedern oder Familienrollen den Zugriff auf Module eingeschraenkt hat und zugleich einen Zugang fuer Skripte oder KI-Assistenten vergibt, sollte dieses Update einspielen. Ein Mitglied, dem zum Beispiel die Aufgaben entzogen waren, bekam sie in der App korrekt verweigert - ueber die Schnittstelle fuer KI-Assistenten wurden sie ihm aber trotzdem herausgegeben, lesend wie schreibend. Beide Wege halten sich jetzt an dieselben Rechte, und dasselbe gilt fuer Gastkonten der geteilten Ausgaben, die ausserhalb ihres Bereichs nichts mehr erreichen.
+Yuvomi kann Termine jetzt nach Outlook.com schicken. Wer ein privates Microsoft-Konto nutzt, sieht seine Yuvomi-Termine damit auch im Outlook-Kalender auf dem Handy, in der Uhr und ueberall dort, wo dieses Konto eingerichtet ist. Mehrere Konten lassen sich verbinden, jedes bekommt einen eigenen Zielkalender, und wer im Haushalt zu einem Termin eingeteilt ist, steht im Titel dahinter. Das schliesst eine Luecke, die es sonst nicht zu schliessen gab: Outlook.com bietet keinen der ueblichen Kalenderwege mehr an, und ein abonnierter Kalender wird dort erst nach Stunden aktualisiert.
 
-Einzustellen ist dafuer nichts: die vergebenen Rechte gelten ab dem Update auch dort, und Haushalte ohne eingeschraenkte Mitglieder merken keinen Unterschied. Wer diesen Zugang bisher bewusst nur Verwaltungskonten gegeben hat, weil ein normales Mitglied darueber zu viel sehen konnte, kann ihn jetzt wieder freigeben.
+Wer das nutzen moechte, legt einmalig eine kostenlose eigene App-Registrierung bei Microsoft an und traegt die drei Zugangsdaten daraus in den Einstellungen ein; der Installationsassistent fragt sie auf Wunsch gleich mit ab. Ohne diese Angaben aendert sich nichts, und niemand muss etwas tun, der Outlook nicht verwendet.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.25.1
+Wichtig fuer die Entscheidung: der Abgleich laeuft nur in eine Richtung. Yuvomi gibt den Stand vor, und was in Outlook von Hand an einem uebertragenen Termin geaendert oder geloescht wird, wird beim naechsten Abgleich wieder auf den Yuvomi-Stand gesetzt. Wer seine Termine bisher in Outlook gepflegt hat, sollte dafuer deshalb einen eigenen, leeren Kalender anlegen und nicht den, in dem er bisher gearbeitet hat. Termine, die schon ueber Google, CalDAV oder ein Abo synchronisiert werden, bleibt der Abgleich fern, damit sie nicht doppelt erscheinen.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.26.0
