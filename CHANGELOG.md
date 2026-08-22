@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.28.0] - 2026-08-22
+
+### Security
+
+- **A placeholder session secret now stops the server instead of quietly signing cookies with it.**
+  `.env.example` ships `SESSION_SECRET=REPLACE_WITH_A_LONG_RANDOM_STRING`, and copying the quick
+  start without editing `.env` left that value in place. It is printed in this repository, so anyone
+  who could reach the instance could forge a session cookie and sign in as any user - a heavier
+  failure than the database key, which only protects the file at rest and has had this guard since
+  v2.14.5. Unlike that one, this check also stops an existing installation rather than only warning:
+  there, aborting would cost more than the mistake (a key change makes the database unreadable),
+  while here the repair is one new line in `.env` and a fresh sign-in. The error message carries the
+  command to generate a value and says that nothing but the sessions is lost.
+
+### Added
+
+- **The maximum upload size is configurable via `MAX_UPLOAD_MB`** (default 5, supported range
+  1-100). It applies to every upload alike: documents, calendar attachments and housekeeping
+  receipts. Until now 5 MB sat hard-coded in seven places across server and browser, and an eighth
+  time as the literal text "5 MB" in four translation strings per language - so the limit could not
+  be raised without finding all of them, and missing one produced an interface promising something
+  the server would not accept. The hints and error messages now name whatever value is configured.
+  The ceiling is deliberate rather than open-ended: the request body is buffered in memory before
+  any route sees it, so a very large value can take a small machine down.
+- **Birthdays can be switched off in the calendar** (#778). They come from the contacts and, with a
+  large address book, fill the calendar with entries nobody planned as appointments. Deleting them
+  individually did not help - the next sync recreated them, which is what the reporter described as
+  "keeps coming back". They are now a layer like the public and school holidays, with a toggle in
+  the calendar toolbar that is remembered per device. Only genuine birthday entries are affected: an
+  appointment of your own that happens to have "birthday" in its title stays.
+- **Task groups can be collapsed by clicking their header** (#812). With several categories in play
+  the list gets long, and sections that are not currently relevant now fold away; the count stays
+  visible on the collapsed header, so it is still clear how much is in there. The state is
+  remembered per device and kept separately for the two groupings, so collapsing a category does not
+  also fold a due-date group of the same name.
+
 ## [2.27.0] - 2026-08-22
 
 ### Added

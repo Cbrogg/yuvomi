@@ -156,6 +156,35 @@ if (!process.env.SESSION_SECRET) {
   throw new Error('[Auth] SESSION_SECRET must be set in .env. Run: node setup.js');
 }
 
+/**
+ * Ein Platzhalter aus `.env.example` ist kein Geheimnis.
+ *
+ * `.env.example` liefert `SESSION_SECRET=REPLACE_WITH_A_LONG_RANDOM_STRING`.
+ * Wer die Quick-Start-Zeilen am Stueck kopiert und das Bearbeiten von `.env`
+ * ueberspringt, signiert seine Session-Cookies gegen eine Konstante, die in
+ * diesem Repository steht - also gegen nichts. Wer die Instanz erreicht, kann
+ * sich damit ein Admin-Cookie ausstellen; das wiegt schwerer als ein
+ * mitgelesener Datenbankschluessel, der nur die Datei im Ruhezustand betrifft.
+ *
+ * ANDERS ALS BEIM DATENBANKSCHLUESSEL (server/db.js) bricht dieser Guard auch
+ * bei einer BESTEHENDEN Installation ab, statt nur zu warnen. Dort waere der
+ * Abbruch teurer als der Fehler: ein Schluesselwechsel macht die Datenbank
+ * unlesbar, eine laufende Instanz haette also ihre Daten verloren. Hier kostet
+ * die Reparatur eine neue Zeile in `.env` und einen erneuten Login - alle
+ * Sessions werden ungueltig, sonst nichts. Weiterlaufen zu lassen hiesse, ein
+ * offenes Tor offen zu halten, solange niemand die Warnung liest.
+ */
+if (process.env.SESSION_SECRET.startsWith('REPLACE_WITH_')) {
+  throw new Error(
+    '[Auth] SESSION_SECRET is still the placeholder from .env.example ' +
+    `(${process.env.SESSION_SECRET}). That value is published in this ` +
+    'repository, so anyone who can reach this instance could forge a session ' +
+    'cookie and sign in as any user. Generate a real one with ' +
+    '`openssl rand -base64 48` and put it in .env. Everyone will have to sign ' +
+    'in again once - nothing else is lost.'
+  );
+}
+
 // Session-Cookie-Name. Legacy „Oikos"-Installationen nutzten `oikos.sid`; der
 // Name ist nun `yuvomi.sid`. Der Wechsel ist NAHTLOS (kein Zwangs-Logout): der
 // signierte Session-Wert ist nur über den Wert (die sid) signiert, nicht über den

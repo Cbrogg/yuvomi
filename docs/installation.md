@@ -239,9 +239,9 @@ docker compose up -d
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
 
 > **Pinning a version.** Every release is also published under immutable tags:
-> `2.27.0` (exact version), `2.26` (latest patch of that minor), plus a moving `main`
+> `2.28.0` (exact version), `2.28` (latest patch of that minor), plus a moving `main`
 > tag for the current development state. To pin production to a known-good release,
-> set `image: ghcr.io/ulsklyc/yuvomi:2.27.0` in your compose file and bump it
+> set `image: ghcr.io/ulsklyc/yuvomi:2.28.0` in your compose file and bump it
 > deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
@@ -287,7 +287,7 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.27.0
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.28.0
 yuvomi  | [Yuvomi] Environment: production
 yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
@@ -439,7 +439,7 @@ All configuration happens in the `.env` file. The container reads these values o
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `SESSION_SECRET` | Secret key for signing session cookies. **Change this!** | - | **Yes** |
+| `SESSION_SECRET` | Secret key for signing session cookies. The placeholder that `.env.example` ships (`REPLACE_WITH_...`) is refused at startup: it is printed in this repository, so anyone who can reach your instance could forge a session cookie and sign in as any user. Generate one with `openssl rand -base64 48`. Changing it later only signs everyone out once. | - | **Yes** |
 | `SESSION_SECURE` | Set to `true` when running behind an HTTPS reverse proxy (Caddy, Nginx, Traefik). Leave unset for direct HTTP access (e.g. TrueNAS, bare Docker). | `false` | No |
 | `RATE_LIMIT_WINDOW_MS` | Time window for rate limiting (ms) | `60000` | No |
 | `RATE_LIMIT_MAX_ATTEMPTS` | Max login attempts per window | `5` | No |
@@ -632,6 +632,18 @@ environment:
 | `DOCUMENT_STORAGE_LOCAL_DIR` | Compose-only: host folder mounted to `DOCUMENT_STORAGE_LOCAL_PATH` | `./documents` | No |
 
 > Ensure the mounted folder is writable by the container (adjust ownership/permissions as needed).
+
+### Upload Size
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `MAX_UPLOAD_MB` | Largest single upload in megabytes, shared by documents, calendar attachments and housekeeping receipts. Supported range 1-100; values outside it are clamped, anything unparseable falls back to the default. The interface reads this value too, so hints and error messages name whatever you configure. | `5` | No |
+
+> **Why there is a ceiling at all.** The request body is buffered in memory before any route sees
+> it, and a file travels as base64, which adds a third to its size. The limit therefore protects the
+> process, not the disk: on a small single-board machine a very large value can end the container
+> mid-upload. Raise it to what your documents actually need rather than to the largest number that
+> seems safe.
 > Files live on the host volume, so include that folder in your host-level backups — database
 > backups hold only document metadata, not these binaries.
 
@@ -1120,6 +1132,38 @@ This creates a backup at 3:00 AM every day.
 ---
 
 ## Troubleshooting
+
+<details>
+<summary>Container stops at startup: "SESSION_SECRET is still the placeholder"</summary>
+
+Your `.env` still carries `SESSION_SECRET=REPLACE_WITH_A_LONG_RANDOM_STRING` from `.env.example`.
+That value is printed in this repository, so anyone who can reach your instance could forge a
+session cookie and sign in as any user - which is why the server refuses to start with it rather
+than running on in that state.
+
+Generate a real one and put it in `.env`:
+
+```bash
+openssl rand -base64 48
+```
+
+Then restart the container. Everyone will have to sign in again once; nothing else is lost, and no
+data is affected.
+
+</details>
+
+<details>
+<summary>Uploads fail with "Request body too large"</summary>
+
+A single upload may be as large as `MAX_UPLOAD_MB` (default 5). Raise it in `.env`, for example
+`MAX_UPLOAD_MB=25`, and restart the container - the hints in the interface follow the new value.
+
+Keep in mind what the limit protects: the request body is buffered in memory before any route sees
+it, and a file travels as base64, which adds a third to its size. On a small machine a very large
+value can end the container mid-upload, so raise it to what your documents need rather than to the
+highest number the app accepts (100).
+
+</details>
 
 <details>
 <summary>Port already in use</summary>

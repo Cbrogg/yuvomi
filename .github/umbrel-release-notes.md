@@ -1,4 +1,4 @@
-<!-- version: 2.27.0 -->
+<!-- version: 2.28.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -29,25 +29,29 @@
     - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
       YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
 
-  HINWEIS ZU DIESER VERSION: drei Fehlerbehebungen und eine Funktion. Der
-  Kalender-Absatz steht zuerst, weil er als einziger jemanden betrifft, der gar
-  nichts eingerichtet hat - fehlende Termine in einer Ansicht sind das, was im
-  Store zaehlt.
+  HINWEIS ZU DIESER VERSION: eine Sicherheitsaenderung, die STOPPEN kann, plus
+  drei Verbesserungen. Der Sicherheitsabsatz steht zuerst und benennt die
+  Handlung ausdruecklich - das ist der Fall, in dem ein Haushalt nach dem Update
+  einen Container sieht, der nicht mehr startet. Genau dafuer verlangt Umbrels
+  Skill "Migrationen und Breaking Changes ausdruecklich als Handlung".
 
-  Der Handlungs-Absatz ist der zur Anmeldung, wieder in der Form "noetig, falls
-  du es willst": ohne Single Sign-on aendert sich nichts. Er nennt ausdruecklich,
-  WO man es tut, weil genau dieser Weg bisher fehlte.
+  Betroffen ist nur, wer den Platzhalter aus der Beispielkonfiguration nie
+  ersetzt hat. Auf Umbrel ist das praktisch niemand: der Store setzt
+  SESSION_SECRET selbst aus dem App-Seed. Der Absatz bleibt trotzdem drin und
+  bleibt kurz - wer von Hand installiert oder umgezogen ist, muss ihn lesen, und
+  fuer alle anderen kostet er drei Zeilen.
 
-  Draussen bleibt die Bauart: Zeitzonenkuerzel, das Ladefenster des Kalenders,
-  Zonen an Terminreihen, die Zielzuordnung der Einkaufsliste, Namen von
-  Schnittstellen und Feldern. Kurz gehalten bleibt auch, warum ein gleicher
-  Benutzername nicht verbindet - die Begruendung gehoert in die Anleitung, nicht
-  in einen Update-Dialog.
+  Draussen bleibt die Bauart: Namen von Umgebungsvariablen ausser der einen, die
+  man wirklich eintragen muss; wie die Grenze intern zusammengefuehrt wurde; die
+  Speicherschluessel der beiden Schalter; warum ein Gruppenkopf jetzt ein Knopf
+  ist.
 -->
-Die Tagesansicht des Kalenders zeigt wieder alle Termine. Wer westlich von Greenwich lebt, dem fehlten dort synchronisierte Termine am spaeten Nachmittag und Abend, waehrend Monat, Woche und Agenda dieselben Termine anzeigten - fuer den Abgleich gehoerte ein Abendtermin bereits zum naechsten Tag. Ausserdem behalten wiederkehrende Google-Termine ihre Uhrzeit jetzt ueber die Zeitumstellung hinweg; bisher verschoben sie sich ab dem Wechsel um eine Stunde.
+Wichtig, falls du Yuvomi von Hand aufgesetzt hast: der Server startet nicht mehr, solange in der Konfiguration noch der Beispielwert fuer SESSION_SECRET steht. Dieser Wert ist oeffentlich einsehbar, und wer ihn kennt, kann sich als beliebiges Mitglied anmelden - deshalb laeuft Yuvomi damit nicht weiter, statt still angreifbar zu bleiben. Wer betroffen ist, traegt einen selbst erzeugten Wert ein und startet neu; danach muessen sich alle einmal neu anmelden, sonst geht nichts verloren. Ueber den App Store installierte Haushalte sind nicht betroffen, dort wird der Wert automatisch gesetzt.
 
-Die Einkaufsliste laeuft nicht mehr auseinander, wenn sie mit einer Erinnerungsliste auf einem eigenen Kalenderserver abgeglichen wird. Umbenennen, Abhaken und Loeschen wurden schon immer uebertragen, ein in Yuvomi neu hinzugefuegter Artikel blieb aber liegen und tauchte auf dem Handy nie auf. Neue Artikel gehen jetzt ebenfalls hinaus, sofort und beim naechsten Abgleich.
+Die Obergrenze fuer Datei-Uploads laesst sich jetzt einstellen. Bisher waren fuenf Megabyte fest eingebaut, was fuer eingescannte Handbuecher oder laengere Vertraege oft zu wenig war; die Grenze gilt einheitlich fuer Dokumente, Anhaenge an Terminen und Belege der Haushaltshilfe, und die Hinweise in der Oberflaeche nennen den Wert, den du eingestellt hast. Wer mehr braucht, hebt sie in der Konfiguration an - mit Augenmass, denn eine hochgeladene Datei liegt waehrend der Uebertragung im Arbeitsspeicher und ein sehr grosser Wert kann ein kleines Geraet ueberfordern.
 
-Wer sich per Single Sign-on anmeldet, kann sein Anbieter-Konto nun selbst mit einem bestehenden Yuvomi-Konto verbinden. Bisher legte die erste Anmeldung ueber den Anbieter ein zweites Konto an, sobald Yuvomi die Person nicht sicher zuordnen konnte - die bisherigen Daten blieben dann im alten Konto liegen. Dafuer meldet man sich wie gewohnt in Yuvomi an und verbindet beide unter Einstellungen, Konto. Ein gleicher Benutzername verbindet weiterhin nicht von allein, denn er waere ein Weg, sich ein fremdes Konto zu nehmen.
+Geburtstage lassen sich im Kalender ausblenden. Bei einem grossen Adressbuch fuellen sie den Kalender mit Eintraegen, die niemand als Termin geplant hat, und sie einzeln zu loeschen half nicht - der naechste Abgleich legte sie wieder an. Ein Schalter in der Kalender-Leiste blendet sie aus, so wie es ihn fuer Feiertage und Schulferien schon gab. Eigene Termine bleiben stehen, auch wenn "Geburtstag" im Titel steht.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.27.0
+In den Aufgaben lassen sich Abschnitte zuklappen. Ein Klick auf die Ueberschrift faltet die Liste darunter zusammen; die Anzahl bleibt sichtbar, und der Zustand bleibt erhalten, bis du ihn wieder aenderst.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.28.0

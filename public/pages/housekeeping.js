@@ -12,8 +12,9 @@ import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import { wireTablist } from '/utils/tablist.js';
 import { amountPlaceholder, amountStep, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
+import { maxUploadBytes, maxUploadMb } from '/utils/upload-limit.js';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 
 function localDate(d = new Date()) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
@@ -960,7 +961,7 @@ function openVisitEditModal(visit, content, { onDone } = {}) {
         try {
           const file = panel.querySelector('#housekeeping-receipt-file')?.files?.[0];
           if (file) {
-            if (file.size > MAX_FILE_SIZE) throw new Error(t('documents.fileTooLarge'));
+            if (file.size > maxUploadBytes()) throw new Error(t('documents.fileTooLarge', { size: maxUploadMb() }));
             const receipt = await api.post('/documents', {
               name: t('housekeeping.receiptDocumentName', {
                 name: worker?.display_name || t('housekeeping.staff'),

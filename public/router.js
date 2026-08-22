@@ -24,6 +24,7 @@ import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { isNewerVersion, displayVersion } from '/utils/version.js';
+import { setMaxUploadBytes } from '/utils/upload-limit.js';
 import { syncWallMode } from '/utils/wall-mode.js';
 import {
   rememberScrollPosition,
@@ -881,6 +882,9 @@ async function syncPreferencesOnce() {
     const res = await api.get('/version');
     if (res?.version) setAppVersion(res.version);
     if (res?.app_name) setAppName(res.app_name);
+    // Die Upload-Grenze kommt vom Server, damit Hinweis und Pruefung im Browser
+    // dieselbe Zahl nennen wie er (#806).
+    setMaxUploadBytes(res?.max_upload_bytes);
     updateBranding();
   } catch {
     // Non-critical. The login page and settings page can refresh branding later.

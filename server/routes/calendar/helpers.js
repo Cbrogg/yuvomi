@@ -5,9 +5,12 @@
  */
 
 import { StorageError } from '../../services/document-storage.js';
+import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from '../../utils/upload-limit.js';
 
 export const VALID_SOURCES  = ['local', 'google', 'apple', 'ics'];
-export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+// Ein Termin-Anhang ist ein Upload wie jeder andere und teilt deshalb die
+// gemeinsame Grenze (#806).
+export const MAX_ATTACHMENT_BYTES = MAX_UPLOAD_BYTES;
 export const DEFAULT_ATTACHMENT_FOLDER = 'Calendar items';
 export const ATTACHMENT_MIME = new Set([
   'image/png',
@@ -70,7 +73,7 @@ export function parseAttachment(dataUrl) {
   const base64 = match[2].replace(/\s/g, '');
   const buffer = Buffer.from(base64, 'base64');
   if (!buffer.length) throw new Error('attachment_data: Datei ist leer.');
-  if (buffer.length > MAX_ATTACHMENT_BYTES) throw new Error('attachment_data: Datei darf höchstens 5 MB groß sein.');
+  if (buffer.length > MAX_ATTACHMENT_BYTES) throw new Error(`attachment_data: Datei darf höchstens ${MAX_UPLOAD_MB} MB groß sein.`);
   return { mime, size: buffer.length, buffer };
 }
 

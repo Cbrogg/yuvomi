@@ -72,6 +72,7 @@ import changelogRouter from './routes/changelog.js';
 import mcpRouter from './mcp/server.js';
 import { moduleForPath, requiredAccess, tokenAllows } from './scopes.js';
 import { moduleAccessVerdict, MODULE_ACCESS_DENIED, MODULE_ACCESS_READ_ONLY } from './permissions.js';
+import { BODY_LIMIT, MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from './utils/upload-limit.js';
 
 const log     = createLogger('Server');
 const logSync = createLogger('Sync');
@@ -132,8 +133,8 @@ app.use(compression());
 // --------------------------------------------------------
 // Request-Parsing
 // --------------------------------------------------------
-app.use(express.json({ limit: '7mb' }));
-app.use(express.urlencoded({ extended: true, limit: '7mb' }));
+app.use(express.json({ limit: BODY_LIMIT }));
+app.use(express.urlencoded({ extended: true, limit: BODY_LIMIT }));
 
 // JSON-Parse-Fehler abfangen (gibt sonst HTML zurück)
 app.use((err, req, res, next) => {
@@ -141,7 +142,7 @@ app.use((err, req, res, next) => {
     return res.status(400).json({ error: 'Invalid JSON in request body.', code: 400 });
   }
   if (err.type === 'entity.too.large') {
-    return res.status(413).json({ error: 'Request body too large (max. 7 MB).', code: 413 });
+    return res.status(413).json({ error: `Request body too large (max. ${MAX_UPLOAD_MB} MB per file).`, code: 413 });
   }
   next(err);
 });
@@ -264,6 +265,10 @@ function buildVersionPayload(includeVersion = false) {
     app_name: appName,
     setup_required: setupRequired,
     password_reset_enabled: passwordResetEnabled,
+    // Nur für Angemeldete: die Oberfläche muss dieselbe Obergrenze nennen und
+    // prüfen, die der Server annimmt (#806). Vor der Anmeldung gibt es nichts
+    // hochzuladen, also auch keinen Grund, die Konfiguration zu verraten.
+    ...(includeVersion ? { max_upload_bytes: MAX_UPLOAD_BYTES } : {}),
   };
 }
 

@@ -72,10 +72,15 @@ const COMPLETENESS_KEYS = [
   'OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM',
 ];
 
+// Die Obergrenze fuer Uploads (#806). Eigene Liste statt Anhaengen an die
+// Storage-Keys: sie gehoert zu keinem Speicher-Backend, sondern gilt fuer jeden
+// Upload - Dokumente, Termin-Anhaenge, Belege der Haushaltshilfe.
+const UPLOAD_KEYS = ['MAX_UPLOAD_MB'];
+
 const TOTAL_KEYS = ORIGINAL_KEYS.length + GOOGLE_DRIVE_KEYS.length + OUTLOOK_KEYS.length + 2 + P5_KEYS.length
   + DOCUMENT_STORAGE_KEYS.length + DOCUMENT_STORAGE_LOCAL_KEYS.length
   + SUBSCRIPTION_KEYS.length + EMAIL_KEYS.length + WEBDAV_BACKUP_KEYS.length
-  + WIZARD_EXTRA_KEYS.length + COMPLETENESS_KEYS.length; // + TZ + OIKOS_HTTP_PORT
+  + WIZARD_EXTRA_KEYS.length + COMPLETENESS_KEYS.length + UPLOAD_KEYS.length; // + TZ + OIKOS_HTTP_PORT
 
 // ── Regel-Guard: .env.example ⇄ ENV_SCHEMA ⇄ gesendetes env-Objekt ───────────
 //
@@ -270,6 +275,9 @@ test('ENV_SCHEMA enthält alle Original-Keys, TZ, OIKOS_HTTP_PORT, P5, Subscript
   assert.equal(ENV_SCHEMA.length, TOTAL_KEYS);
   const keys = ENV_SCHEMA.map(e => e.key);
   for (const k of ORIGINAL_KEYS) {
+    assert.ok(keys.includes(k), `Key fehlt: ${k}`);
+  }
+  for (const k of UPLOAD_KEYS) {
     assert.ok(keys.includes(k), `Key fehlt: ${k}`);
   }
   for (const k of GOOGLE_DRIVE_KEYS) {

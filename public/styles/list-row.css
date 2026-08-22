@@ -131,6 +131,43 @@
   color: var(--color-text-secondary);
 }
 
+/* Auf- und zuklappbarer Gruppenkopf (#812).
+ *
+ * Ein KNOPF im h2, nicht ein anklickbares h2: sonst kennt ihn die Tastatur
+ * nicht und aria-expanded haette nichts, woran es haengt. Er erbt die
+ * Schrift der Ueberschrift vollstaendig - Groesse, Versalien und Tracking
+ * stehen dort einmal und duerfen hier nicht zum zweiten Mal auftauchen,
+ * sonst laufen Kopf und Knopf beim naechsten Token-Wechsel auseinander. */
+.list-group__toggle {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-transform: inherit;
+  letter-spacing: inherit;
+  cursor: pointer;
+}
+
+.list-group__chevron {
+  transition: transform var(--transition-fast);
+}
+
+/* Zugeklappt zeigt der Winkel zur Seite - die Richtung, in die sich die Gruppe
+ * oeffnen wuerde. Gedreht wird der Pfeil, nicht getauscht: ein zweites Icon
+ * waere ein zweiter Ladepfad fuer dieselbe Aussage. */
+.list-group__chevron--collapsed {
+  transform: rotate(-90deg);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .list-group__chevron { transition: none; }
+}
+
 .list-group__title i {
   color: var(--module-accent);
   flex-shrink: 0;

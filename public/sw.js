@@ -15,7 +15,7 @@
  *   → bypassCacheUntil (in-memory + Cache API für SW-Restart-Robustheit)
  */
 
-const APP_RELEASE   = '2.27.0';
+const APP_RELEASE   = '2.28.0';
 const SHELL_CACHE   = `yuvomi-shell-${APP_RELEASE}`;
 const PAGES_CACHE   = `yuvomi-pages-${APP_RELEASE}`;
 const LOCALES_CACHE = `yuvomi-locales-${APP_RELEASE}`;
@@ -148,6 +148,7 @@ const APP_SHELL = [
   '/utils/ux.js',
   '/utils/vcard.js',
   '/utils/version.js',
+  '/utils/upload-limit.js',
   '/utils/wall-mode.js',
   '/offline.html',
   // offline.html laedt theme-init.js, damit die Huelle dieselbe Farbwelt

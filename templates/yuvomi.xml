@@ -128,6 +128,7 @@ After the container starts, open the WebUI - the first visit guides you through 
 
   <!-- Calendar sync interval -->
   <Config Name="SYNC_INTERVAL_MINUTES" Target="SYNC_INTERVAL_MINUTES" Default="15" Mode="" Description="Interval in minutes for calendar and contact sync (Google, Apple, CalDAV, CardDAV). Default: 15." Type="Variable" Display="advanced" Required="false" Mask="false">15</Config>
+  <Config Name="MAX_UPLOAD_MB" Target="MAX_UPLOAD_MB" Default="5" Mode="" Description="Maximum size of a single upload in megabytes (documents, calendar attachments, receipts). Default: 5, supported range 1-100. The request body is buffered in memory, so a very large value can take the container down on a small machine." Type="Variable" Display="advanced" Required="false" Mask="false">5</Config>
 
   <!-- Backups (optional) -->
   <Config Name="BACKUP_ENABLED" Target="BACKUP_ENABLED" Default="true" Mode="" Description="Optional. Enable automated database backups (default: true)." Type="Variable" Display="advanced" Required="false" Mask="false">true</Config>

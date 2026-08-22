@@ -94,6 +94,11 @@ export const ENV_SCHEMA = [
   // bei Erstnutzung automatisch erzeugt; nur das Subject ist hier konfigurierbar.
   { key: 'VAPID_SUBJECT',               type: 'default', label: 'Push Contact (VAPID Subject)', default: '', group: 'push',  writeToEnv: true },
   // Optionaler lokaler Ordner-Speicher (Host-Mount) für neu hochgeladene Dokumentdateien.
+  // Obergrenze fuer JEDEN Upload (#806). Sie ist kein Speicherlimit, sondern ein
+  // Prozesslimit: express.json puffert den Body vollstaendig im Arbeitsspeicher,
+  // bevor eine Route ihn sieht. Deshalb ist der Wert im Server auf 1-100 MB
+  // gedeckelt, statt beliebig zu sein.
+  { key: 'MAX_UPLOAD_MB',                    type: 'default', label: 'Max Upload Size (MB)',             default: '5',          required: false, group: 'documentStorage', writeToEnv: true },
   { key: 'DOCUMENT_STORAGE_LOCAL_ENABLED',   type: 'default', label: 'Local Document Storage Enabled',   default: 'false',      required: false, group: 'documentStorage', writeToEnv: true },
   { key: 'DOCUMENT_STORAGE_LOCAL_PATH',      type: 'default', label: 'Local Document Storage Path',      default: '/documents', required: false, group: 'documentStorage', writeToEnv: true },
   // Der Host-Ordner, der auf DOCUMENT_STORAGE_LOCAL_PATH gemountet wird. Fehlte

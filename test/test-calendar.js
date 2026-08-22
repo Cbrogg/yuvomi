@@ -770,6 +770,32 @@ test('Monatsraster: das CSS hängt die Tönung an die Klasse, nicht an nth-child
 });
 
 // --------------------------------------------------------
+// Geburtstags-Ebene (#778)
+//
+// Geburtstage kommen aus den Kontakten und fuellen bei einem grossen Adressbuch
+// den Kalender mit Terminen, die niemand als Termin geplant hat. Sie einzeln zu
+// loeschen half nicht - der naechste Abgleich legt sie wieder an ("keeps coming
+// back"). Sie sind deshalb eine Ebene wie die Feiertage.
+// --------------------------------------------------------
+
+test('Die Geburtstags-Ebene blendet genau die Geburtstage aus', () => {
+  const geburtstag = { id: 1, title: 'Anna', birthday_name: 'Anna' };
+  const termin     = { id: 2, title: 'Zahnarzt' };
+
+  assert(calendarHelpers.isVisibleLayer(geburtstag, false) === false, 'ausgeschaltet verschwindet der Geburtstag');
+  assert(calendarHelpers.isVisibleLayer(geburtstag, true)  === true,  'eingeschaltet ist er da');
+  assert(calendarHelpers.isVisibleLayer(termin, false) === true,
+    'ein gewoehnlicher Termin darf von der Ebene nie betroffen sein - sonst raeumt der Schalter den Kalender leer');
+  assert(calendarHelpers.isVisibleLayer(termin, true) === true);
+});
+
+test('Der Marker ist birthday_name, nicht der Titel', () => {
+  // Ein Termin, der zufaellig "Geburtstag" heisst, gehoert dem Nutzer und bleibt.
+  const eigener = { id: 3, title: 'Geburtstagsfeier planen' };
+  assert(calendarHelpers.isVisibleLayer(eigener, false) === true);
+});
+
+// --------------------------------------------------------
 // Ergebnis
 // --------------------------------------------------------
 console.log(`\n[Calendar-Test] Ergebnis: ${passed} bestanden, ${failed} fehlgeschlagen\n`);

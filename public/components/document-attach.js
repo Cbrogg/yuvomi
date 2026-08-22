@@ -24,8 +24,9 @@ import { api } from '/api.js';
 import { t, formatDate } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { isPreviewable } from '/utils/document-preview.js';
+import { maxUploadBytes, maxUploadMb } from '/utils/upload-limit.js';
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+
 
 // Spiegelt die Upload-Allowlist des Servers (server/routes/documents.js).
 // Der Server bleibt die Instanz, die ablehnt - das accept-Attribut erspart dem
@@ -57,7 +58,7 @@ const FIELD_CLASS = 'doc-attach';
 export function renderDocumentAttachField({
   attachments = [],
   label = t('documentAttach.label'),
-  hint = t('documentAttach.hint'),
+  hint = t('documentAttach.hint', { size: maxUploadMb() }),
   icon = 'paperclip',
   maxItems = 0,
 } = {}) {
@@ -124,7 +125,7 @@ export function bindDocumentAttachField(panel, {
   visibility = 'family',
   allowedMemberIds = null,
   documentName = null,
-  maxFileSize = MAX_FILE_SIZE,
+  maxFileSize = maxUploadBytes(),
 } = {}) {
   const field = panel?.querySelector('[data-doc-attach]');
   if (!field) return null;
@@ -198,7 +199,7 @@ export function bindDocumentAttachField(panel, {
   const acceptFiles = (files) => {
     for (const file of files || []) {
       if (file.size > maxFileSize) {
-        window.yuvomi?.showToast(t('documents.fileTooLarge'), 'danger');
+        window.yuvomi?.showToast(t('documents.fileTooLarge', { size: maxUploadMb() }), 'danger');
         continue;
       }
       if (!addItem({ kind: 'file', file, name: file.name })) break;

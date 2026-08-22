@@ -24,6 +24,7 @@ import { localizeBirthdayEvent } from '/utils/birthday-event.js';
 import { googleTargetValue, caldavTargetValue, outlookTargetValue } from '/utils/sync-target.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { findPageFab } from '/utils/fab.js';
+import { maxUploadBytes, maxUploadMb } from '/utils/upload-limit.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -223,12 +224,13 @@ const EVENT_ICON_CATEGORIES = () => [
 const EVENT_ICONS = EVENT_ICON_CATEGORIES().flatMap((cat) => cat.icons);
 
 const CUSTOM_EVENT_ICONS = new Set(['tooth']);
-const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+
 const ATTACHMENT_IMAGE_MIME = new Set(['image/png', 'image/jpeg', 'image/webp', 'image/gif']);
 const CALENDAR_VIEW_STORAGE_KEY = 'yuvomi:calendar:view';
 const LEGACY_CALENDAR_VIEW_STORAGE_KEY = 'yuvomi-calendar-view';
 const LAYER_HOLIDAYS_KEY = 'yuvomi:calendar:layer:holidays';
 const LAYER_SCHOOL_KEY    = 'yuvomi:calendar:layer:school';
+const LAYER_BIRTHDAYS_KEY = 'yuvomi:calendar:layer:birthdays';
 const ASSIGNED_TO_ME_KEY  = 'yuvomi:calendar:assignedToMe';
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
@@ -438,6 +440,7 @@ let state = {
   documentUploadBackend: 'local',
   layerHolidays: true,     // toggle for public holiday layer
   layerSchool:   true,     // toggle for school holiday layer
+  layerBirthdays: true,    // toggle for the birthday layer (#778)
   offlineSince:  null,     // Date des letzten Cache-Stands, wenn offline bedient
   defaultDuration: 60,     // Standard-Termindauer (Minuten) aus den Präferenzen
   currentUserId: null,     // eigene User-ID für „Mir zugewiesen"-Filter
@@ -807,6 +810,27 @@ function belongsToMe(item) {
   return (item.assigned_users ?? []).some((u) => u.id === state.currentUserId);
 }
 
+/**
+ * True, solange die Ebene sichtbar ist, zu der ein Termin gehoert (#778).
+ *
+ * Geburtstage kommen aus den Kontakten und fuellen bei einem grossen Adressbuch
+ * den Kalender mit Terminen, die niemand als Termin plant. Sie einzeln zu
+ * loeschen half nicht: der naechste Abgleich legt sie wieder an - was der
+ * Melder als "keeps coming back" beschrieb. Sie sind deshalb eine Ebene wie die
+ * Feiertage, keine Sammlung loeschbarer Eintraege.
+ *
+ * `birthday_name` ist der Marker: die Leseroute haengt ihn nur an Termine, die
+ * an einem Geburtstag haengen (siehe localizeBirthdayEvent).
+ */
+function isVisibleLayer(ev, showBirthdays = state.layerBirthdays) {
+  return showBirthdays || !ev.birthday_name;
+}
+
+/** True, wenn im geladenen Bereich ueberhaupt Geburtstage liegen. */
+function hasBirthdayEvents() {
+  return state.events.some((e) => e.birthday_name);
+}
+
 function eventsOnDay(dateStr) {
   const list = _dayIndex.active
     ? (_dayIndex.events.get(dateStr) ?? [])
@@ -815,7 +839,8 @@ function eventsOnDay(dateStr) {
         const end   = eventEndDate(e);
         return start <= dateStr && end >= dateStr;
       });
-  return state.assignedToMe ? list.filter(belongsToMe) : list;
+  const layered = state.layerBirthdays ? list : list.filter(isVisibleLayer);
+  return state.assignedToMe ? layered.filter(belongsToMe) : layered;
 }
 
 /**
@@ -1096,6 +1121,7 @@ export async function render(container, { user }) {
   state.documentUploadBackend = documentOptionsRes.data?.active_upload_backend ?? 'local';
   state.layerHolidays = localStorage.getItem(LAYER_HOLIDAYS_KEY) !== 'false';
   state.layerSchool   = localStorage.getItem(LAYER_SCHOOL_KEY)   !== 'false';
+  state.layerBirthdays = localStorage.getItem(LAYER_BIRTHDAYS_KEY) !== 'false';
   state.currentUserId = user?.id ?? null;
   state.assignedToMe  = localStorage.getItem(ASSIGNED_TO_ME_KEY) === '1';
 
@@ -1136,7 +1162,13 @@ function renderToolbar() {
   const showHolidayToggle = hp.holiday_show_public;
   const showSchoolToggle  = hp.holiday_show_school;
 
-  const holidayToggleHtml = (showHolidayToggle || showSchoolToggle) ? `
+  // Der Geburtstags-Schalter erscheint nur, wenn im geladenen Bereich wirklich
+  // Geburtstage liegen - oder wenn die Ebene aus ist, denn sonst gaebe es keinen
+  // Weg zurueck: ohne sichtbare Geburtstage verschwaende der Knopf, der sie
+  // wieder einschaltet.
+  const showBirthdayToggle = hasBirthdayEvents() || !state.layerBirthdays;
+
+  const holidayToggleHtml = (showHolidayToggle || showSchoolToggle || showBirthdayToggle) ? `
     <div class="cal-toolbar__layers">
       ${showHolidayToggle ? `
         <button class="cal-toolbar__layer-btn ${state.layerHolidays ? 'cal-toolbar__layer-btn--active' : ''}"
@@ -1154,6 +1186,15 @@ function renderToolbar() {
                 style="--layer-color:${esc(hp.holiday_school_color ?? '#34C759')}">
           <span class="cal-toolbar__layer-dot"></span>
           <span>${t('calendar.toggleSchool')}</span>
+        </button>
+      ` : ''}
+      ${showBirthdayToggle ? `
+        <button class="cal-toolbar__layer-btn ${state.layerBirthdays ? 'cal-toolbar__layer-btn--active' : ''}"
+                id="cal-layer-birthdays" data-layer="birthdays"
+                title="${t('calendar.toggleBirthdays')}"
+                style="--layer-color:var(--color-accent)">
+          <span class="cal-toolbar__layer-dot"></span>
+          <span>${t('calendar.toggleBirthdays')}</span>
         </button>
       ` : ''}
     </div>
@@ -1237,6 +1278,10 @@ function renderToolbar() {
         state.layerSchool = !state.layerSchool;
         localStorage.setItem(LAYER_SCHOOL_KEY, state.layerSchool);
         btn.classList.toggle('cal-toolbar__layer-btn--active', state.layerSchool);
+      } else if (layer === 'birthdays') {
+        state.layerBirthdays = !state.layerBirthdays;
+        localStorage.setItem(LAYER_BIRTHDAYS_KEY, state.layerBirthdays);
+        btn.classList.toggle('cal-toolbar__layer-btn--active', state.layerBirthdays);
       }
       renderView();
     });
@@ -2320,6 +2365,7 @@ async function openFoundEvent(ev) {
 
 export const __test = {
   fetchWindow,
+  isVisibleLayer,
   normalizeCalendarView,
   defaultCalendarViewFromState,
   newEventDefaultDate,
@@ -3540,7 +3586,7 @@ async function saveEvent(overlay, mode, event, existingReminder = null, attachme
     const attachmentFile = overlay.querySelector('#modal-attachment')?.files?.[0];
     let attachmentPayload = null;
     if (attachmentFile) {
-      if (attachmentFile.size > MAX_ATTACHMENT_BYTES) throw new Error(t('calendar.attachmentTooLarge'));
+      if (attachmentFile.size > maxUploadBytes()) throw new Error(t('calendar.attachmentTooLarge', { size: maxUploadMb() }));
       attachmentPayload = {
         name: attachmentFile.name,
         mime: attachmentFile.type || 'application/octet-stream',

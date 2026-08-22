@@ -173,6 +173,50 @@ function formatDueDate(dateStr, timeStr, isDone = false) {
   return { label: fullLabel, cls: '' };
 }
 
+/**
+ * Gruppiert die Aufgaben und gibt je Gruppe `{ id, label, tasks }`.
+ *
+ * Die `id` ist bewusst NICHT das angezeigte Label: eingeklappte Gruppen werden
+ * gespeichert (#812), und ein uebersetzter Name als Schluessel haette den
+ * Zustand bei jedem Sprachwechsel verloren - „Heute" und „Today" waeren zwei
+ * verschiedene Gruppen. Die Kategorie bringt ihren stabilen Schluessel schon
+ * mit, die Faelligkeits-Gruppen bekommen hier feste Namen.
+ */
+/** Schluessel einer Gruppe im Speicher: Modus und Id zusammen. */
+function groupKey(mode, id) {
+  return `${mode}:${id}`;
+}
+
+function isGroupCollapsed(mode, id) {
+  return state.collapsedGroups.has(groupKey(mode, id));
+}
+
+/**
+ * Klappt eine Gruppe um und merkt sich das (#812).
+ *
+ * Gespeichert wird nur, was EINGEKLAPPT ist: eine neue Gruppe - eine frisch
+ * angelegte Kategorie, „Ueberfaellig" beim ersten ueberfaelligen Eintrag -
+ * erscheint damit offen. Die Umkehrung haette sie versteckt, obwohl niemand sie
+ * je zugeklappt hat.
+ */
+function toggleGroup(mode, id) {
+  const key = groupKey(mode, id);
+  if (state.collapsedGroups.has(key)) state.collapsedGroups.delete(key);
+  else state.collapsedGroups.add(key);
+  try {
+    localStorage.setItem(COLLAPSED_GROUPS_KEY, JSON.stringify([...state.collapsedGroups]));
+  } catch { /* Privatmodus/Quota: der Zustand gilt dann nur fuer diese Sitzung */ }
+}
+
+function loadCollapsedGroups() {
+  try {
+    const raw = JSON.parse(localStorage.getItem(COLLAPSED_GROUPS_KEY) ?? '[]');
+    state.collapsedGroups = new Set(Array.isArray(raw) ? raw.filter((k) => typeof k === 'string') : []);
+  } catch {
+    state.collapsedGroups = new Set();
+  }
+}
+
 function groupBy(tasks, mode) {
   const groups = {};
 
@@ -181,7 +225,9 @@ function groupBy(tasks, mode) {
       const key = t.category || FALLBACK_CATEGORY;
       (groups[key] = groups[key] || []).push(t);
     }
-    return Object.entries(groups).sort(([a], [b]) => a.localeCompare(b, 'de'));
+    return Object.entries(groups)
+      .sort(([a], [b]) => a.localeCompare(b, 'de'))
+      .map(([key, list]) => ({ id: key, label: catLabel(key), tasks: list }));
   }
 
   // mode === 'due'
@@ -206,8 +252,17 @@ function groupBy(tasks, mode) {
     (groups[key] = groups[key] || []).push(task);
   }
 
-  const order = [groupOverdue, groupToday, groupThisWeek, groupNextWeek, groupLater, groupNoDate];
-  return order.filter((k) => groups[k]).map((k) => [k, groups[k]]);
+  const order = [
+    ['overdue',  groupOverdue],
+    ['today',    groupToday],
+    ['thisWeek', groupThisWeek],
+    ['nextWeek', groupNextWeek],
+    ['later',    groupLater],
+    ['noDate',   groupNoDate],
+  ];
+  return order
+    .filter(([, label]) => groups[label])
+    .map(([id, label]) => ({ id, label, tasks: groups[label] }));
 }
 
 // --------------------------------------------------------
@@ -535,8 +590,9 @@ function renderTaskGroups(tasks, groupMode) {
 
   const now = new Date();
   const groups = groupBy(tasks, groupMode);
-  return groups.map(([name, groupTasks]) => {
+  return groups.map(({ id, label, tasks: groupTasks }) => {
     const sorted = [...groupTasks].sort((a, b) => sortTasks(a, b, now));
+    const collapsed = isGroupCollapsed(groupMode, id);
     return `
     <div class="task-group list-group">
       <!-- Gruppenkopf als echte Ueberschrift (Critique 2026-08-10): /tasks
@@ -552,17 +608,25 @@ function renderTaskGroups(tasks, groupMode) {
            entfernt und las sich als unverbundener Wert. Genau diesen Befund
            hatte der Einkauf am 2026-07-30 schon einmal. -->
       <h2 class="list-group__title">
-        ${esc(groupMode === 'category' ? catLabel(name) : name)}
+        <!-- Der Kopf ist ein Knopf, keine anklickbare Ueberschrift (#812): nur
+             so kennt ihn die Tastatur, und nur so kann aria-expanded den
+             Zustand ueberhaupt melden. -->
+        <button type="button" class="list-group__toggle" data-group-toggle="${esc(id)}"
+                aria-expanded="${collapsed ? 'false' : 'true'}">
+          <i data-lucide="chevron-down" aria-hidden="true"
+             class="list-group__chevron${collapsed ? ' list-group__chevron--collapsed' : ''}"></i>
+          <span>${esc(label)}</span>
+        </button>
         <span class="list-group__count">${groupTasks.length}</span>
       </h2>
-      <div class="list-rows">
+      ${collapsed ? '' : `<div class="list-rows">
         ${sorted.map((t) => renderSwipeRow(t, renderTaskCard(t, {
           showCheckbox: state.bulkSelectMode,
           isChecked: state.selectedTaskIds.has(t.id),
           expandedSubtasks: state.subtasksExpandedByDefault,
           showCategory: groupMode !== 'category',
         }))).join('')}
-      </div>
+      </div>`}
     </div>`;
   }).join('');
 }
@@ -748,6 +812,14 @@ function wireTagBadgeFilter(container) {
     e.stopPropagation();
     await toggleTagFilter(chip.dataset.tagFilter, container);
   }, true);
+
+  // Gruppenkopf auf- und zuklappen (#812).
+  container.addEventListener('click', (e) => {
+    const toggle = e.target.closest('[data-group-toggle]');
+    if (!toggle || !container.contains(toggle)) return;
+    toggleGroup(state.groupMode, toggle.dataset.groupToggle);
+    renderTaskList(container);
+  });
 }
 
 function renderModalContent({ task = null, users = [], reminder = null } = {}) {
@@ -1026,6 +1098,9 @@ let state = {
   // lokal. Wird beim Öffnen des Dialogs als Vorauswahl gesetzt.
   defaultSyncTarget: '',
   expandedTasks:   new Set(),
+  // Eingeklappte Gruppen (#812), als "<modus>:<gruppen-id>" - derselbe Name
+  // kann in beiden Gruppierungen vorkommen und meint dort Verschiedenes.
+  collapsedGroups: new Set(),
   dragTaskId:      null,
   filterPanelOpen: false,
   bulkSelectMode:  false,
@@ -3109,6 +3184,7 @@ function updateOverdueBadge() {
 
 const RECENT_FILTERS_KEY = 'yuvomi:recentTaskFilters';
 const RECENT_FILTERS_MAX = 3;
+const COLLAPSED_GROUPS_KEY = 'yuvomi:taskCollapsedGroups';
 const SHOW_FUTURE_KEY = 'yuvomi:taskShowFuture';
 const ASSIGNED_TO_ME_KEY = 'yuvomi:taskAssignedToMe';
 
@@ -3616,6 +3692,7 @@ function wireTaskList(container) {
 
 export async function render(container, { user }) {
   state.currentUserId = user?.id ?? null;
+  loadCollapsedGroups();
   // Die Rolle entscheidet nur darüber, ob ein fremder Kommentar entfernt werden
   // darf (#734) - der Server prüft dieselbe Bedingung noch einmal.
   state.isAdmin = user?.role === 'admin';
@@ -3825,3 +3902,6 @@ export async function render(container, { user }) {
     } catch { /* Task existiert nicht oder kein Zugriff */ }
   }
 }
+
+// Testfläche: nur reine Funktionen, deren Vertrag außerhalb dieser Datei zählt.
+export const __test = { groupBy, groupKey };
