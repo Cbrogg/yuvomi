@@ -1359,7 +1359,9 @@
         "receiptsHint": "Hóa đơn hoặc biên lai của giao dịch này.",
         "receiptDocumentName": "Chứng từ: {{title}} ({{date}})",
         "receiptsAttachedLabel": "Đã đính kèm {{count}} chứng từ",
-        "receiptsAttachedLabel_one": "Đã đính kèm {{count}} chứng từ"
+        "receiptsAttachedLabel_one": "Đã đính kèm {{count}} chứng từ",
+        "loanPaidInstallmentsLabel": "Số kỳ đã trả",
+        "loanPaidInstallmentsHint": "Dành cho khoản vay đang trả dở. Các kỳ này được ghi nhận nhưng không hạch toán vào ngân sách."
     },
     "settings": {
         "healthCycleEnableLabel": "Hiện tab chu kỳ",

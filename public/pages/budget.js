@@ -2139,6 +2139,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       wireLoanDirectionField(panel);
       wireLoanCurrencyFields(panel);
       wireLoanInterestFields(panel);
+      wireLoanPaidInstallmentsField(panel);
       // Belege (#583): landen als Dokumente im Dokumente-Modul, deshalb die
       // Finanz-Kategorie und ein eigener Ordner - ein Kassenbon soll dort
       // auffindbar sein, nicht namenlos zwischen den Verträgen liegen.
@@ -2629,11 +2630,48 @@ function wireLoanInterestFields(panel) {
   update();
 }
 
+/**
+ * Schlägt die bereits gezahlten Raten aus dem Startmonat vor (#813).
+ *
+ * Vorschlag, keine Ableitung: sobald der Nutzer die Zahl einmal selbst anfasst,
+ * hält der Vorschlag still. Ein tilgungsfreier Start oder eine Stundung machen
+ * die errechnete Zahl falsch, und eine still gesetzte falsche Zahl legt echte
+ * Zahlungen an - die Entscheidung muss beim Nutzer bleiben.
+ *
+ * Die Differenz wird auf den Monats-Strings gerechnet, nicht über Date-Objekte:
+ * ein "YYYY-MM" ist kein Zeitpunkt, und der Umweg über Date kippt westlich von
+ * UTC auf den Vormonat.
+ */
+function wireLoanPaidInstallmentsField(panel) {
+  const paid = panel.querySelector('#lm-paid');
+  if (!paid) return; // Bearbeiten-Modus: das Feld gibt es dort bewusst nicht.
+  const start = panel.querySelector('#lm-start');
+  let touched = false;
+  paid.addEventListener('input', () => { touched = true; });
+
+  const suggest = () => {
+    if (touched) return;
+    const m = /^(\d{4})-(\d{2})$/.exec(start.value || '');
+    if (!m) return;
+    const now = todayMonth.split('-');
+    const months = (Number(now[0]) - Number(m[1])) * 12 + (Number(now[1]) - Number(m[2]));
+    paid.value = String(Math.max(0, months));
+  };
+  start.addEventListener('change', suggest);
+  suggest();
+}
+
 async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave = false } = {}) {
   const isEdit = Boolean(loan);
   const borrower = panel.querySelector('#lm-borrower').value.trim();
   const title = panel.querySelector('#lm-title').value.trim() || borrower;
   const start_month = panel.querySelector('#lm-start').value;
+  // null = das Feld gibt es nicht (Bearbeiten) oder es ist leer - der Server
+  // behandelt beides als "nichts nachtragen".
+  const paidField = panel.querySelector('#lm-paid');
+  const paidInstallments = paidField && paidField.value.trim() !== ''
+    ? parseInt(paidField.value, 10)
+    : null;
   const notes = panel.querySelector('#lm-notes').value.trim();
   const mode = panel.querySelector('#lm-interest-mode')?.value ?? 'none';
 
@@ -2677,6 +2715,7 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
       return;
     }
     body = { borrower, title, start_month, notes, interest_mode: 'none', total_amount, installment_count };
+    if (paidInstallments !== null) body.paid_installments = paidInstallments;
   } else {
     const principal = parseFloat(panel.querySelector('#lm-principal').value);
     const fixed_rate = parseFloat(panel.querySelector('#lm-fixed-rate').value);
@@ -2698,6 +2737,7 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
       return;
     }
     body = { borrower, title, start_month, notes, interest_mode: mode, principal, fixed_rate, initial_repayment_rate };
+    if (paidInstallments !== null) body.paid_installments = paidInstallments;
     if (mode === 'fixed_then_variable') {
       const fixed_period_months = parseInt(panel.querySelector('#lm-fixed-period').value, 10);
       const followup_rate = parseFloat(panel.querySelector('#lm-followup-rate').value);
@@ -2770,6 +2810,13 @@ function openLoanModal(loan = null) {
       <label class="form-label" for="lm-start">${t('budget.loanStartMonthLabel')}</label>
       <input type="month" class="form-input" id="lm-start" value="${esc(loan?.start_month ?? todayMonth)}">
     </div>
+    ${isEdit ? '' : `
+    <div class="form-group">
+      <label class="form-label" for="lm-paid">${t('budget.loanPaidInstallmentsLabel')}</label>
+      <input type="number" class="form-input" id="lm-paid" step="1" min="0"
+             inputmode="numeric" value="0">
+      <p class="budget-loan-hint">${t('budget.loanPaidInstallmentsHint')}</p>
+    </div>`}
     <div class="form-group">
       <label class="form-label" for="lm-notes">${t('budget.loanNotesLabel')}</label>
       <textarea class="form-input" id="lm-notes" rows="3">${esc(loan?.notes ?? '')}</textarea>

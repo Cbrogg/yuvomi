@@ -1359,7 +1359,9 @@
         "receiptsHint": "Чек або рахунок до цієї операції.",
         "receiptDocumentName": "Чек: {{title}} ({{date}})",
         "receiptsAttachedLabel": "Прикріплено чеків: {{count}}",
-        "receiptsAttachedLabel_one": "Прикріплено чек: {{count}}"
+        "receiptsAttachedLabel_one": "Прикріплено чек: {{count}}",
+        "loanPaidInstallmentsLabel": "Уже сплачені платежі",
+        "loanPaidInstallmentsHint": "Для позики, що вже виплачується. Ці платежі фіксуються, але не проводяться в бюджеті."
     },
     "settings": {
         "healthCycleEnableLabel": "Показати вкладку циклу",

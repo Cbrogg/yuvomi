@@ -1359,7 +1359,9 @@
         "receiptsHint": "Kvitto eller faktura för den här posten.",
         "receiptDocumentName": "Kvitto: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} kvitton bifogade",
-        "receiptsAttachedLabel_one": "{{count}} kvitto bifogat"
+        "receiptsAttachedLabel_one": "{{count}} kvitto bifogat",
+        "loanPaidInstallmentsLabel": "Redan betalda delbetalningar",
+        "loanPaidInstallmentsHint": "För ett lån som redan löper. Dessa delbetalningar registreras men bokförs inte i budgeten."
     },
     "settings": {
         "healthCycleEnableLabel": "Visa cykelfliken",

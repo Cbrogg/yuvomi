@@ -1359,7 +1359,9 @@
         "receiptsHint": "这笔交易的收据或发票。",
         "receiptDocumentName": "凭证：{{title}}（{{date}}）",
         "receiptsAttachedLabel": "已附加 {{count}} 张凭证",
-        "receiptsAttachedLabel_one": "已附加 {{count}} 张凭证"
+        "receiptsAttachedLabel_one": "已附加 {{count}} 张凭证",
+        "loanPaidInstallmentsLabel": "已支付期数",
+        "loanPaidInstallmentsHint": "适用于已在还款的借贷。这些期数会被记录，但不会计入预算。"
     },
     "settings": {
         "healthCycleEnableLabel": "显示周期标签页",

@@ -1359,7 +1359,9 @@
         "receiptsHint": "Ticket o factura de este movimiento.",
         "receiptDocumentName": "Comprobante: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} comprobantes adjuntos",
-        "receiptsAttachedLabel_one": "{{count}} comprobante adjunto"
+        "receiptsAttachedLabel_one": "{{count}} comprobante adjunto",
+        "loanPaidInstallmentsLabel": "Cuotas ya pagadas",
+        "loanPaidInstallmentsHint": "Para un préstamo que ya está en curso. Estas cuotas se registran, pero no se contabilizan en el presupuesto."
     },
     "settings": {
         "healthCycleEnableLabel": "Mostrar la pestaña de ciclo",

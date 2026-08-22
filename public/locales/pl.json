@@ -1371,7 +1371,9 @@
         "receiptsHint": "Paragon lub faktura do tej transakcji.",
         "receiptDocumentName": "Dowód: {{title}} ({{date}})",
         "receiptsAttachedLabel": "Załączone dowody: {{count}}",
-        "receiptsAttachedLabel_one": "Załączone dowody: {{count}}"
+        "receiptsAttachedLabel_one": "Załączone dowody: {{count}}",
+        "loanPaidInstallmentsLabel": "Już zapłacone raty",
+        "loanPaidInstallmentsHint": "Dla pożyczki, która już trwa. Te raty zostaną uzupełnione, ale nie trafią do budżetu."
     },
     "settings": {
         "healthCycleEnableLabel": "Pokaż kartę cyklu",

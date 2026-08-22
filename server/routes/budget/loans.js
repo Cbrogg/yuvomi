@@ -11,7 +11,7 @@ import { normalizeBudgetVisibility } from '../../services/budget-visibility.js';
 import { computeLoanSchedule, MAX_LOAN_MONTHS } from '../../services/loan-amortization.js';
 import {
   budgetFilter, mayEdit, getBudgetMode, loanSummaryRow, loadLoan, refreshLoanStatus, cents,
-  budgetCurrency, toBudgetAmount, CURRENCY_RE, validateAccountRef,
+  budgetCurrency, toBudgetAmount, CURRENCY_RE, validateAccountRef, addMonths,
 } from './helpers.js';
 
 const log = createLogger('Budget');
@@ -245,6 +245,41 @@ router.get('/loans', (req, res) => {
   }
 });
 
+/**
+ * Trägt bereits gezahlte Raten eines schon laufenden Darlehens nach (#813).
+ *
+ * Der Betrag kommt aus loadLoan().installment_amount und ist damit dieselbe Zahl,
+ * die die Oberfläche als Monatsrate zeigt - bei verzinsten Darlehen die konstante
+ * Annuität, nicht der Durchschnitt (#569). Die letzte Rate wird auf den Restbetrag
+ * gekürzt, sonst überzahlt ein vollständig nachgetragenes Darlehen sich selbst.
+ *
+ * ENTSCHEIDEND: budget_entry_id bleibt NULL. Eine regulär abgehakte Rate bucht ins
+ * Budget, weil sie GERADE bezahlt wird. Diese hier wurden vor Yuvomi bezahlt und
+ * liefen nie über den Haushalt - sie als Buchungen anzulegen hieße, vergangene
+ * Monate mit Ausgaben zu füllen, die dort nie stattgefunden haben, und Kontostände
+ * wie Statistik zu verfälschen.
+ */
+function seedPaidInstallments(loanId, count, userId) {
+  const loan = loadLoan(loanId);
+  const perInstallment = loan.installment_amount;
+  db.get().transaction(() => {
+    let booked = 0;
+    for (let n = 1; n <= count; n++) {
+      const remaining = cents(loan.total_amount - booked);
+      if (remaining <= 0) break;
+      const amount = Math.min(perInstallment, remaining);
+      if (amount <= 0) break;
+      db.get().prepare(`
+        INSERT INTO budget_loan_payments
+          (loan_id, installment_number, amount, paid_date, budget_entry_id, created_by)
+        VALUES (?, ?, ?, ?, NULL, ?)
+      `).run(loanId, n, amount, `${addMonths(loan.start_month, n - 1)}-01`, userId);
+      booked = cents(booked + amount);
+    }
+  })();
+  refreshLoanStatus(loanId);
+}
+
 router.post('/loans', (req, res) => {
   try {
     const vTitle = str(req.body.title || req.body.borrower, 'Title', { max: MAX_TITLE });
@@ -281,6 +316,25 @@ router.post('/loans', (req, res) => {
     if (dir.error) errors.push(dir.error);
     const account = validateAccountRef(req.body.account_id);
     if (account.error) errors.push(account.error);
+
+    // Altlasten beim Anlegen (#813): Ein Darlehen, das schon läuft, wenn es hier
+    // eingetragen wird, startet sonst mit lauter offenen Raten - der Nutzer müsste
+    // jede vergangene Rate einzeln abhaken, nur damit Restschuld und Fortschritt
+    // stimmen. Die Zahl wird bewusst ANGEGEBEN und nicht aus start_month abgeleitet:
+    // ein tilgungsfreier Start, eine Stundung oder ein später eingetragenes Darlehen
+    // mit Zahlungslücke hätten sonst still eine falsche Zahl bekommen. Das Formular
+    // schlägt den aus dem Startmonat errechneten Wert vor, die Entscheidung bleibt
+    // beim Nutzer.
+    let paidInstallments = 0;
+    if (req.body.paid_installments !== undefined && req.body.paid_installments !== null
+        && req.body.paid_installments !== '') {
+      paidInstallments = parseInt(req.body.paid_installments, 10);
+      if (!Number.isInteger(paidInstallments) || paidInstallments < 0) {
+        errors.push('Paid installments must be zero or a positive number.');
+      } else if (terms && paidInstallments > terms.installment_count) {
+        errors.push('Paid installments cannot exceed the installment count.');
+      }
+    }
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
     const me = req.authUserId || req.session.userId;
@@ -308,7 +362,10 @@ router.post('/loans', (req, res) => {
       dir.value, account.value
     );
 
-    res.status(201).json({ data: loadLoan(result.lastInsertRowid) });
+    const loanId = result.lastInsertRowid;
+    if (paidInstallments > 0) seedPaidInstallments(loanId, paidInstallments, me);
+
+    res.status(201).json({ data: loadLoan(loanId) });
   } catch (err) {
     log.error('POST /loans error:', err);
     res.status(500).json({ error: 'Internal error', code: 500 });

@@ -1371,7 +1371,9 @@
         "receiptsHint": "Resibo o invoice para sa transaksyong ito.",
         "receiptDocumentName": "Resibo: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} resibo ang nakalakip",
-        "receiptsAttachedLabel_one": "{{count}} resibo ang nakalakip"
+        "receiptsAttachedLabel_one": "{{count}} resibo ang nakalakip",
+        "loanPaidInstallmentsLabel": "Mga hulog na nabayaran na",
+        "loanPaidInstallmentsHint": "Para sa utang na tumatakbo na. Naitatala ang mga hulog na ito ngunit hindi ibinibilang sa badyet."
     },
     "settings": {
         "healthCycleEnableLabel": "Ipakita ang tab ng siklo",

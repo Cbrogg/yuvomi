@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A loan that is already running can say how many installments are behind it.** Entering an
+  existing loan meant starting from zero: every past installment had to be ticked off by hand, just
+  to make the remaining balance and the progress read correctly. The form now asks for the number of
+  installments already paid and suggests the figure derived from the first due month - a suggestion,
+  not a rule, because a payment-free start or a deferral makes that number wrong, and it stops
+  suggesting as soon as you touch the field. These installments are recorded against the loan but
+  **deliberately not booked to the budget**: they were paid before Yuvomi existed and never went
+  through the household, so booking them would fill past months with expenses that never happened
+  and shift account balances along with them. Ticking off an installment the normal way books as it
+  always did. (Discussion #813)
+
 ### Security
 
 - **The document management connection now checks its target URL before contacting it.** Four other

@@ -1359,7 +1359,9 @@
         "receiptsHint": "Kassabon of factuur bij deze boeking.",
         "receiptDocumentName": "Bon: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} bonnen bijgevoegd",
-        "receiptsAttachedLabel_one": "{{count}} bon bijgevoegd"
+        "receiptsAttachedLabel_one": "{{count}} bon bijgevoegd",
+        "loanPaidInstallmentsLabel": "Al betaalde termijnen",
+        "loanPaidInstallmentsHint": "Voor een lening die al loopt. Deze termijnen worden vastgelegd, maar niet in het budget geboekt."
     },
     "settings": {
         "healthCycleEnableLabel": "Cyclustabblad tonen",

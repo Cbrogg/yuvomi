@@ -1371,7 +1371,9 @@
         "receiptsHint": "Struk atau faktur untuk transaksi ini.",
         "receiptDocumentName": "Bukti: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} bukti terlampir",
-        "receiptsAttachedLabel_one": "{{count}} bukti terlampir"
+        "receiptsAttachedLabel_one": "{{count}} bukti terlampir",
+        "loanPaidInstallmentsLabel": "Cicilan yang sudah dibayar",
+        "loanPaidInstallmentsHint": "Untuk pinjaman yang sudah berjalan. Cicilan ini dicatat, tetapi tidak dibukukan ke anggaran."
     },
     "settings": {
         "healthCycleEnableLabel": "Tampilkan tab siklus",

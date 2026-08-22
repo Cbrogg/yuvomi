@@ -1359,7 +1359,9 @@
         "receiptsHint": "Scontrino o fattura di questo movimento.",
         "receiptDocumentName": "Ricevuta: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} ricevute allegate",
-        "receiptsAttachedLabel_one": "{{count}} ricevuta allegata"
+        "receiptsAttachedLabel_one": "{{count}} ricevuta allegata",
+        "loanPaidInstallmentsLabel": "Rate già pagate",
+        "loanPaidInstallmentsHint": "Per un prestito già in corso. Queste rate vengono registrate ma non contabilizzate nel budget."
     },
     "settings": {
         "healthCycleEnableLabel": "Mostra la scheda ciclo",

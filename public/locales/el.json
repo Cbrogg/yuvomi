@@ -1359,7 +1359,9 @@
         "receiptsHint": "Απόδειξη ή τιμολόγιο για αυτή την κίνηση.",
         "receiptDocumentName": "Απόδειξη: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} συνημμένες αποδείξεις",
-        "receiptsAttachedLabel_one": "{{count}} συνημμένη απόδειξη"
+        "receiptsAttachedLabel_one": "{{count}} συνημμένη απόδειξη",
+        "loanPaidInstallmentsLabel": "Ήδη πληρωμένες δόσεις",
+        "loanPaidInstallmentsHint": "Για δάνειο που τρέχει ήδη. Οι δόσεις αυτές καταχωρούνται χωρίς να περάσουν στον προϋπολογισμό."
     },
     "settings": {
         "healthCycleEnableLabel": "Εμφάνιση καρτέλας κύκλου",

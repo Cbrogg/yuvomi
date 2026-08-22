@@ -1371,7 +1371,9 @@
         "receiptsHint": "رسید یا فاکتور این تراکنش.",
         "receiptDocumentName": "رسید: {{title}} ({{date}})",
         "receiptsAttachedLabel": "رسیدهای پیوست‌شده: {{count}}",
-        "receiptsAttachedLabel_one": "رسیدهای پیوست‌شده: {{count}}"
+        "receiptsAttachedLabel_one": "رسیدهای پیوست‌شده: {{count}}",
+        "loanPaidInstallmentsLabel": "اقساط پرداخت‌شده",
+        "loanPaidInstallmentsHint": "برای وامی که از قبل در جریان است. این اقساط ثبت می‌شوند اما در بودجه لحاظ نمی‌شوند."
     },
     "settings": {
         "healthCycleEnableLabel": "نمایش برگهٔ چرخه",

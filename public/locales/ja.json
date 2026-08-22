@@ -1359,7 +1359,9 @@
         "receiptsHint": "この取引のレシートまたは請求書。",
         "receiptDocumentName": "領収書: {{title}}（{{date}}）",
         "receiptsAttachedLabel": "領収書 {{count}} 件を添付",
-        "receiptsAttachedLabel_one": "領収書 {{count}} 件を添付"
+        "receiptsAttachedLabel_one": "領収書 {{count}} 件を添付",
+        "loanPaidInstallmentsLabel": "支払い済みの回数",
+        "loanPaidInstallmentsHint": "すでに返済中のローン用です。これらの回は記録されますが、家計簿には計上されません。"
     },
     "settings": {
         "healthCycleEnableLabel": "周期タブを表示",

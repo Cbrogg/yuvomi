@@ -697,6 +697,135 @@ test('account_id: unbekanntes Konto -> 400', async () => {
   assert.equal(r.status, 400);
 });
 
+// --------------------------------------------------------------------------
+// Bereits gezahlte Raten beim Anlegen (#813)
+//
+// Ein Darlehen, das schon läuft, wenn es hier eingetragen wird, startete bisher
+// mit lauter offenen Raten. Der teuerste Teil davon ist NICHT die Bequemlichkeit,
+// sondern was die naheliegende Abhilfe angerichtet hätte: die vergangenen Raten
+// über die normale Zahlungsroute abzuhaken, die jede Rate ins Budget bucht.
+// --------------------------------------------------------------------------
+
+function paymentsOf(loanId) {
+  return db.prepare('SELECT * FROM budget_loan_payments WHERE loan_id = ? ORDER BY installment_number').all(loanId);
+}
+
+test('#813: bereits gezahlte Raten werden beim Anlegen nachgetragen', async () => {
+  const r = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Altkredit', title: 'Altkredit', total_amount: 1200,
+      installment_count: 12, start_month: '2026-01', paid_installments: 3,
+    },
+  });
+  assert.equal(r.status, 201);
+  assert.equal(r.body.data.paid_installments, 3);
+  assert.equal(r.body.data.remaining_installments, 9);
+
+  const rows = paymentsOf(r.body.data.id);
+  assert.equal(rows.length, 3);
+  assert.deepEqual(rows.map((p) => p.installment_number), [1, 2, 3]);
+  // Der Fälligkeitsmonat läuft mit der Rate, nicht alle drei auf den Startmonat.
+  assert.deepEqual(rows.map((p) => p.paid_date), ['2026-01-01', '2026-02-01', '2026-03-01']);
+  assert.deepEqual(rows.map((p) => p.amount), [100, 100, 100]);
+});
+
+// Der eigentliche Punkt. Eine regulär abgehakte Rate bucht ins Budget, weil sie
+// gerade bezahlt wird - diese hier liefen nie über den Haushalt.
+test('#813: nachgetragene Raten erzeugen KEINE Budget-Buchungen', async () => {
+  const before = db.prepare('SELECT COUNT(*) AS c FROM budget_entries').get().c;
+  const r = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Ohne Buchung', title: 'Ohne Buchung', total_amount: 600,
+      installment_count: 6, start_month: '2025-07', paid_installments: 4,
+    },
+  });
+  const after = db.prepare('SELECT COUNT(*) AS c FROM budget_entries').get().c;
+  assert.equal(after, before, 'vergangene Monate dürfen nicht mit erfundenen Ausgaben gefüllt werden');
+  for (const p of paymentsOf(r.body.data.id)) {
+    assert.equal(p.budget_entry_id, null, 'eine nachgetragene Rate hängt an keiner Buchung');
+  }
+});
+
+// Gegenprobe zur vorigen Zusicherung: die normale Zahlungsroute bucht weiterhin.
+// Ohne diesen Test wäre "erzeugt keine Buchung" auch dann erfüllt, wenn das
+// Buchen insgesamt kaputtginge.
+test('#813: die normale Zahlungsroute bucht unverändert weiter', async () => {
+  const r = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Bucht noch', title: 'Bucht noch', total_amount: 300,
+      installment_count: 3, start_month: '2026-02', paid_installments: 1,
+    },
+  });
+  const id = r.body.data.id;
+  const before = db.prepare('SELECT COUNT(*) AS c FROM budget_entries').get().c;
+  await call('POST', `/loans/${id}/payments`, {
+    as: AA, body: { installment_number: 2, amount: 100, paid_date: '2026-03-15' },
+  });
+  const after = db.prepare('SELECT COUNT(*) AS c FROM budget_entries').get().c;
+  assert.equal(after, before + 1, 'die reguläre Rate bucht weiter ins Budget');
+  const rows = paymentsOf(id);
+  assert.equal(rows.find((p) => p.installment_number === 1).budget_entry_id, null);
+  assert.ok(rows.find((p) => p.installment_number === 2).budget_entry_id, 'die reguläre Rate trägt ihre Buchung');
+});
+
+test('#813: alle Raten nachgetragen schließt das Darlehen ab', async () => {
+  const r = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Fertig', title: 'Fertig', total_amount: 500,
+      installment_count: 5, start_month: '2025-01', paid_installments: 5,
+    },
+  });
+  assert.equal(r.body.data.status, 'paid');
+  assert.equal(r.body.data.remaining_installments, 0);
+  assert.equal(r.body.data.remaining_amount, 0, 'ein vollständig nachgetragenes Darlehen überzahlt sich nicht');
+});
+
+// Die Deckelung auf den Restbetrag. Sie greift NUR, wenn die Rate nicht glatt
+// aufgeht - bei 200 auf 3 Raten sind das 66,67 je Rate und in der Summe 200,01.
+// Ohne Deckelung überzahlt sich das Darlehen um einen Cent und rutscht in eine
+// negative Restsumme. Der erste Anlauf dieser Suite prüfte nur glatte Beträge
+// und wäre gegen ein Entfernen der Deckelung blind gewesen.
+test('#813: die letzte nachgetragene Rate wird auf den Restbetrag gekürzt', async () => {
+  const r = await call('POST', '/loans', {
+    as: AA,
+    body: {
+      borrower: 'Krumm', title: 'Krumm', total_amount: 200,
+      installment_count: 3, start_month: '2025-03', paid_installments: 3,
+    },
+  });
+  const rows = paymentsOf(r.body.data.id);
+  assert.deepEqual(rows.map((p) => p.amount), [66.67, 66.67, 66.66]);
+  const sum = rows.reduce((acc, p) => acc + p.amount, 0);
+  assert.ok(Math.abs(sum - 200) < 0.005, `die Summe darf den Betrag nicht übersteigen, war ${sum}`);
+  assert.equal(r.body.data.remaining_amount, 0);
+  assert.equal(r.body.data.status, 'paid');
+});
+
+test('#813: ohne das Feld bleibt alles wie vorher', async () => {
+  const r = await createLoan(AA, { title: 'Unverändert' });
+  assert.equal(r.body.data.paid_installments, 0);
+  assert.equal(paymentsOf(r.body.data.id).length, 0);
+});
+
+test('#813: unbrauchbare Werte werden abgewiesen', async () => {
+  const base = {
+    borrower: 'X', title: 'X', total_amount: 1200, installment_count: 12, start_month: '2026-01',
+  };
+  for (const bad of [-1, 13, 'viele']) {
+    const r = await call('POST', '/loans', { as: AA, body: { ...base, paid_installments: bad } });
+    assert.equal(r.status, 400, `paid_installments=${bad} muss 400 geben`);
+  }
+  // Leerstring ist der Normalfall aus einem nicht ausgefüllten Formularfeld und
+  // darf nicht als 0-Fehler durchschlagen.
+  const ok = await call('POST', '/loans', { as: AA, body: { ...base, paid_installments: '' } });
+  assert.equal(ok.status, 201);
+  assert.equal(ok.body.data.paid_installments, 0);
+});
+
 test('teardown: Server schließen', async () => {
   await new Promise((r) => server.close(r));
 });

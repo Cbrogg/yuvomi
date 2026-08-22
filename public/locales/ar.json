@@ -1359,7 +1359,9 @@
         "receiptsHint": "إيصال أو فاتورة لهذه الحركة.",
         "receiptDocumentName": "إيصال: {{title}} ({{date}})",
         "receiptsAttachedLabel": "الإيصالات المرفقة: {{count}}",
-        "receiptsAttachedLabel_one": "إيصال واحد مرفق"
+        "receiptsAttachedLabel_one": "إيصال واحد مرفق",
+        "loanPaidInstallmentsLabel": "الأقساط المدفوعة بالفعل",
+        "loanPaidInstallmentsHint": "لقرض قيد السداد بالفعل. تُضاف هذه الأقساط دون تسجيلها في الميزانية."
     },
     "settings": {
         "healthCycleEnableLabel": "إظهار علامة تبويب الدورة",

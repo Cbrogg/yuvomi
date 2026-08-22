@@ -1359,7 +1359,9 @@
         "receiptsHint": "Nyugta vagy számla ehhez a tételhez.",
         "receiptDocumentName": "Bizonylat: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} csatolt bizonylat",
-        "receiptsAttachedLabel_one": "{{count}} csatolt bizonylat"
+        "receiptsAttachedLabel_one": "{{count}} csatolt bizonylat",
+        "loanPaidInstallmentsLabel": "Már kifizetett részletek",
+        "loanPaidInstallmentsHint": "Már futó kölcsönhöz. Ezek a részletek rögzülnek, de nem kerülnek be a költségvetésbe."
     },
     "settings": {
         "healthCycleEnableLabel": "Ciklus fül megjelenítése",

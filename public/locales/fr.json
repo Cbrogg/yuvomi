@@ -1359,7 +1359,9 @@
         "receiptsHint": "Ticket de caisse ou facture de cette opération.",
         "receiptDocumentName": "Justificatif : {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} justificatifs joints",
-        "receiptsAttachedLabel_one": "{{count}} justificatif joint"
+        "receiptsAttachedLabel_one": "{{count}} justificatif joint",
+        "loanPaidInstallmentsLabel": "Échéances déjà payées",
+        "loanPaidInstallmentsHint": "Pour un prêt déjà en cours. Ces échéances sont enregistrées mais non comptabilisées dans le budget."
     },
     "settings": {
         "healthCycleEnableLabel": "Afficher l’onglet cycle",

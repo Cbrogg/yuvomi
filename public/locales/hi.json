@@ -1359,7 +1359,9 @@
         "receiptsHint": "इस लेनदेन की रसीद या बिल।",
         "receiptDocumentName": "रसीद: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} रसीदें संलग्न",
-        "receiptsAttachedLabel_one": "{{count}} रसीद संलग्न"
+        "receiptsAttachedLabel_one": "{{count}} रसीद संलग्न",
+        "loanPaidInstallmentsLabel": "पहले से चुकाई गई किस्तें",
+        "loanPaidInstallmentsHint": "पहले से चल रहे ऋण के लिए। ये किस्तें दर्ज होती हैं, पर बजट में नहीं जोड़ी जातीं।"
     },
     "settings": {
         "healthCycleEnableLabel": "चक्र टैब दिखाएँ",

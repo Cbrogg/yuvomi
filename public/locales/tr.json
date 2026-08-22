@@ -1359,7 +1359,9 @@
         "receiptsHint": "Bu işleme ait fiş veya fatura.",
         "receiptDocumentName": "Fiş: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} fiş eklendi",
-        "receiptsAttachedLabel_one": "{{count}} fiş eklendi"
+        "receiptsAttachedLabel_one": "{{count}} fiş eklendi",
+        "loanPaidInstallmentsLabel": "Halihazırda ödenen taksitler",
+        "loanPaidInstallmentsHint": "Zaten devam eden bir kredi için. Bu taksitler kaydedilir, ancak bütçeye işlenmez."
     },
     "settings": {
         "healthCycleEnableLabel": "Döngü sekmesini göster",

@@ -1371,7 +1371,9 @@
         "receiptsHint": "Kassenbon oder Rechnung zu dieser Buchung.",
         "receiptDocumentName": "Beleg: {{title}} ({{date}})",
         "receiptsAttachedLabel": "{{count}} Belege angehängt",
-        "receiptsAttachedLabel_one": "{{count}} Beleg angehängt"
+        "receiptsAttachedLabel_one": "{{count}} Beleg angehängt",
+        "loanPaidInstallmentsLabel": "Bereits gezahlte Raten",
+        "loanPaidInstallmentsHint": "Für ein Darlehen, das schon läuft. Diese Raten werden nachgetragen, aber nicht ins Budget gebucht."
     },
     "settings": {
         "healthCycleEnableLabel": "Zyklus-Tab anzeigen",

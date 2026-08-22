@@ -1359,7 +1359,9 @@
         "receiptsHint": "Účtenka nebo faktura k této transakci.",
         "receiptDocumentName": "Doklad: {{title}} ({{date}})",
         "receiptsAttachedLabel": "Připojené doklady: {{count}}",
-        "receiptsAttachedLabel_one": "Připojený doklad: {{count}}"
+        "receiptsAttachedLabel_one": "Připojený doklad: {{count}}",
+        "loanPaidInstallmentsLabel": "Již zaplacené splátky",
+        "loanPaidInstallmentsHint": "Pro půjčku, která již běží. Tyto splátky se doplní, ale nezaúčtují se do rozpočtu."
     },
     "settings": {
         "healthCycleEnableLabel": "Zobrazit kartu cyklu",
