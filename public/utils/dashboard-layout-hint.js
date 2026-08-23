@@ -26,22 +26,53 @@
 
 const LAYOUT_HINT_KEY = 'yuvomi-dash-layout-hint';
 
-/** Merkt sich die Kachelformen der sichtbaren Widgets (duenn: nur die Form). */
-export function rememberLayoutHint(cfg) {
+/** Der gespeicherte Hinweis, in beiden Formen: Alt-Eintraege sind ein Array. */
+function readHint() {
   try {
-    localStorage.setItem(LAYOUT_HINT_KEY, JSON.stringify(
-      cfg.filter((w) => w.visible).map((w) => w.size),
-    ));
+    const stored = JSON.parse(localStorage.getItem(LAYOUT_HINT_KEY) ?? 'null');
+    if (Array.isArray(stored)) return { sizes: stored, query: null };
+    if (stored && typeof stored === 'object') return { sizes: stored.sizes, query: stored.query ?? null };
+  } catch { /* unlesbar: Standard */ }
+  return { sizes: null, query: null };
+}
+
+/**
+ * Merkt sich die Kachelformen der sichtbaren Widgets (duenn: nur die Form) und
+ * den Abfragepfad, den diese Anordnung erzeugt.
+ *
+ * WARUM DER PFAD MITKOMMT (#814): welche Filter gelten, steht in den
+ * Praeferenzen, und die kommen mit derselben Antwort wie die Uebersicht selbst -
+ * die erste Abfrage weiss also noch nichts von ihnen. Ohne diesen Hinweis
+ * zahlte jeder, der Optionen gesetzt hat, bei jedem Kaltstart eine zweite
+ * Abfrage. Er bleibt eine Vorhersage wie die Formen darueber: stimmt er nicht
+ * mehr, holt die Seite nach, bevor sie zeichnet.
+ *
+ * @param {object[]} cfg     Widget-Konfiguration
+ * @param {string} [query]   Abfragepfad zu dieser Konfiguration
+ */
+export function rememberLayoutHint(cfg, query = null) {
+  try {
+    localStorage.setItem(LAYOUT_HINT_KEY, JSON.stringify({
+      sizes: cfg.filter((w) => w.visible).map((w) => w.size),
+      ...(query ? { query } : {}),
+    }));
   } catch { /* z.B. voller oder gesperrter Speicher: der Hinweis ist entbehrlich */ }
 }
 
 /** Gemerkte Formen, sonst die uebergebenen Standardformen. */
 export function layoutHintSizes(fallbackSizes) {
-  try {
-    const stored = JSON.parse(localStorage.getItem(LAYOUT_HINT_KEY) ?? 'null');
-    if (Array.isArray(stored) && stored.length && stored.every((s) => typeof s === 'string')) return stored;
-  } catch { /* unlesbar: Standard */ }
+  const { sizes } = readHint();
+  if (Array.isArray(sizes) && sizes.length && sizes.every((s) => typeof s === 'string')) return sizes;
   return fallbackSizes;
+}
+
+/** Gemerkter Abfragepfad, sonst der uebergebene Standardpfad. */
+export function layoutHintQuery(fallbackQuery) {
+  const { query } = readHint();
+  // Nur ein Pfad der eigenen Route, nie ein fremdes Ziel: der Eintrag liegt im
+  // localStorage und ist damit beschreibbar von allem, was auf dieser Seite
+  // laeuft.
+  return typeof query === 'string' && query.startsWith('/dashboard') ? query : fallbackQuery;
 }
 
 /** Beim Abmelden: der naechste Nutzer an diesem Geraet hat sein eigenes Raster. */

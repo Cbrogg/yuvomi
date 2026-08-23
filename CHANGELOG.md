@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The overview's calendar and tasks tiles have options of their own** (#814, requested by
+  @raninehme). Customize mode now carries a settings button on those two tiles: the calendar can be
+  limited to appointments assigned to you, the task tiles to categories you choose. Both are stored
+  with the rest of your layout, so they are yours alone - narrowing your overview changes nothing for
+  anyone else in the household.
+
+  The filtering happens in the query, not in the browser: the task list caps at five while the metric
+  tiles count without a limit, so filtering the finished response would have put two rows under a
+  tile that says seven. And it applies to everything the page says about tasks and appointments, not
+  just one tile - a page that filters half of itself contradicts the other half. "Assigned to me"
+  means the same here as in the calendar module: among the assignees.
+
 - **The household can set a default overview, and members can follow it again** (#827, requested by
   @avalynnrose). Most family members never open customize mode, so what they see should be the
   arrangement an admin chose. An admin now arranges the overview and publishes it from the customize
@@ -20,6 +32,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   it. The difference only shows up later - a copied default freezes today's state onto your account
   and you stop following every change made after it. The button is hidden for anyone who has nothing
   of their own to reset, and the reset itself is undoable like any other save.
+
+- **`GET /api/v1/tasks?category=` accepts several categories.** They combine with OR, like status,
+  priority and assignee already did (#671). A second `category` parameter used to make the request
+  fail outright rather than filter by both.
 
 - **Israeli new shekel (ILS) and an Israel region preset** (#841, requested by @zivawernick). ILS is
   now selectable as the household currency and in Subscriptions and Shared expenses, and Settings →

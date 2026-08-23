@@ -1858,12 +1858,52 @@ svg.weather-forecast__icon {
   color: var(--color-accent);
 }
 
+/* Chip plus Optionen-Knopf (#814): zwei Knoepfe, die zusammengehoeren, aber
+ * nicht ineinander liegen duerfen. Die Gruppe haelt sie im Umbruch beisammen. */
+.widget-restore-chip-group {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.widget-restore-chip__options {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--target-md);
+  height: var(--target-md);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-full);
+  background: var(--color-surface-elevated);
+  color: var(--color-text-secondary);
+  cursor: pointer;
+  transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.widget-restore-chip__options:hover {
+  background: var(--color-surface-elevated-hover);
+  border-color: var(--color-accent);
+}
+
+.widget-restore-chip__options:focus-visible {
+  outline: var(--focus-ring-width) solid var(--focus-ring-color);
+  outline-offset: var(--focus-ring-offset);
+}
+
+@media (pointer: coarse) {
+  .widget-restore-chip__options {
+    min-width: var(--target-base);
+    min-height: var(--target-base);
+  }
+}
+
 /* Auf Touch-Eingabe (Finger) müssen die kompakten Anpassen-/Edit-Controls das
  * 44px-iOS-Minimum erreichen; auf dem Desktop (Maus) bleiben sie schlank bei
  * --target-md (Assessment B: Touch-Target < 44px). */
 @media (pointer: coarse) {
   .widget-edit-controls__handle,
   .widget-edit-controls__hide,
+  .widget-edit-controls__options,
   .widget-edit-controls__move-btn {
     min-width: var(--target-base);
     min-height: var(--target-base);
@@ -2522,7 +2562,11 @@ svg.weather-forecast__icon {
 }
 
 .widget-edit-controls__handle,
-.widget-edit-controls__hide {
+/* Der Optionen-Knopf (#814) traegt dieselbe Form wie das Ausblenden daneben:
+ * beide sind Einzelaktionen am Rand der Leiste, und eine zweite Formsprache
+ * fuer denselben Rang waere nur Unruhe. */
+.widget-edit-controls__hide,
+.widget-edit-controls__options {
   width: var(--target-md);
   height: var(--target-md);
   border: 1px solid var(--color-border);
@@ -2539,7 +2583,8 @@ svg.weather-forecast__icon {
   cursor: grab;
 }
 
-.widget-edit-controls__hide {
+.widget-edit-controls__hide,
+.widget-edit-controls__options {
   cursor: pointer;
 }
 
@@ -4512,4 +4557,36 @@ svg.weather-forecast__icon {
   .wall__exit {
     transition: none;
   }
+}
+
+
+/* ── Widget-Optionen (#814) ──────────────────────────────────────────────────
+ * Ein schlanker Dialog: eine Gruppe, darin Auswahlzeilen. Bewusst keine eigene
+ * Listenkomponente - was hier steht, sind zwei Radios oder eine Handvoll
+ * Kategorien, und jede weitere Form waere ein Bauteil, das nur an einer Stelle
+ * vorkommt. */
+.widget-options__group {
+  border: 0;
+  margin: 0;
+  padding: 0;
+}
+
+.widget-options__hint {
+  margin: 0 0 var(--space-2) 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
+
+.widget-options__choice {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  /* Die ganze Zeile ist das Ziel, nicht nur das Kaestchen: auf dem Telefon
+     traefe man sonst 20px in einer 44px-Zeile. */
+  min-height: var(--target-base);
+  cursor: pointer;
+}
+
+.widget-options__choice input {
+  flex: 0 0 auto;
 }

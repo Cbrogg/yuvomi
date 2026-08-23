@@ -15,11 +15,15 @@
  * teilen.
  *
  * WAS HIER NICHT HINEINGEHÖRT: die Filter, die nur eine Seite kennt - Status,
- * Priorität, Person, Kategorie, Tags und die Archiv-Achse (#688) mit ihrer
- * Verschränkung von `?archived` und `?status=archived`. Das sind Wünsche des
- * Betrachters an eine Liste, keine Aussage darüber, was eine Liste überhaupt
- * enthalten darf. Nur die zwei Regeln, die beide Seiten brauchen und über die
- * sie sich uneinig waren, stehen hier.
+ * Priorität, Person, Tags und die Archiv-Achse (#688) mit ihrer Verschränkung
+ * von `?archived` und `?status=archived`. Das sind Wünsche des Betrachters an
+ * eine Liste, keine Aussage darüber, was eine Liste überhaupt enthalten darf.
+ *
+ * DIE KATEGORIE HAT DIESE GRENZE MIT #814 GEWECHSELT, und zwar aus genau dem
+ * Grund, der oben steht: seit die Übersicht ihre Kategorien einschränken kann,
+ * ist sie ein Wunsch, den BEIDE Seiten kennen - und damit eine Regel, die zwei
+ * Fassungen haben könnte. Sie steht deshalb hier, als Fragment wie das Scope
+ * darüber, statt ein zweites Mal in der Dashboard-Route.
  *
  * Guards: test/test-task-scope.js
  */
@@ -75,4 +79,64 @@ export function taskScopeWhere(alias, { includeFuture = false, includeSubtasks =
  */
 export function taskScopeNeedsToday({ includeFuture = false } = {}) {
   return !includeFuture;
+}
+
+/**
+ * WHERE-Fragment für eine Einschränkung auf bestimmte Kategorien.
+ *
+ * Mehrere Werte verbinden sich ODER, aus demselben Grund wie bei Status und
+ * Priorität (#671): eine Aufgabe trägt genau EINE Kategorie, ein UND über zwei
+ * Werte wäre garantiert leer. Zwischen den Achsen bleibt es UND.
+ *
+ * Leere Liste = keine Einschränkung, und das ist die wichtigere Hälfte: ein
+ * Filter, der ohne Auswahl alles wegschneidet, macht aus „ich habe nichts
+ * gewählt" ein leeres Dashboard.
+ *
+ * BENANNTE ODER POSITIONALE PLATZHALTER, nicht beides gemischt: die Aufrufer
+ * sind sich darin uneinig, und node:sqlite lässt eine Mischung in einer
+ * Anweisung nicht zu. Die Aufgabenroute zählt ihre Parameter selbst durch, die
+ * Übersicht bindet @today und @me namentlich - mit `named` bekommt sie
+ * `@cat0, @cat1, …` und dazu das passende Objekt aus `categoryBindings()`.
+ *
+ * @param {string} alias        Tabellen-Alias der Aufgaben
+ * @param {string[]} categories Kategorie-Schlüssel (normalisiert)
+ * @param {object} [opts]
+ * @param {string} [opts.named] Präfix für benannte Platzhalter, z. B. 'cat'
+ * @returns {string|null} Fragment ohne führendes AND, oder null wenn nichts einzuschränken ist
+ */
+export function taskCategoryWhere(alias, categories, { named = null } = {}) {
+  if (!Array.isArray(categories) || categories.length === 0) return null;
+  const holes = categories.map((_, i) => (named ? `@${named}${i}` : '?'));
+  return `${alias}.category IN (${holes.join(', ')})`;
+}
+
+/**
+ * Die benannten Werte zum Fragment oben - dieselbe Reihenfolge, dieselben Namen.
+ *
+ * @param {string[]} categories
+ * @param {string} [named]
+ * @returns {Record<string, string>}
+ */
+export function categoryBindings(categories, named = 'cat') {
+  return Object.fromEntries(categories.map((value, i) => [`${named}${i}`, value]));
+}
+
+/**
+ * Kategorie-Parameter einer Anfrage auf eine saubere Liste bringen.
+ *
+ * Express liefert `?category=a` als String und `?category=a&category=b` als
+ * Array - wer den Rohwert bindet, schiebt im zweiten Fall ein Array in einen
+ * Platzhalter, und die Anweisung kommt gar nicht erst durch. Doppelte fliegen
+ * raus, damit die Platzhalterzahl der Wertezahl entspricht, und die Obergrenze
+ * verhindert, dass eine Anfrage mit tausend Werten eine Anweisung baut, die
+ * SQLite nicht mehr vorbereitet.
+ *
+ * @param {unknown} raw   req.query.<name>
+ * @param {number} [max]  Obergrenze (default 50)
+ * @returns {string[]}
+ */
+export function normalizeCategoryFilter(raw, max = 50) {
+  if (raw === undefined || raw === null) return [];
+  const list = [raw].flat().filter((v) => typeof v === 'string' && v !== '');
+  return [...new Set(list)].slice(0, max);
 }

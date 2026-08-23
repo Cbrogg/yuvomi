@@ -313,3 +313,77 @@ test('die Prüfung gilt auch für die Vorgabe', async () => {
     await close();
   }
 });
+
+// ── Widget-Optionen (#814) ───────────────────────────────────────────────────
+//
+// Der Server speichert sie und prüft ihre FORM - was drinsteht, weiß allein das
+// Frontend. Genau wie bei den Widget-Ids: ein neues Widget darf keine
+// Backend-Änderung kosten.
+
+test('Optionen überleben den Weg durch Speichern und Lesen', async () => {
+  const { baseUrl, close } = await startApp();
+  try {
+    const layout = [
+      { id: 'calendar', visible: true, order: 0, size: '1x2', options: { scope: 'mine' } },
+      { id: 'tasks', visible: true, order: 1, size: '1x2', options: { categories: ['household', 'school'] } },
+    ];
+    const saved = await write(baseUrl, { dashboard_widgets: layout });
+    assert.equal(saved.status, 200);
+    assert.deepEqual(saved.data.dashboard_widgets[0].options, { scope: 'mine' });
+    assert.deepEqual(saved.data.dashboard_widgets[1].options, { categories: ['household', 'school'] });
+    assert.deepEqual((await read(baseUrl)).dashboard_widgets[1].options, { categories: ['household', 'school'] });
+  } finally {
+    await close();
+  }
+});
+
+test('ein Widget ohne Optionen trägt kein leeres Optionsfeld mit sich', async () => {
+  const { baseUrl, close } = await startApp();
+  try {
+    const saved = await write(baseUrl, { dashboard_widgets: WIDGETS_A });
+    assert.equal(saved.status, 200);
+    for (const widget of saved.data.dashboard_widgets) {
+      assert.equal('options' in widget, false, 'ein leeres Objekt wäre in jedem Layout dieselbe leere Klammer');
+    }
+    // Und ein ausdrücklich leeres Objekt verschwindet genauso: gespeichert
+    // aussehen soll ein Layout, das den Dialog geöffnet und nichts gewählt hat,
+    // wie eines, das ihn nie gesehen hat.
+    const emptied = await write(baseUrl, { dashboard_widgets: [{ id: 'tasks', visible: true, order: 0, size: '1x1', options: {} }] });
+    assert.equal('options' in emptied.data.dashboard_widgets[0], false);
+  } finally {
+    await close();
+  }
+});
+
+test('die Form der Optionen wird geprüft, ihre Bedeutung nicht', async () => {
+  const { baseUrl, close } = await startApp();
+  try {
+    const withOptions = (options) => write(baseUrl, {
+      dashboard_widgets: [{ id: 'tasks', visible: true, order: 0, size: '1x1', options }],
+    });
+
+    // Der Server kennt kein Widget und keine Option - eine ausgedachte geht
+    // durch, weil sonst hier eine Registry stünde, die jedes neue Widget
+    // nachziehen müsste.
+    assert.equal((await withOptions({ was_auch_immer: true })).status, 200);
+
+    assert.equal((await withOptions('mine')).status, 400, 'ein String ist kein Optionsobjekt');
+    assert.equal((await withOptions([1, 2])).status, 400, 'ein Array ist kein Optionsobjekt');
+    assert.equal((await withOptions({ 'Groß': true })).status, 400, 'Schlüssel sind klein und schlicht');
+    assert.equal((await withOptions({ nested: { a: 1 } })).status, 400, 'verschachtelt hätte keine Tiefengrenze');
+    assert.equal((await withOptions({ list: [{ a: 1 }] })).status, 400);
+    assert.equal((await withOptions({ text: 'x'.repeat(65) })).status, 400);
+    assert.equal((await withOptions({ list: Array.from({ length: 51 }, (_, i) => `c${i}`) })).status, 400);
+    assert.equal((await withOptions(Object.fromEntries(
+      Array.from({ length: 9 }, (_, i) => [`k${i}`, true]),
+    ))).status, 400, 'acht Optionen sind genug für ein Widget');
+
+    // Eine abgewiesene Option darf den vorherigen Stand nicht anfassen.
+    assert.deepEqual(
+      (await read(baseUrl)).dashboard_widgets[0].options,
+      { was_auch_immer: true },
+    );
+  } finally {
+    await close();
+  }
+});

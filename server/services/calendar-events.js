@@ -165,13 +165,14 @@ export function expandRecurringEvents(events, from, to, exceptionsByEvent = null
  * @param {number}  opts.limit       Maximale Anzahl Termine (default 5)
  * @param {number}  opts.windowDays  Vorausschau-Fenster in Tagen (default 90)
  * @param {boolean} opts.fromToday   true = ab Tagesbeginn (Dashboard); false = ab jetzt (default)
+ * @param {number?} opts.assignedTo  Nur Termine, die dieser Person zugewiesen sind (#814)
  * @param {Date}    [opts.now]        Ersetzbar für Tests - die Tagesgrenze ist genau
  *        das, was hier schiefgehen kann, und ohne festen Zeitpunkt liesse sie sich
  *        nur an dem einen Abend im Jahr pruefen, an dem die Suite zufaellig laeuft.
  * @returns {object[]}  Rohe, expandierte Event-Zeilen (inkl. assigned_users_json)
  */
 export function getUpcomingEvents(d, {
-  userId = null, limit = 5, windowDays = 90, fromToday = false, now = new Date(),
+  userId = null, limit = 5, windowDays = 90, fromToday = false, assignedTo = null, now = new Date(),
 } = {}) {
   const tz      = householdTimeZone(d);
   const nowDate = todayKey(d, now);
@@ -233,6 +234,20 @@ export function getUpcomingEvents(d, {
         e.all_day ? e.start_datetime.slice(0, 10) : e.start_datetime, tz
       );
       return startMs !== null && startMs >= filterFromMs;
+    })
+    // „NUR MEINE" HEISST HIER DASSELBE WIE IM KALENDERMODUL (#814): zugewiesen,
+    // nicht etwa „unzugewiesen zählt auch mit". Das Modul filtert clientseitig
+    // über `assigned_users.some(u => u.id === me)` (public/pages/calendar.js,
+    // `belongsToMe`), und zwei Auslegungen desselben Satzes an zwei Orten wären
+    // schlimmer als der eine Fall, über den man streiten kann.
+    //
+    // VOR der Deckelung, nicht danach: gefiltert würde sonst innerhalb der
+    // fünf, die ohnehin schon feststehen, und ein Widget mit „nur meine" zeigte
+    // je nach Fremdterminen mal fünf und mal keinen (dieselbe Lehre wie #647).
+    .filter((e) => {
+      if (!assignedTo) return true;
+      const assigned = e.assigned_users_json ? JSON.parse(e.assigned_users_json) : [];
+      return assigned.some((u) => Number(u.id) === Number(assignedTo));
     })
     .slice(0, limit);
 }

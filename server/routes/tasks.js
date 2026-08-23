@@ -10,7 +10,7 @@ import * as db from '../db.js';
 import { documentVisibleSql } from '../services/document-access.js';
 import { nextDueAfterCompletion } from '../services/recurrence.js';
 import { syncTaskRewards } from '../services/rewards.js';
-import { taskScopeNeedsToday, taskScopeWhere } from '../services/task-scope.js';
+import { normalizeCategoryFilter, taskCategoryWhere, taskScopeNeedsToday, taskScopeWhere } from '../services/task-scope.js';
 import { normalizeVisibility, visibilityWhere } from '../services/visibility.js';
 import {
   flushOutbound, markTodoOutbound, queueTodoDeletion,
@@ -782,7 +782,14 @@ router.get('/', (req, res) => {
                              AND ta.user_id IN (${assignees.map(() => '?').join(', ')}))`;
       params.push(...assignees);
     }
-    if (category)    { sql += ' AND t.category = ?';    params.push(category); }
+    // MEHRERE KATEGORIEN, ODER-verknüpft - dieselbe Regel wie bei Status,
+    // Priorität und Person (#671), und seit #814 dasselbe Fragment wie in der
+    // Übersicht. Vorher band `?category=a&category=b` das Array von Express in
+    // einen einzigen Platzhalter: der zweite Wert war nicht etwa unwirksam,
+    // die Abfrage kam gar nicht mehr durch.
+    const categories = normalizeCategoryFilter(category);
+    const categoryFragment = taskCategoryWhere('t', categories);
+    if (categoryFragment) { sql += ` AND ${categoryFragment}`; params.push(...categories); }
     // Tag-Filter ohne Rücksicht auf Groß-/Kleinschreibung: die Werte kommen von
     // fremden Servern, dort ist „Garten" und „garten" dasselbe Etikett.
     //

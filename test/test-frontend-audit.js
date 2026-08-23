@@ -1283,6 +1283,36 @@ test('synchronization-by-data-type leaves exist and export async render function
   }
 });
 
+test('die Widget-Optionen sind auch am ausgeblendeten Widget erreichbar (#814)', () => {
+  const source = read('../public/pages/dashboard.js');
+  const widgets = read('../public/utils/dashboard-widgets.js');
+
+  // DIE VORAUSSETZUNG, DIE DIESE REGEL NOETIG MACHT: Aufgaben und Kalender sind
+  // ab Werk ausgeblendet, weil das Cockpit ihre Domaenen abdeckt. Genau sie
+  // tragen die Optionen. Waeren die Optionen nur an der sichtbaren Kachel,
+  // muesste man die Kachel erst einblenden, um einzustellen, was sie gar nicht
+  // zeigt - und ihre Filter wirken auf Cockpit und Kopfband weiter.
+  const covered = widgets.match(/COCKPIT_COVERED_WIDGETS = new Set\(\[([^\]]*)\]/);
+  assert.ok(covered, 'COCKPIT_COVERED_WIDGETS nicht gefunden - das Muster greift nicht mehr');
+  const withOptions = source.match(/WIDGETS_WITH_OPTIONS = new Set\(\[([^\]]*)\]/);
+  assert.ok(withOptions, 'WIDGETS_WITH_OPTIONS nicht gefunden');
+  const optionIds = [...withOptions[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]);
+  const coveredIds = [...covered[1].matchAll(/'([a-z-]+)'/g)].map((m) => m[1]);
+  assert.ok(optionIds.some((id) => coveredIds.includes(id)),
+    'kein Options-Widget ist ab Werk ausgeblendet - dann ist diese Regel gegenstandslos geworden');
+
+  // Die Ablage der ausgeblendeten Widgets traegt den Knopf.
+  const tray = source.match(/function renderHiddenWidgetsTray[\s\S]*?\n}/);
+  assert.ok(tray, 'renderHiddenWidgetsTray nicht gefunden');
+  assert.match(tray[0], /data-widget-options=/,
+    'die Ablage bietet keine Optionen an - am ausgeblendeten Widget waeren sie unerreichbar');
+
+  // Und sie werden auch verdrahtet: die Ablage liegt AUSSERHALB des Grids, ein
+  // `grid.querySelectorAll` faende sie nicht.
+  assert.match(source, /container\.querySelectorAll\('\[data-widget-options\]'\)/,
+    'die Optionen-Knoepfe der Ablage bekommen keinen Listener');
+});
+
 test('das Kopfband faehrt im selben Anpassen-Zyklus wie die Kacheln (#740)', () => {
   const source = read('../public/pages/dashboard.js');
 

@@ -9,7 +9,7 @@ import express from 'express';
 import * as db from '../db.js';
 import { hydrateBirthday } from '../services/birthdays.js';
 import { getUpcomingEvents } from '../services/calendar-events.js';
-import { taskScopeWhere } from '../services/task-scope.js';
+import { taskScopeWhere, taskCategoryWhere, categoryBindings, normalizeCategoryFilter } from '../services/task-scope.js';
 import { getCountdowns } from '../services/countdowns.js';
 import { visibilityWhere } from '../services/visibility.js';
 import { resolveBudgetMode } from '../services/budget-visibility.js';
@@ -129,6 +129,33 @@ router.get('/', (req, res) => {
   const result = {};
   const userId = req.authUserId || req.session.userId;
 
+  /* WIDGET-OPTIONEN KOMMEN ALS QUERY-PARAMETER, NICHT AUS DEM GESPEICHERTEN
+   * LAYOUT (#814). Der Server kennt die Widget-Ids bewusst nicht - sie gehören
+   * dem Frontend, und ein neues Widget soll keine Backend-Änderung kosten. Er
+   * speichert `options` deshalb nur als Form und versteht hier ausschliesslich
+   * die zwei Achsen, die er ohnehin abfragen kann.
+   *
+   * SIE WIRKEN AUF DIE GANZE ÜBERSICHT, nicht auf eine Kachel. Aufgaben stehen
+   * hier an vier Stellen (Liste, Kennzahl, „heute dran" je Mitglied, das
+   * Kopfband) und Termine an dreien; würde eine Auswahl nur die Liste
+   * einschränken, stünden zwei Zeilen unter einer Kachel, die sieben sagt -
+   * derselbe Fehler wie in #647, eine Ebene höher.
+   *
+   * Und sie wirken VOR der Deckelung, weil jede dieser Abfragen ihr eigenes
+   * LIMIT trägt.
+   *
+   * AUSGENOMMEN SIND DIE COUNTDOWNS (#647), und zwar bewusst: dort steht keine
+   * Aufgabe, weil sie in einer Liste vorkommt, sondern weil jemand sie
+   * ausdrücklich markiert hat. Eine Kategorie-Auswahl, die eine markierte
+   * Aufgabe wieder verschwinden lässt, nähme eine Entscheidung zurück, die
+   * jemand ausdrücklich getroffen hat. */
+  const taskCategories = normalizeCategoryFilter(req.query.tasks_category);
+  const taskCategoryFragment = taskCategoryWhere('t', taskCategories, { named: 'cat' });
+  const taskCategoryAnd = taskCategoryFragment ? ` AND ${taskCategoryFragment}` : '';
+  const taskCategoryBinds = categoryBindings(taskCategories, 'cat');
+  // `mine` ist die Auslegung des Kalendermoduls: zugewiesen an mich.
+  const eventsAssignedTo = req.query.events_scope === 'mine' ? userId : null;
+
   const now = new Date();
 
   // Lokaler Datums-/Wochentagsschlüssel: die Fälligkeit einer Dosis hängt am lokalen
@@ -172,7 +199,7 @@ router.get('/', (req, res) => {
   // Geteilte Logik mit /calendar/upcoming: expandiert wiederkehrende Serien,
   // sodass auch Termine erscheinen, deren Master-Start in der Vergangenheit liegt.
   if (allows('calendar')) try {
-    result.upcomingEvents = getUpcomingEvents(d, { userId, limit: 5, fromToday: true })
+    result.upcomingEvents = getUpcomingEvents(d, { userId, limit: 5, fromToday: true, assignedTo: eventsAssignedTo })
       .map(({ assigned_users_json, ...event }) => {
         event.assigned_users = assigned_users_json ? JSON.parse(assigned_users_json) : [];
         return event;
@@ -209,7 +236,7 @@ router.get('/', (req, res) => {
         -- öffnete, fand sie in der Liste nicht wieder.
         AND t.archived_at IS NULL
         AND ${taskScopeWhere('t', { bind: '@today' })}
-        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}${taskCategoryAnd}
       ORDER BY
         CASE WHEN __due_sort IS NOT NULL AND __due_sort < @now THEN 0 ELSE 1 END ASC,
         __due_sort IS NULL ASC,
@@ -219,7 +246,7 @@ router.get('/', (req, res) => {
           WHEN 'low' THEN 3 ELSE 4
         END ASC
       LIMIT 5
-    `).all({ now: nowIso, me: userId, today: todayLocalKey }).map(({ __due_sort, ...task }) => addAssignedUsers(task));
+    `).all({ now: nowIso, me: userId, today: todayLocalKey, ...taskCategoryBinds }).map(({ __due_sort, ...task }) => addAssignedUsers(task));
   } catch (err) {
     log.error('urgentTasks error:', err.message);
     result.urgentTasks = [];
@@ -237,8 +264,8 @@ router.get('/', (req, res) => {
       SELECT COUNT(*) AS n FROM tasks t
       WHERE t.status != 'done' AND t.archived_at IS NULL
         AND ${taskScopeWhere('t', { bind: '@today' })}
-        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
-    `).get({ me: userId, today: todayLocalKey }).n;
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}${taskCategoryAnd}
+    `).get({ me: userId, today: todayLocalKey, ...taskCategoryBinds }).n;
   } catch (err) {
     log.error('openTaskCount error:', err.message);
     result.openTaskCount = null;
@@ -252,8 +279,8 @@ router.get('/', (req, res) => {
       WHERE t.status != 'done' AND t.archived_at IS NULL
         AND t.due_date IS NOT NULL AND t.due_date < @today
         AND ${taskScopeWhere('t', { bind: '@today' })}
-        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
-    `).get({ today: todayLocalKey, me: userId }).n;
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}${taskCategoryAnd}
+    `).get({ today: todayLocalKey, me: userId, ...taskCategoryBinds }).n;
   } catch (err) {
     log.error('overdueTaskCount error:', err.message);
     result.overdueTaskCount = null;
@@ -607,9 +634,9 @@ router.get('/', (req, res) => {
       WHERE t.status != 'done' AND t.archived_at IS NULL
         AND t.due_date IS NOT NULL AND t.due_date <= @today
         AND ${taskScopeWhere('t', { bind: '@today' })}
-        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}${taskCategoryAnd}
       GROUP BY ta.user_id
-    `).all({ today: todayLocalKey, me: userId });
+    `).all({ today: todayLocalKey, me: userId, ...taskCategoryBinds });
   } catch (err) {
     log.error('memberTodayTasks error:', err.message);
     result.memberTodayTasks = [];
@@ -624,8 +651,8 @@ router.get('/', (req, res) => {
       WHERE t.status = 'done' AND t.archived_at IS NULL
         AND t.due_date = @today
         AND ${taskScopeWhere('t', { bind: '@today' })}
-        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
-    `).get({ today: todayLocalKey, me: userId }).n;
+        AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}${taskCategoryAnd}
+    `).get({ today: todayLocalKey, me: userId, ...taskCategoryBinds }).n;
   } catch (err) {
     log.error('tasksDoneToday error:', err.message);
     result.tasksDoneToday = 0;

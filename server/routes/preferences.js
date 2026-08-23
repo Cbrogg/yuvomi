@@ -152,6 +152,12 @@ const WIDGET_ID_RE = /^[a-z][a-z0-9-]{0,63}$/;
 const MAX_DASHBOARD_WIDGETS = 64;
 const VALID_WIDGET_SIZES = ['1x1', '1x2', '1x3', '1x4', '2x1', '2x2', '2x3', '2x4', '3x1', '3x2', '3x3', '3x4', '4x1', '4x2', '4x3', '4x4'];
 const DEFAULT_WIDGET_CONFIG = '[]';
+// Grenzen der Widget-Optionen (#814). Sie beschreiben die SPEICHERFORM, nicht
+// die Bedeutung: welche Optionen ein Widget kennt, weiss allein das Frontend.
+const WIDGET_OPTION_KEY_RE = /^[a-z][a-z0-9_]{0,31}$/;
+const MAX_WIDGET_OPTION_KEYS = 8;
+const MAX_WIDGET_OPTION_VALUES = 50;
+const MAX_WIDGET_OPTION_LENGTH = 64;
 
 // Modul-Slugs, die per Settings deaktiviert werden können.
 // Dashboard und Settings sind absichtlich nicht enthalten — sie sind essentiell.
@@ -364,6 +370,52 @@ function parseMobileNavOrder(raw) {
   }
 }
 
+/**
+ * Die Optionen eines Widgets - der Server prüft ihre FORM und sonst nichts (#814).
+ *
+ * Widget-Ids gehören seit jeher dem Frontend: ein neues Widget kostet keine
+ * Backend-Änderung, weil hier keine Registry steht, die es kennen müsste. Für
+ * die Optionen gilt dasselbe, und aus demselben Grund - eine serverseitige
+ * Liste „welches Widget kennt welche Option" wäre der billige Anfang und
+ * danach der Preis jedes weiteren Widgets. Was der Server verhindern muss, ist
+ * nur, dass hier unbegrenzt viel Fremdinhalt in `sync_config` landet.
+ *
+ * Erlaubt sind Boolean, endliche Zahlen, kurze Strings und Listen kurzer
+ * Strings. Verschachtelte Objekte nicht: sie hätten keine Tiefengrenze, und
+ * kein Widget braucht sie.
+ *
+ * @returns {object|null} normalisierte Optionen, oder null wenn die Form nicht stimmt
+ */
+function normalizeWidgetOptions(input) {
+  if (input === undefined) return {};
+  if (!input || typeof input !== 'object' || Array.isArray(input)) return null;
+  const keys = Object.keys(input);
+  if (keys.length > MAX_WIDGET_OPTION_KEYS) return null;
+
+  const out = {};
+  for (const key of keys) {
+    if (!WIDGET_OPTION_KEY_RE.test(key)) return null;
+    const value = input[key];
+    if (typeof value === 'boolean') { out[key] = value; continue; }
+    if (typeof value === 'number') {
+      if (!Number.isFinite(value)) return null;
+      out[key] = value; continue;
+    }
+    if (typeof value === 'string') {
+      if (value.length > MAX_WIDGET_OPTION_LENGTH) return null;
+      out[key] = value; continue;
+    }
+    if (Array.isArray(value)) {
+      if (value.length > MAX_WIDGET_OPTION_VALUES) return null;
+      if (!value.every((v) => typeof v === 'string' && v.length <= MAX_WIDGET_OPTION_LENGTH)) return null;
+      out[key] = [...value];
+      continue;
+    }
+    return null;
+  }
+  return out;
+}
+
 function normalizeWidgetConfig(input) {
   if (!Array.isArray(input) || input.length > MAX_DASHBOARD_WIDGETS) return null;
 
@@ -375,6 +427,8 @@ function normalizeWidgetConfig(input) {
     if (widget.visible !== undefined && typeof widget.visible !== 'boolean') return null;
     if (widget.order !== undefined && !Number.isFinite(Number(widget.order))) return null;
     if (widget.size !== undefined && !VALID_WIDGET_SIZES.includes(widget.size)) return null;
+    const options = normalizeWidgetOptions(widget.options);
+    if (options === null) return null;
 
     seenIds.add(widget.id);
     normalized.push({
@@ -382,6 +436,10 @@ function normalizeWidgetConfig(input) {
       visible: widget.visible !== false,
       order: widget.order === undefined ? index : Number(widget.order),
       size: widget.size ?? '1x1',
+      // Ein leeres Optionsobjekt wird nicht mitgeschleppt: es wäre in jedem
+      // gespeicherten Layout dieselbe leere Klammer und in jeder Antwort ein
+      // Feld, das nichts sagt.
+      ...(Object.keys(options).length ? { options } : {}),
     });
   }
 

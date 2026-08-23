@@ -21,11 +21,12 @@ import {
   WIDGET_IDS, WIDGET_SIZE_PRESETS, WIDGET_SIZE_OPTIONS, DEFAULT_WIDGET_CONFIG,
   COCKPIT_COVERED_WIDGETS,
   nearestPreset, normalizeDashboardConfig, isUserOrderedConfig, sameWidgetConfig,
+  dashboardQuery,
 } from '/utils/dashboard-widgets.js';
 import { whoMark } from '/utils/seal-pair.js';
 import { MODULE_ICON, moduleIconHTML } from '/nav-icons.js';
 import { exitWallMode, isWallActive, syncWallMode } from '/utils/wall-mode.js';
-import { rememberLayoutHint, layoutHintSizes } from '/utils/dashboard-layout-hint.js';
+import { rememberLayoutHint, layoutHintSizes, layoutHintQuery } from '/utils/dashboard-layout-hint.js';
 
 // Hält den AbortController des aktuellen FAB-Listeners - wird bei jedem render() erneuert.
 let _fabController = null;
@@ -2111,6 +2112,119 @@ function renderSizeMiniGridCells(size) {
   }).join('');
 }
 
+/* WIDGET-OPTIONEN (#814) - was ein Widget zeigt, nicht nur ob und wie gross.
+ *
+ * DIE OPTIONEN GEHOEREN DEM FRONTEND, wie die Widget-Ids seit jeher: der Server
+ * speichert `options` als Form und weiss nicht, was drinsteht (preferences.js,
+ * `normalizeWidgetOptions`). Eine serverseitige Registry „welches Widget kennt
+ * welche Option" waere der billige Anfang und danach der Preis jedes weiteren
+ * Widgets. Was der Browser daraus macht, sind Query-Parameter, die die Route
+ * ohnehin versteht - kein zweiter Filterweg.
+ *
+ * WARUM EIN EIGENER DIALOG statt eines weiteren Steuerelements in der Leiste:
+ * die Kachelleiste traegt Griff, Reihenfolge, vier Groessen und Ausblenden; eine
+ * Kategorienauswahl daneben kippt sie auf 1x1-Kacheln ins Ueberlaufen (die
+ * Lehre aus dem alten Groessen-Select, Critique P1). Der Knopf oeffnet, was
+ * Platz braucht.
+ */
+const WIDGETS_WITH_OPTIONS = new Set(['calendar', 'tasks']);
+
+/* Das Etikett einer Kategorie - dieselbe Regel wie im Aufgabenmodul
+ * (`catLabel` in pages/tasks.js): die mitgelieferten Kategorien tragen einen
+ * i18n-Schluessel, die selbst angelegten ihren Namen. Wer hier `key` anzeigt,
+ * stellt „household" neben „Einkaufen" in dieselbe Liste. */
+function taskCategoryLabel(category) {
+  if (!category) return '';
+  return category.label_key ? t(category.label_key) : (category.name || category.key);
+}
+
+/** Kategorien der Aufgaben - nur wenn der Dialog sie braucht, und nur einmal. */
+let taskCategoriesCache = null;
+async function loadTaskCategories() {
+  if (taskCategoriesCache) return taskCategoriesCache;
+  try {
+    const res = await api.get('/tasks/categories');
+    taskCategoriesCache = Array.isArray(res?.data) ? res.data : [];
+  } catch {
+    taskCategoriesCache = [];
+  }
+  return taskCategoriesCache;
+}
+
+/** Der Optionen-Dialog eines Widgets. Aufloesen mit den neuen Optionen oder null. */
+async function openWidgetOptions(id, current = {}) {
+  const options = { ...current };
+  const categories = id === 'tasks' ? await loadTaskCategories() : [];
+
+  const body = id === 'calendar'
+    ? `
+      <fieldset class="form-group widget-options__group">
+        <legend class="form-label">${t('dashboard.optionCalendarScope')}</legend>
+        <label class="widget-options__choice">
+          <input type="radio" name="cal-scope" value="all" ${options.scope === 'mine' ? '' : 'checked'}>
+          <span>${t('dashboard.optionCalendarAll')}</span>
+        </label>
+        <label class="widget-options__choice">
+          <input type="radio" name="cal-scope" value="mine" ${options.scope === 'mine' ? 'checked' : ''}>
+          <span>${t('calendar.assignedToMe')}</span>
+        </label>
+      </fieldset>`
+    : `
+      <fieldset class="form-group widget-options__group">
+        <legend class="form-label">${t('dashboard.optionTaskCategories')}</legend>
+        <p class="widget-options__hint">${t('dashboard.optionTaskCategoriesHint')}</p>
+        ${categories.length ? categories.map((c) => `
+        <label class="widget-options__choice">
+          <input type="checkbox" name="task-category" value="${esc(c.key)}"
+                 ${(options.categories ?? []).includes(c.key) ? 'checked' : ''}>
+          <span>${esc(taskCategoryLabel(c))}</span>
+        </label>`).join('') : `<p class="widget-options__hint">${t('dashboard.optionTaskCategoriesEmpty')}</p>`}
+      </fieldset>`;
+
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (value) => {
+      if (settled) return;
+      settled = true;
+      resolve(value);
+    };
+    openModal({
+      title: t('dashboard.optionsFor', { widget: widgetLabel(id) }),
+      size: 'sm',
+      content: `
+        <form id="widget-options-form" class="widget-options">
+          ${body}
+          <div class="modal-actions">
+            <button type="button" class="btn btn--secondary" data-action="cancel">${t('common.cancel')}</button>
+            <button type="submit" class="btn btn--primary">${t('common.save')}</button>
+          </div>
+        </form>`,
+      onClose: () => finish(null),
+      onSave(panel) {
+        panel.querySelector('[data-action="cancel"]').addEventListener('click', () => closeModal({ force: true }));
+        panel.querySelector('#widget-options-form').addEventListener('submit', (event) => {
+          event.preventDefault();
+          const next = {};
+          if (id === 'calendar') {
+            const scope = panel.querySelector('input[name="cal-scope"]:checked')?.value;
+            // „Alles" ist die Abwesenheit einer Einschraenkung und wird deshalb
+            // nicht gespeichert - sonst stuende in jedem Layout ein Feld, das
+            // den Auslieferungszustand wiederholt.
+            if (scope === 'mine') next.scope = 'mine';
+          } else {
+            const picked = [...panel.querySelectorAll('input[name="task-category"]:checked')].map((el) => el.value);
+            // Keine Auswahl heisst „alle" - eine leere Liste als Filter waere
+            // ein leeres Dashboard fuer jemanden, der nur den Dialog geoeffnet hat.
+            if (picked.length) next.categories = picked;
+          }
+          finish(next);
+          closeModal({ force: true });
+        });
+      },
+    });
+  });
+}
+
 function renderWidgetCustomizeControls(w, index = 0, total = 1) {
   const isFirst = index === 0;
   const isLast = index === total - 1;
@@ -2148,6 +2262,12 @@ function renderWidgetCustomizeControls(w, index = 0, total = 1) {
       <div class="widget-edit-controls__size" role="group" aria-label="${t('dashboard.customizeSizeFor', { widget: widgetLabel(w.id) })}">
         ${sizeButtons}
       </div>
+      ${WIDGETS_WITH_OPTIONS.has(w.id) ? `
+      <button type="button" class="widget-edit-controls__options" data-widget-options="${esc(w.id)}"
+              aria-label="${esc(t('dashboard.optionsFor', { widget: widgetLabel(w.id) }))}"
+              title="${esc(t('dashboard.optionsFor', { widget: widgetLabel(w.id) }))}">
+        <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
+      </button>` : ''}
       <button type="button" class="widget-edit-controls__hide" data-widget-hide="${esc(w.id)}" aria-label="${t('dashboard.customizeHide', { widget: widgetLabel(w.id) })}">
         <i data-lucide="eye-off" aria-hidden="true"></i>
       </button>
@@ -2171,13 +2291,28 @@ function renderHiddenWidgetsTray(cfg, glanceHidden = false) {
       <span class="widget-restore-chip__label">${t('dashboard.todayTitle')}</span>
       <i data-lucide="plus" class="widget-restore-chip__add" aria-hidden="true"></i>
     </button>` : '';
+  /* DIE OPTIONEN MUESSEN AUCH AM AUSGEBLENDETEN WIDGET ERREICHBAR SEIN (#814).
+   * Aufgaben und Kalender sind ab Werk ausgeblendet - das Cockpit deckt ihre
+   * vier Domaenen bereits ab -, und ihre Optionen wirken trotzdem auf die ganze
+   * Seite: das Cockpit und das Kopfband sprechen ueber dieselben Aufgaben.
+   * Ohne diesen Knopf muesste man die Kachel erst einblenden, um einzustellen,
+   * was die Kachel gar nicht zeigt. Deshalb eine Gruppe statt eines Chips: ein
+   * Knopf im Knopf waere kein gueltiges Markup. */
   const chips = glanceChip + hidden.map((w) => `
-    <button type="button" class="widget-restore-chip" data-widget-show="${esc(w.id)}"
-            aria-label="${t('dashboard.customizeShow', { widget: widgetLabel(w.id) })}">
-      <i data-lucide="${widgetIcon(w.id)}" class="widget-restore-chip__icon" aria-hidden="true"></i>
-      <span class="widget-restore-chip__label">${widgetLabel(w.id)}</span>
-      <i data-lucide="plus" class="widget-restore-chip__add" aria-hidden="true"></i>
-    </button>`).join('');
+    <div class="widget-restore-chip-group">
+      <button type="button" class="widget-restore-chip" data-widget-show="${esc(w.id)}"
+              aria-label="${t('dashboard.customizeShow', { widget: widgetLabel(w.id) })}">
+        <i data-lucide="${widgetIcon(w.id)}" class="widget-restore-chip__icon" aria-hidden="true"></i>
+        <span class="widget-restore-chip__label">${widgetLabel(w.id)}</span>
+        <i data-lucide="plus" class="widget-restore-chip__add" aria-hidden="true"></i>
+      </button>
+      ${WIDGETS_WITH_OPTIONS.has(w.id) ? `
+      <button type="button" class="widget-restore-chip__options" data-widget-options="${esc(w.id)}"
+              aria-label="${esc(t('dashboard.optionsFor', { widget: widgetLabel(w.id) }))}"
+              title="${esc(t('dashboard.optionsFor', { widget: widgetLabel(w.id) }))}">
+        <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
+      </button>` : ''}
+    </div>`).join('');
   return `
     <section class="widget-restore" aria-label="${t('dashboard.customizeHiddenTitle')}">
       <h3 class="widget-restore__title">${t('dashboard.customizeHiddenTitle')}</h3>
@@ -3353,7 +3488,7 @@ export async function render(container, { user }) {
   let lastLoadedAt = null;
   try {
     const [dashRes, weatherRes, prefsRes] = await Promise.all([
-      api.get('/dashboard'),
+      api.get(layoutHintQuery('/dashboard')),
       api.get(`/weather?lang=${encodeURIComponent(getLocale())}`).catch(() => ({ data: null })),
       api.get('/preferences').catch(() => ({ data: {} })),
     ]);
@@ -3369,11 +3504,32 @@ export async function render(container, { user }) {
     weatherAutoLocate = Boolean(prefsRes.data?.weather_user?.auto_locate ?? prefsRes.data?.weather_auto_locate);
     widgetConfig = normalizeDashboardConfig(prefsRes.data?.dashboard_widgets ?? DEFAULT_WIDGET_CONFIG);
     savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+    /* WIDGET-OPTIONEN KOMMEN EINEN SCHRITT ZU SPAET (#814): die Uebersicht und
+     * die Praeferenzen laufen absichtlich parallel los, aber welche Filter
+     * gelten, steht erst in der Antwort der zweiten. Die erste Abfrage nimmt
+     * deshalb den Pfad, den dieses Geraet zuletzt gebraucht hat
+     * (`layoutHintQuery`, dieselbe Vorhersage wie beim Skelett) - im
+     * Regelfall stimmt er, und es bleibt bei einer Abfrage.
+     *
+     * Stimmt er nicht, wird nachgeholt, und zwar VOR dem ersten Zeichnen: sonst
+     * saehe man kurz Termine, die man ausgeblendet hat. Die Alternative - erst
+     * Praeferenzen, dann Uebersicht - kostete JEDEN Aufruf eine Rundreise, auch
+     * die ohne Optionen. */
+    if (dashboardQuery(widgetConfig) !== layoutHintQuery('/dashboard')) {
+      try {
+        const filtered = await api.get(dashboardQuery(widgetConfig));
+        if (Array.isArray(filtered?.upcomingEvents)) {
+          filtered.upcomingEvents = filtered.upcomingEvents.map(localizeBirthdayEvent);
+        }
+        data = filtered;
+        setCountdownAvailability(data?.countdowns);
+      } catch { /* die ungefilterte Antwort steht bereits - lieber mehr als nichts */ }
+    }
     glanceVisible = prefsRes.data?.dashboard_today_glance !== false;
     savedGlanceVisible = glanceVisible;
     followsDefault = prefsRes.data?.dashboard_follows_default !== false;
     // Das Skelett des NAECHSTEN Aufrufs lernt hier seine Kachelform.
-    rememberLayoutHint(widgetConfig);
+    rememberLayoutHint(widgetConfig, dashboardQuery(widgetConfig));
     currency     = prefsRes.data?.currency ?? 'EUR';
     visibleMealTypes = normalizeVisibleMealTypes(prefsRes.data?.visible_meal_types);
     lastLoadedAt = new Date();
@@ -3413,8 +3569,24 @@ export async function render(container, { user }) {
   // Einziger Persist-Pfad für Inline- UND Modal-Speichern. Legt vor dem Schreiben
   // einen Schnappschuss an und bietet — wenn sich etwas geändert hat — im Toast ein
   // „Rückgängig" an, das den vorherigen Stand wiederherstellt (inkl. Server).
+  /** Die Uebersicht neu holen, wenn sich die Filter geaendert haben (#814). */
+  async function reloadIfQueryChanged(previousQuery) {
+    if (dashboardQuery(widgetConfig) === previousQuery) return;
+    try {
+      const fresh = await api.get(dashboardQuery(widgetConfig));
+      if (Array.isArray(fresh?.upcomingEvents)) {
+        fresh.upcomingEvents = fresh.upcomingEvents.map(localizeBirthdayEvent);
+      }
+      fresh.cycle = data.cycle;
+      data = fresh;
+      setCountdownAvailability(data?.countdowns);
+      lastLoadedAt = new Date();
+    } catch { /* der alte Stand bleibt stehen, statt die Seite zu leeren */ }
+  }
+
   async function persistWidgetConfig(nextConfig) {
     const previousConfig = savedWidgetConfig.map((w) => ({ ...w }));
+    const previousQuery = dashboardQuery(savedWidgetConfig);
     widgetConfig = nextConfig.map((w) => ({ ...w }));
     const previousGlance = savedGlanceVisible;
     await api.put('/preferences', { dashboard_widgets: widgetConfig, dashboard_today_glance: glanceVisible });
@@ -3423,23 +3595,26 @@ export async function render(container, { user }) {
     // Ab jetzt liegt ein eigener Stand vor - die Vorgabe des Haushalts erreicht
     // mich erst wieder, wenn ich ihn loesche.
     followsDefault = false;
-    rememberLayoutHint(widgetConfig);
+    rememberLayoutHint(widgetConfig, dashboardQuery(widgetConfig));
     isCustomizing = false;
     // Wird die Zyklus-Kachel gerade erst eingeblendet, ihren owner-only Slice
     // nachladen — sonst zeigte sie fälschlich den Empty-State bis zum Reload.
     if (widgetConfig.some((w) => w.id === 'cycle' && w.visible)) await ensureCycleSlice();
+    await reloadIfQueryChanged(previousQuery);
     rebuildDashboard(widgetConfig);
 
     const changed = !sameWidgetConfig(previousConfig, widgetConfig) || previousGlance !== glanceVisible;
     const onUndo = changed
       ? async () => {
+          const queryBeforeUndo = dashboardQuery(widgetConfig);
           try {
             widgetConfig = previousConfig.map((w) => ({ ...w }));
             glanceVisible = previousGlance;
             await api.put('/preferences', { dashboard_widgets: widgetConfig, dashboard_today_glance: glanceVisible });
             savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
             savedGlanceVisible = glanceVisible;
-            rememberLayoutHint(widgetConfig);
+            rememberLayoutHint(widgetConfig, dashboardQuery(widgetConfig));
+            await reloadIfQueryChanged(queryBeforeUndo);
           } catch {
             window.yuvomi?.showToast(t('common.errorGeneric'), 'danger');
           }
@@ -3485,6 +3660,7 @@ export async function render(container, { user }) {
     if (!confirmed) return;
     const previousConfig = savedWidgetConfig.map((w) => ({ ...w }));
     const previousGlance = savedGlanceVisible;
+    const previousQuery = dashboardQuery(savedWidgetConfig);
     try {
       const res = await api.put('/preferences', { dashboard_widgets: null, dashboard_today_glance: null });
       widgetConfig = normalizeDashboardConfig(res.data?.dashboard_widgets ?? DEFAULT_WIDGET_CONFIG);
@@ -3496,13 +3672,17 @@ export async function render(container, { user }) {
     savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
     savedGlanceVisible = glanceVisible;
     followsDefault = true;
-    rememberLayoutHint(widgetConfig);
+    rememberLayoutHint(widgetConfig, dashboardQuery(widgetConfig));
     isCustomizing = false;
     if (widgetConfig.some((w) => w.id === 'cycle' && w.visible)) await ensureCycleSlice();
+    // Die Vorgabe kann andere Filter tragen als mein geloeschter Stand (#814).
+    await reloadIfQueryChanged(previousQuery);
     rebuildDashboard(widgetConfig);
     // Ein Zurücksetzen ist so umkehrbar wie jedes andere Speichern (#821):
     // der vorherige eigene Stand wird zurückgeschrieben, nicht nachgebaut.
     window.yuvomi?.showToast(t('dashboard.customizeResetDone'), 'success', 6000, async () => {
+      // Der Stand, fuer den die aktuell angezeigten Daten geholt wurden.
+      const queryBeforeUndo = dashboardQuery(widgetConfig);
       try {
         widgetConfig = previousConfig.map((w) => ({ ...w }));
         glanceVisible = previousGlance;
@@ -3510,7 +3690,8 @@ export async function render(container, { user }) {
         savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
         savedGlanceVisible = glanceVisible;
         followsDefault = false;
-        rememberLayoutHint(widgetConfig);
+        rememberLayoutHint(widgetConfig, dashboardQuery(widgetConfig));
+        await reloadIfQueryChanged(queryBeforeUndo);
       } catch {
         window.yuvomi?.showToast(t('common.errorGeneric'), 'danger');
       }
@@ -3550,7 +3731,7 @@ export async function render(container, { user }) {
     }
     savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
     savedGlanceVisible = glanceVisible;
-    rememberLayoutHint(widgetConfig);
+    rememberLayoutHint(widgetConfig, dashboardQuery(widgetConfig));
     isCustomizing = false;
     rebuildDashboard(widgetConfig);
     window.yuvomi?.showToast(t('dashboard.customizeSetDefaultDone'), 'success');
@@ -3622,6 +3803,21 @@ export async function render(container, { user }) {
         const size = btn.dataset.widgetSizePreset;
         if (!WIDGET_SIZE_OPTIONS.includes(size)) return;
         widgetConfig = updateWidgetConfig(widgetConfig, btn.dataset.widgetId, { size });
+        rebuildDashboard(widgetConfig);
+      });
+    });
+
+    container.querySelectorAll('[data-widget-options]').forEach((btn) => {
+      btn.addEventListener('click', async () => {
+        const id = btn.dataset.widgetOptions;
+        const current = widgetConfig.find((w) => w.id === id)?.options ?? {};
+        const next = await openWidgetOptions(id, current);
+        if (next === null) return;
+        // Ein leeres Optionsobjekt wird zu „keine Optionen": so bleibt der
+        // gespeicherte Stand identisch mit dem eines Layouts, das den Dialog
+        // nie gesehen hat.
+        widgetConfig = updateWidgetConfig(widgetConfig, id,
+          Object.keys(next).length ? { options: next } : { options: undefined });
         rebuildDashboard(widgetConfig);
       });
     });
@@ -3801,7 +3997,7 @@ export async function render(container, { user }) {
     if (isCustomizing || loadFailed || refreshInFlight) return;
     refreshInFlight = true;
     try {
-      const fresh = await api.get('/dashboard');
+      const fresh = await api.get(dashboardQuery(widgetConfig));
       if (Array.isArray(fresh?.upcomingEvents)) {
         fresh.upcomingEvents = fresh.upcomingEvents.map(localizeBirthdayEvent);
       }

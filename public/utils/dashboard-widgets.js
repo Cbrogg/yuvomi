@@ -181,6 +181,14 @@ export function normalizeDashboardConfig(input) {
         // Gültige (inkl. Legacy-)Größen auf das nächste Preset ziehen; Unbekanntes
         // fällt auf den Domänen-Default. So sieht niemand eine 5. Größen-Option.
         size: WIDGET_SIZE_OPTIONS.includes(w.size) ? nearestPreset(w.size) : defaultWidgetSize(w.id),
+        // OPTIONEN GEHEN DURCH, OHNE DASS DIESE DATEI SIE KENNT (#814). Sie
+        // gehören dem Widget, das sie stellt; hier hätten sie nur eine zweite
+        // Liste ergeben, die bei jedem neuen Widget nachgezogen werden müsste -
+        // dieselbe Entscheidung wie im Backend, das sie als Form prüft und
+        // nicht als Bedeutung. Ein leeres Objekt wird nicht mitgeschleppt.
+        ...(w.options && typeof w.options === 'object' && !Array.isArray(w.options) && Object.keys(w.options).length
+          ? { options: { ...w.options } }
+          : {}),
       }))
     : [];
   // Erst sortieren, dann einsortieren: `order` und Array-Position können in
@@ -232,5 +240,37 @@ export function isUserOrderedConfig(cfg) {
 export function sameWidgetConfig(a, b) {
   if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) return false;
   return a.every((w, i) => w.id === b[i].id && w.visible === b[i].visible
-    && w.size === b[i].size && w.order === b[i].order);
+    && w.size === b[i].size && w.order === b[i].order
+    // Die Optionen zählen mit, sonst bietet der Toast kein „Rückgängig" an,
+    // wenn NUR eine Option umgestellt wurde (#814) - genau der Fall, in dem
+    // die Änderung am wenigsten sichtbar ist. Der Vergleich läuft über die
+    // serialisierte Form: die Werte sind flach und stammen aus derselben
+    // Normalisierung, ihre Schlüsselreihenfolge ist damit stabil.
+    && JSON.stringify(w.options ?? null) === JSON.stringify(b[i].options ?? null));
+}
+
+/**
+ * Die Optionen der Widgets als Pfad der Uebersichts-Abfrage (#814).
+ *
+ * SIE MUESSEN MIT DER ANFRAGE REISEN, nicht im Browser nachfiltern: die Route
+ * deckelt die Liste bei fuenf und zaehlt die Kacheln unbegrenzt. Wer hier
+ * nachtraeglich siebte, stellte zwei Zeilen unter eine Kachel, die sieben sagt
+ * (dieselbe Lehre wie #647).
+ *
+ * WELCHE OPTION WELCHEN PARAMETER ERGIBT, WEISS NUR DER BROWSER. Der Server
+ * speichert `options` als Form und kennt weder Widget noch Bedeutung - eine
+ * Registry dort waere der billige Anfang und danach der Preis jedes weiteren
+ * Widgets. Diese Funktion ist die Uebersetzung, und sie steht hier, weil sie
+ * rein ist und ihre Zusicherung sonst am `__test`-Export der Seite haenge.
+ *
+ * @param {object[]} config normalisierte Widget-Konfiguration
+ * @returns {string} '/dashboard' oder '/dashboard?…'
+ */
+export function dashboardQuery(config) {
+  const params = new URLSearchParams();
+  const optionsOf = (id) => (Array.isArray(config) ? config.find((w) => w.id === id)?.options : null) ?? {};
+  if (optionsOf('calendar').scope === 'mine') params.set('events_scope', 'mine');
+  for (const key of optionsOf('tasks').categories ?? []) params.append('tasks_category', key);
+  const query = params.toString();
+  return query ? `/dashboard?${query}` : '/dashboard';
 }

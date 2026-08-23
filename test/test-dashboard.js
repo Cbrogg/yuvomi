@@ -1588,6 +1588,50 @@ test('Widget-Merge: ein umsortiertes Layout laesst den Neuzugang seinem Vorgaeng
     'ein echt umsortiertes Layout muss umsortiert bleiben - sonst packt dense es um');
 });
 
+test('Widget-Optionen reisen durch die Normalisierung, ohne dass sie jemand kennt (#814)', () => {
+  const gespeichert = widgets.DEFAULT_WIDGET_CONFIG.map((w) => (
+    w.id === 'tasks' ? { ...w, options: { categories: ['household'], erfunden: true } } : { ...w }
+  ));
+  const merged = widgets.normalizeDashboardConfig(gespeichert);
+  const tasks = merged.find((w) => w.id === 'tasks');
+  assert(tasks.options?.categories?.[0] === 'household', 'die Auswahl ist unterwegs verlorengegangen');
+  assert(tasks.options?.erfunden === true,
+    'eine unbekannte Option muss durchgehen - sonst steht hier eine zweite Registry');
+  // Und ein Widget ohne Optionen bekommt keine leere Klammer angehaengt.
+  assert(!('options' in merged.find((w) => w.id === 'weather')),
+    'ein leeres Optionsobjekt waere in jedem Layout dieselbe leere Klammer');
+});
+
+test('sameWidgetConfig sieht eine geaenderte Option (#814)', () => {
+  // Sonst bietet der Toast nach einer reinen Optionsaenderung kein
+  // „Rueckgaengig" an - genau der Fall, in dem die Aenderung am wenigsten
+  // sichtbar ist.
+  const a = widgets.DEFAULT_WIDGET_CONFIG.map((w) => ({ ...w }));
+  const b = a.map((w) => (w.id === 'calendar' ? { ...w, options: { scope: 'mine' } } : { ...w }));
+  assert(widgets.sameWidgetConfig(a, a.map((w) => ({ ...w }))), 'identische Layouts gelten als verschieden');
+  assert(!widgets.sameWidgetConfig(a, b), 'eine geaenderte Option faellt nicht auf');
+});
+
+test('dashboardQuery uebersetzt Optionen in Parameter, die die Route versteht (#814)', () => {
+  const mit = (id, options) => widgets.DEFAULT_WIDGET_CONFIG
+    .map((w) => (w.id === id ? { ...w, options } : { ...w }));
+
+  assert(widgets.dashboardQuery(widgets.DEFAULT_WIDGET_CONFIG) === '/dashboard',
+    'ohne Optionen darf kein Parameter entstehen - sonst zahlt jeder Aufruf eine zweite Abfrage');
+  assert(widgets.dashboardQuery(mit('calendar', { scope: 'mine' })) === '/dashboard?events_scope=mine',
+    `Kalender-Parameter falsch: ${widgets.dashboardQuery(mit('calendar', { scope: 'mine' }))}`);
+  assert(widgets.dashboardQuery(mit('calendar', { scope: 'all' })) === '/dashboard',
+    '„alle" ist die Abwesenheit einer Einschraenkung, kein Parameter');
+  const zwei = widgets.dashboardQuery(mit('tasks', { categories: ['household', 'school'] }));
+  assert(zwei === '/dashboard?tasks_category=household&tasks_category=school',
+    `Kategorien falsch: ${zwei}`);
+  assert(widgets.dashboardQuery(mit('tasks', { categories: [] })) === '/dashboard',
+    'eine leere Auswahl ist keine Einschraenkung');
+  // Ein Layout, in dem es das Widget gar nicht gibt, darf nicht werfen.
+  assert(widgets.dashboardQuery([]) === '/dashboard');
+  assert(widgets.dashboardQuery(null) === '/dashboard');
+});
+
 test('isUserOrderedConfig erkennt eine ECHTE Umsortierung weiterhin', () => {
   // Gegenprobe zur Zusicherung oben: sie darf nicht dadurch halten, dass die
   // Funktion nie mehr `true` sagt. Zwei sichtbare Widgets tauschen.

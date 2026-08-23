@@ -117,7 +117,7 @@ const base = `http://127.0.0.1:${server.address().port}/api/v1`;
 test.after(() => { server.close(); db.close(); });
 
 const moduleTasks = async (query = '') => (await (await fetch(`${base}/tasks${query}`)).json()).data;
-const dashboard = async () => (await fetch(`${base}/dashboard`)).json();
+const dashboard = async (query = '') => (await fetch(`${base}/dashboard${query}`)).json();
 
 // --------------------------------------------------------------------------
 // Vorbedingung. OHNE SIE IST JEDE ZUSICHERUNG UNTEN WERTLOS: wenn die
@@ -220,4 +220,111 @@ test('Der Tagesschlüssel wird gebunden, nicht aus SQLite genommen', () => {
 
   assert.ok(count(NEXT_WEEK) > count(TOMORROW), 'ein späterer Stichtag muss mehr Aufgaben einschließen');
   assert.ok(!taskScopeNeedsToday({ includeFuture: true }), 'ohne Startdatum-Filter ist kein Bind fällig');
+});
+
+// --------------------------------------------------------------------------
+// Widget-Optionen (#814): dieselbe Einschraenkung, dieselbe Antwort.
+//
+// Die Uebersicht kann ihre Aufgaben auf Kategorien einschraenken und ihre
+// Termine auf die eigenen. Beides muss die ABFRAGE einengen und nicht die
+// fertige Liste: `urgentTasks` deckelt bei fuenf, die Kennzahlen zaehlen
+// unbegrenzt - wer nachtraeglich siebt, stellt zwei Zeilen unter eine Kachel,
+// die sieben sagt (dieselbe Lehre wie #647).
+// --------------------------------------------------------------------------
+const GARDEN = 'garden-scope-test';
+const OFFICE = 'office-scope-test';
+db.prepare('INSERT INTO task_categories (key, name, sort_order) VALUES (?, ?, ?), (?, ?, ?)')
+  .run(GARDEN, 'Garten', 90, OFFICE, 'Buero', 91);
+const insertCategorized = db.prepare(`
+  INSERT INTO tasks (title, priority, status, due_date, category, visibility, created_by)
+  VALUES (?, 'high', 'open', ?, ?, 'all', ?)
+`);
+insertCategorized.run('Hecke schneiden', TODAY, GARDEN, ALICE);
+insertCategorized.run('Rasen maehen', TODAY, GARDEN, ALICE);
+insertCategorized.run('Steuer sortieren', TODAY, OFFICE, ALICE);
+
+test('Kategorie-Einschraenkung: Modul und Uebersicht treffen dieselbe Auswahl', async () => {
+  const fromModule = (await moduleTasks(`?category=${GARDEN}`)).map((t) => t.title).sort();
+  const fromDashboard = (await dashboard(`?tasks_category=${GARDEN}`)).urgentTasks.map((t) => t.title).sort();
+  assert.deepEqual(fromDashboard, fromModule);
+  assert.ok(fromModule.includes('Hecke schneiden'));
+  assert.ok(!fromModule.includes('Steuer sortieren'));
+});
+
+test('Mehrere Kategorien verbinden sich ODER, auf beiden Seiten', async () => {
+  // Vorher band die Aufgabenroute das Array von Express in EINEN Platzhalter -
+  // `?category=a&category=b` kam gar nicht erst durch.
+  const fromModule = await moduleTasks(`?category=${GARDEN}&category=${OFFICE}`);
+  const titles = fromModule.map((t) => t.title).sort();
+  assert.deepEqual(titles, ['Hecke schneiden', 'Rasen maehen', 'Steuer sortieren']);
+  const fromDashboard = (await dashboard(`?tasks_category=${GARDEN}&tasks_category=${OFFICE}`))
+    .urgentTasks.map((t) => t.title).sort();
+  assert.deepEqual(fromDashboard, titles);
+});
+
+test('Die Kennzahlen der Uebersicht zaehlen die eingeschraenkte Menge, nicht alles', async () => {
+  const all = await dashboard();
+  const garden = await dashboard(`?tasks_category=${GARDEN}`);
+  assert.equal(garden.openTaskCount, 2, 'die Kachel zaehlt an der Einschraenkung vorbei');
+  assert.ok(all.openTaskCount > garden.openTaskCount,
+    'ohne Einschraenkung muessen es mehr sein - sonst misst der Test nichts');
+  // Die Liste ist die Probe aufs Exempel: Kachel und Zeilen muessen dieselbe
+  // Grundgesamtheit meinen.
+  assert.equal(garden.urgentTasks.length, garden.openTaskCount);
+});
+
+test('Eine leere oder unbekannte Auswahl leert die Uebersicht nicht', async () => {
+  // „Ich habe nichts gewaehlt" heisst alles - ein Filter, der ohne Auswahl
+  // alles wegschneidet, ist ein leeres Dashboard fuer jemanden, der nur den
+  // Dialog geoeffnet hat.
+  const empty = await dashboard('?tasks_category=');
+  const all = await dashboard();
+  assert.equal(empty.openTaskCount, all.openTaskCount);
+  // Eine Kategorie, die es nicht gibt, schraenkt dagegen wirklich ein.
+  assert.equal((await dashboard('?tasks_category=gibtesnicht')).openTaskCount, 0);
+});
+
+// --------------------------------------------------------------------------
+// Termine: „nur meine" heisst zugewiesen an mich - dieselbe Auslegung wie im
+// Kalendermodul (`belongsToMe` in public/pages/calendar.js).
+// --------------------------------------------------------------------------
+const BOB = db.prepare(`
+  INSERT INTO users (username, display_name, password_hash, avatar_color, role)
+  VALUES (?, 'Bob', 'hash', '#34C759', 'member')
+`).run(`bob-${randomUUID()}`).lastInsertRowid;
+
+const insertEvent = db.prepare(`
+  INSERT INTO calendar_events (title, start_datetime, end_datetime, all_day, visibility, created_by)
+  VALUES (?, ?, ?, 0, 'all', ?)
+`);
+const MINE_EVENT = insertEvent.run('Zahnarzt', `${TOMORROW}T09:00`, `${TOMORROW}T10:00`, ALICE).lastInsertRowid;
+const HIS_EVENT = insertEvent.run('Bobs Training', `${TOMORROW}T11:00`, `${TOMORROW}T12:00`, ALICE).lastInsertRowid;
+const NOBODYS_EVENT = insertEvent.run('Muellabfuhr', `${TOMORROW}T13:00`, `${TOMORROW}T14:00`, ALICE).lastInsertRowid;
+db.prepare('INSERT INTO event_assignments (event_id, user_id) VALUES (?, ?)').run(MINE_EVENT, ALICE);
+db.prepare('INSERT INTO event_assignments (event_id, user_id) VALUES (?, ?)').run(HIS_EVENT, BOB);
+
+test('Termine ohne Einschraenkung: alle drei stehen da', async () => {
+  const titles = (await dashboard()).upcomingEvents.map((e) => e.title);
+  for (const title of ['Zahnarzt', 'Bobs Training', 'Muellabfuhr']) {
+    assert.ok(titles.includes(title), `${title} fehlt - der Test misst sonst nichts`);
+  }
+});
+
+test('events_scope=mine zeigt nur, was mir zugewiesen ist', async () => {
+  const titles = (await dashboard('?events_scope=mine')).upcomingEvents.map((e) => e.title);
+  assert.deepEqual(titles, ['Zahnarzt']);
+  // Unzugewiesen zaehlt NICHT mit, so wie im Kalendermodul auch nicht. Zwei
+  // Auslegungen desselben Satzes an zwei Orten waeren schlimmer als der eine
+  // Fall, ueber den man streiten kann.
+  assert.ok(!titles.includes('Muellabfuhr'));
+});
+
+test('Die Termin-Einschraenkung wirkt vor der Deckelung', async () => {
+  // Sechs fremde Termine VOR meinem: gefiltert wuerde nachtraeglich innerhalb
+  // der fuenf, die die Route ohnehin liefert, bliebe von „nur meine" nichts.
+  for (let i = 0; i < 6; i++) {
+    insertEvent.run(`Fremdtermin ${i}`, `${TOMORROW}T0${i}:30`, `${TOMORROW}T0${i}:45`, ALICE);
+  }
+  const titles = (await dashboard('?events_scope=mine')).upcomingEvents.map((e) => e.title);
+  assert.deepEqual(titles, ['Zahnarzt'], 'der eigene Termin ist hinter der Deckelung verschwunden');
 });
