@@ -106,7 +106,7 @@ Fotos laufen, wenn der Bildschirm still steht. Jedes Modul im Detail steht in de
 - **Image** - `ghcr.io/ulsklyc/`<wbr>`yuvomi:latest`, rund 500 MB.
 - **Braucht** - 256 MB RAM und einen Port, standardmäßig 3000.
 - **Schreibt** - vier Volumes, die dir gehören: Daten, Backups, Module, Dokumente.
-- **Nach außen** - eine Update-Abfrage an die GitHub-Releases-API, sonst nichts. Wetter, Kalender-Sync und Cloud-Backup bleiben aus, bis du Zugangsdaten einträgst.
+- **Nach außen** - eine Update-Abfrage an die GitHub-Releases-API, sonst nichts. Blockier sie, und es geht nichts verloren: der Änderungsverlauf liest dann den Stand, der mit deiner Installation ausgeliefert wurde, nur der Hinweis auf eine neuere Version bleibt aus. Wetter, Kalender-Sync und Cloud-Backup bleiben aus, bis du Zugangsdaten einträgst.
 - **Deine Daten** - eine SQLite-Datei unter `/data/yuvomi.db`. Sie zu kopieren ist der ganze Export, solange der Dokumentenspeicher nicht auf einem Ordner, WebDAV oder Drive liegt; diese Dateien brauchen dann eine eigene Sicherung.
 
 ### Docker oder Podman

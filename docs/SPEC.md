@@ -1454,16 +1454,28 @@ Allowlist for `visibility = 'restricted'` documents — only listed users can se
 | PRIMARY KEY | | (document_id, user_id) |
 
 ### Family Document Folders
-Custom folders for organizing family documents (migration v37). A "Hausreinigung" folder is auto-created when a housekeeping worker is first added.
+Custom folders for organizing family documents (migration v37). The housekeeping folder is auto-created when a housekeeping worker is first added.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
-| name | TEXT | NOT NULL UNIQUE |
+| name | TEXT | NOT NULL UNIQUE (display label only since v157) |
+| module_key | TEXT | nullable, UNIQUE where set (migration v157) - `budget`, `tasks`, `splitExpenses`, `inventory`, `housekeeping`, `calendarItems` |
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
 | created_at | TEXT | ISO 8601 |
 | updated_at | TEXT | ISO 8601 |
 
 `family_documents.folder_id` references this table (ON DELETE SET NULL, nullable).
+
+**`module_key` carries the identity of a module's system folder, `name` is a label (migration v157).**
+Until then the folder was looked up by its translated name, which the client sent in its own
+language: two members with different language settings created two folders holding half the receipts
+each, every correction to a translation split the folder again (migration v146 had to clean that up
+once), and a folder someone renamed came back under its old name with the next upload. The migration
+binds existing folders to their key through written-out name lists per language; where a household
+holds the same folder in two languages the **older** one takes the key and nothing is merged.
+Resolution lives in `server/services/document-folders.js` - it previously existed as two copies, in
+the documents route and in the calendar helper. Folders without a `module_key` are the ones people
+created themselves and keep matching by name.
 
 ### DMS Accounts
 Connections to an external document management system for the Documents module (migration v50, extended v52). Admin-managed in Settings. Supported providers: `paperless` (Paperless-ngx) and `papra` (Papra).
@@ -2534,7 +2546,7 @@ Module for managing household staff workflows. Navigation uses violet accent the
 - **Recurring chores (`housekeeping_decay_tasks`):** define chores by name, area, and frequency in days; urgency level computed from elapsed time since `last_completed`; visual decay indicator; chores can be edited, deleted, or undone (clear `last_completed`) directly from the chore list
 - **Supply requests:** request supplies with optional quantity; supplies can be linked directly to shopping lists
 - **Dashboard integration:** housekeeping widgets show today's open sessions, upcoming chores, and a recent-visits strip with inline edit access
-- **Document folder:** a "Hausreinigung" folder in Documents is auto-created on first worker creation; receipts can be linked to individual work sessions
+- **Document folder:** a folder for the module is auto-created in Documents on first worker creation and carries the `housekeeping` key (migration v157), so it is the same folder regardless of the uploader's language; receipts can be linked to individual work sessions
 - **API:** `GET /api/v1/housekeeping/visits/:id` returns a single work session with worker name, task list, and linked document
 
 ### Inventory (`/inventory`)

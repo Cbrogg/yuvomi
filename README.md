@@ -105,7 +105,7 @@ drop-in module is covered in the [module guide](MODULES.md).
 - **Image** - `ghcr.io/ulsklyc/`<wbr>`yuvomi:latest`, about 500 MB.
 - **Needs** - 256 MB RAM and one port, 3000 by default.
 - **Writes** - four volumes you own: data, backups, modules, documents.
-- **Outbound** - one update check against the GitHub releases API, nothing else. Weather, calendar sync and cloud backup stay off until you fill in credentials.
+- **Outbound** - one update check against the GitHub releases API, nothing else. Block it and nothing breaks: the changelog then reads the history that ships with your installation, only the hint about a newer version stays away. Weather, calendar sync and cloud backup stay off until you fill in credentials.
 - **Your data** - one SQLite file at `/data/yuvomi.db`. Copying it is the whole export, unless you moved document storage to a folder, WebDAV or Drive; those files then need their own backup.
 
 ### Docker or Podman
