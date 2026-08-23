@@ -541,8 +541,8 @@
         "categoryDeleteConfirmDetail": "Hindi nawawala ang mga item sa kategoryang ito, lilipat sila sa unang natitirang kategorya. Wala na ang talaga pagkatapos, at hindi maaaring tanggalin ang huling kategorya.",
         "toPantry": "Sa paminggalan",
         "toPantryTitle": "Ilipat sa paminggalan",
-        "toPantryDescription": "{{count}} na biniling item ang idaragdag sa despensa. Maaari mo pang ayusin dito ang dami at yunit.",
-        "toPantryDescription_one": "{{count}} na biniling item ang idaragdag sa despensa. Maaari mo pang ayusin dito ang dami at yunit.",
+        "toPantryDescription": "{{count}} na biniling item ang idaragdag sa paminggalan. Maaari mo pang ayusin dito ang dami at yunit.",
+        "toPantryDescription_one": "{{count}} na biniling item ang idaragdag sa paminggalan. Maaari mo pang ayusin dito ang dami at yunit.",
         "toPantryConfirm": "Idagdag",
         "toPantryClearList": "Alisin ang mga item sa listahan ng pamimili",
         "toPantryDoneAt": "{{count}} mga item ang naidagdag sa {{location}}.",
@@ -1732,7 +1732,7 @@
             "family": "Pamilya",
             "dashboard": "Pangkalahatang-tanaw",
             "search": "Paghahanap",
-            "inventory": "Inventory"
+            "inventory": "Imbentaryo"
         },
         "ics": {
             "title": "Mga ICS Subscription",
@@ -2637,14 +2637,14 @@
     "emptyHint": {
         "tasks": "I-tap ang + para gawin ang iyong unang gawain. I-swipe pakaliwa ang isang card para tapusin, pakanan para tingnan.",
         "calendar": "Ikonekta ang Google Calendar sa Mga Setting → Mga Integrasyon para sa awtomatikong pag-sync.",
-        "shopping": "Pagkatapos mamili, lilipat sa despensa ang mga na-tsek na item.",
+        "shopping": "Pagkatapos mamili, lilipat sa paminggalan ang mga na-tsek na item.",
         "notes": "I-tap ang + para sa bagong tala. Nahahanap ang mga tala sa buong teksto.",
         "contacts": "Idagdag ang mahahalagang kontak - doktor, paaralan, emergency - para mabilis na maabot.",
         "budget": "Gumawa ng mga kategorya at subaybayan ang kita at gastos.",
         "meals": "Kapag nakatakda na ang plano, pupunuin nito ang iyong listahan ng pamimili sa isang hakbang.",
         "birthdays": "Magdagdag ng mga kaarawan - makakatanggap ka ng paalala nang maaga.",
         "recipes": "Diretso sa plano ng pagkain o sa listahan ng pamimili ang isang resipe.",
-        "pantry": "Tip: ang mga item na na-tsek mo habang namimili ay maaaring ilipat diretso sa despensa."
+        "pantry": "Tip: ang mga item na na-tsek mo habang namimili ay maaaring ilipat diretso sa paminggalan."
     },
     "shortcuts": {
         "search": "Buksan ang paghahanap",
@@ -2658,7 +2658,7 @@
         "goNotes": "Mga Tala",
         "goKitchen": "Kusina",
         "goHealth": "Kalusugan",
-        "goInventory": "Inventory"
+        "goInventory": "Imbentaryo"
     },
     "documents": {
         "title": "Mga Dokumento",
@@ -2802,7 +2802,7 @@
         "storageGoogleDrive": "Google Drive",
         "budgetFolder": "Mga Resibo",
         "splitExpensesFolder": "Mga hinating gastos",
-        "inventoryFolder": "Inventory",
+        "inventoryFolder": "Imbentaryo",
         "tasksFolder": "Mga gawain"
     },
     "userMultiSelect": {
@@ -4054,7 +4054,7 @@
         "resultCount_few": "{{count}} item ang natagpuan.",
         "toShoppingSkipped_few": "{{count}} ang nandoon na.",
         "toShoppingDone_few": "{{count}} item ang naidagdag sa {{list}}.",
-        "searchPlaceholder": "Maghanap sa despensa",
+        "searchPlaceholder": "Maghanap sa paminggalan",
         "searchNoResults": "Walang natagpuang item.",
         "filterNoResults": "Walang item sa pagpiling ito.",
         "noResultsTitle": "Walang natagpuan",
@@ -4062,10 +4062,10 @@
         "resetFilters": "I-reset ang paghahanap at mga filter",
         "resultCount": "{{count}} item ang natagpuan.",
         "resultCount_one": "{{count}} item ang natagpuan.",
-        "emptyTitle": "Wala pa ring laman ang iyong despensa",
+        "emptyTitle": "Wala pa ring laman ang iyong paminggalan",
         "emptyDescription": "Itala kung ano ang mayroon ka sa bahay - kasama ang dami, lugar ng imbakan at petsa ng expiry.",
         "emptyAction": "Magdagdag ng item",
-        "loadErrorTitle": "Hindi ma-load ang despensa",
+        "loadErrorTitle": "Hindi ma-load ang paminggalan",
         "addItem": "Magdagdag ng item",
         "namePlaceholder": "hal. harina",
         "quantityLabel": "Dami",
@@ -4127,7 +4127,7 @@
         }
     },
     "inventory": {
-        "title": "Inventory",
+        "title": "Imbentaryo",
         "searchPlaceholder": "Search inventory",
         "addItem": "Add item",
         "namePlaceholder": "e.g. MacBook Air",
