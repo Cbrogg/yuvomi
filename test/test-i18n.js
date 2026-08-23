@@ -208,6 +208,11 @@ const FOLDER_NAMED_LIKE_MODULE = [
   // Der Inventar-Ordner kam dazu, als PR #837 `nav.inventory` ins Filipino
   // uebersetzte und die drei uebrigen Stellen stehen liess.
   ['inventory.title', 'documents.inventoryFolder'],
+  // Die Haushaltshilfe kam als dritte dazu: ihr Ordner hiess in zwoelf von
+  // vierundzwanzig Sprachen anders als das Modul - "Hausreinigung" gegen
+  // "Haushaltshilfe", "ハウスキーピング" gegen "家事" - und zwei davon,
+  // "HouseKeeping" (en) und "HázTartás" (hu), waren schlicht vertippt.
+  ['housekeeping.title', 'documents.housekeepingFolder'],
 ];
 
 test('der Beleg-Ordner heisst wie das Modul, dessen Belege er traegt', () => {

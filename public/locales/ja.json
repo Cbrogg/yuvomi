@@ -2726,7 +2726,7 @@
         "deleteFolderConfirmDetail": "すべての文書の一覧には引き続き表示され、フォルダなしの絞り込みからも辿れます。共有設定とカテゴリは変わりません。",
         "folderRenamedToast": "フォルダー名を変更しました。",
         "folderDeletedToast": "フォルダーを削除しました。",
-        "housekeepingFolder": "ハウスキーピング",
+        "housekeepingFolder": "家事",
         "calendarItemsFolder": "カレンダー項目",
         "folderBrowserTitle": "フォルダー",
         "emptyPrimary": "書類を追加",

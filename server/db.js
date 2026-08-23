@@ -5995,6 +5995,29 @@ const MIGRATIONS = [
           "Inventar", // de
         ]],
         ['housekeeping', [
+          // Der Ordner hiess in ZWOELF von vierundzwanzig Sprachen anders als
+          // das Modul, dessen Belege er traegt. Seit diesem Release traegt er
+          // ueberall den Modulnamen - beide Schreibweisen stehen deshalb hier,
+          // die alte fuer Bestandsordner und die neue fuer den Fall, dass
+          // jemand seinen Ordner schon von Hand so genannt hat.
+          //
+          // Eine Namensliste NACHTRAEGLICH zu ergaenzen ist erlaubt, obwohl
+          // Migrationen sonst unantastbar sind: bei einer Bestandsinstallation
+          // ist v157 laengst gelaufen und die Liste wirkungslos, bei einer
+          // neuen ist die Tabelle leer. Was sich aendern darf, ist also nur,
+          // wen eine noch nie migrierte Datenbank findet - und da hilft jeder
+          // zusaetzliche Name.
+          "التدبير المنزلي", // ar, seit dem Angleich an den Modulnamen
+          "Domácí práce", // cs, seit dem Angleich an den Modulnamen
+          "Haushaltshilfe", // de, seit dem Angleich an den Modulnamen
+          "Νοικοκυριό", // el, seit dem Angleich an den Modulnamen
+          "خدمتکار خانه", // fa, seit dem Angleich an den Modulnamen
+          "गृहकार्य", // hi, seit dem Angleich an den Modulnamen
+          "Asisten Rumah Tangga", // id, seit dem Angleich an den Modulnamen
+          "家事", // ja, seit dem Angleich an den Modulnamen
+          "가사 도우미", // ko, seit dem Angleich an den Modulnamen
+          "Ev işleri", // tr, seit dem Angleich an den Modulnamen
+          "家务", // zh, seit dem Angleich an den Modulnamen
           "التنظيف المنزلي", // ar
           "Úklid domácnosti", // cs
           "Hausreinigung", // de

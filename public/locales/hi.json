@@ -2726,7 +2726,7 @@
         "deleteFolderConfirmDetail": "वे सभी दस्तावेज़ों वाले दृश्य में दिखते रहते हैं और बिना फ़ोल्डर वाले दस्तावेज़ों के फ़िल्टर से भी मिलते हैं। साझाकरण और श्रेणियाँ नहीं बदलतीं।",
         "folderRenamedToast": "फ़ोल्डर का नाम बदला गया।",
         "folderDeletedToast": "फ़ोल्डर हटाया गया।",
-        "housekeepingFolder": "हाउसकीपिंग",
+        "housekeepingFolder": "गृहकार्य",
         "calendarItemsFolder": "कैलेंडर आइटम",
         "folderBrowserTitle": "फ़ोल्डर",
         "emptyPrimary": "दस्तावेज़ जोड़ें",

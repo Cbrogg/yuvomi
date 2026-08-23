@@ -2726,7 +2726,7 @@
         "deleteFolderConfirmDetail": "تظل ظاهرة في عرض كل المستندات، ويمكن الوصول إليها أيضًا عبر مرشِّح المستندات بلا مجلد. ولا تتغير المشاركات ولا الفئات.",
         "folderRenamedToast": "تمت إعادة تسمية المجلد.",
         "folderDeletedToast": "تم حذف المجلد.",
-        "housekeepingFolder": "التنظيف المنزلي",
+        "housekeepingFolder": "التدبير المنزلي",
         "calendarItemsFolder": "عناصر التقويم",
         "folderBrowserTitle": "المجلدات",
         "emptyPrimary": "إضافة مستند",

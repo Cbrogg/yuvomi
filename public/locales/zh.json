@@ -2726,7 +2726,7 @@
         "deleteFolderConfirmDetail": "它们在全部文档视图中依然可见，也能通过“无文件夹”筛选找到。共享设置和分类都不会改变。",
         "folderRenamedToast": "已重命名文件夹。",
         "folderDeletedToast": "已删除文件夹。",
-        "housekeepingFolder": "家政清洁",
+        "housekeepingFolder": "家务",
         "calendarItemsFolder": "日历项目",
         "folderBrowserTitle": "文件夹",
         "emptyPrimary": "添加文档",
