@@ -258,3 +258,51 @@ test('jeder Schluessel der Liste hat eine Beschriftung in der Referenz-Locale', 
   const ohne = MODULE_FOLDER_KEYS.filter((key) => !de.documents?.[`${key}Folder`]);
   assert.deepEqual(ohne, [], `Schluessel ohne documents.<key>Folder: ${ohne.join(', ')}`);
 });
+
+// --------------------------------------------------------
+// Aufrufer in der Oberfläche
+// --------------------------------------------------------
+
+test('wer einen Modul-Ordner anspricht, nennt seinen Schluessel', () => {
+  // Der Rueckfall auf den Namen bleibt absichtlich erlaubt (aeltere Clients,
+  // selbst angelegte Ordner) - und genau deshalb faellt es nicht auf, wenn
+  // eine NEUE Stelle ihn benutzt. Sie funktioniert ja, bis jemand die Sprache
+  // wechselt oder die Uebersetzung korrigiert wird. Der Guard sucht deshalb
+  // nach dem Muster selbst, statt eine Liste bekannter Aufrufer zu pflegen.
+  const roots = ['pages', 'components'];
+  const treffer = [];
+
+  for (const root of roots) {
+    const dir = new URL(`../public/${root}/`, import.meta.url);
+    for (const file of readdirSync(dir).filter((f) => f.endsWith('.js'))) {
+      const lines = readFileSync(new URL(file, dir), 'utf8').split('\n');
+      lines.forEach((line, i) => {
+        const match = line.match(/t\('documents\.(\w+)Folder'\)/);
+        // Nur die Systemordner der Module - `documents.noFolder`,
+        // `renameFolder` und Verwandte sind Beschriftungen der Ordner-Leiste
+        // und meinen gar keinen bestimmten Ordner. Die Abgrenzung kommt aus
+        // der Liste, die der Server ohnehin fuehrt, statt aus einer zweiten
+        // hier.
+        if (!match || !MODULE_FOLDER_KEYS.includes(match[1])) return;
+        // Der Schluessel steht im selben Objektliteral, also unmittelbar
+        // daneben - drei Zeilen Fenster decken auch eine umbrochene Zeile ab.
+        const umfeld = lines.slice(Math.max(0, i - 3), i + 4).join('\n');
+        const hatKey = /folder_?[Kk]ey\s*:/.test(umfeld);
+        treffer.push({ ort: `public/${root}/${file}:${i + 1}`, key: match[1], hatKey });
+      });
+    }
+  }
+
+  // Reichweiten-Nachweis: ohne ihn meldet ein Guard, dessen Muster nicht mehr
+  // greift, fehlerfrei "alles in Ordnung" ueber null geprueften Stellen.
+  assert.ok(treffer.length >= 6,
+    `zu wenige Aufrufer gefunden (${treffer.length}) - greift das Muster noch?`);
+
+  // Die Kalender-Anhaenge sind die eine Ausnahme: ihr Schluessel steht fest im
+  // Server (`ensureDocumentFolder` in routes/calendar/helpers.js), weil dort
+  // nur EIN Ordner in Frage kommt. Der Client schickt nur die Beschriftung.
+  const ohneKey = treffer.filter((t) => !t.hatKey && t.key !== 'calendarItems');
+  assert.deepEqual(ohneKey.map((t) => `${t.ort} (${t.key})`), [],
+    'Diese Stellen legen ueber den uebersetzten Namen ab und ergeben in einem\n'
+    + 'mehrsprachigen Haushalt einen zweiten Ordner - sie brauchen folderKey/folder_key:');
+});
