@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · مُعدّل",
         "commentUnknownAuthor": "غير معروف",
         "commentDeletedToast": "تم حذف التعليق.",
-        "documentsLinkFailed": "تم حفظ المهمة، لكن تعذّر ربط المستندات."
+        "documentsLinkFailed": "تم حفظ المهمة، لكن تعذّر ربط المستندات.",
+        "lockedToggle": "قفل التحرير",
+        "lockedHint": "يمكنك أنت والمسؤولون فقط تعديل هذه المهمة أو أرشفتها أو حذفها. ويظل بإمكان الآخرين وضع علامة منجز عليها والتعليق عليها وإسناد أنفسهم إليها.",
+        "lockedBadge": "مقفلة",
+        "lockedLabel": "التحرير",
+        "lockedDetail": "المنشئ والمسؤولون فقط",
+        "tagsSkippedLocked": "تم تخطي {{count}} مهام مقفلة.",
+        "tagsSkippedLocked_one": "تم تخطي مهمة {{count}} مقفلة."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وجبات",

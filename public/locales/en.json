@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · edited",
         "commentUnknownAuthor": "Unknown",
         "commentDeletedToast": "Comment deleted.",
-        "documentsLinkFailed": "The task was saved, but the documents could not be linked."
+        "documentsLinkFailed": "The task was saved, but the documents could not be linked.",
+        "lockedToggle": "Lock editing",
+        "lockedHint": "Only you and administrators can change, archive or delete this task. Everyone else can still tick it off, comment on it and assign themselves.",
+        "lockedBadge": "Locked",
+        "lockedLabel": "Editing",
+        "lockedDetail": "Creator and administrators only",
+        "tagsSkippedLocked": "{{count}} locked tasks skipped.",
+        "tagsSkippedLocked_one": "{{count}} locked task skipped."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} meals",

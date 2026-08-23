@@ -278,6 +278,72 @@ function mayAccessTask(task, me) {
   return false;
 }
 
+/**
+ * Die Aufgabe, deren Sperre hier gilt - sie selbst, ihre Elternaufgabe, oder
+ * null, wenn nichts gesperrt ist (#830).
+ *
+ * Eine Unteraufgabe erbt die Sperre ihrer Elternaufgabe. Sie ist ein
+ * Checklistenpunkt und damit Teil derselben Anweisung: waeren die Punkte frei
+ * aenderbar, waere die Sperre der Elternaufgabe wertlos, weil sich "vor dem
+ * Abendessen" einfach eine Ebene tiefer umschreiben liesse.
+ */
+function lockingTask(task) {
+  if (!task) return null;
+  if (task.locked) return task;
+  if (!task.parent_task_id) return null;
+  const parent = db.get().prepare('SELECT id, locked, created_by FROM tasks WHERE id = ?')
+    .get(task.parent_task_id);
+  return parent && parent.locked ? parent : null;
+}
+
+/** Admin - hier lokal, weil die Regel in der Route wohnt und nicht in einer Middleware. */
+function isAdmin(req) { return req.authRole === 'admin' || req.session?.role === 'admin'; }
+
+/**
+ * Darf diese Person die DEFINITION der Aufgabe aendern oder sie loeschen? (#830)
+ *
+ * Gesperrt heisst nicht unsichtbar und nicht unantastbar: Ansehen, Abhaken,
+ * Kommentieren, die eigene Erinnerung und die eigene Zuweisung bleiben fuer
+ * alle offen. Zu ist nur, was die Aufgabe zu dem macht, was sie ist.
+ *
+ * Berechtigt sind Ersteller:in und Admins - bewusst NICHT abgeleitet aus
+ * `family_role`: die Rolle sagt, wer jemand ist, nicht was er darf, und
+ * "Elternteil" ist dort kein einzelner Wert. Siehe Migration v155.
+ */
+function mayEditTaskDefinition(task, req) {
+  const lock = lockingTask(task);
+  if (!lock) return true;
+  if (isAdmin(req)) return true;
+  return lock.created_by === (req.authUserId || req.session?.userId);
+}
+
+const LOCKED_ERROR = { error: 'This task is locked; only its creator and administrators can change it.', code: 403 };
+
+/**
+ * Aufgaben-IDs, deren Definition diese Person anfassen darf - fuer die
+ * Sammeloperationen, die nicht eine Aufgabe meinen, sondern viele (#830).
+ *
+ * Eine gesperrte Aufgabe wird dort UEBERSPRUNGEN statt den ganzen Aufruf
+ * abzuweisen: ein Tag ueber 40 Aufgaben umzubenennen, von denen eine gesperrt
+ * ist, soll die anderen 39 nicht blockieren. Was wegfiel, steht in der Antwort.
+ */
+function editableTaskIds(ids, req) {
+  if (!ids.length) return ids;
+  const rows = db.get().prepare(
+    `SELECT id, locked, created_by, parent_task_id FROM tasks WHERE id IN (${ids.map(() => '?').join(',')})`
+  ).all(...ids);
+  const byId = new Map(rows.map((r) => [r.id, r]));
+  return ids.filter((id) => {
+    const row = byId.get(id);
+    return row ? mayEditTaskDefinition(row, req) : true;
+  });
+}
+
+/** Wertevergleich fuer den Definitionsabgleich: NULL, '' und 0 bleiben unterscheidbar. */
+function sameFieldValue(a, b) {
+  return String(a ?? '') === String(b ?? '');
+}
+
 function loadSubtasks(taskId, me) {
   // Eine Unteraufgabe trägt eine eigene Sichtbarkeit (POST nimmt das Feld
   // entgegen). Sie hing hier noch nie an der Regel: unter einer geteilten
@@ -463,10 +529,16 @@ router.post('/tags/apply', (req, res) => {
       return res.status(400).json({ error: 'Nothing to add or remove.', code: 400 });
 
     const me = req.authUserId || req.session.userId;
+    // Gesperrte Aufgaben fallen aus der Auswahl (#830), statt den ganzen Aufruf
+    // abzuweisen: 40 Aufgaben zu taggen, von denen eine gesperrt ist, soll die
+    // anderen 39 nicht kosten. Was wegfiel, steht als `skipped` in der Antwort -
+    // eine stille Teilausfuehrung waere schlimmer als ein Fehler.
+    const targets = visibleTaskIds(ids, me);
+    const allowed = editableTaskIds(targets, req);
     const changed = db.get().transaction(() =>
-      applyTagChanges(db.get(), { taskIds: visibleTaskIds(ids, me), add, remove }))();
+      applyTagChanges(db.get(), { taskIds: allowed, add, remove }))();
 
-    res.json({ data: { updated: changed.length, tags: allTags(db.get(), me) } });
+    res.json({ data: { updated: changed.length, skipped: targets.length - allowed.length, tags: allTags(db.get(), me) } });
     pushTagChanges(changed, 'Tag-Vergabe');
   } catch (err) {
     log.error('POST /tags/apply error:', err);
@@ -491,10 +563,19 @@ router.put('/tags/:tag', (req, res) => {
     if (!taskIdsWithTag(db.get(), req.params.tag, me).length)
       return res.status(404).json({ error: 'Tag not found.', code: 404 });
 
+    // Umbenennen fasst jede Aufgabe an, die den Tag traegt - auch die
+    // gesperrten. Die bleiben aussen vor (#830); der alte Name haelt sich dort
+    // also, und das ist die ehrliche Auskunft: geaendert wurde, was geaendert
+    // werden durfte.
+    const affected = [...new Set([
+      ...taskIdsWithTag(db.get(), req.params.tag, me),
+      ...taskIdsWithTag(db.get(), to, me),
+    ])];
+    const allowed = editableTaskIds(affected, req);
     const changed = db.get().transaction(() =>
-      renameTag(db.get(), { from: req.params.tag, to, me }))();
+      renameTag(db.get(), { from: req.params.tag, to, me, ids: allowed }))();
 
-    res.json({ data: { updated: changed.length, tag: to, tags: allTags(db.get(), me) } });
+    res.json({ data: { updated: changed.length, skipped: affected.length - allowed.length, tag: to, tags: allTags(db.get(), me) } });
     pushTagChanges(changed, 'Tag-Umbenennung');
   } catch (err) {
     log.error('PUT /tags/:tag error:', err);
@@ -509,13 +590,16 @@ router.put('/tags/:tag', (req, res) => {
 router.delete('/tags/:tag', (req, res) => {
   try {
     const me = req.authUserId || req.session.userId;
-    if (!taskIdsWithTag(db.get(), req.params.tag, me).length)
+    const affected = taskIdsWithTag(db.get(), req.params.tag, me);
+    if (!affected.length)
       return res.status(404).json({ error: 'Tag not found.', code: 404 });
 
+    // Wie beim Umbenennen: an gesperrten Aufgaben bleibt der Tag haengen (#830).
+    const allowed = editableTaskIds(affected, req);
     const changed = db.get().transaction(() =>
-      removeTagEverywhere(db.get(), { tag: req.params.tag, me }))();
+      removeTagEverywhere(db.get(), { tag: req.params.tag, me, ids: allowed }))();
 
-    res.json({ data: { updated: changed.length, tags: allTags(db.get(), me) } });
+    res.json({ data: { updated: changed.length, skipped: affected.length - allowed.length, tags: allTags(db.get(), me) } });
     pushTagChanges(changed, 'Tag-Löschung');
   } catch (err) {
     log.error('DELETE /tags/:tag error:', err);
@@ -831,11 +915,14 @@ router.post('/', (req, res) => {
 
     // Tiefe begrenzen: Subtasks dürfen keine eigenen Subtasks haben (max. 2 Ebenen)
     if (parent_task_id) {
-      const parent = db.get().prepare('SELECT parent_task_id FROM tasks WHERE id = ?')
+      const parent = db.get().prepare('SELECT id, parent_task_id, locked, created_by FROM tasks WHERE id = ?')
         .get(parent_task_id);
       if (!parent) return res.status(404).json({ error: 'Parent task not found.', code: 404 });
       if (parent.parent_task_id)
         return res.status(400).json({ error: 'Maximal 2 Verschachtelungsebenen erlaubt.', code: 400 });
+      // Einen Punkt an eine gesperrte Checkliste zu haengen aendert, was die
+      // Aufgabe verlangt - der offensichtlichste Weg um die Sperre herum (#830).
+      if (!mayEditTaskDefinition(parent, req)) return res.status(403).json(LOCKED_ERROR);
     }
 
     const taskId = db.get().transaction(() => {
@@ -843,13 +930,13 @@ router.post('/', (req, res) => {
         INSERT INTO tasks
           (title, description, category, priority, start_date, due_date, due_time,
            assigned_to, created_by, parent_task_id, is_recurring, recurrence_rule,
-           recurrence_from_completion, points, visibility, countdown)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           recurrence_from_completion, points, visibility, countdown, locked)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
       `).run(
         title.trim(), description, category, priority,
         start_date, due_date, due_time, firstUid, req.authUserId || req.session.userId, parent_task_id,
         is_recurring ? 1 : 0, recurrence_rule, recurrence_from_completion ? 1 : 0, points, visibility,
-        countdown ? 1 : 0
+        countdown ? 1 : 0, req.body.locked ? 1 : 0
       );
       setAssignments(db.get(), result.lastInsertRowid, userIds);
       if (req.body.tags !== undefined) setTags(db.get(), result.lastInsertRowid, req.body.tags);
@@ -926,11 +1013,16 @@ router.put('/:id', (req, res) => {
       ? task.status
       : req.body.status;
 
+    const assignedBefore = db.get().prepare('SELECT user_id FROM task_assignments WHERE task_id = ?')
+      .all(task.id).map((r) => r.user_id);
     const userIds  = req.body.assigned_to !== undefined
       ? parseAssignedTo(req.body.assigned_to)
-      : db.get().prepare('SELECT user_id FROM task_assignments WHERE task_id = ?')
-          .all(task.id).map((r) => r.user_id);
+      : assignedBefore;
     const firstUid = userIds[0] ?? null;
+
+    // Sperre der Aufgabe (#830). Nicht mitgeschickt heisst "nicht angefasst".
+    const lockedRequested = req.body.locked !== undefined ? (req.body.locked ? 1 : 0) : null;
+    const locked = lockedRequested ?? task.locked;
 
     // Vor dem Update festhalten: die Rückrichtung vergleicht damit, ob sich die
     // Tags wirklich geändert haben (#586).
@@ -949,6 +1041,51 @@ router.put('/:id', (req, res) => {
       syncTarget = resolved.target;
     }
 
+    // GESPERRTE AUFGABE (#830): die Definition ist zu, die Interaktion nicht.
+    //
+    // Verglichen wird das AUFGELOESTE Ergebnis gegen den Bestand, nicht die
+    // blosse Anwesenheit eines Feldes im Rumpf. Der Dialog schickt die ganze
+    // Aufgabe zurueck, und "Feld mitgeschickt = Aenderungsversuch" wuerde
+    // deshalb genau das abweisen, was offen bleiben soll: das Abhaken aus dem
+    // Bearbeiten-Formular schickt Titel und Termin unveraendert mit.
+    if (!mayEditTaskDefinition(task, req)) {
+      const wanted = {
+        title: title.trim(), description, category, priority,
+        start_date, due_date, due_time,
+        is_recurring: is_recurring ? 1 : 0, recurrence_rule,
+        recurrence_from_completion: recurrence_from_completion ? 1 : 0,
+        countdown: countdown ? 1 : 0, points, visibility,
+      };
+      let touchesDefinition = Object.keys(wanted).some((k) => !sameFieldValue(wanted[k], task[k]));
+
+      if (req.body.tags !== undefined
+          && tagsKey(normalizeTags(req.body.tags)) !== tagsKey(tagsBefore)) touchesDefinition = true;
+
+      if (syncTarget !== undefined
+          && (!sameFieldValue(syncTarget?.accountId ?? null, task.target_caldav_account_id)
+           || !sameFieldValue(syncTarget?.listUrl   ?? null, task.target_caldav_list_url))) touchesDefinition = true;
+
+      // Ablegen nimmt die Aufgabe allen aus der Ansicht - das ist eine
+      // Aenderung an ihr, kein Umgang mit ihr.
+      if (archiveRequested && !task.archived_at) touchesDefinition = true;
+
+      // Die Sperre selbst zu loesen ist der erste Zug, den jemand versuchen
+      // wuerde, der sie umgehen will.
+      if (lockedRequested !== null && lockedRequested !== task.locked) touchesDefinition = true;
+
+      // Die EIGENE Zuweisung ist Interaktion - eine offene Aufgabe an sich zu
+      // nehmen oder wieder abzugeben. Die FREMDE ist Definition: sonst schoebe
+      // ein Kind die Aufgabe einfach seinem Geschwister zu, und die Sperre
+      // haette den Fall nicht gehalten, um den es hier geht.
+      const me = req.authUserId || req.session.userId;
+      const othersBefore = assignedBefore.filter((id) => id !== me);
+      const othersAfter  = userIds.filter((id) => id !== me);
+      if (othersBefore.length !== othersAfter.length
+          || othersBefore.some((id) => !othersAfter.includes(id))) touchesDefinition = true;
+
+      if (touchesDefinition) return res.status(403).json(LOCKED_ERROR);
+    }
+
     // Wie in PATCH umfasst die Transaktion auch die Serien-Bewegung: eine
     // gespeicherte Aufgabe ohne die Folgeinstanz, die zu ihr gehört, wäre
     // derselbe stille Serienabbruch, den dieser Weg gerade erst verloren hat.
@@ -961,12 +1098,12 @@ router.put('/:id', (req, res) => {
           title = ?, description = ?, category = ?, priority = ?,
           status = ?, start_date = ?, due_date = ?, due_time = ?, assigned_to = ?,
           is_recurring = ?, recurrence_rule = ?, recurrence_from_completion = ?,
-          points = ?, visibility = ?, countdown = ?
+          points = ?, visibility = ?, countdown = ?, locked = ?
         WHERE id = ?
       `).run(title.trim(), description, category, priority,
              status, start_date, due_date, due_time, firstUid,
              is_recurring ? 1 : 0, recurrence_rule, recurrence_from_completion ? 1 : 0,
-             points, visibility, countdown ? 1 : 0, req.params.id);
+             points, visibility, countdown ? 1 : 0, locked, req.params.id);
       setAssignments(db.get(), task.id, userIds);
       if (req.body.tags !== undefined) setTags(db.get(), task.id, req.body.tags);
       if (syncTarget !== undefined) {
@@ -1295,8 +1432,18 @@ router.patch('/:id/status', (req, res) => {
 // --------------------------------------------------------
 router.patch('/:id/archive', (req, res) => {
   try {
-    const task = db.get().prepare('SELECT id, status FROM tasks WHERE id = ?').get(req.params.id);
+    // Ganze Zeile statt id+status: die Sichtbarkeit und die Sperre stehen in
+    // Feldern, die die schmale Auswahl nicht mitbrachte.
+    const task = db.get().prepare('SELECT * FROM tasks WHERE id = ?').get(req.params.id);
     if (!task) return res.status(404).json({ error: 'Task not found.', code: 404 });
+    // 404 statt 403: ob es die Aufgabe gibt, ist selbst schon eine Auskunft.
+    // Dieser Weg hat das nie geprueft - eine geratene id genuegte, um eine
+    // fremde private Aufgabe abzulegen (Muster aus #769).
+    if (!mayAccessTask(task, req.authUserId || req.session.userId)) {
+      return res.status(404).json({ error: 'Task not found.', code: 404 });
+    }
+    // Ablegen nimmt die Aufgabe allen aus der Ansicht (#830).
+    if (!mayEditTaskDefinition(task, req)) return res.status(403).json(LOCKED_ERROR);
 
     if (req.body.archived !== undefined && typeof req.body.archived !== 'boolean')
       return res.status(400).json({ error: 'archived must be a boolean.', code: 400 });
@@ -1328,6 +1475,8 @@ router.delete('/:id', (req, res) => {
     if (!mayAccessTask(victim, req.authUserId || req.session.userId)) {
       return res.status(404).json({ error: 'Task not found.', code: 404 });
     }
+    // Loeschen ist der endgueltigste Eingriff in die Definition (#830).
+    if (!mayEditTaskDefinition(victim, req)) return res.status(403).json(LOCKED_ERROR);
 
     const doomed = db.get().prepare(
       `SELECT * FROM tasks WHERE (id = ? OR parent_task_id = ?) AND external_source = 'caldav'`
@@ -1360,7 +1509,7 @@ const DOC_VISIBLE_SQL = documentVisibleSql('d', 'me');
 /** Aufgabe nur zurückgeben, wenn sie für die betrachtende Person sichtbar ist. */
 function findVisibleTask(id, me) {
   return db.get().prepare(`
-    SELECT t.id FROM tasks t
+    SELECT t.id, t.locked, t.created_by, t.parent_task_id FROM tasks t
     WHERE t.id = ? AND ${visibilityWhere('t', 'task_assignments', 'task_id')}
   `).get(id, me, me);
 }
@@ -1399,6 +1548,9 @@ router.put('/:id/documents', (req, res) => {
     const me = req.authUserId || req.session.userId;
     const task = findVisibleTask(req.params.id, me);
     if (!task) return res.status(404).json({ error: 'Task not found.', code: 404 });
+    // Angehaengte Dokumente sind Teil der Anweisung - die Anleitung, das
+    // Formular, der Zettel, auf den die Aufgabe verweist (#830).
+    if (!mayEditTaskDefinition(task, req)) return res.status(403).json(LOCKED_ERROR);
 
     const requested = Array.isArray(req.body.document_ids)
       ? [...new Set(req.body.document_ids.map(Number).filter((n) => Number.isInteger(n) && n > 0))]

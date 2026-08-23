@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · đã sửa",
         "commentUnknownAuthor": "Không rõ",
         "commentDeletedToast": "Đã xóa bình luận.",
-        "documentsLinkFailed": "Đã lưu công việc, nhưng không thể liên kết tài liệu."
+        "documentsLinkFailed": "Đã lưu công việc, nhưng không thể liên kết tài liệu.",
+        "lockedToggle": "Khoá chỉnh sửa",
+        "lockedHint": "Chỉ bạn và quản trị viên mới có thể thay đổi, lưu trữ hoặc xóa công việc này. Những người khác vẫn có thể đánh dấu là hoàn thành, bình luận và tự nhận việc.",
+        "lockedBadge": "Đã khoá",
+        "lockedLabel": "Chỉnh sửa",
+        "lockedDetail": "Chỉ người tạo và quản trị viên",
+        "tagsSkippedLocked": "Đã bỏ qua {{count}} công việc bị khoá.",
+        "tagsSkippedLocked_one": "Đã bỏ qua {{count}} công việc bị khoá."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} bữa ăn",

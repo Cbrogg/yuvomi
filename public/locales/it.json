@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · modificato",
         "commentUnknownAuthor": "Sconosciuto",
         "commentDeletedToast": "Commento eliminato.",
-        "documentsLinkFailed": "L'attività è stata salvata, ma i documenti non sono stati collegati."
+        "documentsLinkFailed": "L'attività è stata salvata, ma i documenti non sono stati collegati.",
+        "lockedToggle": "Blocca la modifica",
+        "lockedHint": "Solo tu e gli amministratori potete modificare, archiviare o eliminare questa attività. Gli altri possono comunque segnarla come completata, commentarla e assegnarsela.",
+        "lockedBadge": "Bloccata",
+        "lockedLabel": "Modifica",
+        "lockedDetail": "Solo il creatore e gli amministratori",
+        "tagsSkippedLocked": "{{count}} attività bloccate ignorate.",
+        "tagsSkippedLocked_one": "{{count}} attività bloccata ignorata."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pasti",

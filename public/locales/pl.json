@@ -455,7 +455,14 @@
         "commentEditedAt": "{{date}} {{time}} · edytowano",
         "commentUnknownAuthor": "Nieznany",
         "commentDeletedToast": "Komentarz usunięty.",
-        "documentsLinkFailed": "Zadanie zapisano, ale nie udało się powiązać dokumentów."
+        "documentsLinkFailed": "Zadanie zapisano, ale nie udało się powiązać dokumentów.",
+        "lockedToggle": "Zablokuj edycję",
+        "lockedHint": "Tylko Ty i administratorzy możecie zmieniać, archiwizować lub usuwać to zadanie. Pozostali nadal mogą oznaczyć je jako zrobione, skomentować i przypisać do siebie.",
+        "lockedBadge": "Zablokowane",
+        "lockedLabel": "Edycja",
+        "lockedDetail": "Tylko autor i administratorzy",
+        "tagsSkippedLocked": "Pominięto {{count}} zablokowanych zadań.",
+        "tagsSkippedLocked_one": "Pominięto {{count}} zablokowane zadanie."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} posiłki",

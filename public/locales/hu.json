@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · szerkesztve",
         "commentUnknownAuthor": "Ismeretlen",
         "commentDeletedToast": "Hozzászólás törölve.",
-        "documentsLinkFailed": "A feladat mentve, de a dokumentumokat nem sikerült csatolni."
+        "documentsLinkFailed": "A feladat mentve, de a dokumentumokat nem sikerült csatolni.",
+        "lockedToggle": "Szerkesztés zárolása",
+        "lockedHint": "Ezt a feladatot csak te és az adminisztrátorok módosíthatjátok, archiválhatjátok vagy törölhetitek. A többiek továbbra is késznek jelölhetik, hozzászólhatnak és magukhoz rendelhetik.",
+        "lockedBadge": "Zárolva",
+        "lockedLabel": "Szerkesztés",
+        "lockedDetail": "Csak a létrehozó és az adminisztrátorok",
+        "tagsSkippedLocked": "{{count}} zárolt feladat kihagyva.",
+        "tagsSkippedLocked_one": "{{count}} zárolt feladat kihagyva."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} étkezésből",

@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · editado",
         "commentUnknownAuthor": "Desconocido",
         "commentDeletedToast": "Comentario eliminado.",
-        "documentsLinkFailed": "La tarea se guardó, pero no se pudieron vincular los documentos."
+        "documentsLinkFailed": "La tarea se guardó, pero no se pudieron vincular los documentos.",
+        "lockedToggle": "Bloquear la edición",
+        "lockedHint": "Solo tú y los administradores podéis modificar, archivar o eliminar esta tarea. Los demás pueden seguir marcándola como completada, comentarla y asignársela.",
+        "lockedBadge": "Bloqueada",
+        "lockedLabel": "Edición",
+        "lockedDetail": "Solo el creador y los administradores",
+        "tagsSkippedLocked": "{{count}} tareas bloqueadas omitidas.",
+        "tagsSkippedLocked_one": "{{count}} tarea bloqueada omitida."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} comidas",

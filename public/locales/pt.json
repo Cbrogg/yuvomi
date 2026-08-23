@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · editado",
         "commentUnknownAuthor": "Desconhecido",
         "commentDeletedToast": "Comentário excluído.",
-        "documentsLinkFailed": "A tarefa foi salva, mas os documentos não puderam ser vinculados."
+        "documentsLinkFailed": "A tarefa foi salva, mas os documentos não puderam ser vinculados.",
+        "lockedToggle": "Bloquear a edição",
+        "lockedHint": "Apenas você e os administradores podem alterar, arquivar ou excluir esta tarefa. Os demais continuam podendo marcá-la como concluída, comentar e atribuí-la a si mesmos.",
+        "lockedBadge": "Bloqueada",
+        "lockedLabel": "Edição",
+        "lockedDetail": "Apenas o criador e os administradores",
+        "tagsSkippedLocked": "{{count}} tarefas bloqueadas ignoradas.",
+        "tagsSkippedLocked_one": "{{count}} tarefa bloqueada ignorada."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} refeições",

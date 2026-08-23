@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · redigerad",
         "commentUnknownAuthor": "Okänd",
         "commentDeletedToast": "Kommentaren togs bort.",
-        "documentsLinkFailed": "Uppgiften sparades, men dokumenten kunde inte kopplas."
+        "documentsLinkFailed": "Uppgiften sparades, men dokumenten kunde inte kopplas.",
+        "lockedToggle": "Lås redigering",
+        "lockedHint": "Bara du och administratörer kan ändra, arkivera eller radera den här uppgiften. Övriga kan fortfarande markera den som klar, kommentera och tilldela sig själva.",
+        "lockedBadge": "Låst",
+        "lockedLabel": "Redigering",
+        "lockedDetail": "Endast skaparen och administratörer",
+        "tagsSkippedLocked": "{{count}} låsta uppgifter hoppades över.",
+        "tagsSkippedLocked_one": "{{count}} låst uppgift hoppades över."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} måltider",

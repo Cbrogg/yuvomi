@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · düzenlendi",
         "commentUnknownAuthor": "Bilinmiyor",
         "commentDeletedToast": "Yorum silindi.",
-        "documentsLinkFailed": "Görev kaydedildi, ancak belgeler bağlanamadı."
+        "documentsLinkFailed": "Görev kaydedildi, ancak belgeler bağlanamadı.",
+        "lockedToggle": "Düzenlemeyi kilitle",
+        "lockedHint": "Bu görevi yalnızca siz ve yöneticiler değiştirebilir, arşivleyebilir veya silebilirsiniz. Diğerleri görevi tamamlandı olarak işaretlemeye, yorum yapmaya ve kendilerini atamaya devam edebilir.",
+        "lockedBadge": "Kilitli",
+        "lockedLabel": "Düzenleme",
+        "lockedDetail": "Yalnızca oluşturan kişi ve yöneticiler",
+        "tagsSkippedLocked": "{{count}} kilitli görev atlandı.",
+        "tagsSkippedLocked_one": "{{count}} kilitli görev atlandı."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} öğünden",

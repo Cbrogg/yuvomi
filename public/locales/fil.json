@@ -455,7 +455,14 @@
         "commentEditedAt": "{{date}} {{time}} · in-edit",
         "commentUnknownAuthor": "Hindi kilala",
         "commentDeletedToast": "Nabura ang komento.",
-        "documentsLinkFailed": "Na-save ang gawain, pero hindi na-link ang mga dokumento."
+        "documentsLinkFailed": "Na-save ang gawain, pero hindi na-link ang mga dokumento.",
+        "lockedToggle": "I-lock ang pag-edit",
+        "lockedHint": "Ikaw at ang mga administrator lamang ang makakapagbago, makakapag-archive o makakapagtanggal ng gawaing ito. Maaari pa ring markahang tapos ito ng iba, magkomento at italaga ang sarili.",
+        "lockedBadge": "Naka-lock",
+        "lockedLabel": "Pag-edit",
+        "lockedDetail": "Tagalikha at mga administrator lamang",
+        "tagsSkippedLocked": "{{count}} naka-lock na gawain ang nilaktawan.",
+        "tagsSkippedLocked_one": "{{count}} naka-lock na gawain ang nilaktawan."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pagkain",

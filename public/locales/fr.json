@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · modifié",
         "commentUnknownAuthor": "Inconnu",
         "commentDeletedToast": "Commentaire supprimé.",
-        "documentsLinkFailed": "La tâche est enregistrée, mais les documents n'ont pas pu être liés."
+        "documentsLinkFailed": "La tâche est enregistrée, mais les documents n'ont pas pu être liés.",
+        "lockedToggle": "Verrouiller la modification",
+        "lockedHint": "Vous seul et les administrateurs pouvez modifier, archiver ou supprimer cette tâche. Les autres peuvent toujours la cocher, la commenter et se l’attribuer.",
+        "lockedBadge": "Verrouillée",
+        "lockedLabel": "Modification",
+        "lockedDetail": "Créateur et administrateurs uniquement",
+        "tagsSkippedLocked": "{{count}} tâches verrouillées ignorées.",
+        "tagsSkippedLocked_one": "{{count}} tâche verrouillée ignorée."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} repas",

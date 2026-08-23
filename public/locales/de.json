@@ -455,7 +455,14 @@
         "commentEditedAt": "{{date}} {{time}} · bearbeitet",
         "commentUnknownAuthor": "Unbekannt",
         "commentDeletedToast": "Kommentar gelöscht.",
-        "documentsLinkFailed": "Die Aufgabe ist gespeichert, die Dokumente konnten aber nicht verknüpft werden."
+        "documentsLinkFailed": "Die Aufgabe ist gespeichert, die Dokumente konnten aber nicht verknüpft werden.",
+        "lockedToggle": "Bearbeiten sperren",
+        "lockedHint": "Nur du und Administratoren können diese Aufgabe ändern, archivieren oder löschen. Alle anderen dürfen sie weiterhin abhaken, kommentieren und sich selbst eintragen.",
+        "lockedBadge": "Gesperrt",
+        "lockedLabel": "Bearbeiten",
+        "lockedDetail": "Nur Ersteller:in und Administratoren",
+        "tagsSkippedLocked": "{{count}} gesperrte Aufgaben übersprungen.",
+        "tagsSkippedLocked_one": "{{count}} gesperrte Aufgabe übersprungen."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} Mahlzeiten",

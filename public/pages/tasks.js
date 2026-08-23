@@ -58,6 +58,25 @@ function isArchived(task) {
   return !!task?.archived_at;
 }
 
+/**
+ * Darf ich die DEFINITION dieser Aufgabe ändern? (#830)
+ *
+ * Spiegelt die Serverregel Wort für Wort: gesperrt heißt, nur Ersteller:in und
+ * Admins dürfen umschreiben, ablegen oder löschen - abhaken, kommentieren und
+ * sich selbst eintragen bleibt für alle offen. Der Server entscheidet, hier
+ * wird nur die Oberfläche danach gerichtet; laufen die beiden auseinander,
+ * bietet das UI einen Knopf an, der in einem 403 endet.
+ *
+ * `parent` ist die Elternaufgabe einer Unteraufgabe: die erbt die Sperre, weil
+ * sie ein Punkt derselben Anweisung ist.
+ */
+function canEditTaskDefinition(task, parent = null) {
+  const lock = task?.locked ? task : (parent?.locked ? parent : null);
+  if (!lock) return true;
+  if (state.isAdmin) return true;
+  return Number(lock.created_by) === Number(state.currentUserId);
+}
+
 // Fallback-Kategorie (kanonischer Key). Kategorien sind seit #494 benutzer-
 // verwaltbar und werden aus /tasks/meta/options in state.categories geladen.
 const FALLBACK_CATEGORY = 'misc';
@@ -439,6 +458,9 @@ function renderTaskCard(task, opts = {}) {
   const { expandedSubtasks = false, showCheckbox = false, isChecked = false, showCategory = true } = opts;
   const isDone = task.status === 'done';
   const archived = isArchived(task);
+  // Gesperrte Aufgabe (#830): abhaken bleibt, umschreiben nicht. Die Knoepfe,
+  // die in einem 403 endeten, stehen deshalb gar nicht erst da.
+  const canEdit = canEditTaskDefinition(task);
   const progress = task.subtask_total > 0
     ? Math.round((task.subtask_done / task.subtask_total) * 100)
     : null;
@@ -453,6 +475,7 @@ function renderTaskCard(task, opts = {}) {
             ${s.status === 'done' ? '<i data-lucide="check" class="subtask-item__checkbox-icon" aria-hidden="true"></i>' : ''}
           </button>
           <span class="subtask-item__title">${esc(s.title)}</span>
+          ${canEditTaskDefinition(s, task) ? `
           <div class="subtask-item__actions">
             <button class="btn btn--ghost btn--icon btn--icon-sm subtask-item__action"
                     data-action="rename-subtask" data-id="${s.id}" data-title="${esc(s.title)}"
@@ -464,7 +487,7 @@ function renderTaskCard(task, opts = {}) {
                     aria-label="${t('tasks.subtaskDelete', { title: esc(s.title) })}">
               <i data-lucide="trash-2" aria-hidden="true"></i>
             </button>
-          </div>
+          </div>` : ''}
         </div>`).join('')
     : '';
 
@@ -498,6 +521,7 @@ function renderTaskCard(task, opts = {}) {
                 hier standen zwei Kopien ohne Rolle (PR-Review #754). */ ''}
             ${task.is_recurring ? `<span class="due-date" role="img" aria-label="${esc(t('tasks.recurring'))}"><i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i></span>` : ''}
             ${task.document_count > 0 ? `<span class="due-date task-card__docs" role="img" aria-label="${esc(t('tasks.documentsCount', { count: task.document_count }))}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i></span>` : ''}
+            ${task.locked ? `<span class="due-date" role="img" aria-label="${esc(t('tasks.lockedBadge'))}" title="${esc(t('tasks.lockedBadge'))}"><i data-lucide="lock" class="icon-sm" aria-hidden="true"></i></span>` : ''}
             ${renderVisibilityBadge(task.visibility)}
             ${showCategory && task.category !== FALLBACK_CATEGORY ? `<span class="due-date task-card__category">${esc(catLabel(task.category))}</span>` : ''}
             ${renderTagBadges(task.tags, ROW_TAG_BADGES_VISIBLE, task.priority)}
@@ -506,11 +530,12 @@ function renderTaskCard(task, opts = {}) {
 
         ${renderAvatarStack(task.assigned_users ?? [], { size: 28 })}
 
-        ${!(task.subtask_total > 0) && !archived && !task.parent_task_id ? `
+        ${canEdit && !(task.subtask_total > 0) && !archived && !task.parent_task_id ? `
         <button class="btn btn--ghost btn--icon btn--icon-sm task-card__inline-action" data-action="add-subtask" data-parent="${task.id}"
                 aria-label="${t('tasks.subtaskAdd')}" title="${t('tasks.subtaskAdd')}">
           <i data-lucide="list-plus" class="icon-md" aria-hidden="true"></i>
         </button>` : ''}
+        ${canEdit ? `
         <button class="btn btn--ghost btn--icon btn--icon-sm task-card__inline-action" data-action="edit-task" data-id="${task.id}"
                 aria-label="${t('tasks.editButton')}">
           <i data-lucide="pencil" class="icon-md" aria-hidden="true"></i>
@@ -520,7 +545,7 @@ function renderTaskCard(task, opts = {}) {
                 aria-label="${archived ? t('tasks.unarchiveButton') : t('tasks.archiveButton')}"
                 title="${archived ? t('tasks.unarchiveButton') : t('tasks.archiveButton')}">
           <i data-lucide="${archived ? 'archive-restore' : 'archive'}" class="icon-md" aria-hidden="true"></i>
-        </button>
+        </button>` : ''}
       </div>
 
       ${progress !== null ? `
@@ -1010,6 +1035,20 @@ ${syncTargetFieldHtml(task)}
         </select>
         <p class="task-field-hint">${t('common.visibility.hint')}</p>
         <p class="task-field-hint field-hint--warn" id="task-visibility-warning" role="status" hidden><i data-lucide="alert-triangle" aria-hidden="true"></i><span>${t('common.visibility.assigneesNobodyHint')}</span></p>
+      </div>
+
+      <!-- #830: Die Sperre steht neben der Sichtbarkeit, weil beide dieselbe
+           Frage beantworten - wer darf hier was. Sichtbarkeit regelt das Sehen,
+           die Sperre das Aendern. In einem Ein-Personen-Haushalt sagen beide
+           nichts, also verschwinden sie zusammen (isSoloHousehold). -->
+      <div class="form-group" style="margin-top:var(--space-4)"${isSoloHousehold() ? ' hidden' : ''}>
+        <label class="toggle" style="margin:0">
+          <input type="checkbox" id="task-locked" name="locked" aria-describedby="task-locked-hint"
+                 ${task?.locked ? 'checked' : ''}>
+          <span class="toggle__track"></span>
+          <span>${t('tasks.lockedToggle')}</span>
+        </label>
+        <p class="task-field-hint" id="task-locked-hint">${t('tasks.lockedHint')}</p>
       </div>
 
       <!-- #647: die Haelfte, die @jamespurnama1 beschrieben hat. Fuehrerschein
@@ -1951,6 +1990,9 @@ function renderTaskDetail(task, reminders = [], container = null) {
     // ANDERES als „offen/erledigt", nicht dasselbe anders (#688).
     { icon: 'archive', label: t('tasks.archivedLabel'), value: isArchived(task) ? formatDate(task.archived_at) : '' },
     { icon: 'flag', label: t('tasks.priorityLabel'), node: priorityNode(task.priority) },
+    // Nur wenn gesetzt - eine Zeile "nicht gesperrt" an jeder Aufgabe waere
+    // Rauschen. Die leere `value` blendet die Zeile aus (#830).
+    { icon: 'lock', label: t('tasks.lockedLabel'), value: task.locked ? t('tasks.lockedDetail') : '' },
     { icon: 'clock', label: t('tasks.dueDateLabel'), value: due?.label ?? '' },
     { icon: 'calendar-clock', label: t('tasks.startDateLabel'), value: task.start_date ? formatDate(task.start_date) : '' },
     recurrenceRow(task.recurrence_rule, { fromCompletion: !!task.recurrence_from_completion }),
@@ -2010,8 +2052,12 @@ function descriptionNode(description) {
 function openTaskDetail({ task, users = [], reminder = null }, container) {
   const archived = isArchived(task);
   const next = archived ? null : NEXT_STATUS[task.status];
+  // Gesperrte Aufgabe (#830): der Weiterschalt-Knopf bleibt, Loeschen, Ablegen
+  // und Bearbeiten fallen weg. Die Detailansicht ist der zweite Einstieg neben
+  // der Zeile - blendete nur die Zeile aus, waere die Sperre hier zu umgehen.
+  const canEdit = canEditTaskDefinition(task);
 
-  const actions = [{
+  const actions = canEdit ? [{
     id: 'task-detail-delete',
     label: t('common.delete'),
     variant: 'danger-ghost',
@@ -2024,7 +2070,7 @@ function openTaskDetail({ task, users = [], reminder = null }, container) {
       await close({ force: true });
       handleDeleteTask(String(task.id), container);
     },
-  }];
+  }] : [];
 
   // Der häufigste Grund, eine Aufgabe zu öffnen, ist sie abzuhaken. Bisher
   // führte dieser Weg durch ein Formular mit sieben Auswahlfeldern.
@@ -2040,20 +2086,22 @@ function openTaskDetail({ task, users = [], reminder = null }, container) {
 
   // Ablegen und Zurückholen sind derselbe Schalter - was er tut, hängt daran, wo
   // die Aufgabe gerade liegt.
-  actions.push({
-    id: 'task-detail-archive',
-    label: archived ? t('tasks.unarchiveButton') : t('tasks.archiveButton'),
-    variant: 'ghost',
-    icon: archived ? 'archive-restore' : 'archive',
-    onClick: ({ button }) => toggleTaskArchive(task, button, container),
-  });
+  if (canEdit) {
+    actions.push({
+      id: 'task-detail-archive',
+      label: archived ? t('tasks.unarchiveButton') : t('tasks.archiveButton'),
+      variant: 'ghost',
+      icon: archived ? 'archive-restore' : 'archive',
+      onClick: ({ button }) => toggleTaskArchive(task, button, container),
+    });
+  }
 
   openDetailView({
     title: task.title,
     size: 'lg',
     sections: renderTaskDetail(task, reminder, container),
     actions,
-    edit: {
+    edit: canEdit ? {
       label: t('common.edit'),
       title: t('tasks.editTask'),
       mount: (panel, pane) => {
@@ -2063,7 +2111,7 @@ function openTaskDetail({ task, users = [], reminder = null }, container) {
         pane.insertAdjacentHTML('beforeend', renderModalContent({ task, users, reminder }));
         wireTaskForm(panel, { task, container });
       },
-    },
+    } : undefined,
   });
 }
 
@@ -2189,7 +2237,15 @@ function openBulkTagDialog(taskIds, mode, container) {
           const body = mode === 'add' ? { ids: taskIds, add: [tag] } : { ids: taskIds, remove: [tag] };
           const res = await api.post('/tasks/tags/apply', body);
           state.allTags = res.data?.tags ?? state.allTags;
-          window.yuvomi.showToast(t('tasks.tagsUpdated', { count: res.data?.updated ?? 0 }), 'success');
+          // Der Server ueberspringt gesperrte Aufgaben, statt den ganzen Aufruf
+          // abzuweisen (#830). Eine stille Teilausfuehrung waere schlimmer als
+          // ein Fehler, also sagt der Toast, was liegen blieb.
+          const skipped = res.data?.skipped ?? 0;
+          window.yuvomi.showToast(
+            skipped
+              ? `${t('tasks.tagsUpdated', { count: res.data?.updated ?? 0 })} ${t('tasks.tagsSkippedLocked', { count: skipped })}`
+              : t('tasks.tagsUpdated', { count: res.data?.updated ?? 0 }),
+            'success');
           closeModal({ force: true });
           state.selectedTaskIds.clear();
           updateBulkActionsBar(container);
@@ -2288,6 +2344,7 @@ async function handleFormSubmit(e, container) {
     recurrence_rule: rrule.recurrence_rule,
     recurrence_from_completion: rrule.recurrence_from_completion ? 1 : 0,
     countdown:       form.querySelector('#task-countdown')?.checked ? 1 : 0,
+    locked:          form.querySelector('#task-locked')?.checked ? 1 : 0,
     points:          Math.max(0, Math.trunc(Number(form.points?.value)) || 0),
   };
   // Das Feld fehlt bei Unteraufgaben und bei bereits gespiegelten Aufgaben - in

@@ -29,7 +29,7 @@ export function tasksPaths() {
           { name: 'include_future', in: 'query', required: false, schema: { type: 'string' }, description: 'Any non-empty value also returns tasks whose start date lies in the future.' },
         ],
       }),
-      post: op({ summary: 'Create task', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null) }),
+      post: op({ summary: 'Create task', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null), description: 'Body accepts `locked: true` to close the task definition to everyone but its creator and administrators (#830). A subtask under a locked parent inherits the lock, and adding one requires the same rights.' }),
     },
     '/api/v1/tasks/meta/options': { get: op({ summary: 'Get task metadata', tag: 'Tasks' }) },
     '/api/v1/tasks/points/affected': {
@@ -60,26 +60,26 @@ export function tasksPaths() {
       get: op({ summary: 'List task tags', tag: 'Tasks', description: 'Every visible tag in use with its task count. Tags are free-form and have no registry: the list follows from the tasks themselves. Mirrored from VTODO CATEGORIES on CalDAV task lists, and distinct from the single category a task carries. Tags on tasks the caller cannot see are omitted, counts included.' }),
     },
     '/api/v1/tasks/tags/apply': {
-      post: op({ summary: 'Add or remove tags on several tasks', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null), description: 'Body: { ids, add?, remove? }. Applies to the tasks in `ids` the caller can see; the others are skipped silently. Returns the number of tasks actually changed and the refreshed tag list.' }),
+      post: op({ summary: 'Add or remove tags on several tasks', tag: 'Tasks', stateChanging: true, requestBody: jsonBody(null), description: 'Body: { ids, add?, remove? }. Applies to the tasks in `ids` the caller can see; the others are skipped silently. Locked tasks the caller may not edit are skipped as well and counted in `skipped`, so a partial run is visible rather than silent. Returns the number of tasks actually changed and the refreshed tag list.' }),
     },
     '/api/v1/tasks/tags/{tag}': {
-      put: op({ summary: 'Rename a task tag', tag: 'Tasks', params: [stringPathParam('tag', 'Tag name')], stateChanging: true, requestBody: jsonBody(null), description: 'Body: { name }. Renames the tag on every task the caller can see. Renaming onto an existing tag merges the two. Tasks the caller cannot see keep the old tag.' }),
-      delete: op({ summary: 'Remove a task tag everywhere', tag: 'Tasks', params: [stringPathParam('tag', 'Tag name')], stateChanging: true, description: 'Detaches the tag from every task the caller can see. The tasks themselves stay. Unlike categories there is no in-use guard: a tag is nothing but its uses.' }),
+      put: op({ summary: 'Rename a task tag', tag: 'Tasks', params: [stringPathParam('tag', 'Tag name')], stateChanging: true, requestBody: jsonBody(null), description: 'Body: { name }. Renames the tag on every task the caller can see. Renaming onto an existing tag merges the two. Tasks the caller cannot see keep the old tag, and so do locked tasks the caller may not edit - those are counted in `skipped`.' }),
+      delete: op({ summary: 'Remove a task tag everywhere', tag: 'Tasks', params: [stringPathParam('tag', 'Tag name')], stateChanging: true, description: 'Detaches the tag from every task the caller can see. The tasks themselves stay. Locked tasks the caller may not edit keep the tag and are counted in `skipped`. Unlike categories there is no in-use guard: a tag is nothing but its uses.' }),
     },
     '/api/v1/tasks/{id}': {
       get: op({ summary: 'Get task', tag: 'Tasks', params: [idParam()] }),
-      put: op({ summary: 'Update task', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null) }),
-      delete: op({ summary: 'Delete task', tag: 'Tasks', params: [idParam()], stateChanging: true }),
+      put: op({ summary: 'Update task', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'On a locked task (`locked: 1`) only the creator and administrators may change the definition - title, description, category, priority, dates, recurrence, points, visibility, tags, sync target, the lock itself, and assigning other members. Everyone else may still send the full body as long as the outcome differs only in `status` or in their own entry in `assigned_to`; anything else answers 403. The comparison is against the stored values, not against which fields were sent.' }),
+      delete: op({ summary: 'Delete task', tag: 'Tasks', params: [idParam()], stateChanging: true, description: 'On a locked task, the creator and administrators only (403 otherwise).' }),
     },
     '/api/v1/tasks/{id}/status': {
-      patch: op({ summary: 'Update task status', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'Body: { status }. Sending `archived` files the task away without touching its status - use PATCH /archive instead.' }),
+      patch: op({ summary: 'Update task status', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'Body: { status }. Sending `archived` files the task away without touching its status - use PATCH /archive instead. Deliberately open on a locked task: ticking one off is the interaction the lock exists to preserve.' }),
     },
     '/api/v1/tasks/{id}/archive': {
-      patch: op({ summary: 'Archive or restore a task', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'Archives the task by default. Send `{ "archived": false }` to bring it back. The status is left untouched: a task that was done stays done, and no reward booking changes.' }),
+      patch: op({ summary: 'Archive or restore a task', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'Archives the task by default. Send `{ "archived": false }` to bring it back. The status is left untouched: a task that was done stays done, and no reward booking changes. Filing a task removes it from everyone\'s view, so on a locked task this is the creator and administrators only.' }),
     },
     '/api/v1/tasks/{id}/documents': {
       get: op({ summary: 'List documents linked to a task', tag: 'Tasks', params: [idParam()], description: 'Returns family documents linked to the task that are visible to the current user.' }),
-      put: op({ summary: 'Set documents linked to a task', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'Replace-set of document_ids; only documents visible to the user are linked.' }),
+      put: op({ summary: 'Set documents linked to a task', tag: 'Tasks', params: [idParam()], stateChanging: true, requestBody: jsonBody(null), description: 'Replace-set of document_ids; only documents visible to the user are linked. Attachments are part of the task definition, so a locked task answers 403 for anyone but its creator and administrators.' }),
     },
     '/api/v1/tasks/{id}/comments': {
       get: op({ summary: 'List comments on a task', tag: 'Tasks', params: [idParam()], description: 'Oldest first. Anyone who may see the task may read its comments; a task the caller cannot see answers 404.' }),

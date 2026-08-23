@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · bewerkt",
         "commentUnknownAuthor": "Onbekend",
         "commentDeletedToast": "Opmerking verwijderd.",
-        "documentsLinkFailed": "De taak is opgeslagen, maar de documenten konden niet worden gekoppeld."
+        "documentsLinkFailed": "De taak is opgeslagen, maar de documenten konden niet worden gekoppeld.",
+        "lockedToggle": "Bewerken vergrendelen",
+        "lockedHint": "Alleen jij en beheerders kunnen deze taak wijzigen, archiveren of verwijderen. De rest kan haar nog steeds als klaar markeren, van een reactie voorzien en aan zichzelf toewijzen.",
+        "lockedBadge": "Vergrendeld",
+        "lockedLabel": "Bewerken",
+        "lockedDetail": "Alleen de maker en beheerders",
+        "tagsSkippedLocked": "{{count}} vergrendelde taken overgeslagen.",
+        "tagsSkippedLocked_one": "{{count}} vergrendelde taak overgeslagen."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} maaltijden",

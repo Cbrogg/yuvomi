@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · изменено",
         "commentUnknownAuthor": "Неизвестно",
         "commentDeletedToast": "Комментарий удалён.",
-        "documentsLinkFailed": "Задача сохранена, но документы не удалось привязать."
+        "documentsLinkFailed": "Задача сохранена, но документы не удалось привязать.",
+        "lockedToggle": "Заблокировать изменение",
+        "lockedHint": "Изменять, архивировать и удалять эту задачу можете только вы и администраторы. Остальные по-прежнему могут отмечать её как выполненную, комментировать и назначать себя.",
+        "lockedBadge": "Заблокирована",
+        "lockedLabel": "Изменение",
+        "lockedDetail": "Только автор и администраторы",
+        "tagsSkippedLocked": "Пропущено заблокированных задач: {{count}}.",
+        "tagsSkippedLocked_one": "Пропущена {{count}} заблокированная задача."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} приёма пищи",

@@ -455,7 +455,14 @@
         "commentEditedAt": "{{date}} {{time}} · ویرایش‌شده",
         "commentUnknownAuthor": "ناشناس",
         "commentDeletedToast": "دیدگاه حذف شد.",
-        "documentsLinkFailed": "کار ذخیره شد، اما پیوند دادن سندها ممکن نشد."
+        "documentsLinkFailed": "کار ذخیره شد، اما پیوند دادن سندها ممکن نشد.",
+        "lockedToggle": "قفل کردن ویرایش",
+        "lockedHint": "فقط شما و مدیران می‌توانید این کار را تغییر دهید، بایگانی یا حذف کنید. دیگران همچنان می‌توانند آن را انجام‌شده علامت بزنند، دربارهٔ آن نظر بدهند و خودشان را به آن اختصاص دهند.",
+        "lockedBadge": "قفل‌شده",
+        "lockedLabel": "ویرایش",
+        "lockedDetail": "فقط سازنده و مدیران",
+        "tagsSkippedLocked": "{{count}} وظیفهٔ قفل‌شده رد شد.",
+        "tagsSkippedLocked_one": "{{count}} وظیفهٔ قفل‌شده رد شد."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وعده",

@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · संपादित",
         "commentUnknownAuthor": "अज्ञात",
         "commentDeletedToast": "टिप्पणी हटा दी गई.",
-        "documentsLinkFailed": "कार्य सहेजा गया, लेकिन दस्तावेज़ नहीं जोड़े जा सके."
+        "documentsLinkFailed": "कार्य सहेजा गया, लेकिन दस्तावेज़ नहीं जोड़े जा सके.",
+        "lockedToggle": "संपादन लॉक करें",
+        "lockedHint": "केवल आप और व्यवस्थापक ही इस कार्य को बदल, संग्रहित या हटा सकते हैं। बाकी सभी इसे पूर्ण के रूप में चिह्नित कर सकते हैं, टिप्पणी कर सकते हैं और स्वयं को असाइन कर सकते हैं।",
+        "lockedBadge": "लॉक किया गया",
+        "lockedLabel": "संपादन",
+        "lockedDetail": "केवल निर्माता और व्यवस्थापक",
+        "tagsSkippedLocked": "{{count}} लॉक किए गए कार्य छोड़े गए।",
+        "tagsSkippedLocked_one": "{{count}} लॉक किया गया कार्य छोड़ा गया।"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} भोजन",

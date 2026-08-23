@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · відредаговано",
         "commentUnknownAuthor": "Невідомо",
         "commentDeletedToast": "Коментар видалено.",
-        "documentsLinkFailed": "Завдання збережено, але документи не вдалося прив'язати."
+        "documentsLinkFailed": "Завдання збережено, але документи не вдалося прив'язати.",
+        "lockedToggle": "Заблокувати редагування",
+        "lockedHint": "Змінювати, архівувати та видаляти це завдання можете лише ви та адміністратори. Інші й далі можуть позначати його як виконане, коментувати та призначати себе.",
+        "lockedBadge": "Заблоковано",
+        "lockedLabel": "Редагування",
+        "lockedDetail": "Лише автор і адміністратори",
+        "tagsSkippedLocked": "Пропущено заблокованих завдань: {{count}}.",
+        "tagsSkippedLocked_one": "Пропущено {{count}} заблоковане завдання."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} прийоми їжі",

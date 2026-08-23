@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · upraveno",
         "commentUnknownAuthor": "Neznámý",
         "commentDeletedToast": "Komentář smazán.",
-        "documentsLinkFailed": "Úkol byl uložen, dokumenty se ale nepodařilo připojit."
+        "documentsLinkFailed": "Úkol byl uložen, dokumenty se ale nepodařilo připojit.",
+        "lockedToggle": "Zamknout úpravy",
+        "lockedHint": "Tento úkol můžete měnit, archivovat nebo mazat jen vy a administrátoři. Ostatní jej mohou dál označovat jako hotový, komentovat a přiřadit si ho.",
+        "lockedBadge": "Zamčeno",
+        "lockedLabel": "Úpravy",
+        "lockedDetail": "Pouze autor a administrátoři",
+        "tagsSkippedLocked": "Přeskočeno {{count}} zamčených úkolů.",
+        "tagsSkippedLocked_one": "Přeskočen {{count}} zamčený úkol."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} jídla",

@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · 已编辑",
         "commentUnknownAuthor": "未知",
         "commentDeletedToast": "评论已删除。",
-        "documentsLinkFailed": "任务已保存，但未能关联文档。"
+        "documentsLinkFailed": "任务已保存，但未能关联文档。",
+        "lockedToggle": "锁定编辑",
+        "lockedHint": "只有你和管理员可以修改、归档或删除此任务。其他人仍然可以将其标记为完成、发表评论并把它分配给自己。",
+        "lockedBadge": "已锁定",
+        "lockedLabel": "编辑",
+        "lockedDetail": "仅创建者和管理员",
+        "tagsSkippedLocked": "已跳过 {{count}} 个锁定的任务。",
+        "tagsSkippedLocked_one": "已跳过 {{count}} 个锁定的任务。"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} 餐",

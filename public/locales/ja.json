@@ -443,7 +443,14 @@
         "commentEditedAt": "{{date}} {{time}} · 編集済み",
         "commentUnknownAuthor": "不明",
         "commentDeletedToast": "コメントを削除しました。",
-        "documentsLinkFailed": "タスクは保存しましたが、書類を関連付けできませんでした。"
+        "documentsLinkFailed": "タスクは保存しましたが、書類を関連付けできませんでした。",
+        "lockedToggle": "編集をロックする",
+        "lockedHint": "このタスクを変更・アーカイブ・削除できるのはあなたと管理者だけです。ほかの人も完了としてマークしたり、コメントしたり、自分に割り当てたりすることは引き続きできます。",
+        "lockedBadge": "ロック中",
+        "lockedLabel": "編集",
+        "lockedDetail": "作成者と管理者のみ",
+        "tagsSkippedLocked": "ロックされた {{count}} 件のタスクをスキップしました。",
+        "tagsSkippedLocked_one": "ロックされた {{count}} 件のタスクをスキップしました。"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}件の食事",

@@ -455,7 +455,14 @@
         "commentEditedAt": "{{date}} {{time}} · diubah",
         "commentUnknownAuthor": "Tidak diketahui",
         "commentDeletedToast": "Komentar dihapus.",
-        "documentsLinkFailed": "Tugas tersimpan, tetapi dokumen tidak dapat ditautkan."
+        "documentsLinkFailed": "Tugas tersimpan, tetapi dokumen tidak dapat ditautkan.",
+        "lockedToggle": "Kunci penyuntingan",
+        "lockedHint": "Hanya Anda dan administrator yang dapat mengubah, mengarsipkan, atau menghapus tugas ini. Yang lain tetap dapat menandainya selesai, berkomentar, dan menugaskan diri sendiri.",
+        "lockedBadge": "Terkunci",
+        "lockedLabel": "Penyuntingan",
+        "lockedDetail": "Hanya pembuat dan administrator",
+        "tagsSkippedLocked": "{{count}} tugas terkunci dilewati.",
+        "tagsSkippedLocked_one": "{{count}} tugas terkunci dilewati."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} hidangan",

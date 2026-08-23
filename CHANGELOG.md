@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A task can be locked so that only its creator and administrators may change it** (discussion #830).
+  Module permissions could not express what the request needed: they only know read-only for the whole
+  module, and read-only also stops a child from ticking anything off - which is the entire point of
+  giving them access. The lock therefore sits on the individual task and splits two things that used
+  to be one. Closed is the **definition**: title, description, category, priority, dates, recurrence,
+  points, visibility, tags, linked documents, filing it away, deleting it, and lifting the lock. Open
+  to everyone stays the **interaction**: viewing, ticking off, commenting, personal reminders - and
+  taking the task on or handing it back, because assigning *oneself* is something you do with a task,
+  not to it. Assigning somebody *else* is not: otherwise a child would simply push the chore onto a
+  sibling, which is the case the lock exists for.
+
+  **The lock deliberately does not key off the family role.** A family role says who somebody is, not
+  what they may do, and "parent" is not one value there - `dad`, `mom` and `parent` certainly,
+  `grandparent` depending on the household, so any rule reading it has to guess a list and will guess
+  wrong for someone. Yuvomi already replaced that inference with explicit grants once, for health
+  permissions in #584. The holders are the creator plus admins, which covers the case without
+  inventing a second permission system.
+
+  A subtask inherits its parent's lock - it is a point of the same instruction, and a freely editable
+  checklist would make the lock on the task above it worthless. The check runs in every route that
+  writes, not in one piece of middleware, because a task is also reached through the dashboard, the
+  search, the public API and MCP. The three bulk tag operations skip locked tasks rather than
+  rejecting the whole call, and say how many were left out: tagging forty tasks should not fail
+  because one of them is locked, but a silent partial run would be worse than an error.
+
+### Fixed
+
+- **Filing a task away now checks whether you may see it at all.** `PATCH /:id/archive` was the one
+  writing path that loaded the row by ID alone, so a guessed ID was enough to archive somebody
+  else's private task - the same hole that was closed for `PUT` and `DELETE` in v2.12.0 (#769). It
+  answers 404 now, because whether the task exists is itself information.
+
 ## [2.29.0] - 2026-08-23
 
 ### Added
