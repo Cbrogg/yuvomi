@@ -122,8 +122,8 @@
         "open": "Buksan ang paghahanap",
         "scopesLabel": "Tumalon sa",
         "loading": "Naghahanap…",
-        "resultCountOne": "{{count}} resulta",
-        "resultCountMany": "{{count}} resulta"
+        "resultCountOne": "{{count}} na resulta",
+        "resultCountMany": "{{count}} na mga resulta"
     },
     "dashboard": {
         "title": "Pangkalahatang-tanaw",
