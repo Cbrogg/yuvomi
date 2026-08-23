@@ -177,7 +177,7 @@ export function documentsPaths() {
         summary: 'Upload family document',
         tag: 'Documents',
         stateChanging: true,
-        description: 'Stores a document using the active upload backend (`local`, `webdav`, or `google_drive`) with family, restricted, or private visibility. File content is sent as a base64 data URL in `content_data`. An environment-managed local folder may override the selected destination.',
+        description: 'Stores a document using the active upload backend (`local`, `webdav`, or `google_drive`) with family, restricted, or private visibility. File content is sent as a base64 data URL in `content_data`. An environment-managed local folder may override the selected destination. Filing: `folder_id` targets an existing folder; `folder_key` names the system folder a module files its receipts in (`budget`, `tasks`, `splitExpenses`, `inventory`, `housekeeping`, `calendarItems`) and is what identifies it, while `folder_name` is only the label used if that folder still has to be created. Sending `folder_name` alone still works and matches on the name, which is what two clients in different languages used to file into two separate folders.',
         requestBody: jsonBody(null),
         responses: {
           201: {
