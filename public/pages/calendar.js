@@ -354,8 +354,8 @@ function openIconPickerDialog(selectedIcon, onSelect, onClose = () => {}) {
 }
 
 // --------------------------------------------------------
-// Farbberechnung: Assignee-Farben haben Vorrang
-// Hierarchie: Assignees → manuelle Event-Farbe → Kalenderfarbe → Grau
+// Farbberechnung: die spezifischste Angabe gewinnt
+// Hierarchie: eigene Terminfarbe → erster Assignee → Kalenderfarbe → Grau
 // --------------------------------------------------------
 
 /** Neutrale Fallback-Farbe wenn weder Assignee noch manuelle Farbe gesetzt. */
@@ -364,17 +364,36 @@ const FALLBACK_COLOR = '#8E8E93';
 /**
  * Gibt die primäre Einzelfarbe eines Events zurück.
  * Wird für Textkontrastberechnung und Stellen genutzt, die keine Gradienten unterstützen.
- * Priorität: 1. erster Assignee, 2. ev.color, 3. ev.cal_color, 4. Grau.
+ * Priorität: 1. ev.color, 2. erster Assignee, 3. ev.cal_color, 4. Grau.
+ *
+ * WARUM DIE TERMINFARBE VORN STEHT (#815). Bis v2.35.0 schlug die Farbe der
+ * zugewiesenen Person alles andere. Das warf zwei sehr verschiedene Dinge in
+ * denselben Topf: `cal_color` ist GEERBT - jeder Termin des Kalenders hat sie,
+ * sie sagt nichts über diesen einen aus -, `ev.color` dagegen ist an DIESEM
+ * Termin ausdrücklich gesetzt, von Hand hier oder als RFC-7986-`COLOR` vom
+ * CalDAV-Server. Eine ausdrückliche Angabe darf eine abgeleitete nicht
+ * verlieren; gegen die geerbte Kalenderfarbe gewinnt die Person weiterhin.
+ *
+ * Der Melder von #815 hat den Fall belegt: seine Termine tragen in Baikal und
+ * Nextcloud eigene Farben, Yuvomi liest sie korrekt ein - sichtbar waren sie
+ * nur, solange der Kalender niemandem zugewiesen war. Die Sync war nie das
+ * Problem, die Vorrangregel war es.
+ *
+ * WAS DABEI NICHT VERLOREN GEHT: wer der Termin gehört, steht weiter im
+ * Avatar-Stack daneben - das ist ohnehin der Weg, auf dem MEHRERE Zugewiesene
+ * kommuniziert werden (siehe resolveEventBackground). Die Farbe war für diese
+ * Auskunft nie die einzige Quelle.
  */
 function resolveEventColor(ev) {
+  if (ev.color) return ev.color;
   const assignees = ev.assigned_users ?? [];
   if (assignees.length > 0) return assignees[0].color || FALLBACK_COLOR;
-  return ev.color || ev.cal_color || FALLBACK_COLOR;
+  return ev.cal_color || FALLBACK_COLOR;
 }
 
 /**
  * Gibt eine einzelne CSS-Füllfarbe zurück (nie ein Gradient).
- * Eine Farbachse: 1. erster Assignee, 2. manuelle Event-Farbe, 3. Kalenderfarbe, 4. Grau.
+ * Eine Farbachse: 1. eigene Terminfarbe, 2. erster Assignee, 3. Kalenderfarbe, 4. Grau.
  * Mehrere Zugewiesene werden über den Avatar-Stack kommuniziert, nicht über eine
  * diagonal geteilte Füllung — die wirkte wie ein Render-Artefakt und blieb bei der
  * zweiten Farbe ungeprüft im Kontrast.
@@ -2372,6 +2391,7 @@ async function openFoundEvent(ev) {
 
 export const __test = {
   fetchWindow,
+  resolveEventColor,
   isVisibleLayer,
   normalizeCalendarView,
   defaultCalendarViewFromState,

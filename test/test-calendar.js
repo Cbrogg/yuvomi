@@ -796,6 +796,39 @@ test('Der Marker ist birthday_name, nicht der Titel', () => {
 });
 
 // --------------------------------------------------------
+// Farbhierarchie (#815)
+// --------------------------------------------------------
+
+test('die eigene Terminfarbe schlaegt die Farbe der zugewiesenen Person', () => {
+  // Der belegte Fall aus #815: ein CalDAV-Termin bringt seine RFC-7986-`COLOR`
+  // mit, wird jemandem zugewiesen - und war bis v2.35.0 unsichtbar, weil die
+  // Personenfarbe alles schlug. Die Sync war nie das Problem.
+  const { resolveEventColor } = calendarHelpers;
+  const assignee = [{ id: 1, color: '#FF0000' }];
+
+  assert(resolveEventColor({ color: '#00FF00', assigned_users: assignee, cal_color: '#0000FF' }) === '#00FF00',
+    'die ausdrueckliche Terminfarbe muss die Zuweisung schlagen');
+  // Gegenprobe: OHNE eigene Farbe gewinnt die Person weiter - gegen die
+  // Kalenderfarbe, die jeder Termin des Kalenders traegt und die deshalb nichts
+  // ueber diesen einen aussagt. Ohne diese Haelfte waere der Test auch dann
+  // gruen, wenn die Zuweisung gar nicht mehr faerbte.
+  assert(resolveEventColor({ assigned_users: assignee, cal_color: '#0000FF' }) === '#FF0000',
+    'ohne eigene Farbe muss die Zuweisung faerben');
+  assert(resolveEventColor({ cal_color: '#0000FF' }) === '#0000FF',
+    'ohne Zuweisung bleibt die Kalenderfarbe');
+  assert(resolveEventColor({}) === '#8E8E93',
+    'ohne alles bleibt das neutrale Grau');
+});
+
+test('eine Zuweisung ohne eigene Farbe faellt nicht auf die Kalenderfarbe durch', () => {
+  // Ein Mitglied ohne gesetzte Avatar-Farbe bekommt das neutrale Grau, nicht die
+  // Kalenderfarbe: sonst saehe ein zugewiesener Termin aus wie ein nicht
+  // zugewiesener, und die Zuweisung waere unsichtbar statt nur farblos.
+  assert(calendarHelpers.resolveEventColor({ assigned_users: [{ id: 1 }], cal_color: '#0000FF' }) === '#8E8E93',
+    'ein Mitglied ohne Farbe darf nicht auf die Kalenderfarbe durchfallen');
+});
+
+// --------------------------------------------------------
 // Ergebnis
 // --------------------------------------------------------
 console.log(`\n[Calendar-Test] Ergebnis: ${passed} bestanden, ${failed} fehlgeschlagen\n`);
