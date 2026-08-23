@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.33.1] - 2026-08-23
+
 ### Fixed
 
 - **Google Calendar sync imports nothing once the installation's first user is deleted** (#839,
@@ -19,6 +21,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Where no user exists at all, new events are skipped with a single warning instead of one failed
   insert per event. Updates and deletions do not need an owner and keep running.
+
+  **The appointments missed in the meantime come back** (migration v158). Stopping the failure was
+  not enough on its own: the sync stored its sync token after every run, including the runs where
+  every single insert had failed. To Google those events are delivered, and an incremental run only
+  ever asks for changes since that token - so the gap would have been permanent. Where the user with
+  ID 1 is absent, which is exactly the condition the fault needed, the token is dropped and the next
+  run is a full resync. Everywhere else it stays: nothing was ever missing there, and a full resync
+  costs Google API quota for nothing. The resync itself is harmless either way - the upsert compares
+  values and does not touch a row that has not changed.
 
 ## [2.33.0] - 2026-08-23
 

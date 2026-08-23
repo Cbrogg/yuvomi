@@ -1,4 +1,4 @@
-<!-- version: 2.33.0 -->
+<!-- version: 2.33.1 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -45,10 +45,8 @@
       dem Merge uebersetzt - genau die Handarbeit, die er sich mit seiner
       Bitte ersparen wollte.
 -->
-The changelog no longer needs a connection to GitHub. Until now Yuvomi fetched its release history live, so an instance without outbound network, or one behind a busy shared IP, saw nothing but an error. The history that ships with your installation is used instead when GitHub does not answer, and the view tells you that is what you are reading. It reports the newest available version as unknown in that case rather than claiming you are up to date, because a bundled file cannot know about anything newer than itself.
+Google Calendar sync works again on installations where the account created during setup was later deleted. Imported appointments were assigned to that account, so once it was gone nothing arrived at all - the sync reported success while every appointment was rejected behind the scenes. Appointments are now assigned to the first account that exists.
 
-Documents filed by a module now land in one folder regardless of who uploads them. The folder was previously identified by its translated name, so two people using Yuvomi in different languages ended up with two folders and half the receipts in each. Existing folders keep their name and contents, and renaming one no longer causes a second to appear the next time something is filed.
+If this affected you, the appointments missed in the meantime come back on their own. Google only ever resends what changed since the last run, so those events would otherwise have stayed missing; this update arranges one full refresh of your calendars where the fault applied, and nothing changes for everyone else.
 
-Filipino has been revised throughout by a native speaker, and the housekeeping folder is now named after the module it belongs to in every language.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.33.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.33.1
