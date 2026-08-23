@@ -26,8 +26,15 @@
     - Keine internen Details: keine CSS-Klassen, keine Pixelwerte, keine
       Tokennamen, keine Testnamen.
     - Letzter Absatz ist der Link auf die vollen Release Notes.
-    - Leerzeile zwischen den Absaetzen: der Store rendert ein gefaltetes
-      YAML-Blockskalar, dort ist die Leerzeile der Absatzumbruch.
+    - Ein Absatz ist EINE Zeile, egal wie lang. Innerhalb eines Absatzes darf
+      kein Zeilenumbruch stehen: der Store rendert ein gefaltetes
+      YAML-Blockskalar (`>-`), das jeden einzelnen Umbruch zu einem Leerzeichen
+      faltet - der Text liest sich dann anders zurueck, als er geschrieben
+      wurde, und der Round-Trip-Guard im Workflow bricht den Lauf ab. Genau
+      daran ist der erste v2.30.0-Versuch gescheitert. Den Zeilenumbruch fuer
+      die Lesbarkeit macht der Workflow selbst beim Schreiben.
+    - Leerzeile zwischen den Absaetzen: dort, und nur dort, ist der
+      Absatzumbruch.
     - ENGLISCH. Der Store-Eintrag ist durchgehend englisch (`tagline`,
       `description` daneben), und diese Notiz steht im Update-Dialog eines
       Haushalts irgendwo auf der Welt. Der Kommentar hier ist deutsch, weil er
@@ -38,18 +45,8 @@
       dem Merge uebersetzt - genau die Handarbeit, die er sich mit seiner
       Bitte ersparen wollte.
 -->
-This update adds a lock for individual tasks. A locked task can only be
-rewritten, archived or deleted by the person who created it and by the
-household's administrators - the title, the due date, the recurrence, the
-points, and everything else that defines it. For everybody else it stays fully
-usable: they can still look at it, tick it off, comment on it, set their own
-reminder, and take the task on or hand it back. It is meant for households with
-children, where tasks are meant to be shared but not redefined by everyone.
-Existing tasks are not locked and behave exactly as before; the switch sits in
-the edit dialog next to the visibility setting.
+This update adds a lock for individual tasks. A locked task can only be rewritten, archived or deleted by the person who created it and by the household's administrators - the title, the due date, the recurrence, the points, and everything else that defines it. For everybody else it stays fully usable: they can still look at it, tick it off, comment on it, set their own reminder, and take the task on or hand it back. It is meant for households with children, where tasks are meant to be shared but not redefined by everyone. Existing tasks are not locked and behave exactly as before; the switch sits in the edit dialog next to the visibility setting.
 
-Archiving a task did not check whether you were allowed to see it in the first
-place. A private task belonging to another member could be taken out of view
-without it ever having been shown to you. That is fixed.
+Archiving a task did not check whether you were allowed to see it in the first place. A private task belonging to another member could be taken out of view without it ever having been shown to you. That is fixed.
 
 Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.30.0
