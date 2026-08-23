@@ -11,6 +11,7 @@ import { createLogger } from '../logger.js';
 import { collectErrors, date as validateDate, id as validateId, str, MAX_TEXT, MAX_TITLE } from '../middleware/validate.js';
 import { documentLinksFor, loadDocumentLinks, replaceDocumentLinks, visibleDocumentRef } from '../services/document-links.js';
 import { buildSplits, decorateMoney, minorToDecimal, parseMoneyToMinor, simplifyDebts } from '../services/split-expenses.js';
+import { CURRENCY_CODES } from '../../public/utils/currency-codes.js';
 import { syncBirthdayArtifacts } from '../services/birthdays.js';
 import { todayKey } from '../utils/timezone.js';
 
@@ -20,13 +21,12 @@ const router = express.Router();
 const avatarColors = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55'];
 const randomAvatarColor = () => avatarColors[Math.floor(Math.random() * avatarColors.length)];
 
+// Derselbe Waehrungsvorrat wie in den Einstellungen und in den Abos - eine
+// Liste fuer Server und Browser (#841, public/utils/currency-codes.js).
 const GROUP_TYPES = ['household', 'couple', 'travel', 'event', 'shopping', 'general'];
 const GROUP_ROLES = ['owner', 'admin', 'guest'];
 const SPLIT_METHODS = ['equal', 'exact', 'percentage', 'shares'];
 const CATEGORIES = ['groceries', 'rent', 'utilities', 'baby', 'pets', 'school', 'travel', 'shopping', 'subscriptions', 'health', 'home', 'general'];
-// Muss mit VALID_CURRENCIES in server/routes/preferences.js übereinstimmen,
-// sonst lehnt diese Route die Haushaltswährung ab (per Test abgesichert).
-const CURRENCIES = ['AED', 'ARS', 'AUD', 'BBD', 'BOB', 'BRL', 'BSD', 'BYN', 'BZD', 'CAD', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CZK', 'DKK', 'DOP', 'EUR', 'GBP', 'GTQ', 'GYD', 'HNL', 'HTG', 'HUF', 'IDR', 'INR', 'IRR', 'JMD', 'JPY', 'KRW', 'KZT', 'MXN', 'MYR', 'NIO', 'NOK', 'NZD', 'PAB', 'PEN', 'PHP', 'PLN', 'PYG', 'RUB', 'SAR', 'SEK', 'SRD', 'TRY', 'TTD', 'UAH', 'USD', 'UYU', 'VES', 'XCD', 'ZAR'];
 const FREQUENCIES = ['weekly', 'monthly', 'yearly'];
 const FAMILY_ROLES = ['dad', 'mom', 'parent', 'child', 'grandparent', 'relative', 'other'];
 
@@ -316,8 +316,8 @@ function replaceExpenseSplits(database, expense, splits, actorId) {
 }
 
 function parseExpenseBody(body, fallbackCurrency) {
-  const currency = CURRENCIES.includes(body.currency) ? body.currency : fallbackCurrency;
-  const convertedCurrency = CURRENCIES.includes(body.converted_currency) ? body.converted_currency : currency;
+  const currency = CURRENCY_CODES.includes(body.currency) ? body.currency : fallbackCurrency;
+  const convertedCurrency = CURRENCY_CODES.includes(body.converted_currency) ? body.converted_currency : currency;
   const amountMinor = parseMoneyToMinor(body.amount, currency);
   const convertedAmountMinor = body.converted_amount
     ? parseMoneyToMinor(body.converted_amount, convertedCurrency, 'converted_amount')
@@ -376,7 +376,7 @@ function normalizeSplitDefaults(body, groupId, fallbackMethod = 'equal') {
 
 router.get('/meta', (_req, res) => {
   try {
-    res.json({ data: { group_types: GROUP_TYPES, group_roles: GROUP_ROLES, split_methods: SPLIT_METHODS, categories: CATEGORIES, currencies: CURRENCIES, frequencies: FREQUENCIES, default_currency: defaultCurrency() } });
+    res.json({ data: { group_types: GROUP_TYPES, group_roles: GROUP_ROLES, split_methods: SPLIT_METHODS, categories: CATEGORIES, currencies: CURRENCY_CODES, frequencies: FREQUENCIES, default_currency: defaultCurrency() } });
   } catch (err) {
     log.error('GET /meta error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -454,7 +454,7 @@ router.post('/groups', (req, res) => {
     const errors = collectErrors([vName, vDescription]);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
     const type = GROUP_TYPES.includes(req.body.type) ? req.body.type : 'general';
-    const currency = CURRENCIES.includes(req.body.default_currency) ? req.body.default_currency : defaultCurrency();
+    const currency = CURRENCY_CODES.includes(req.body.default_currency) ? req.body.default_currency : defaultCurrency();
     // Beim Anlegen existiert nur der Owner als Mitglied - eine pro-Mitglied-Config
     // ist hier noch nicht sinnvoll (das Frontend bietet den Editor erst im
     // Bearbeiten-Dialog). Nur die Methode wird direkt übernommen.
@@ -488,7 +488,7 @@ router.patch('/groups/:id', (req, res) => {
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
     const current = db.get().prepare('SELECT * FROM expense_groups WHERE id = ?').get(id);
     const type = GROUP_TYPES.includes(req.body.type) ? req.body.type : current.type;
-    const currency = CURRENCIES.includes(req.body.default_currency) ? req.body.default_currency : current.default_currency;
+    const currency = CURRENCY_CODES.includes(req.body.default_currency) ? req.body.default_currency : current.default_currency;
     // Standard-Aufteilung nur anfassen, wenn der Client sie mitschickt (#517).
     let defaultMethod = current.default_split_method;
     let defaultConfig = current.default_split_config;
@@ -891,7 +891,7 @@ router.post('/groups/:id/settlements', (req, res) => {
     const payeeId = Number(req.body.payee_id);
     if (!memberRole(groupId, payerId) || !memberRole(groupId, payeeId)) return res.status(400).json({ error: 'Settlement users must be group members.', code: 400 });
     if (payerId === payeeId) return res.status(400).json({ error: 'Settlement needs two different users.', code: 400 });
-    const currency = CURRENCIES.includes(req.body.currency) ? req.body.currency : group.default_currency;
+    const currency = CURRENCY_CODES.includes(req.body.currency) ? req.body.currency : group.default_currency;
     const amountMinor = parseMoneyToMinor(req.body.amount, currency);
     const vNotes = str(req.body.notes, 'Notes', { max: MAX_TEXT, required: false });
     if (vNotes.error) return res.status(400).json({ error: vNotes.error, code: 400 });

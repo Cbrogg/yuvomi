@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+
+- **The list of selectable currencies now exists exactly once.** It lived in four literal copies -
+  the settings picker, the Subscriptions tab, the preferences route and Shared expenses - kept in
+  step by two guards that compared the four source files by regular expression. That is how KRW, IDR
+  and IRR once ended up selectable as the household currency while two modules refused them. The
+  list moved to `public/utils/currency-codes.js`, shared by browser and server like the other
+  isomorphic utilities, and the guard now asserts that no second list exists rather than comparing
+  copies. No behaviour changes for an existing installation; adding the next currency is one line.
+
 ## [2.34.0] - 2026-08-23
 
 ### Added

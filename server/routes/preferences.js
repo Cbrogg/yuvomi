@@ -15,6 +15,9 @@ import { retitleBirthdayEvents } from '../services/birthdays.js';
 // Geteilte isomorphe Util (#620, Allowlist in test/test-layer-boundary.js):
 // dasselbe Kennungsformat, das Event-Modal und Einstellungen verwenden.
 import { parseSyncTargetValue } from '../../public/utils/sync-target.js';
+// Der Vorrat waehlbarer Waehrungen - eine Liste fuer Server und Browser
+// (#841, Allowlist in test/test-layer-boundary.js).
+import { CURRENCY_CODES } from '../../public/utils/currency-codes.js';
 
 const log = createLogger('Preferences');
 
@@ -23,7 +26,6 @@ const router = express.Router();
 const VALID_MEAL_TYPES = ['breakfast', 'lunch', 'dinner', 'snack'];
 const DEFAULT_MEAL_TYPES = VALID_MEAL_TYPES.join(',');
 
-const VALID_CURRENCIES = ['AED', 'ARS', 'AUD', 'BBD', 'BOB', 'BRL', 'BSD', 'BYN', 'BZD', 'CAD', 'CHF', 'CLP', 'CNY', 'COP', 'CRC', 'CUP', 'CZK', 'DKK', 'DOP', 'EUR', 'GBP', 'GTQ', 'GYD', 'HNL', 'HTG', 'HUF', 'IDR', 'INR', 'IRR', 'JMD', 'JPY', 'KRW', 'KZT', 'MXN', 'MYR', 'NIO', 'NOK', 'NZD', 'PAB', 'PEN', 'PHP', 'PLN', 'PYG', 'RUB', 'SAR', 'SEK', 'SRD', 'TRY', 'TTD', 'UAH', 'USD', 'UYU', 'VES', 'XCD', 'ZAR'];
 const DEFAULT_CURRENCY = 'EUR';
 const DEFAULT_APP_NAME = 'Yuvomi';
 
@@ -452,8 +454,8 @@ router.put('/', (req, res) => {
     }
 
     if (currency !== undefined) {
-      if (!VALID_CURRENCIES.includes(currency)) {
-        return res.status(400).json({ error: `Ungültige Währung. Erlaubt: ${VALID_CURRENCIES.join(', ')}`, code: 400 });
+      if (!CURRENCY_CODES.includes(currency)) {
+        return res.status(400).json({ error: `Ungültige Währung. Erlaubt: ${CURRENCY_CODES.join(', ')}`, code: 400 });
       }
       cfgSet('currency', currency);
     }

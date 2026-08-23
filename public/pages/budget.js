@@ -2404,7 +2404,7 @@ function requestNameInPanel(panel, { title, label, placeholder }) {
 // Währung je Darlehen (#582): Währungs-Select + fester Umrechnungskurs. Das
 // Kursfeld erscheint nur bei einer von der Budget-Währung abweichenden Wahl -
 // solange beide gleich sind, gibt es nichts umzurechnen. Die Option-Liste füllt
-// wireLoanCurrencyFields() nach dem Einfügen (geteilte SUPPORTED_CURRENCIES).
+// wireLoanCurrencyFields() nach dem Einfügen (geteilte CURRENCY_CODES).
 /**
  * Weist einen Betrag zurück, der nicht ins Raster seiner Währung passt.
  *

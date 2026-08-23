@@ -38,8 +38,8 @@ import {
 } from '../public/settings/pages/modules-calendar.js';
 import {
   persistCurrencySelection,
-  SUPPORTED_CURRENCIES,
 } from '../public/settings/currency.js';
+import { CURRENCY_CODES } from '../public/utils/currency-codes.js';
 import {
   hasValidWeatherCoords,
   isConnectedWeatherControl,
@@ -979,41 +979,60 @@ test('Budget persistence restores the previous currency on failure', async () =>
   assert.equal(select.disabled, false);
 });
 
-test('Budget currency options match the existing preferences API contract', async () => {
-  const source = await readFile(
-    new URL('../server/routes/preferences.js', import.meta.url),
-    'utf8',
-  );
-  const declaration = source.match(/const VALID_CURRENCIES = \[([^\]]+)\]/);
-  assert.ok(declaration, 'preferences route must declare VALID_CURRENCIES');
-  const backendCurrencies = [...declaration[1].matchAll(/'([A-Z]{3})'/g)]
-    .map((match) => match[1]);
+// Die Waehrungsliste lebte in vier woertlichen Kopien (Einstellungen, Abos,
+// Preferences-Route, Geteilte Ausgaben); zwei Guards hielten sie per Regex
+// ueber den Quelltext deckungsgleich. Seit #841 gibt es sie einmal, in
+// public/utils/currency-codes.js. Der Guard prueft deshalb nicht mehr die
+// Gleichheit von Kopien, sondern DASS ES KEINE ZWEITE LISTE GIBT - eine Regel
+// ueber alle Dateien statt einer Aufzaehlung der drei, die man damals kannte.
+test('the currency list exists exactly once in the repo', async () => {
+  const ROOT = new URL('../', import.meta.url);
+  const SHARED = 'public/utils/currency-codes.js';
+  const files = [];
+  const walk = async (dir) => {
+    for (const entry of await readdir(new URL(dir, ROOT), { withFileTypes: true })) {
+      if (entry.name === 'node_modules' || entry.name.startsWith('.')) continue;
+      const rel = `${dir}${entry.name}`;
+      if (entry.isDirectory()) await walk(`${rel}/`);
+      else if (/\.(js|mjs)$/.test(entry.name)) files.push(rel);
+    }
+  };
+  await walk('public/');
+  await walk('server/');
 
-  assert.deepEqual(SUPPORTED_CURRENCIES, backendCurrencies);
+  const offenders = [];
+  for (const rel of files) {
+    if (rel === SHARED) continue;
+    const source = await readFile(new URL(rel, ROOT), 'utf8');
+    // Ein Array-Literal, dessen Elemente wie ISO-4217-Codes aussehen. Drei
+    // Treffer im echten Vorrat trennen eine Waehrungsliste von zufaelligen
+    // Grossbuchstaben-Tripeln (Laendercodes, Kuerzel in Testdaten).
+    for (const match of source.matchAll(/\[([^\][]*?)\]/gs)) {
+      const codes = [...match[1].matchAll(/'([A-Z]{3})'/g)].map((m) => m[1]);
+      if (codes.length < 5) continue;
+      const known = codes.filter((code) => CURRENCY_CODES.includes(code));
+      if (known.length >= 3) offenders.push(`${rel}: ${codes.slice(0, 5).join(', ')} …`);
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `Waehrungslisten gehoeren nach ${SHARED} - eine zweite Kopie driftet:\n${offenders.join('\n')}`,
+  );
 });
 
-// Die Haushaltswährung wird zentral in preferences.js validiert, aber Abos und
-// geteilte Ausgaben führen eigene Listen. Liefen sie auseinander, konnte man
-// eine Währung im Haushalt einstellen, die in diesen beiden Modulen nicht
-// wählbar war bzw. dort abgelehnt wurde (KRW, IDR und IRR waren so gestrandet).
-test('subscription and split-expense currency lists match the preferences contract', async () => {
-  const listFrom = async (path, name) => {
-    const source = await readFile(new URL(path, import.meta.url), 'utf8');
-    const declaration = source.match(new RegExp(`const ${name} = \\[([^\\]]+)\\]`));
-    assert.ok(declaration, `${path} must declare ${name}`);
-    return [...declaration[1].matchAll(/'([A-Z]{3})'/g)].map((match) => match[1]);
-  };
-
-  const backendCurrencies = await listFrom('../server/routes/preferences.js', 'VALID_CURRENCIES');
-
-  assert.deepEqual(
-    await listFrom('../public/pages/subscriptions.js', 'CURRENCIES'),
-    backendCurrencies,
-  );
-  assert.deepEqual(
-    await listFrom('../server/routes/split-expenses.js', 'CURRENCIES'),
-    backendCurrencies,
-  );
+// Der Vorrat ist der, den die Preferences-Route validiert: die Auswahl im
+// Browser und die Pruefung im Server lesen dieselbe Konstante.
+test('the shared currency list is sorted, unique and ISO-4217 shaped', () => {
+  assert.deepEqual([...CURRENCY_CODES].sort(), [...CURRENCY_CODES]);
+  assert.equal(new Set(CURRENCY_CODES).size, CURRENCY_CODES.length);
+  for (const code of CURRENCY_CODES) assert.match(code, /^[A-Z]{3}$/);
+  // Frei gewaehlte Stichprobe aus drei Kontinenten: die Liste ist ein Vorrat,
+  // kein Zufallsprodukt eines Refactorings.
+  for (const code of ['EUR', 'USD', 'IDR', 'JPY', 'ZAR']) {
+    assert.ok(CURRENCY_CODES.includes(code), `${code} fehlt im Vorrat`);
+  }
 });
 
 test('weather geolocation callbacks only update the active leaf', () => {

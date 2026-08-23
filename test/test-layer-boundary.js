@@ -53,6 +53,14 @@ const SHARED_ISOMORPHIC = new Set([
   // Fassung im Backend waere die dritte im Repo und wuerde von der ersten nur
   // dort abweichen, wo es niemandem auffaellt: nicht in der CI, die in UTC laeuft.
   'public/utils/date.js',
+  // #841: Der Vorrat waehlbarer Waehrungen. Er stand viermal woertlich im Repo
+  // (Einstellungen, Abos, Preferences-Route, Geteilte Ausgaben) und wurde von
+  // zwei Guards per Regex ueber den Quelltext zusammengehalten - eine teure
+  // Antwort auf die falsche Frage. Wer eine Waehrung aufnahm, musste vier
+  // Listen anfassen, und wer eine vergass, bekam eine Waehrung, die im
+  // Haushalt einstellbar und in zwei Modulen nicht waehlbar war (KRW, IDR,
+  // IRR waren genau so gestrandet). Eine reine Konstante, sonst nichts.
+  'public/utils/currency-codes.js',
 ]);
 
 const SOURCE_EXT = /\.(js|mjs)$/;

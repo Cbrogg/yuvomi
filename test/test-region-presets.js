@@ -10,6 +10,7 @@ import {
   resolveRegion,
   numberLocaleFor,
 } from '../public/settings/region-presets.js';
+import { CURRENCY_CODES } from '../public/utils/currency-codes.js';
 
 // Spiegelt die Formprüfung aus getFormatLocale() in public/i18n.js. Zwei- oder
 // dreibuchstabiger Sprachcode, damit fil-PH (Filipino) durchkommt.
@@ -26,7 +27,7 @@ async function backendList(name) {
 }
 
 test('every region preset maps to backend-valid currency, date and time values', async () => {
-  const currencies = await backendList('VALID_CURRENCIES');
+  const currencies = CURRENCY_CODES;
   const dateFormats = await backendList('VALID_DATE_FORMATS');
   const timeFormats = await backendList('VALID_TIME_FORMATS');
 

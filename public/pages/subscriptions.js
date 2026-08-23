@@ -15,6 +15,7 @@ import {
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { toLocalDateKey } from '/utils/date.js';
+import { CURRENCY_CODES } from '/utils/currency-codes.js';
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { formatMoney, amountPlaceholder, amountStep, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 
@@ -32,15 +33,6 @@ let state = {
   user: null,
 };
 let container = null;
-// Muss mit VALID_CURRENCIES in server/routes/preferences.js übereinstimmen,
-// sonst ist die Haushaltswährung hier nicht wählbar (per Test abgesichert).
-const CURRENCIES = [
-  'AED', 'ARS', 'AUD', 'BBD', 'BOB', 'BRL', 'BSD', 'BYN', 'BZD', 'CAD', 'CHF', 'CLP',
-  'CNY', 'COP', 'CRC', 'CUP', 'CZK', 'DKK', 'DOP', 'EUR', 'GBP', 'GTQ', 'GYD',
-  'HNL', 'HTG', 'HUF', 'IDR', 'INR', 'IRR', 'JMD', 'JPY', 'KRW', 'KZT', 'MXN',
-  'MYR', 'NIO', 'NOK', 'NZD', 'PAB', 'PEN', 'PHP', 'PLN', 'PYG', 'RUB', 'SAR',
-  'SEK', 'SRD', 'TRY', 'TTD', 'UAH', 'USD', 'UYU', 'VES', 'XCD', 'ZAR',
-];
 const DEFAULT_CATEGORY_LABELS = {
   Entertainment: 'budget.subcatSubscriptionEntertainment',
   Productivity: 'budget.subcatSubscriptionProductivity',
@@ -744,7 +736,7 @@ function currencyItems() {
   } catch {
     names = null;
   }
-  return CURRENCIES.map((code) => ({
+  return CURRENCY_CODES.map((code) => ({
     value: code,
     label: `${code} · ${names?.of(code) || code}`,
   }));

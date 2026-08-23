@@ -4,7 +4,7 @@
 // detectRegion() aus den drei vorhandenen Werten abgeleitet.
 //
 // Jeder Wert muss in den serverseitigen Listen enthalten sein:
-//   currency    ∈ VALID_CURRENCIES      (server/routes/preferences.js)
+//   currency    ∈ CURRENCY_CODES        (public/utils/currency-codes.js)
 //   date_format ∈ DATE_FORMATS          (public/settings/pages/personal-appearance.js)
 //   time_format ∈ { '24h', '12h' }
 // (per test/test-region-presets.js abgesichert).
