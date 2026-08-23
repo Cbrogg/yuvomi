@@ -1465,6 +1465,19 @@ UNIQUE constraint: `(base_url, org_id)` — allows multiple Papra organizations 
 
 **DMS integration:** Admins connect a DMS instance (Paperless-ngx or Papra), then search it and **link** existing DMS documents into the Documents module as `external`/`dms` references (no duplication of the binary), or **push** a local or WebDAV-backed document into the DMS. Only `storage_backend = 'dms'` means a document is already stored in the DMS. All DMS operations (account management, search, link, push) are **admin-only**; searching the DMS is gated because it would otherwise bypass the per-document `restricted`/`private` visibility boundaries. Linked documents are previewed/downloaded by proxying the DMS live. The adapter layer (`server/services/dms/`) is provider-pluggable; Paperless-ngx and Papra are the two built-in adapters. For **Paperless-ngx**, a search term carrying an `asn:` prefix (e.g. `asn:123`, `asn 123`, `asn#123`) is resolved as an exact **Archive Serial Number (ASN)** lookup (`?archive_serial_number=`) instead of a full-text query, so a stamped ASN maps straight to the single matching document rather than a noisy title/content result set. A **bare number** is ambiguous (it may be a stamped ASN, but equally a street number, year or invoice number in the title), so it runs both queries in parallel and returns the ASN hit first, followed by the deduplicated full-text results, capped at the requested limit. A failing ASN lookup does not fail the search: the full-text results still come back.
 
+**Target validation (#809):** the account's `base_url` is checked before every outbound request, in
+`server/services/dms/guard.js`. Every adapter method routes through it — including Papra's
+`testConnection()`, which builds its own request and would otherwise be the one gap. `DMS_ALLOW_PRIVATE_NETWORK`
+governs it and is the **only** `*_ALLOW_PRIVATE_NETWORK` switch that defaults to `true`: a DMS is
+self-hosted by definition and normally sits on the same LAN or Docker network, so shipping this as an
+opt-in would have cut off virtually every existing connection. Only an explicit `false` or `0` turns
+the guard on; a typo leaves a working setup working. When on, the hostname is checked against the
+blocklist before DNS and **every** resolved address is validated, so one public address next to a
+private one does not pass. This is a pre-flight check of the configured URL, not the per-connection
+anti-rebinding lookup `server/utils/http.js` provides: the adapters need `FormData` and `res.json()`,
+which `safeRequest()` does not offer, and global `fetch()` has no per-connection `lookup`. That
+residual gap is documented in the module header.
+
 ### Budget Loans
 Instalment-based loans with per-payment tracking. Active loans show remaining balance and due months; paid-off loans are automatically closed. **Interest phases (migration v100, #569):** a loan is optionally modelled as a German-style annuity — from the `principal`, nominal `fixed_rate` and `initial_repayment_rate` the server derives the constant monthly payment and, from that, the term and total cost, storing them in `total_amount`/`installment_count` so the existing instalment/status logic is unchanged. With `interest_mode = 'fixed_then_variable'` a forecast `followup_rate` applies after the `fixed_period_months` fixed period (a longer follow-up rate lengthens the term). `interest_mode = 'variable'` (migration v101, #569) covers a loan with **no fixed-interest period at all**: it is computed single-phase exactly like `fixed`, but `fixed_rate` is treated as the current rate rather than a commitment, so `fixed_period_months`/`followup_rate` stay NULL and the UI labels payment and term as a snapshot of that rate. `interest_mode = 'none'` keeps the prior behaviour (manual `total_amount` + `installment_count`).
 
@@ -1506,8 +1519,17 @@ Individual payment records for a budget loan. Each installment number is unique 
 | installment_number | INTEGER | NOT NULL CHECK(> 0), UNIQUE per loan |
 | amount | REAL | NOT NULL CHECK(> 0) — in the loan's currency, not the budget currency (#582); always positive, the sign lives on the coupled budget entry and follows `direction` (#638) |
 | paid_date | TEXT | DATE, NOT NULL |
-| budget_entry_id | INTEGER | FK → Budget Entries (SET NULL on delete), nullable |
+| budget_entry_id | INTEGER | FK → Budget Entries (SET NULL on delete), nullable — **NULL for installments backfilled at loan creation** (#813), see below |
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+
+**Backfilling a running loan (#813):** `POST /loans` accepts an optional `paid_installments` count and
+writes that many payment rows straight away, numbered from 1, dated to their own due month
+(`start_month` + n-1), each carrying the loan's `installment_amount` with the last one capped at the
+remaining total. Those rows deliberately have **no coupled budget entry**: a regular installment books
+into the budget because it is being paid now, whereas these were paid before Yuvomi existed and never
+went through the household — booking them would fill past months with expenses that never happened and
+move account balances with them. The form derives a suggestion from the first due month but does not
+enforce it, since a payment-free start or a deferral makes the computed number wrong.
 
 ### Housekeeping Workers
 Staff profiles for the Housekeeping module (migrations v34, v48).

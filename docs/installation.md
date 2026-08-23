@@ -239,9 +239,9 @@ docker compose up -d
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
 
 > **Pinning a version.** Every release is also published under immutable tags:
-> `2.28.0` (exact version), `2.28` (latest patch of that minor), plus a moving `main`
+> `2.29.0` (exact version), `2.29` (latest patch of that minor), plus a moving `main`
 > tag for the current development state. To pin production to a known-good release,
-> set `image: ghcr.io/ulsklyc/yuvomi:2.28.0` in your compose file and bump it
+> set `image: ghcr.io/ulsklyc/yuvomi:2.29.0` in your compose file and bump it
 > deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
@@ -287,7 +287,7 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.28.0
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.29.0
 yuvomi  | [Yuvomi] Environment: production
 yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
@@ -753,6 +753,14 @@ it in controlled environments.
 |----------|-------------|---------|----------|
 | `ICS_SUBSCRIPTION_ALLOW_PRIVATE_NETWORK` | Allow `http://` and private/local network ICS feeds; lifts SSRF protection (`true`/`false`) | `false` | No |
 | `RECIPE_PROVIDER_ALLOW_PRIVATE_NETWORK` | Allow `http://` and private/local network recipe provider (Mealie/Tandoor) targets; lifts SSRF protection (`true`/`false`) | `false` | No |
+| `DMS_ALLOW_PRIVATE_NETWORK` | Allow private/local network document management targets (Paperless-ngx, Papra); `false` enforces SSRF protection (`true`/`false`) | `true` | No |
+
+> **Note the inverted default.** `DMS_ALLOW_PRIVATE_NETWORK` is the only switch in this family that
+> defaults to `true`. A document management system is self-hosted by definition and normally sits on
+> the same LAN or Docker network as Yuvomi, so blocking private targets by default would break
+> virtually every existing connection. Set it to `false` to enforce the same protection the other
+> integrations have; only an explicit `false` or `0` switches it on, so a typo leaves a working
+> setup working.
 
 ### Google Calendar Sync (Optional)
 
