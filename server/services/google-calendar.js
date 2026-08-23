@@ -835,6 +835,16 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
     `SELECT id, start_datetime FROM calendar_events WHERE external_calendar_id = ? AND external_source = 'google'`
   );
 
+  // created_by ist ein Fremdschlüssel auf users, und hier stand die 1 fest. Wer
+  // den bei der Installation angelegten Nutzer löscht, bekommt seither jeden
+  // Insert mit "FOREIGN KEY constraint failed" zurück (#839): der Sync läuft
+  // durch, importiert aber nichts. CalDAV und Apple hatten denselben Fehler,
+  // Google wurde damals nicht nachgezogen. Einmal auflösen statt je Event - die
+  // Zeile ist über den ganzen Lauf konstant.
+  const ownerRow  = db.get().prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1').get();
+  const createdBy = ownerRow ? ownerRow.id : null;
+  if (createdBy === null) log.warn('No user in database - new events are not imported.');
+
   const insertOrUpdate = db.get().transaction((item) => {
     // Löschung aus diesem Kalender - eine Zeile, die inzwischen zu einem anderen
     // Kalender gehört, ist davon nicht gemeint.
@@ -888,14 +898,6 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
     // sonst Kalenderfarbe als Default.
     const evColor = (item.colorId && colorMap[item.colorId]) || calColor;
 
-    // created_by: ersten existierenden User verwenden (nicht hardcoded ID 1)
-    const owner = db.get().prepare('SELECT id FROM users ORDER BY id ASC LIMIT 1').get();
-    if (!owner) {
-      log.warn('No user in database - sync skipped.');
-      return;
-    }
-    const createdBy = owner.id;
-
     const existing = db.get().prepare(
       'SELECT id, outbound_dirty FROM calendar_events WHERE external_calendar_id = ? AND external_source = ?'
     ).get(item.id, 'google');
@@ -941,9 +943,14 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
               )
       `).run(...values, existing.id, ...values);
     } else {
+      // Ohne Nutzer gibt es niemanden, dem der Termin gehören könnte. Die Zweige
+      // darüber - Aktualisierung und Löschung - kommen ohne ihn aus und laufen
+      // weiter; gewarnt wurde einmal beim Auflösen, nicht je Event.
+      if (createdBy === null) return;
       const inserted = db.get().prepare(`
         INSERT INTO calendar_events
-          (title, description, start_datetime, end_datetime, all_day, location, color, external_calendar_id, external_source, recurrence_rule, tzid, calendar_ref_id, created_by)
+          (title, description, start_datetime, end_datetime, all_day,
+           location, color, external_calendar_id, external_source, recurrence_rule, tzid, calendar_ref_id, created_by)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'google', ?, ?, ?, ?)
       `).run(title, description, startDt, endDt, allDay ? 1 : 0, location, evColor, item.id, rrule, tzid, calRefId, createdBy);
       assignDefaultToEvent(db.get(), inserted.lastInsertRowid, defaultAssignee);

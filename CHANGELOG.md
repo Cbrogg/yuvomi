@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Google Calendar sync imports nothing once the installation's first user is deleted** (#839,
+  thanks @Ennosuke). The owner of an imported event was written as the literal ID `1`, and
+  `created_by` is a foreign key on `users`. Delete the account the installer created and every insert
+  comes back as `FOREIGN KEY constraint failed`: the sync itself reports success, the log fills with
+  one error per event, and not a single appointment arrives. The same fault was found and fixed for
+  CalDAV and Apple earlier; Google was the last place still carrying it. The owner is now the first
+  user that actually exists, resolved once per run rather than once per event.
+
+  Where no user exists at all, new events are skipped with a single warning instead of one failed
+  insert per event. Updates and deletions do not need an owner and keep running.
+
 ## [2.33.0] - 2026-08-23
 
 ### Added
