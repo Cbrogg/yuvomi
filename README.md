@@ -82,7 +82,7 @@ Turn on what your household needs; the rest stays out of the way.
 | **Calendar** | Two-way sync with Google and CalDAV, one-way Outlook push via Microsoft Graph, calendar subscriptions, recurring events, holiday overlays and per-event visibility. |
 | **Documents** | Upload, tag, preview and organize family files, with optional WebDAV or Google Drive storage. |
 | **Inventory** | What you own: purchase price, warranty, condition and storage location, with linked receipts and deadline reminders. Off by default; households turn it on. |
-| **Budget** | Income, expenses, accounts, loans, subscriptions and per-category planning, with a personal mode. |
+| **Budget** | Income, expenses, accounts, loans, subscriptions and per-category planning, with a personal mode. An entry can share its amount while keeping its title and category private, so a shared account's balance stays right. |
 | **Housekeeping** | Household staff: schedules, check-in/out, daily or hourly billing, chores and supply requests. |
 | **Rewards** | Points on tasks credit the assigned member, with a parent-approved catalog and an auditable ledger. |
 | **Health** | Per-member vitals, medications, labs, activity and cycle tracking, with trend charts. |

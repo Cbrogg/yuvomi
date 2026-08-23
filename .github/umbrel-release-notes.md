@@ -1,4 +1,4 @@
-<!-- version: 2.30.0 -->
+<!-- version: 2.31.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -45,8 +45,8 @@
       dem Merge uebersetzt - genau die Handarbeit, die er sich mit seiner
       Bitte ersparen wollte.
 -->
-This update adds a lock for individual tasks. A locked task can only be rewritten, archived or deleted by the person who created it and by the household's administrators - the title, the due date, the recurrence, the points, and everything else that defines it. For everybody else it stays fully usable: they can still look at it, tick it off, comment on it, set their own reminder, and take the task on or hand it back. It is meant for households with children, where tasks are meant to be shared but not redefined by everyone. Existing tasks are not locked and behave exactly as before; the switch sits in the edit dialog next to the visibility setting.
+This update adds a third way to file a budget entry: share the amount, but keep the purpose to yourself. Until now an entry was either private, which hid it from everyone else and left their account balance short by that amount, or shared with everything on it. The new setting counts the amount towards everybody's account balance and the household's net worth, while the title, the category and any receipts stay with you. The others see the row with its date and its amount and a neutral placeholder where the title would be, so the balance still adds up to what the list shows. You pick this per entry, alongside private and shared.
 
-Archiving a task did not check whether you were allowed to see it in the first place. A private task belonging to another member could be taken out of view without it ever having been shown to you. That is fixed.
+Nothing changes for entries you already have, and the setting only appears if your household runs Budget in its personal mode, where each member owns their own entries.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.30.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.31.0
