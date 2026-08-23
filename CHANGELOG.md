@@ -7,6 +7,58 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.36.0] - 2026-08-23
+
+### Changed
+
+- **The display follows the household's time zone, not the browser's** (#829). v2.34.0 put every
+  server-side clock on the one zone this household lives in; the display was the half that stayed
+  behind. It mattered because appointments are stored in two forms in the same column: one you create
+  here is bare wall-clock time, one synced in from Google, Apple or CalDAV is an instant. A browser
+  leaves the first alone and converts the second into *its* zone - so on a device outside the
+  household's zone, two appointments at the same time showed two different times, depending only on
+  where they came from.
+
+  The rule that decides what gets converted is now stated once, in `public/utils/timezone.js`, and it
+  mirrors the server's: only a value that carries its own zone is converted. Someone who typed
+  "19:00" meant 19:00 in any zone, and a bare date has no clock at all - both are read rather than
+  calculated. What follows the zone alongside the appointments: the "today" markers across every
+  module, the now-line in the week view, the suggested time for a new appointment, and the wall
+  display's clock, weekday and night mode.
+
+  **Nothing changes without an explicit household zone.** The setting is what opts you in; until then
+  the display stays on the browser, exactly as before. The value mirrored to the browser is
+  deliberately the *chosen* zone rather than the resolved one - the fallback chain is never empty, so
+  mirroring it would have quietly moved every existing installation onto its container's `TZ`.
+
+- **An appointment's own colour now beats the colour of the person it is assigned to** (discussion
+  #815, reported by @ToToR65). The order was assignee first, then the appointment's colour, then the
+  calendar's - which treated two very different things as equally overridable. A calendar colour is
+  *inherited*: every appointment in that calendar carries it, so it says nothing about any single
+  one. An appointment colour is set on *that* appointment, by hand here or as an RFC 7986 `COLOR`
+  from a CalDAV server. An explicit statement should not lose to a derived one, so the order is now
+  the appointment's own colour, then the assignee, then the calendar. An assigned appointment without
+  its own colour still takes the person's colour, and who it belongs to is still shown in the avatar
+  stack next to it - that was always how *multiple* assignees were communicated anyway.
+
+  The reporter found this while testing what looked like missing CalDAV colour sync: the sync had
+  been working all along, the colours were simply invisible whenever the calendar was assigned to
+  someone.
+
+- **The note dialog opens at the width the app uses for its content-heavy dialogs** (discussion #826,
+  requested by @Genchou). A note is almost entirely a text area and it had the same width as a form
+  with four short fields. It now matches Documents, Contacts, Shopping and Budget, which applies to
+  the reading view of a note as well as the editor. Deliberately not a setting, and deliberately not
+  full width: past roughly 680px a line gets long enough that it reads worse, not better.
+
+### Fixed
+
+- **The time-zone field showed "Automatic (UTC)" again after saving.** Introduced with the setting in
+  v2.34.0: the choice was stored correctly, but the settings page builds the object it hands to the
+  form field by field and never passed the stored zone - or the resolved one behind the "Automatic"
+  label - back into it. Both are passed through now, so the field states what is set and what
+  automatic would resolve to.
+
 ## [2.35.0] - 2026-08-23
 
 ### Added
