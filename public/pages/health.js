@@ -16,7 +16,8 @@ import { t, formatDate, formatTime, getLocale, getNumberFormat } from '/i18n.js'
 import { esc } from '/utils/html.js';
 import { CHART, chartScales, chartGridMarkup, chartXLabelsMarkup } from '/utils/chart.js';
 import { wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
-import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
+import { toLocalDateKey, parseLocalDateKey, addLocalDays, todayKey} from '/utils/date.js';
+import { zonedDateKey } from '/utils/timezone.js';
 import { trendMarkup } from '/utils/metric-card.js';
 import { openModal, closeModal, confirmModal, confirmOverModal, reportFieldError } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
@@ -104,7 +105,7 @@ const vitals = {
   members: [],
   rows: [],
   range: 'month',
-  anchor: toLocalDateKey(new Date()),
+  anchor: todayKey(),
   selectedType: 'bp',
   loaded: false,
   error: false,
@@ -591,7 +592,7 @@ function wireVitals() {
 }
 
 async function switchPerson() {
-  vitals.anchor = toLocalDateKey(new Date());
+  vitals.anchor = todayKey();
   try {
     await loadVitals();
     vitals.error = false;
@@ -1145,7 +1146,7 @@ function collectVitalBody(panel, type) {
 
 async function reloadAfterSave(savedType) {
   vitals.selectedType = savedType;
-  vitals.anchor = toLocalDateKey(new Date());
+  vitals.anchor = todayKey();
   try {
     await loadVitals();
     vitals.error = false;
@@ -1286,7 +1287,7 @@ async function loadMeds() {
   meds.schedulesByMed = {};
   meds.logsByMed = {};
 
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   await Promise.all(meds.list.map(async (m) => {
     const from = addLocalDays(today, -(medLogWindowDays(m, meds.adherenceDays) - 1));
     const [sRes, lRes] = await Promise.all([
@@ -1391,7 +1392,7 @@ function renderMedsShell() {
 }
 
 function dueTodayMarkup() {
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   const due = computeDueDoses(allSchedules(), { from: today, to: today });
   if (!due.length) {
     return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.dueToday.empty'))}</p></div>`;
@@ -1461,7 +1462,9 @@ function prnMeds(scope) {
 
 /** Zeitpunkt lesbar: die Uhrzeit allein nur, wenn sie noch heute liegt. */
 function prnWhenLabel(at) {
-  const sameDay = toLocalDateKey(at) === toLocalDateKey(new Date());
+  // `at` ist ein Zeitpunkt: sein Kalendertag kommt aus der Anzeigezone, nicht aus
+  // den Browser-Gettern - sonst vergleicht die Zeile zwei verschiedene Uhren.
+  const sameDay = zonedDateKey(at) === todayKey();
   return sameDay ? formatTime(at) : `${formatDate(at)} ${formatTime(at)}`;
 }
 
@@ -1738,7 +1741,7 @@ function wirePrn(root) {
 }
 
 function adherenceMarkup() {
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   const from = addLocalDays(today, -(meds.adherenceDays - 1));
   const planned = computeDueDoses(allSchedules(), { from, to: today }).length;
   const a = computeAdherence(allLogsInRange(from, today), planned);
@@ -2821,7 +2824,7 @@ function openLabModal(report) {
   const val = (v) => (v == null ? '' : String(v));
   const dateValue = isEdit
     ? String(report.report_date).slice(0, 10)
-    : toLocalDateKey(new Date());
+    : todayKey();
 
   openModal({
     title: isEdit ? t('health.labs.edit') : t('health.labs.add'),
@@ -3085,7 +3088,7 @@ const activity = {
   personId: null,
   members: [],
   rows: [],
-  anchor: toLocalDateKey(new Date()),
+  anchor: todayKey(),
   loaded: false,
   error: false,
   root: null,
@@ -3134,7 +3137,7 @@ async function loadActivity() {
 }
 
 async function switchActivityPerson() {
-  activity.anchor = toLocalDateKey(new Date());
+  activity.anchor = todayKey();
   try {
     await loadActivity();
     activity.error = false;
@@ -3473,7 +3476,7 @@ function openActivityModal(row, opts = {}) {
             await api.patch(`/health/activities/${row.id}`, body);
           } else {
             await api.post('/health/activities', { ...body, ...ownerField(activity.personId, activity.meId) });
-            activity.anchor = toLocalDateKey(new Date(body.performed_at));
+            activity.anchor = zonedDateKey(body.performed_at);
           }
           closeModal({ force: true });
           window.yuvomi?.showToast(t('health.activity.saved'), 'success');
@@ -3595,7 +3598,7 @@ async function mountOverview() {
       overview.members = res.data || [];
     }
     if (!overview.personId) overview.personId = overview.meId ?? overview.members[0]?.id ?? null;
-    const today = toLocalDateKey(new Date());
+    const today = todayKey();
     overview.exportRange = { from: addLocalDays(today, -(OVERVIEW_EXPORT_DAYS - 1)), to: today };
     await loadOverview();
     overview.error = false;
@@ -3618,7 +3621,7 @@ async function loadOverview() {
   overview.schedulesByMed = {};
   overview.logsByMed = {};
 
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   await Promise.all(overview.meds.map(async (m) => {
     const from = addLocalDays(today, -(medLogWindowDays(m, OVERVIEW_ADHERENCE_DAYS) - 1));
     const [sRes, lRes] = await Promise.all([
@@ -3730,7 +3733,7 @@ function overviewCard(icon, titleKey, body) {
 // --- Heute fällig (identische Logik wie dueTodayMarkup im Meds-Tab) ---
 
 function overviewDueMarkup() {
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   const due = computeDueDoses(overviewAllSchedules(), { from: today, to: today });
   if (!due.length) {
     return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.dueToday.empty'))}</p></div>`;
@@ -3828,7 +3831,7 @@ async function handleOverviewDose(btn, action) {
 // --- Adherence-Quote + Streak ---
 
 function overviewAdherenceMarkup() {
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   const from = addLocalDays(today, -(OVERVIEW_ADHERENCE_DAYS - 1));
   const schedules = overviewAllSchedules();
   const planned = computeDueDoses(schedules, { from, to: today }).length;
@@ -3871,7 +3874,7 @@ function overviewAdherenceMarkup() {
 // --- Letzte Vitalwerte (Karten, Klick navigiert zum Vitalwerte-Tab) ---
 
 function overviewVitalsMarkup() {
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   const cards = VITAL_METRICS.map((metric) => {
     const series = computeVitalSeries(overview.vitals, { type: metric.type, range: 'month', anchor: today });
     return overviewVitalCardMarkup(metric, series);
@@ -4051,7 +4054,7 @@ const cycle = {
   periods: [],
   logs: [],
   settings: null,
-  anchor: toLocalDateKey(new Date()),
+  anchor: todayKey(),
   loaded: false,
   error: false,
   root: null,
@@ -4148,7 +4151,7 @@ function cycleSettings() {
 }
 
 async function switchCyclePerson() {
-  cycle.anchor = toLocalDateKey(new Date());
+  cycle.anchor = todayKey();
   try { await loadCycle(); cycle.error = false; }
   catch (err) { console.error('[Health] cycle load error:', err); cycle.error = true; }
   renderCycleShell();
@@ -4407,7 +4410,7 @@ function cycleStatsMarkup(prediction) {
 
 function cycleOpenPeriod() {
   // Jüngste laufende Periode (kein Enddatum), deren Start nicht in der Zukunft liegt.
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   return [...cycle.periods]
     .filter((p) => !p.end_date && String(p.start_date).slice(0, 10) <= today)
     .sort((a, b) => (a.start_date < b.start_date ? 1 : -1))[0] || null;
@@ -4433,7 +4436,7 @@ function cycleTodayActionsMarkup(pregnant = false) {
 }
 
 async function cycleStartPeriodToday() {
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   try {
     await api.post('/health/cycle/periods', { start_date: today });
     cycle.anchor = today;
@@ -4449,7 +4452,7 @@ async function cycleEndPeriodToday() {
   const open = cycleOpenPeriod();
   if (!open) { window.yuvomi?.showToast(t('health.cycle.today.noOpenPeriod'), 'info'); return; }
   try {
-    await api.patch(`/health/cycle/periods/${open.id}`, { end_date: toLocalDateKey(new Date()) });
+    await api.patch(`/health/cycle/periods/${open.id}`, { end_date: todayKey() });
     window.yuvomi?.showToast(t('health.cycle.today.endedToast'), 'success');
     await reloadCycle();
   } catch (err) {
@@ -4608,7 +4611,7 @@ function wireCycle() {
   cycle.root.querySelector('[data-action="cycle-first"]')?.addEventListener('click', () => openPeriodModal(null));
   cycle.root.querySelector('[data-action="cycle-start-period"]')?.addEventListener('click', () => cycleStartPeriodToday());
   cycle.root.querySelector('[data-action="cycle-end-period"]')?.addEventListener('click', () => cycleEndPeriodToday());
-  cycle.root.querySelector('[data-action="cycle-log-today"]')?.addEventListener('click', () => openDayLogModal(toLocalDateKey(new Date())));
+  cycle.root.querySelector('[data-action="cycle-log-today"]')?.addEventListener('click', () => openDayLogModal(todayKey()));
   cycle.root.querySelector('[data-action="cycle-settings"]')?.addEventListener('click', () => openCycleSettingsModal());
 }
 
@@ -4625,7 +4628,7 @@ function cycleVisibilityFor(row) {
 
 function openPeriodModal(period) {
   const isEdit = Boolean(period && period.id);
-  const startVal = isEdit ? String(period.start_date).slice(0, 10) : toLocalDateKey(new Date());
+  const startVal = isEdit ? String(period.start_date).slice(0, 10) : todayKey();
   const endVal = isEdit && period.end_date ? String(period.end_date).slice(0, 10) : '';
 
   openModal({
@@ -4829,7 +4832,7 @@ function openCycleSettingsModal() {
   // Plausibilitäts-Fenster für den Entbindungstermin: knapp in der Vergangenheit
   // (gerade entbunden/überfällig) bis ~40 Wochen voraus (frisch schwanger). Hält
   // die SSW-/Countdown-Mathematik sinnvoll, verhindert absurde Eingaben.
-  const dueTodayKey = toLocalDateKey(new Date());
+  const dueTodayKey = todayKey();
   const dueMin = addLocalDays(dueTodayKey, -40);
   const dueMax = addLocalDays(dueTodayKey, 300);
 

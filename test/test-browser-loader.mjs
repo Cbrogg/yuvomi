@@ -133,6 +133,9 @@ const STUBS = {
     export const onPwaInstallStateChanged = () => () => {};
     export const promptPwaInstall = async () => ({ outcome: 'unavailable' });
   `,
+  // /utils/timezone.js steht ebenfalls nicht hier - localStorage ist dort in
+  // try/catch gekapselt, in Node faellt der ReferenceError also auf 'keine Zone'
+  // zurueck, und genau das ist das Verhalten ohne Einstellung.
   // /utils/date.js steht bewusst NICHT hier: die Datei hat keine DOM- oder
   // i18n-Abhängigkeit und wird vom Pfad-Fallback unten direkt geladen. Der
   // Nachbau, der hier stand, war schon auseinandergelaufen (er kannte den

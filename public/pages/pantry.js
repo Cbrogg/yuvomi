@@ -25,7 +25,7 @@ import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 // Renderer mit den Vorrats-Texten füllt.
 import { emptyStateEl as emptyStateComponentEl, mountLoadError } from '/utils/empty-state.js';
 import { scheduleUndoableDelete, vibrate, wireScrollFade } from '/utils/ux.js';
-import { toLocalDateKey } from '/utils/date.js';
+import { todayKey } from '/utils/date.js';
 import { DEFAULT_CATEGORY_NAME, categoryLabel } from '/utils/shopping-categories.js';
 import { locationLabel } from '/utils/pantry-locations.js';
 import { setBulkPill, clearBulkPill } from '/utils/bulk-pill.js';
@@ -52,7 +52,7 @@ const state = {
   filter: 'all',
   /** Einmal pro Render eingefroren: sonst könnte ein über Mitternacht offener
    *  Tab Zeilen unterschiedlich bewerten, je nachdem wann sie gezeichnet wurden. */
-  todayKey: toLocalDateKey(),
+  todayKey: todayKey(),
 };
 
 /** Ausstehende Mengen-PATCHes je Artikel (Stepper-Entprellung). */
@@ -197,7 +197,7 @@ function groupedItems(items) {
 
 export async function render(container) {
   _container = container;
-  state.todayKey = toLocalDateKey();
+  state.todayKey = todayKey();
   // Frische Seite: die Chip-Leiste darf beim ersten Zeichnen wieder scrollen.
   _scrolledFilter = null;
 

@@ -15,7 +15,7 @@ import { ingredientRowHTML } from '/utils/ingredient-row.js';
 import { scheduleUndoableDelete } from '/utils/ux.js';
 import { normalizeRecipeMealTypes, RECIPE_MEAL_TYPE_KEYS } from '/utils/recipe-meal-types.js';
 import { mealPayloadFromRecipe } from '/utils/recipe-to-meal.js';
-import { toLocalDateKey } from '/utils/date.js';
+import { todayKey } from '/utils/date.js';
 import '/components/datepicker.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { mountEmptyState, mountLoadError } from '/utils/empty-state.js';
@@ -904,7 +904,7 @@ async function planRecipe(recipe, btn) {
       `<option value="${key}"${key === vorauswahl ? ' selected' : ''}>${esc(label)}</option>`)
     .join('');
 
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
 
   openSharedModal({
     title: t('recipes.planTitle', { name: recipe.title }),

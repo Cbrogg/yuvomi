@@ -145,6 +145,7 @@ const APP_SHELL = [
   '/utils/swipe-row.js',
   '/utils/sync-target.js',
   '/utils/tablist.js',
+  '/utils/timezone.js',
   '/utils/toast-surface.js',
   '/utils/ux.js',
   '/utils/vcard.js',

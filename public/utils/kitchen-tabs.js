@@ -2,7 +2,7 @@ import { t } from '/i18n.js';
 import { api } from '/api.js';
 import { renderSubTabs, setSubTabBadge, scrollActiveSubTabIntoView } from '/utils/sub-tabs.js';
 import { MODULE_ICON, moduleIconEl } from '/nav-icons.js';
-import { toLocalDateKey } from '/utils/date.js';
+import { todayKey } from '/utils/date.js';
 import { KITCHEN_MODULES as KITCHEN_MODULES_SOURCE } from '/utils/module-accent.js';
 
 // Reihenfolge = Küchen-Kreislauf: planen → kochen → einkaufen → lagern.
@@ -116,7 +116,7 @@ async function loadBadges() {
   try {
     // `today` kommt vom Client: „abgelaufen" hängt am lokalen Kalendertag, und der
     // Server rechnet in UTC (siehe server/routes/kitchen.js).
-    const res = await api.get(`/kitchen/summary?today=${encodeURIComponent(toLocalDateKey())}`);
+    const res = await api.get(`/kitchen/summary?today=${encodeURIComponent(todayKey())}`);
     const data = res.data ?? {};
     if (!_bar?.isConnected) return;
     for (const { route, pick, label, tone } of BADGES) {

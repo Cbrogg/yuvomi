@@ -83,7 +83,10 @@ test('das Modul führt genau eine Zeitachse', () => {
   // Vorher hielt budget-stats.js einen eigenen anchor: Budget auf März gestellt,
   // Wechsel auf Berichte zeigte Juli. Der Anker lebt jetzt im Modul-State und
   // wird beim Tabwechsel in beide Richtungen angeglichen.
-  assert.match(budget, /reportAnchor:\s*toLocalDateKey\(new Date\(\)\)/);
+  // Seit #829 Teil 3 heisst die Frage nach dem heutigen Tag `todayKey()` - sie
+  // folgt der Haushaltszone, waehrend `toLocalDateKey` der reine Konverter blieb.
+  // Die Zusicherung ist dieselbe: der Anker startet auf heute.
+  assert.match(budget, /reportAnchor:\s*todayKey\(\)/);
   assert.match(budget, /state\.reportAnchor = anchorForMonth\(state\.month\)/, 'Hinweg Budget → Berichte fehlt');
   assert.match(budget, /const ym = state\.reportAnchor\.slice\(0, 7\)/, 'Rückweg Berichte → Budget fehlt');
 

@@ -2,6 +2,34 @@
  * Local-date helpers for YYYY-MM-DD values sent to the API.
  * These deliberately use local calendar fields instead of UTC ISO strings.
  */
+// Relativ, nicht browser-absolut: test-date-utils.js laedt diese Datei ohne den
+// Loader aus test-browser-loader.mjs, und '/utils/...' waere dort das
+// Dateisystem-Root. Innerhalb von public/utils/ ist das der uebliche Weg
+// (vgl. './ux.js' in bulk-pill.js).
+import { todayKey as zonedTodayKey } from './timezone.js';
+
+/**
+ * Welcher Kalendertag ist gerade „heute" (#829 Teil 3).
+ *
+ * Bewusst NICHT dasselbe wie `toLocalDateKey()` ohne Argument, obwohl beide
+ * heute denselben Wert liefern, solange keine Haushaltszone gesetzt ist:
+ *
+ *   - `toLocalDateKey(date)` ist ein KONVERTER. Er liest die Wanduhrfelder eines
+ *     `Date`, und die Gegenrichtung `parseLocalDateKey` baut sie in der Zone des
+ *     Browsers wieder auf. Die beiden bilden ein Paar, das seinen Schlüssel
+ *     unverändert zurückgeben muss - das tut es nur, wenn beide Seiten dieselbe
+ *     Uhr lesen. Er bleibt deshalb bei der Browser-Zone.
+ *   - `todayKey()` ist eine FRAGE AN DIE UHR. Nur sie darf der Haushaltszone
+ *     folgen, sonst zeigt ein Gerät, das auf Reisen in einer anderen Zone steht,
+ *     den Nachbartag als heute an.
+ *
+ * Das Gegenstück auf dem Server heißt genauso: `todayKey(database)` in
+ * server/utils/timezone.js.
+ * @returns {string} YYYY-MM-DD
+ */
+export function todayKey() {
+  return zonedTodayKey();
+}
 
 export function toLocalDateKey(value = new Date()) {
   const date = value instanceof Date ? value : new Date(value);
@@ -60,7 +88,7 @@ export function monthPeriodKeys(dateKey) {
  * Zeitraum (kein `from`) bleibt es bei heute, und ein Zeitraum ohne Ende gilt
  * als der eine Tag `from`.
  */
-export function defaultDateInPeriod(from, to, today = toLocalDateKey()) {
+export function defaultDateInPeriod(from, to, today = todayKey()) {
   if (!from) return today;
   return (today >= from && today <= (to || from)) ? today : from;
 }

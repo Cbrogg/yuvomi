@@ -17,6 +17,7 @@ import { BULK_PILL_LAYER, clearBulkPill } from '/utils/bulk-pill.js';
 import { init as initReminders, stop as stopReminders } from '/reminders.js';
 import { initPush, stopPush } from '/push.js';
 import { numberLocaleFor } from '/settings/region-presets.js';
+import { setDisplayTimeZone } from '/utils/timezone.js';
 import { isKitchenRoute, getLastKitchenRoute } from '/utils/kitchen-tabs.js';
 import { moduleAccentToken, moduleAccentVar } from '/utils/module-accent.js';
 import { getLastHealthRoute, HEALTH_ROUTES } from '/utils/health-tabs.js';
@@ -846,6 +847,12 @@ async function syncPreferencesOnce() {
     if (timeFormat) {
       localStorage.setItem('yuvomi-time-format', timeFormat);
     }
+    // Die Haushaltszone in die Anzeige spiegeln (#829 Teil 3). Bewusst
+    // `timezone` und nicht `timezone_effective`: letzteres ist nie leer und
+    // traegt ohne Einstellung die `TZ` des Containers - ein Compose-Schalter,
+    // der nichts darueber aussagt, wo dieser Haushalt lebt. Ohne getroffene
+    // Wahl bleibt die Anzeige also beim Browser, so wie bisher.
+    setDisplayTimeZone(res?.data?.timezone ?? null);
     // Region als Formatier-Locale für Zahlen/Währung spiegeln (z. B. de-CH →
     // 123'456.78). getFormatLocale() in i18n.js liest diesen Wert.
     const numberLocale = numberLocaleFor({
@@ -4050,6 +4057,9 @@ function refreshCurrentRoute() {
 }
 
 window.addEventListener('date-format-changed', refreshCurrentRoute);
+// Die Anzeigezone wirkt auf jede Uhrzeit auf dem Schirm - dasselbe Neuzeichnen
+// wie beim Datums-/Zeitformat (#829 Teil 3).
+window.addEventListener('timezone-changed', refreshCurrentRoute);
 window.addEventListener('time-format-changed', refreshCurrentRoute);
 
 window.addEventListener('resize', () => {

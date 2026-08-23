@@ -11,7 +11,7 @@ import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { promptModal, openModal, closeModal, confirmModal, reportFieldError } from '/components/modal.js';
 import { DEFAULT_CATEGORY_NAME, categoryLabel } from '/utils/shopping-categories.js';
-import { addLocalDays, toLocalDateKey } from '/utils/date.js';
+import { addLocalDays, todayKey } from '/utils/date.js';
 import { renderKitchenTabsBar, refreshKitchenBadges } from '/utils/kitchen-tabs.js';
 import { mountEmptyState, mountLoadError } from '/utils/empty-state.js';
 import { popoverMenuHtml, installPopoverMenus } from '/utils/popover-menu.js';
@@ -1444,7 +1444,7 @@ function updateListCounter(listId, totalDelta, checkedDelta) {
 
 function openMealPlanImport(container) {
   if (!state.activeListId) return;
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   const defaultTo = addLocalDays(today, 6);
 
   openModal({

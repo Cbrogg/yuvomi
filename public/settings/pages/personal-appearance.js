@@ -9,6 +9,7 @@ import { appendCurrencyOptions, persistCurrencySelection } from '/settings/curre
 import { getPreferences, savePreferences } from '/settings/preferences-cache.js';
 import { toggleRowHtml } from '/settings/components.js';
 import { isWallModeEnabled, setWallModeEnabled } from '/utils/wall-mode.js';
+import { setDisplayTimeZone } from '/utils/timezone.js';
 import {
   CUSTOM_REGION,
   REGION_CODES,
@@ -503,6 +504,13 @@ function bindEvents(container, user) {
       timezoneSelect.insertAdjacentHTML(
         'beforeend', timeZoneOptions(saved?.data?.timezone, saved?.data?.timezone_effective)
       );
+      // Die Anzeige folgt der neuen Zone sofort - dasselbe Paar aus Spiegeln und
+      // Neuzeichnen wie bei Datums- und Zeitformat. Ohne das Ereignis blieben die
+      // bereits gezeichneten Uhrzeiten bis zum naechsten Seitenwechsel stehen.
+      setDisplayTimeZone(saved?.data?.timezone ?? null);
+      window.dispatchEvent(new CustomEvent('timezone-changed', {
+        detail: { timezone: saved?.data?.timezone ?? null },
+      }));
       window.yuvomi?.showToast(t('settings.timezoneSaved'), 'success');
     } catch (error) {
       showError(errorElement, error.message);
@@ -638,10 +646,17 @@ export async function render(container, { user }) {
       region: loaded.region || null,
       language: loaded.language || null,
       language_auto: loaded.language_auto || 'en',
+      // Beide Zonen-Felder gehoeren hier durchgereicht: renderPage() liest sie
+      // (Auswahlzustand und Automatik-Label), und ohne sie stand das Feld nach
+      // dem Speichern beim naechsten Oeffnen wieder auf "Automatisch (UTC)" -
+      // die Zone WAR gesetzt, das Formular zeigte sie nur nicht.
+      timezone: loaded.timezone || null,
+      timezone_effective: loaded.timezone_effective || null,
     };
 
     safeStorageSet('yuvomi-date-format', preferences.date_format);
     safeStorageSet('yuvomi-time-format', preferences.time_format);
+    setDisplayTimeZone(preferences.timezone);
     applyNumberLocale(preferences);
     const isAdmin = user?.role === 'admin';
     renderPage(container, preferences, isAdmin);

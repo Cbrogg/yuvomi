@@ -48,6 +48,8 @@
  * zwei Wege.
  */
 
+import { nowFields } from './timezone.js';
+
 const WALL_KEY = 'yuvomi-wall-mode';
 const THEME_KEY = 'yuvomi-theme';
 
@@ -108,7 +110,10 @@ export function isWallRoute(path) {
  * Falle, die das Tagesprogramm beim Mitternachts-Ausblick schon einmal hatte.
  */
 export function isWallNight(now = new Date()) {
-  const hour = now.getHours();
+  // Die Uhr des Haushalts, nicht die des Geraets: ein Wandbildschirm, dessen
+  // Browser in einer anderen Zone steht, ginge sonst zur falschen Stunde in den
+  // Nachtmodus (#829 Teil 3).
+  const hour = nowFields(now).hour;
   return hour >= WALL_NIGHT_FROM || hour < WALL_NIGHT_TO;
 }
 

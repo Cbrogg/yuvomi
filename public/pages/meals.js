@@ -14,11 +14,12 @@ import { DEFAULT_CATEGORY_NAME } from '/utils/shopping-categories.js';
 import { renderKitchenTabsBar } from '/utils/kitchen-tabs.js';
 import { resolveShoppingTarget, announceTransfer, mountMissingShoppingList } from '/utils/kitchen-transfer.js';
 import { ingredientRowHTML } from '/utils/ingredient-row.js';
-import { addLocalDays, startOfLocalWeekKey, toLocalDateKey } from '/utils/date.js';
+import { addLocalDays, startOfLocalWeekKey, todayKey } from '/utils/date.js';
 import { normalizeRecipeMealTypes, recipeSupportsMealType, recipeAllowsMealType } from '/utils/recipe-meal-types.js';
 import { mountEmptyState, mountLoadError, emptyStateEl } from '/utils/empty-state.js';
 import { mealPayloadFromRecipe } from '/utils/recipe-to-meal.js';
 import { findPageFab } from '/utils/fab.js';
+import { zonedWeekday } from '/utils/timezone.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -78,7 +79,7 @@ function formatWeekLabel(monday) {
 }
 
 function isToday(dateStr) {
-  return dateStr === toLocalDateKey(new Date());
+  return dateStr === todayKey();
 }
 
 function formatDayDate(dateStr) {
@@ -263,7 +264,7 @@ export async function render(container, { user }) {
   if (window.lucide) lucide.createIcons({ el: container });
   renderKitchenTabsBar(container, '/meals');
 
-  const today  = toLocalDateKey(new Date());
+  const today  = todayKey();
   const monday = getMondayOf(today);
 
   await Promise.all([loadWeek(monday), loadLists(), loadPreferences(), loadCategories(), loadRecipes()]);
@@ -426,7 +427,9 @@ function renderWeekGrid() {
   grid.insertAdjacentHTML('beforeend', gutterHTML + weekDays.map((date, dayIndex) => {
     const mealsForDay = state.meals.filter((m) => m.date === date);
     const todayClass  = isToday(date) ? 'day-header--today' : '';
-    const dayNameIndex = (new Date(`${date}T00:00:00`).getDay() + 6) % 7;
+    // zonedWeekday statt `new Date(key + 'T00:00:00').getDay()`: derselbe Wert,
+    // aber ohne den Umweg ueber ein Date der Browser-Zone (#829 Teil 3).
+    const dayNameIndex = (zonedWeekday(date) + 6) % 7;
     // Spalte 1 ist die Gutter-Spalte, Zeile 1 die Kopfzeile — Inhalte ab 2.
     const dayCol = dayIndex + 2;
 
@@ -697,7 +700,7 @@ function wireNav() {
   });
 
   _container.querySelector('#week-today')?.addEventListener('click', async () => {
-    const monday = getMondayOf(toLocalDateKey(new Date()));
+    const monday = getMondayOf(todayKey());
     if (monday === state.currentWeek) return;
     setWeekBusy();
     await loadWeek(monday);
@@ -1229,7 +1232,6 @@ function openMealModal(opts) {
           saveAsRecipeBtn.disabled = false;
         }
       });
-
 
       addIngBtn.addEventListener('click', () => {
         const tmp  = document.createElement('div');

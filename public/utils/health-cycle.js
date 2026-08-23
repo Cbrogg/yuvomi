@@ -15,7 +15,9 @@
  * Abhängigkeiten: /utils/date.js (ebenfalls DOM-frei).
  */
 
-import { toLocalDateKey, addLocalDays, startOfLocalWeekKey } from '/utils/date.js';
+// `todayKey` heisst hier schon ein Parameter (bzw. eine lokale Bindung), der den
+// Bezugstag traegt - der Import kommt deshalb unter eigenem Namen herein.
+import { addLocalDays, startOfLocalWeekKey, todayKey as householdToday } from '/utils/date.js';
 
 // --------------------------------------------------------
 // Preset-Definitionen
@@ -219,7 +221,7 @@ export function cycleStats(periods, settings = {}) {
  * @param {string} [todayKey] - Referenz-„heute" (YYYY-MM-DD).
  * @returns {{ active, dueDate, hasDue, ... }}
  */
-export function pregnancyInfo(settings = {}, todayKey = toLocalDateKey(new Date())) {
+export function pregnancyInfo(settings = {}, todayKey = householdToday()) {
   const active = !!(settings.pregnancy_mode === 1 || settings.pregnancy_mode === true);
   const dueRaw = settings.pregnancy_due_date ? dayKey(settings.pregnancy_due_date) : null;
   const hasDue = !!dueRaw && !Number.isNaN(Date.parse(`${dueRaw}T00:00:00Z`));
@@ -268,7 +270,7 @@ export function pregnancyInfo(settings = {}, todayKey = toLocalDateKey(new Date(
  * @param {string} [todayKey]     - Referenz-„heute" (YYYY-MM-DD), Default: heute.
  * @returns {Object} { hasData, ... }
  */
-export function predictCycle(periods, settings = {}, todayKey = toLocalDateKey(new Date())) {
+export function predictCycle(periods, settings = {}, todayKey = householdToday()) {
   const asc = sortPeriodsAsc(periods);
   const stats = cycleStats(asc, settings);
   const today = dayKey(todayKey);
@@ -375,7 +377,7 @@ function loggedPeriodPhase(dateKey, periodsAsc, avgPeriod) {
  * @param {number} [opts.weekStartsOn=1]
  * @returns {{ month, weeks: Array<Array<Object>> }}
  */
-export function buildCycleCalendar(anchorKey, { periods = [], logs = [], settings = {}, todayKey = toLocalDateKey(new Date()), weekStartsOn = 1 } = {}) {
+export function buildCycleCalendar(anchorKey, { periods = [], logs = [], settings = {}, todayKey = householdToday(), weekStartsOn = 1 } = {}) {
   const asc = sortPeriodsAsc(periods);
   const stats = cycleStats(asc, settings);
   const { avgCycle, avgPeriod, lutealLength, trackFertility } = stats;

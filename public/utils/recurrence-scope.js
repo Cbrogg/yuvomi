@@ -7,7 +7,7 @@
  * damit sie ohne DOM getestet werden können. Bewusst frei von Framework-/DOM-Bezug.
  */
 
-import { parseLocalDateKey, toLocalDateKey, addLocalDays } from './date.js';
+import { parseLocalDateKey, addLocalDays } from './date.js';
 
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}/;
 

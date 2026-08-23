@@ -24,6 +24,7 @@ import { localizeBirthdayEvent } from '/utils/birthday-event.js';
 import { googleTargetValue, caldavTargetValue, outlookTargetValue } from '/utils/sync-target.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { findPageFab } from '/utils/fab.js';
+import { nowFields, todayKey, zonedDateKey, zonedTimeKey } from '/utils/timezone.js';
 import { maxUploadBytes, maxUploadMb } from '/utils/upload-limit.js';
 
 // --------------------------------------------------------
@@ -497,13 +498,14 @@ function getRangeForView(view, cursor) {
   return getMonthRange(cursor);
 }
 
-// Extract YYYY-MM-DD in the browser's local timezone from any datetime string.
-// For date-only strings (≤10 chars) slicing is safe; for datetime strings with an
-// explicit UTC offset or 'Z' suffix, new Date() converts to local before extraction.
+// Der Kalendertag eines gespeicherten Termin-Zeitpunkts in der Anzeigezone
+// (#829 Teil 3). Vorher stand hier die Zone des Browsers; ein extern
+// synchronisierter Termin sprang damit auf einem Gerät in einer anderen Zone auf
+// den Nachbartag, während ein von Hand angelegter (zonenlose Wanduhrzeit)
+// stehenblieb - zwei Termine derselben Uhrzeit an zwei Tagen.
 function localDate(str) {
   if (!str || str.length <= 10) return (str || '').slice(0, 10);
-  const d = new Date(str);
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+  return zonedDateKey(str);
 }
 
 function validDateParam(value) {
@@ -521,11 +523,10 @@ function findDeepLinkedOccurrence(events, initialEvent, targetDate) {
   ) || initialEvent;
 }
 
-// Extract HH:MM in the browser's local timezone from a datetime string.
+// Die Uhrzeit eines gespeicherten Termin-Zeitpunkts in der Anzeigezone (#829).
 function localTime(str) {
   if (!str || str.length <= 10) return '00:00';
-  const d = new Date(str);
-  return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  return zonedTimeKey(str);
 }
 
 function addMonths(dateStr, n) {
@@ -1061,7 +1062,10 @@ async function loadUsers() {
 
 export async function render(container, { user }) {
   _container = container;
-  state.today  = isoDate(new Date());
+  // Die Uhr des Haushalts: state.today markiert die Heute-Zelle, die Jetzt-Linie
+  // und den Vorschlag fuer einen neuen Termin - alle drei muessen denselben Tag
+  // meinen wie die Termine daneben (#829 Teil 3).
+  state.today  = todayKey();
   state.cursor = state.today;
   state.view   = defaultCalendarView();
 
@@ -1741,7 +1745,7 @@ function renderWeekView(container) {
           <div class="week-view__times">
             ${Array.from({ length: 24 }, (_, h) => `
               <div class="week-view__time-slot">
-                <span class="week-view__time-label">${h === 0 ? '' : formatTime(new Date(2000, 0, 1, h, 0, 0))}</span>
+                <span class="week-view__time-label">${h === 0 ? '' : formatTime(`${pad(h)}:00`)}</span>
               </div>
             `).join('')}
           </div>
@@ -1806,7 +1810,7 @@ function renderWeekView(container) {
 function scrollToHour(scroll, body) {
   if (!scroll || !body) return;
   const hourHeight = body.getBoundingClientRect().height / 24;
-  scroll.scrollTop = Math.max(0, new Date().getHours() * hourHeight - 80);
+  scroll.scrollTop = Math.max(0, nowFields().hour * hourHeight - 80);
 }
 
 function renderWeekEvent(ev, layout = null) {
@@ -1851,8 +1855,11 @@ function addDurationToDateTime(dateKey, timeStr, minutes) {
 
 /** Minuten seit Mitternacht - der Bezug jeder Now-Linie. */
 function nowMinutes() {
-  const now = new Date();
-  return now.getHours() * 60 + now.getMinutes();
+  // Die Uhr des Haushalts (#829 Teil 3): sonst steht die Jetzt-Linie auf einem
+  // Geraet in einer anderen Zone um deren Offset daneben - im selben Raster, in
+  // dem die Termine bereits der Haushaltszone folgen.
+  const { hour, minute } = nowFields();
+  return hour * 60 + minute;
 }
 
 /** Berechnet die geklickte Uhrzeit (auf 30-Minuten gerundet) aus einem Click-Event
@@ -1966,7 +1973,7 @@ function renderDayView(container) {
           <div class="day-view__times">
             ${Array.from({ length: 24 }, (_, h) => `
               <div class="week-view__time-slot">
-                <span class="week-view__time-label">${h === 0 ? '' : formatTime(new Date(2000, 0, 1, h, 0, 0))}</span>
+                <span class="week-view__time-label">${h === 0 ? '' : formatTime(`${pad(h)}:00`)}</span>
               </div>
             `).join('')}
           </div>
@@ -3277,11 +3284,13 @@ function wireDurationMemory(panel) {
 // Start; kippt die Rundung über Mitternacht, ebenfalls.
 function defaultNewEventTime(dateStr) {
   if (dateStr !== state.today) return '09:00';
-  const now = new Date();
-  const dayBefore = now.getDate();
-  now.setMinutes(now.getMinutes() <= 30 ? 30 : 60, 0, 0);
-  if (now.getDate() !== dayBefore) return '09:00';
-  return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  // Auf die naechste halbe Stunde aufrunden - auf den Feldern der Haushaltszone
+  // statt auf einem Date, damit der Vorschlag zu der Uhr passt, die daneben im
+  // Raster steht. Kippt die Rundung ueber Mitternacht, bleibt es bei 09:00.
+  const { hour, minute } = nowFields();
+  const rounded = minute <= 30 ? { hour, minute: 30 } : { hour: hour + 1, minute: 0 };
+  if (rounded.hour > 23) return '09:00';
+  return `${pad(rounded.hour)}:${pad(rounded.minute)}`;
 }
 
 function buildEventModalContent({ mode, event, date, reminder = null, time = null }) {

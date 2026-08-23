@@ -14,7 +14,7 @@ import {
 } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { toLocalDateKey } from '/utils/date.js';
+import { todayKey } from '/utils/date.js';
 import { CURRENCY_CODES } from '/utils/currency-codes.js';
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { formatMoney, amountPlaceholder, amountStep, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
@@ -117,7 +117,7 @@ function cycleLabel(subscription) {
 }
 
 function daysUntil(date) {
-  const today = new Date(`${toLocalDateKey(new Date())}T00:00:00`);
+  const today = new Date(`${todayKey()}T00:00:00`);
   const due = new Date(`${date}T00:00:00`);
   return Math.round((due - today) / 86400000);
 }
@@ -428,7 +428,7 @@ function dueAmount(subscription) {
 }
 
 function renewalForecast() {
-  const today = new Date(`${toLocalDateKey(new Date())}T00:00:00`);
+  const today = new Date(`${todayKey()}T00:00:00`);
   const start = new Date(today.getFullYear(), today.getMonth(), 1);
   const months = Array.from({ length: 6 }, (_, index) => {
     const date = addMonths(start, index);
@@ -991,7 +991,7 @@ export function openSubscriptionModal(subscription = null) {
           <div class="form-group">
             <label class="form-label" for="subscription-next-date">${t('subscriptions.nextPaymentLabel')}</label>
             <yuvomi-datepicker id="subscription-next-date" type="date"
-                   value="${esc(subscription?.next_payment_date || toLocalDateKey(new Date()))}"></yuvomi-datepicker>
+                   value="${esc(subscription?.next_payment_date || todayKey())}"></yuvomi-datepicker>
           </div>
           <div class="form-group">
             <label class="form-label" for="subscription-reminder">${t('subscriptions.reminderDaysLabel')}</label>

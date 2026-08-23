@@ -706,7 +706,10 @@ function warrantyDetailValue(item) {
   if (item.warranty_months == null) return '';
   const status = warrantyStatus(item);
   if (!status) return t('inventory.warrantyMonthsValue', { count: item.warranty_months });
-  const formattedDate = formatDate(new Date(`${status.endDateKey}T00:00:00`));
+  // Der Key direkt, ohne Date-Umweg: `new Date(key + 'T00:00:00')` ist
+  // Mitternacht der BROWSER-Zone, und in einer Haushaltszone westlich davon
+  // faellt der angezeigte Tag dann auf den Vortag (#829 Teil 3).
+  const formattedDate = formatDate(status.endDateKey);
   if (status.state === 'expired') return t('inventory.warrantyStatusExpired', { date: formattedDate });
   if (status.state === 'expiring') return t('inventory.warrantyStatusExpiringSoon', { count: status.days });
   return t('inventory.warrantyStatusValid', { date: formattedDate });
@@ -1054,7 +1057,10 @@ function updateWarrantyStatus(panel) {
 
   statusEl.hidden = false;
   statusEl.className = `inventory-warranty-status inventory-warranty-status--${status.state}`;
-  const formattedDate = formatDate(new Date(`${status.endDateKey}T00:00:00`));
+  // Der Key direkt, ohne Date-Umweg: `new Date(key + 'T00:00:00')` ist
+  // Mitternacht der BROWSER-Zone, und in einer Haushaltszone westlich davon
+  // faellt der angezeigte Tag dann auf den Vortag (#829 Teil 3).
+  const formattedDate = formatDate(status.endDateKey);
   if (status.state === 'expired') {
     statusEl.textContent = t('inventory.warrantyStatusExpired', { date: formattedDate });
   } else if (status.state === 'expiring') {

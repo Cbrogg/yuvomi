@@ -9,7 +9,10 @@ import { canSeeWidget } from '/permissions.js';
 import { t, formatDate, formatTime, timeSuffix, getLocale, getNumberFormat } from '/i18n.js';
 import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
 import { esc, fmtLocation, renderMarkdownLight } from '/utils/html.js';
-import { toLocalDateKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
+// `todayKey` heisst hier schon ein Parameter (bzw. eine lokale Bindung), der den
+// Bezugstag traegt - der Import kommt deshalb unter eigenem Namen herein.
+import { toLocalDateKey, parseLocalDateKey, addLocalDays, todayKey as householdToday } from '/utils/date.js';
+import { nowFields, zonedUTCProxy } from '/utils/timezone.js';
 import { predictCycle, PHASE } from '/utils/health-cycle.js';
 import { localizeBirthdayEvent } from '/utils/birthday-event.js';
 import { countdownPhrase, countdownRank } from '/utils/countdown.js';
@@ -379,7 +382,7 @@ function firstName(displayName) {
 }
 
 function greeting(displayName) {
-  const h = new Date().getHours();
+  const h = nowFields().hour;
   const name = esc(firstName(displayName));
   if (h >= 5 && h < 12) return t('dashboard.greetingMorning', { name });
   if (h >= 12 && h < 18) return t('dashboard.greetingDay',    { name });
@@ -389,7 +392,7 @@ function greeting(displayName) {
 // Tageszeit-Fenster für den Begrüßungs-Gradienten (deckt sich mit greeting()).
 // Nacht (0–4 Uhr) zählt zum Abend, damit 00:37 nicht als „Morgen" begrüßt wird.
 function greetingPeriod() {
-  const h = new Date().getHours();
+  const h = nowFields().hour;
   if (h >= 5 && h < 12) return 'morning';
   if (h >= 12 && h < 18) return 'day';
   return 'evening';
@@ -400,7 +403,9 @@ function greetingPeriod() {
 // (.dashboard-overview__date, text-transform). Bewusst lokales new Date()
 // (reines Anzeige-Datum, keine ISO-Konvertierung - Zeitzonen-Falle).
 function mastheadDateLabel(now = new Date()) {
-  return new Intl.DateTimeFormat(getLocale(), { weekday: 'long', day: 'numeric', month: 'long' }).format(now);
+  return new Intl.DateTimeFormat(getLocale(), {
+    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC',
+  }).format(zonedUTCProxy(now));
 }
 
 // Relatives Datumslabel: „Heute"/„Morgen", sonst das locale-formatierte Datum.
@@ -677,7 +682,7 @@ function selectTodayMeal(meals) {
       ? order.map((type) => (meals[type] ? { ...meals[type], meal_type: type } : null)).filter(Boolean)
       : [];
 
-  const h = new Date().getHours();
+  const h = nowFields().hour;
   const targetType = h < 12 ? 'breakfast' : h < 18 ? 'lunch' : 'dinner';
 
   for (let i = order.indexOf(targetType); i < order.length; i++) {
@@ -702,7 +707,7 @@ const MEAL_SORT_TIME = { breakfast: '08:00', lunch: '12:30', snack: '15:30', din
  */
 function buildTodayProgram(data, { includeTasks = true, includeCalendar = true, includeMeals = true } = {}) {
   const highlights = buildTodayHighlights(data);
-  const todayKey = toLocalDateKey(new Date());
+  const todayKey = householdToday();
   const events = Array.isArray(data?.upcomingEvents) ? data.upcomingEvents : [];
   const rows = [];
 
@@ -1132,7 +1137,7 @@ function renderFamilyWidget(users, data) {
       .map((r) => [r.user_id, Number(r.open_count) || 0])
   );
   const events = Array.isArray(data?.upcomingEvents) ? data.upcomingEvents : [];
-  const todayKey = toLocalDateKey(new Date());
+  const todayKey = householdToday();
 
   const rows = users.slice(0, 6).map((u) => {
     const assignedTo = (e) => (Array.isArray(e.assigned_users) ? e.assigned_users : []).some((a) => a.id === u.id);
@@ -1772,7 +1777,7 @@ function renderHousekeepingWidget(hk, currency) {
     : `<div class="housekeeping-widget__status">
         <span class="housekeeping-widget__dot housekeeping-widget__dot--idle" aria-hidden="true"></span>
         <div class="housekeeping-widget__lines">
-          <div class="housekeeping-widget__state">${hk.lastVisit ? t('dashboard.housekeepingLastVisit', { date: formatDate(new Date(hk.lastVisit)) }) : t('dashboard.housekeepingNoVisits')}</div>
+          <div class="housekeeping-widget__state">${hk.lastVisit ? t('dashboard.housekeepingLastVisit', { date: formatDate(hk.lastVisit) }) : t('dashboard.housekeepingNoVisits')}</div>
           <div class="housekeeping-widget__sub">${t('dashboard.housekeepingVisitsMonth', { count: visits })}</div>
         </div>
       </div>`;
@@ -1970,7 +1975,7 @@ function buildTodayCockpitModel(data, cfg = [], { cap = PROGRAM_ROW_CAP } = {}) 
   // eine Frist in drei Tagen ist keine Falle.
   let coda = null;
   if (program.rows.length > 0 && overflow === 0) {
-    const tomorrowKey = addLocalDays(toLocalDateKey(new Date()), 1);
+    const tomorrowKey = addLocalDays(householdToday(), 1);
     const tomorrowTask = includeTasks && program.nextDueTask?.due_date === tomorrowKey ? program.nextDueTask : null;
     coda = tomorrowTask
       ? t('dashboard.todayNothingElseTomorrow', { title: tomorrowTask.title })
@@ -2791,11 +2796,18 @@ function renderWeatherWidget(weather) {
  * Auskunft ist - „welcher Tag ist heute" fragt niemand nach der Ziffernfolge.
  */
 function clockWidgetParts(now = new Date()) {
-  const weekday = new Intl.DateTimeFormat(getLocale(), { weekday: 'long' }).format(now);
+  // Alle drei Teile lesen dieselbe Uhr. Vorher folgten Zeit und Datum bereits
+  // der Haushaltszone (ueber formatTime/formatDate), Wochentag und Maschinenzeit
+  // aber noch dem Browser - auf einem Wandbildschirm in einer anderen Zone
+  // haette dieselbe Kachel zwei Tage gezeigt.
+  const f = nowFields(now);
+  const weekday = new Intl.DateTimeFormat(getLocale(), {
+    weekday: 'long', timeZone: 'UTC',
+  }).format(zonedUTCProxy(now));
   return {
     time: formatTime(now),
     date: `${weekday}, ${formatDate(now)}`,
-    machineTime: `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`,
+    machineTime: `${String(f.hour).padStart(2, '0')}:${String(f.minute).padStart(2, '0')}`,
   };
 }
 

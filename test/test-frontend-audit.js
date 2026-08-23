@@ -4851,7 +4851,9 @@ test('die Küchen-Tab-Leiste trägt den Zustand des Kreislaufs', () => {
 
   // `today` kommt vom Client: „abgelaufen" hängt am lokalen Kalendertag, der Server
   // rechnet in UTC. Dieselbe Entscheidung wie im Kopf von pantry-status.js.
-  assert.match(tabs, /kitchen\/summary\?today=\$\{encodeURIComponent\(toLocalDateKey\(\)\)\}/,
+  // Seit #829 Teil 3 heisst die Frage nach dem heutigen Tag `todayKey()` und
+  // folgt der Haushaltszone; die Zusicherung ist dieselbe geblieben.
+  assert.match(tabs, /kitchen\/summary\?today=\$\{encodeURIComponent\(todayKey\(\)\)\}/,
     'der Client muss seinen lokalen Tag mitgeben, sonst rechnet der Server in UTC');
   assert.match(route, /DATE_RE\.test\(req\.query\.today/, 'die Route muss `today` validieren');
 

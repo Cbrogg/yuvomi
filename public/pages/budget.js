@@ -18,7 +18,8 @@ import { openSubscriptionModal, render as renderSubscriptions } from '/pages/sub
 import { renderStats } from '/pages/budget-stats.js';
 import { renderPlans } from '/pages/budget-plans.js';
 import { toLocalDateKey, parseLocalDateKey, addLocalDays,
-         monthPeriodKeys, defaultDateInPeriod } from '/utils/date.js';
+         monthPeriodKeys, defaultDateInPeriod,
+        todayKey} from '/utils/date.js';
 import { formatMoney, formatSignedAmount, amountPlaceholder, amountStep, amountMin, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { budgetCategoryLabel } from '/utils/category-labels.js';
 import { trendMarkup } from '/utils/metric-card.js';
@@ -206,7 +207,7 @@ let state = {
   // umschaltbarer Auflösung. Der Anker lebt hier statt in budget-stats.js, damit
   // beide Enden beim Tabwechsel aneinander angeglichen werden können.
   range:        'month',      // 'week' | 'month' | 'year'
-  reportAnchor: toLocalDateKey(new Date()),
+  reportAnchor: todayKey(),
   reportPeriod: '',           // vom Server gemeldeter Zeitraum (nur für 'week' im Label)
 };
 let _container = null;
@@ -298,7 +299,7 @@ function currentMonth() {
 // Monatserste. So landet ein Wechsel Budget → Berichte im gewählten Monat,
 // ohne bei „Woche" auf einen willkürlichen Tag zu springen.
 function anchorForMonth(ym) {
-  return ym === currentMonth() ? toLocalDateKey(new Date()) : `${ym}-01`;
+  return ym === currentMonth() ? todayKey() : `${ym}-01`;
 }
 
 // Ein Schritt in der Auflösung des jeweiligen Tabs.
@@ -515,7 +516,7 @@ function wireNav() {
   _container.querySelector('#budget-next').addEventListener('click', () => stepPeriod(1));
   _container.querySelector('#budget-today').addEventListener('click', async () => {
     if (state.activeTab === 'reports') {
-      const today = toLocalDateKey(new Date());
+      const today = todayKey();
       if (today === state.reportAnchor) return;
       state.reportAnchor = today;
       renderBody();
@@ -1875,7 +1876,7 @@ function openCategoryManager() {
 
 function openBudgetModal({ mode, entry = null, initialType = '' }) {
   const isEdit = mode === 'edit';
-  const today  = toLocalDateKey(new Date());
+  const today  = todayKey();
   // Ein neuer Eintrag gehört in den Monat, den der Nutzer gerade ansieht. Sonst
   // legt „+" beim Blättern in den März stillschweigend einen Juli-Eintrag an,
   // der sofort aus der Liste verschwindet. Im laufenden Monat bleibt es heute.
@@ -2831,7 +2832,7 @@ async function saveLoanFromPanel(panel, saveBtn, { loan = null, closeAfterSave =
 
 function openLoanModal(loan = null) {
   const isEdit = Boolean(loan);
-  const todayMonth = toLocalDateKey(new Date()).slice(0, 7);
+  const todayMonth = todayKey().slice(0, 7);
   const loanCurrency = loan?.currency || state.currency;
   // Richtung (#638) steht ganz oben: sie entscheidet, ob die Rate als Einnahme oder
   // als Ausgabe gebucht wird, und benennt das Feld darunter um (Person vs. Kreditgeber).
@@ -2897,7 +2898,7 @@ function openLoanModal(loan = null) {
 async function markLoanPayment(id) {
   const loan = state.loans.loans.find((item) => item.id === id);
   if (!loan?.next_installment_number) return;
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
   try {
     const res = await api.post(`/budget/loans/${id}/payments`, {
       installment_number: loan.next_installment_number,

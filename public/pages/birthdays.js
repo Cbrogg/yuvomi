@@ -5,7 +5,7 @@ import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { t, formatDate, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
-import { toLocalDateKey } from '/utils/date.js';
+import { todayKey } from '/utils/date.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { findPageFab } from '/utils/fab.js';
 import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
@@ -362,7 +362,7 @@ function birthdayPreviewHtml(name, photoData) {
 function openBirthdayModal({ mode, birthday = null }) {
   const isEdit = mode === 'edit';
   let photoData = birthday?.photo_data || null;
-  const today = toLocalDateKey(new Date());
+  const today = todayKey();
 
   openSharedModal({
     title: isEdit ? t('birthdays.editTitle') : t('birthdays.newTitle'),
