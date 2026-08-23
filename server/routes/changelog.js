@@ -1,7 +1,8 @@
 /**
  * Modul: Changelog
  * Zweck: Authentifizierter Proxy fuer GitHub-Releases, auf UI-relevante
- *        Versionshinweise reduziert.
+ *        Versionshinweise reduziert. Faellt auf die mitgelieferte
+ *        CHANGELOG.md zurueck, wenn GitHub nicht antwortet (#838).
  * Abhängigkeiten: express, node:fs, logger
  */
 
@@ -12,7 +13,16 @@ import { createLogger } from '../logger.js';
 const log = createLogger('Changelog');
 
 const RELEASES_URL = 'https://api.github.com/repos/ulsklyc/yuvomi/releases?per_page=30';
+const CHANGELOG_PATH = new URL('../../CHANGELOG.md', import.meta.url);
+// Dieselbe Zahl wie `per_page` oben: online und offline soll die Liste gleich
+// lang sein, damit der Rueckfall nicht als "kuerzer" auffaellt.
+const LOCAL_RELEASE_LIMIT = 30;
 const CACHE_TTL_MS = 30 * 60 * 1000;
+// Nach einem Fehlschlag wird GitHub eine Weile nicht erneut gefragt. Ohne
+// diese Sperre liefe JEDE Anfrage wieder hinaus, sobald ein Abruf scheitert -
+// bei sechzig unauthentifizierten Anfragen je Stunde und IP faehrt sich ein
+// Haushalt damit selbst ins Limit und haelt den Fehler aufrecht (#838).
+const FAILURE_BACKOFF_MS = 5 * 60 * 1000;
 const REQUEST_HEADERS = {
   Accept: 'application/vnd.github+json',
   'User-Agent': 'Yuvomi/1.0 (+https://github.com/ulsklyc/yuvomi)',
@@ -104,6 +114,67 @@ function normalizeRelease(release) {
   };
 }
 
+/**
+ * Schneidet die mitgelieferte CHANGELOG.md in Versionsbloecke.
+ *
+ * Der Rueckfall existiert, weil die Route sonst nichts anzuzeigen hat, sobald
+ * api.github.com nicht erreichbar ist (#838): kein Netz nach draussen, ein
+ * Timeout, oder das Limit von sechzig unauthentifizierten Anfragen je Stunde
+ * und IP. Fuer eine selbstgehostete App ist "der eigene Verlauf braucht
+ * fremdes Netz" die falsche Abhaengigkeit.
+ *
+ * Die Bloecke laufen durch dasselbe `parseReleaseBody` wie die Texte von
+ * GitHub - beide sind Markdown mit `###`-Ueberschriften und Listen, und beide
+ * sollen gleich aussehen. `[Unreleased]` faellt raus: der Abschnitt traegt
+ * keine Version und beschreibt nichts, was der laufende Stand schon kann.
+ */
+function parseChangelogFile(text) {
+  const releases = [];
+  let current = null;
+
+  for (const rawLine of String(text || '').split(/\r?\n/)) {
+    const heading = rawLine.match(/^##\s+\[([^\]]+)]/);
+    if (heading) {
+      const version = heading[1].trim();
+      if (/^unreleased$/i.test(version)) {
+        current = null;
+        continue;
+      }
+      if (releases.length >= LOCAL_RELEASE_LIMIT) break;
+      current = { version, lines: [] };
+      releases.push(current);
+      continue;
+    }
+    if (current) current.lines.push(rawLine);
+  }
+
+  return releases.map((release) => ({
+    version: release.version,
+    sections: parseReleaseBody(release.lines.join('\n')),
+  })).filter((release) => release.sections.length);
+}
+
+/**
+ * Baut die Antwort aus der mitgelieferten Datei.
+ *
+ * `latest_version` bleibt bewusst null: die Datei kann nur bis zur eigenen
+ * Version reichen, "die neueste ist meine" waere also eine Zusicherung, die
+ * hier niemand pruefen konnte. Der Client zeigt die Version dann als
+ * unbekannt an, statt faelschlich Aktualitaet zu melden.
+ */
+function buildLocalPayload(readFile, currentVersion = APP_VERSION) {
+  const releases = parseChangelogFile(readFile());
+  const currentKey = normalizeVersion(currentVersion);
+  return {
+    current_version: currentVersion,
+    latest_version: null,
+    current_in_releases: Boolean(currentKey)
+      && releases.some((release) => normalizeVersion(release.version) === currentKey),
+    releases,
+    source: 'local',
+  };
+}
+
 function buildChangelogPayload(releases, currentVersion = APP_VERSION) {
   const normalized = (Array.isArray(releases) ? releases : [])
     .filter((release) => release && release.draft !== true)
@@ -120,6 +191,7 @@ function buildChangelogPayload(releases, currentVersion = APP_VERSION) {
     latest_version: latestVersion,
     current_in_releases: currentInReleases,
     releases: normalized,
+    source: 'github',
   };
 }
 
@@ -127,15 +199,39 @@ export function buildRouter({
   fetchFn = globalThis.fetch,
   appVersion = APP_VERSION,
   now = () => Date.now(),
+  readChangelogFile = () => readFileSync(CHANGELOG_PATH, 'utf-8'),
 } = {}) {
   const router = express.Router();
   let cachedPayload = null;
   let cachedAt = 0;
+  let cachedLocal = null;
+  let failedAt = 0;
+
+  // Der lokale Stand aendert sich zur Laufzeit nie - die Datei liegt im Image.
+  // Er wird deshalb einmal geparst und danach behalten, statt bei jedem
+  // fehlgeschlagenen GitHub-Abruf erneut ueber siebentausend Zeilen zu laufen.
+  function localPayload() {
+    if (cachedLocal === null) {
+      try {
+        cachedLocal = buildLocalPayload(readChangelogFile, appVersion);
+      } catch (err) {
+        log.warn('Bundled CHANGELOG.md unavailable:', err.message);
+        cachedLocal = false;
+      }
+    }
+    return cachedLocal || null;
+  }
 
   router.get('/', async (_req, res) => {
     const age = now() - cachedAt;
     if (cachedPayload && age >= 0 && age < CACHE_TTL_MS) {
       return res.json({ data: cachedPayload });
+    }
+
+    const sinceFailure = now() - failedAt;
+    if (failedAt && sinceFailure >= 0 && sinceFailure < FAILURE_BACKOFF_MS) {
+      const recent = cachedPayload ? { data: cachedPayload, stale: true } : { data: localPayload() };
+      if (recent.data) return res.json(recent);
     }
 
     try {
@@ -151,10 +247,18 @@ export function buildRouter({
       const releases = await response.json();
       cachedPayload = buildChangelogPayload(releases, appVersion);
       cachedAt = now();
+      failedAt = 0;
       return res.json({ data: cachedPayload });
     } catch (err) {
       log.warn('Unable to load GitHub releases:', err.message);
+      failedAt = now();
       if (cachedPayload) return res.json({ data: cachedPayload, stale: true });
+
+      // Kein 502 mehr, solange die mitgelieferte Datei da ist: der Verlauf bis
+      // zur laufenden Version ist im Image und braucht GitHub nicht (#838).
+      const local = localPayload();
+      if (local) return res.json({ data: local });
+
       return res.status(502).json({ error: 'Release notes could not be loaded.', code: 502 });
     }
   });
@@ -170,4 +274,7 @@ export const __test = {
   cleanMarkdownText,
   parseReleaseBody,
   buildChangelogPayload,
+  parseChangelogFile,
+  buildLocalPayload,
+  CHANGELOG_PATH,
 };

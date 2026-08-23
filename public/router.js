@@ -2441,7 +2441,13 @@ async function checkForUpdate({ force = false } = {}) {
   try {
     const payload = await api.get('/changelog');
     const latest = String(payload?.data?.latest_version || '').trim();
-    localStorage.setItem(UPDATE_CHECKED_AT_KEY, String(Date.now()));
+    // Der mitgelieferte Stand beantwortet die Update-Frage nicht - er kennt
+    // per Konstruktion nichts Neueres als sich selbst. Der Zeitstempel bleibt
+    // deshalb stehen, sonst gaelte die Frage sechs Stunden lang als geklaert,
+    // obwohl GitHub gar nicht geantwortet hat (#838).
+    if (payload?.data?.source !== 'local') {
+      localStorage.setItem(UPDATE_CHECKED_AT_KEY, String(Date.now()));
+    }
     if (latest) localStorage.setItem(UPDATE_LATEST_KEY, latest);
   } catch { /* still: siehe oben */ }
   applyUpdateBadge();
@@ -2527,16 +2533,24 @@ function renderChangelog(panel, payload) {
 
   // Steht ein Update an, ist das die Nachricht - ob die laufende Version in der
   // GitHub-Liste auftaucht, interessiert dann niemanden mehr.
-  const updateAvailable = isNewerVersion(latestVersion, currentVersion);
+  //
+  // Der mitgelieferte Stand geht beidem vor: er kann per Konstruktion nichts
+  // ueber neuere Versionen wissen, also waere sowohl "Version X ist verfuegbar"
+  // als auch "diese Version steht in den GitHub-Releases" eine Aussage ueber
+  // etwas, das gerade niemand nachsehen konnte (#838).
+  const local = data.source === 'local';
+  const updateAvailable = !local && isNewerVersion(latestVersion, currentVersion);
   const note = panel.querySelector('#changelog-version-note');
-  if (updateAvailable) {
+  if (local) {
+    note.textContent = t('changelog.offlineNotice');
+  } else if (updateAvailable) {
     note.textContent = t('changelog.updateAvailable', { version: displayVersion(latestVersion) });
   } else {
     note.textContent = data.current_in_releases
       ? t('changelog.currentFound')
       : t('changelog.currentMissing');
   }
-  note.classList.toggle('changelog-version-note--warning', !updateAvailable && !data.current_in_releases);
+  note.classList.toggle('changelog-version-note--warning', local || (!updateAvailable && !data.current_in_releases));
   note.classList.toggle('changelog-version-note--update', updateAvailable);
 
   // Der Nutzer sieht die Liste gerade - der Punkt an der Navigation hat seinen

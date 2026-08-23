@@ -3155,6 +3155,7 @@
         "currentBadge": "Geçerli",
         "currentFound": "Yüklü sürüm GitHub sürümlerinde var.",
         "currentMissing": "Yüklü sürüm GitHub sürümlerinde listelenmiyor.",
+        "offlineNotice": "GitHub'a ulaşılamadı. Bu sürümle birlikte gelen geçmiş gösteriliyor.",
         "unknownVersion": "Bilinmiyor",
         "changes": "Değişiklikler",
         "noReleaseNotes": "Bu sürüm için sürüm notu yok."

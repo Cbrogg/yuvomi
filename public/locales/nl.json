@@ -3155,6 +3155,7 @@
         "currentBadge": "Huidig",
         "currentFound": "De geïnstalleerde versie staat in de GitHub-releases.",
         "currentMissing": "De geïnstalleerde versie staat niet in de GitHub-releases.",
+        "offlineNotice": "GitHub was niet bereikbaar. De geschiedenis die met deze versie is meegeleverd wordt getoond.",
         "unknownVersion": "Onbekend",
         "changes": "Wijzigingen",
         "noReleaseNotes": "Geen release-opmerkingen voor deze versie."

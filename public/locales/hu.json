@@ -3155,6 +3155,7 @@
         "currentBadge": "Aktuális",
         "currentFound": "A telepített verzió szerepel a GitHub kiadások között.",
         "currentMissing": "A telepített verzió nem szerepel a GitHub kiadások között.",
+        "offlineNotice": "A GitHub nem volt elérhető. A verzióval szállított előzmények láthatók.",
         "unknownVersion": "Ismeretlen",
         "changes": "Változások",
         "noReleaseNotes": "Ehhez a verzióhoz nincsenek kiadási megjegyzések."

@@ -3155,6 +3155,7 @@
         "currentBadge": "Aktuell",
         "currentFound": "Den installerade versionen finns i GitHub-versionerna.",
         "currentMissing": "Den installerade versionen finns inte i GitHub-versionerna.",
+        "offlineNotice": "GitHub kunde inte nås. Historiken som medföljer den här versionen visas.",
         "unknownVersion": "Okänd",
         "changes": "Ändringar",
         "noReleaseNotes": "Inga versionsnoteringar för den här versionen."

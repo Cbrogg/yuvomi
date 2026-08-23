@@ -3155,6 +3155,7 @@
         "currentBadge": "Текущая",
         "currentFound": "Установленная версия есть в релизах GitHub.",
         "currentMissing": "Установленной версии нет в релизах GitHub.",
+        "offlineNotice": "GitHub недоступен. Показана история, включённая в эту версию.",
         "unknownVersion": "Неизвестно",
         "changes": "Изменения",
         "noReleaseNotes": "Для этой версии нет примечаний к выпуску."

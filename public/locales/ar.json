@@ -3155,6 +3155,7 @@
         "currentBadge": "الإصدار الحالي",
         "currentFound": "هذا الإصدار الحالي موجود في سجل إصدارات GitHub.",
         "currentMissing": "الإصدار الحالي غير موجود في سجل إصدارات GitHub.",
+        "offlineNotice": "تعذر الوصول إلى GitHub. يُعرض السجل المرفق مع هذا الإصدار.",
         "unknownVersion": "غير معروف",
         "changes": "التغييرات",
         "noReleaseNotes": "لا توجد ملاحظات إصدار لهذه النسخة."
