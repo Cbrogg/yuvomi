@@ -84,6 +84,10 @@ export const REGION_PRESETS = {
   'ko-KR': { currency: 'KRW', date_format: 'ymd', time_format: '12h' },
   'id-ID': { currency: 'IDR', date_format: 'dmy', time_format: '24h' },
   'ms-MY': { currency: 'MYR', date_format: 'dmy_slash', time_format: '12h' },
+  // #841: Israel schreibt d.M.yyyy und rechnet in 24h (CLDR he-IL) - dasselbe
+  // Triple wie de-DE bis auf die Waehrung. Das Zeichen ₪ liefert
+  // Intl.NumberFormat, es steht in keiner eigenen Tabelle.
+  'he-IL': { currency: 'ILS', date_format: 'dmy', time_format: '24h' },
   'fa-IR': { currency: 'IRR', date_format: 'ymd', time_format: '24h' },
 };
 

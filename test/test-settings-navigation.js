@@ -1030,7 +1030,7 @@ test('the shared currency list is sorted, unique and ISO-4217 shaped', () => {
   for (const code of CURRENCY_CODES) assert.match(code, /^[A-Z]{3}$/);
   // Frei gewaehlte Stichprobe aus drei Kontinenten: die Liste ist ein Vorrat,
   // kein Zufallsprodukt eines Refactorings.
-  for (const code of ['EUR', 'USD', 'IDR', 'JPY', 'ZAR']) {
+  for (const code of ['EUR', 'USD', 'ILS', 'JPY', 'ZAR']) {
     assert.ok(CURRENCY_CODES.includes(code), `${code} fehlt im Vorrat`);
   }
 });

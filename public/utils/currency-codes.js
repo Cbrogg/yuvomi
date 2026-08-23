@@ -20,13 +20,13 @@
  * Intl.DisplayNames), also ist die Sortierung Teil der Zusage, nicht Kosmetik.
  *
  * Nachkommastellen und Symbol stehen bewusst NICHT hier: beides liefert
- * Intl.NumberFormat aus dem CLDR - JPY etwa ohne Nachkommastellen. Eine eigene
- * Tabelle dafuer waere die naechste zweite Wahrheit.
+ * Intl.NumberFormat aus dem CLDR - JPY ohne Nachkommastellen, ILS mit ₪ (#841).
+ * Eine eigene Tabelle dafür waere die naechste zweite Wahrheit.
  */
 export const CURRENCY_CODES = Object.freeze([
   'AED', 'ARS', 'AUD', 'BBD', 'BOB', 'BRL', 'BSD', 'BYN', 'BZD', 'CAD', 'CHF', 'CLP',
   'CNY', 'COP', 'CRC', 'CUP', 'CZK', 'DKK', 'DOP', 'EUR', 'GBP', 'GTQ', 'GYD',
-  'HNL', 'HTG', 'HUF', 'IDR', 'INR', 'IRR', 'JMD', 'JPY', 'KRW', 'KZT', 'MXN',
+  'HNL', 'HTG', 'HUF', 'IDR', 'ILS', 'INR', 'IRR', 'JMD', 'JPY', 'KRW', 'KZT', 'MXN',
   'MYR', 'NIO', 'NOK', 'NZD', 'PAB', 'PEN', 'PHP', 'PLN', 'PYG', 'RUB', 'SAR',
   'SEK', 'SRD', 'TRY', 'TTD', 'UAH', 'USD', 'UYU', 'VES', 'XCD', 'ZAR',
 ]);

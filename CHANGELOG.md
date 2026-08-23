@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Israeli new shekel (ILS) and an Israel region preset** (#841, requested by @zivawernick). ILS is
+  now selectable as the household currency and in Subscriptions and Shared expenses, and Settings →
+  Personal → Appearance → Region offers Israel (ILS, DD.MM.YYYY, 24-hour - the CLDR defaults for
+  `he-IL`). The shekel sign is not hard-coded anywhere: decimal places and symbol come from the
+  browser's own locale data, the same way every other currency gets them.
+
 ### Changed
 
 - **The list of selectable currencies now exists exactly once.** It lived in four literal copies -
