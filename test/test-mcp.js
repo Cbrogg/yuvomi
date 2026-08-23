@@ -201,7 +201,12 @@ test('tools/call list_tasks: enthält den neu angelegten Task', async () => {
 // Pfad-Guard vorbei, weil sie express nie durchlaufen - genau der Weg, auf dem
 // hier schon einmal die Sichtbarkeit (#474) gefehlt hat.
 test('tools/call list_tasks: was erst spaeter beginnt, ist noch nicht dran', async () => {
-  const inAWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  // Lokaler Kalendertag, nicht `toISOString()`: `start_date` ist ein lokal
+  // eingegebener Tag, und westlich von UTC liefert der UTC-Tag hier abends den
+  // Vortag - genau die Falle, gegen die dieser Test steht (CLAUDE.md).
+  const week = new Date();
+  week.setDate(week.getDate() + 7);
+  const inAWeek = `${week.getFullYear()}-${String(week.getMonth() + 1).padStart(2, '0')}-${String(week.getDate()).padStart(2, '0')}`;
   db.prepare(
     `INSERT INTO tasks (title, created_by, status, visibility, start_date) VALUES (?, ?, 'open', 'all', ?)`
   ).run('Erst naechste Woche', uid, inAWeek);
