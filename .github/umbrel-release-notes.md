@@ -1,8 +1,6 @@
-<!-- version: 2.34.0 -->
-Your household now has its own time zone, set under Settings, Personal, Appearance, Region. Until now the only way to tell Yuvomi where you live was the TZ variable in the container configuration, which is not something you can reach from Umbrel. Leave the new setting on "Automatic" and nothing changes; pick a zone and everything that has to know the time follows it.
+<!-- version: 2.35.0 -->
+The Overview can now be set up once for the whole household. An admin arranges it the way it should be and publishes that arrangement; everyone who has never rearranged their own Overview sees it from then on, including later changes to it. Nobody's own arrangement is overwritten, and "Reset" is the way back to the household default for anyone who wants it.
 
-Households west of UTC will notice several things stop going wrong. Appointments later in the day disappeared from the Overview from the early evening onwards, recurring shared expenses were booked the night before they were due, and a birthday on 31 December could jump a whole year ahead. All of these came from the server working out today's date in UTC rather than in your own time.
+The calendar and tasks tiles gained settings of their own. The calendar can be limited to appointments assigned to you instead of everyone's, and the tasks tiles to the categories you care about. Both are personal: narrowing your Overview changes nothing for anyone else in the household.
 
-Appointments pushed to Outlook also arrive at the right time now. They were sent in Berlin time regardless of where you live, which shifted every one of them for anyone further away.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.34.0
+The Israeli new shekel is now available as a household currency, and Israel is one of the region presets.
