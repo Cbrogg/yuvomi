@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "As novas tarefas são atribuídas a esta lista. Podes escolher outro destino sempre que criares uma.",
         "tasksDefaultTargetUnavailable": "Lista selecionada anteriormente (já não disponível)",
         "tasksDefaultTargetEmpty": "Ainda não há nenhuma lista de lembretes ativada para tarefas.",
-        "tasksDefaultsSaved": "Predefinições guardadas"
+        "tasksDefaultsSaved": "Predefinições guardadas",
+        "timezoneTitle": "Fuso horário",
+        "timezoneLabel": "Fuso horário do agregado",
+        "timezoneHint": "Aplica-se sempre que uma hora não traz um fuso próprio: lembretes, contagens decrescentes, o dia do calendário chamado «hoje», o feed de calendário exportado e os eventos enviados para o Google ou o Outlook.",
+        "timezoneAuto": "Automático ({{zone}})",
+        "timezoneAdminOnly": "Só os administradores podem alterar o fuso horário.",
+        "timezoneSaved": "Fuso horário guardado."
     },
     "login": {
         "tagline": "Bem-vindo de volta ao teu planeador familiar.",

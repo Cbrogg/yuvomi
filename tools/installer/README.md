@@ -44,7 +44,8 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
      creating your admin account. Two or three clicks, no jargon.
    - **Advanced setup** — walks every option, step by step. Security keys are
      still pre-generated (regenerate any time), and each screen is optional:
-     - **Basics** — domain/IP, HTTP host port (`OIKOS_HTTP_PORT`), timezone (`TZ`),
+     - **Basics** — domain/IP, HTTP host port (`OIKOS_HTTP_PORT`), timezone (`TZ`,
+       which also pre-sets the household zone - changeable later in the app),
        how Yuvomi is exposed (`SESSION_SECURE`, `TRUST_PROXY`) and the public
        address (`BASE_URL`). The exposure choice follows the host you enter, and the
        combination of an `http://` address with enforced secure cookies is rejected -

@@ -9,6 +9,7 @@
 import { createLogger } from '../logger.js';
 import express from 'express';
 import * as db from '../db.js';
+import { utcDateKey } from '../utils/timezone.js';
 
 const log = createLogger('Weather');
 
@@ -156,7 +157,10 @@ export function buildRouter({ cfgGet: cfgGetFn = cfgGet, fetchFn = null } = {}) 
         const cur = om.current;
         const isDay = cur.is_day === 1;
 
-        const today = (om.daily?.time?.[0]) ?? new Date().toISOString().slice(0, 10);
+        // Open-Meteo wird mit `timezone=auto` abgefragt, `daily.time` traegt also
+        // die Kalendertage DES ORTES - der erste davon ist heute. Der Rueckfall
+        // greift nur, wenn `daily` ganz fehlt; dann ist `forecast` ohnehin leer.
+        const today = (om.daily?.time?.[0]) ?? utcDateKey();
         const forecast = (om.daily?.time ?? [])
           .map((date, i) => ({
             date,
@@ -207,7 +211,11 @@ export function buildRouter({ cfgGet: cfgGetFn = cfgGet, fetchFn = null } = {}) 
             day.temps.push(item.main.temp);
             day.items.push(item);
           }
-          const today = new Date().toISOString().slice(0, 10);
+          // Bewusst der UTC-Tag und NICHT die Haushaltszone: `dayMap` ist ueber
+          // `dt_txt` geschluesselt, und OpenWeatherMap liefert die
+          // Drei-Stunden-Schritte in UTC. Ein Tag aus einer anderen Zone traefe
+          // hier keinen Schluessel und liesse den laufenden Tag stehen.
+          const today = utcDateKey();
           for (const [dateStr, { temps, items }] of dayMap) {
             if (dateStr === today) continue;
             const noonItem =

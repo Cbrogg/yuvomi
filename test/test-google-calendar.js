@@ -14,7 +14,7 @@ const db = (await import('../server/db.js')).get();
 const { __test } = await import('../server/services/google-calendar.js');
 const { localEventToGoogle, googleAllDayEndToInclusive, localAllDayEndToExclusive,
         upsertGoogleEvents, upsertExternalCalendar,
-        setReadonly, isReadonly, fetchEventColorMap, serverTimeZone } = __test;
+        setReadonly, isReadonly, fetchEventColorMap, householdTimeZone } = __test;
 const { nearestColorId } = await import('../server/utils/ical-color.js');
 const { expandRecurringEvents } = await import('../server/services/calendar-events.js');
 
@@ -291,13 +291,16 @@ test('localEventToGoogle: all-day-Event bleibt ohne timeZone (reines DATE)', () 
   assertEqual(g.start.date, '2026-06-03');
 });
 
-test('serverTimeZone: TZ-Env hat Vorrang, sonst gültige IANA-Zone', () => {
+// Ohne Verbindung (null) faellt householdTimeZone auf die Umgebung zurueck -
+// genau der Rueckfall, den der Google-Outbound nimmt, wenn der Zielkalender
+// keine Zone meldet. Die Einstellung selbst prueft test-household-timezone.js.
+test('householdTimeZone(null): TZ-Env hat Vorrang, sonst gültige IANA-Zone', () => {
   const prevTz = process.env.TZ;
   try {
     process.env.TZ = 'Pacific/Auckland';
-    assertEqual(serverTimeZone(), 'Pacific/Auckland');
+    assertEqual(householdTimeZone(null), 'Pacific/Auckland');
     delete process.env.TZ;
-    const fallback = serverTimeZone();
+    const fallback = householdTimeZone(null);
     assert(typeof fallback === 'string' && fallback.length > 0, 'Fallback liefert eine Zone');
     // Muss von Intl akzeptiert werden, sonst weist Google das Event zurück.
     new Intl.DateTimeFormat('en-US', { timeZone: fallback });

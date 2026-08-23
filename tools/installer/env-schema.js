@@ -37,6 +37,11 @@ export const ENV_SCHEMA = [
   // Rezept-Provider-Spiegel (Mealie/Tandoor): derselbe SSRF-Guard, derselbe
   // häufigste Self-Hoster-Fall wie bei den ICS-Abos oben.
   { key: 'RECIPE_PROVIDER_ALLOW_PRIVATE_NETWORK', type: 'default', label: 'Allow Private Network Recipe Provider Target', default: 'false', required: false, group: 'sync', writeToEnv: true },
+  // Zeitzone des Containers: Logzeitstempel und Backup-Cron, und der DEFAULT für
+  // die Haushaltszone. Seit v2.34.0 (#829) ist die Haushaltszone eine eigene
+  // Einstellung in der App (sync_config `household_timezone`) und gewinnt, wo es
+  // beide gibt - deshalb bleibt dieser Wert hier eine Vorbelegung und wird nicht
+  // zur einzigen Möglichkeit, die Zone zu setzen.
   { key: 'TZ',                          type: 'default', label: 'Timezone',                 default: 'UTC',  group: 'system',  writeToEnv: true },
   { key: 'OIKOS_HTTP_PORT',             type: 'default', label: 'HTTP Port',                default: '3000', group: 'system',  writeToEnv: true },
   // Host-Ordner für Datenbank und App-Daten. Der Container-Pfad steht fest, der

@@ -179,7 +179,7 @@ node tools/installer/install-server.js
 
 Open your browser and navigate to **http://localhost:8090**. The wizard detects your browser language (24 languages supported), verifies that a container engine is available (Docker with Compose v2, or Podman with `podman compose` / `podman-compose`), and reports an existing `.env` file as well as a running container before you start. When it finds one, the **simple setup is disabled** and you continue with the advanced setup: the simple path writes fixed values for host, port, `SESSION_SECURE` and `TRUST_PROXY`, which would silently downgrade an installation that already runs behind a reverse proxy. The wizard then guides you through:
 
-- Basics — domain/IP, HTTP host port (`OIKOS_HTTP_PORT`), timezone (`TZ`), how Yuvomi is exposed (`SESSION_SECURE`, `TRUST_PROXY`) and the public address (`BASE_URL`). The exposure choice follows the host you enter, and the wizard rejects an `http://` address combined with enforced secure cookies — nobody could sign in to that combination
+- Basics — domain/IP, HTTP host port (`OIKOS_HTTP_PORT`), timezone (`TZ`, which pre-sets the household zone; that one is changeable later under Settings → Personal → Appearance → Region), how Yuvomi is exposed (`SESSION_SECURE`, `TRUST_PROXY`) and the public address (`BASE_URL`). The exposure choice follows the host you enter, and the wizard rejects an `http://` address combined with enforced secure cookies — nobody could sign in to that combination
 - Security key generation (`SESSION_SECRET`, `DB_ENCRYPTION_KEY`) — on a re-run, keys already present in your `.env` are kept rather than regenerated, so running the wizard again on a live installation cannot lock you out of your encrypted database
 - Optional integrations (weather, Google Calendar, Apple CalDAV)
 - Email/SMTP for the "forgot password" flow (`EMAIL_SMTP_*`, `EMAIL_FROM_*`)
@@ -239,9 +239,9 @@ docker compose up -d
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
 
 > **Pinning a version.** Every release is also published under immutable tags:
-> `2.33.1` (exact version), `2.33` (latest patch of that minor), plus a moving `main`
+> `2.34.0` (exact version), `2.34` (latest patch of that minor), plus a moving `main`
 > tag for the current development state. To pin production to a known-good release,
-> set `image: ghcr.io/ulsklyc/yuvomi:2.33.1` in your compose file and bump it
+> set `image: ghcr.io/ulsklyc/yuvomi:2.34.0` in your compose file and bump it
 > deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
@@ -287,7 +287,7 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.33.1
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.34.0
 yuvomi  | [Yuvomi] Environment: production
 yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
@@ -430,7 +430,7 @@ All configuration happens in the `.env` file. The container reads these values o
 | `PORT` | Port the Express server listens on **inside the container** (rarely changed) | `3000` | No |
 | `OIKOS_HTTP_PORT` | Host port that the compose file maps to the container's port 3000. Change this to expose Yuvomi on a different host port; the app inside the container always listens on 3000. | `3000` | No |
 | `OIKOS_HTTP_BIND` | Host bind address for the published port (`podman-compose.yml` only). Set to `127.0.0.1` for rootless Podman behind a reverse proxy on the same host. | `0.0.0.0` | No |
-| `TZ` | Container timezone (e.g. `Europe/Berlin`). Affects timestamps, the automated-backup schedule, and serves as the household zone wherever a time carries none of its own: events pushed to Google Calendar when the target calendar reports no zone, the due times of CalDAV reminders synced into Tasks, and the times in the exported calendar feed (`/feed/calendar/<token>.ics`), which subscribers read in this zone - a wrong `TZ` shifts every appointment for everyone subscribed. | `UTC` | No |
+| `TZ` | Container timezone (e.g. `Europe/Berlin`). Affects log timestamps and the automated-backup schedule, and is the **default** for the household zone. Since v2.34.0 the household zone is a setting of its own (Settings → Personal → Appearance → Region), and where both exist the setting wins: `TZ` lives in the compose file, which is out of reach on Umbrel, TrueNAS and Unraid, and it also drives things that have nothing to do with the family calendar. Whichever applies is the zone used wherever a time carries none of its own: the calendar day server-side jobs call "today" (upcoming events, countdowns, recurring split expenses, birthdays), events pushed to Google Calendar when the target calendar reports no zone, events pushed to Outlook, the due times of CalDAV reminders synced into Tasks, and the times in the exported calendar feed (`/feed/calendar/<token>.ics`), which subscribers read in this zone - a wrong zone shifts every appointment for everyone subscribed. | `UTC` | No |
 | `NODE_ENV` | Runtime environment | `production` | No |
 | `LOG_LEVEL` | Lowest severity written to the container log (`debug`, `info`, `warn`, `error`). Set to `debug` to see the per-run detail of the calendar, contact and holiday sync, which stays quiet at `info` when a run has nothing to do. | `info` | No |
 | `TRUST_PROXY` | Number of reverse-proxy hops to trust, or a subnet string (e.g. `1`, `172.16.0.0/12`, `loopback`). The default already trusts a single hop, so `req.ip` returns the real client IP behind one Caddy/Nginx/Traefik proxy without any configuration. Set to `loopback` for direct, proxy-less deployments, or to a subnet/higher hop count behind multiple proxy layers. Numeric values are treated as a hop count; named values (`loopback`, `linklocal`, `uniquelocal`) work as expected. | `1` | No |
@@ -807,7 +807,7 @@ One-way push **Yuvomi → Outlook.com** for personal Microsoft accounts (outlook
 7. Set the three `MS_*` variables in `.env`, restart Yuvomi, then connect each family member's account under **Settings → Synchronization → More providers → Outlook** (admin only).
 8. After connecting, no calendars are enabled yet. Recommended setup: create a **dedicated calendar in Outlook** (e.g. "Yuvomi"), refresh the calendar list, pick it as the **auto-sync target calendar**, and choose which family member the account belongs to — from then on all Yuvomi events visible to that person are pushed there automatically, with assigned members appended to the title (`Dinner (Anna, Ben)`). Alternatively (or additionally), individual events can pick an explicit Outlook target in the event dialog; an explicit target overrides the auto-sync calendar for that event.
 
-**Limitations (one-way push):** recurring events support Yuvomi's RRULE subset only; excluded single occurrences (EXDATE) are not propagated; times are pushed with the `Europe/Berlin` timezone (parity with the Google outbound sync) — this is a fixed value and does **not** follow your `TZ` setting; no attendees, reminders, attachments, or colors. Refresh tokens for personal accounts expire after ~90 days of inactivity — the account then shows a "reconnect" button.
+**Limitations (one-way push):** recurring events support Yuvomi's RRULE subset only; excluded single occurrences (EXDATE) are not propagated; no attendees, reminders, attachments, or colors. **Times follow the household zone since v2.34.0 (#829)** - until then `Europe/Berlin` was hard-coded here, justified as parity with the Google outbound sync although that one already read the target calendar's own zone and only fell back to `TZ`; a household in Toronto pushed every appointment six hours out. Refresh tokens for personal accounts expire after ~90 days of inactivity — the account then shows a "reconnect" button.
 
 ### Apple Calendar Sync — Legacy Single-Account (Optional)
 

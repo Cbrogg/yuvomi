@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "Les nouvelles tâches sont affectées à cette liste. Vous pouvez choisir une autre cible à chaque création.",
         "tasksDefaultTargetUnavailable": "Liste sélectionnée précédemment (plus disponible)",
         "tasksDefaultTargetEmpty": "Aucune liste de rappels n'est encore activée pour les tâches.",
-        "tasksDefaultsSaved": "Valeurs par défaut enregistrées"
+        "tasksDefaultsSaved": "Valeurs par défaut enregistrées",
+        "timezoneTitle": "Fuseau horaire",
+        "timezoneLabel": "Fuseau horaire du foyer",
+        "timezoneHint": "S'applique partout où une heure ne porte pas son propre fuseau : rappels, comptes à rebours, le jour du calendrier appelé « aujourd'hui », le flux de calendrier exporté et les événements envoyés vers Google ou Outlook.",
+        "timezoneAuto": "Automatique ({{zone}})",
+        "timezoneAdminOnly": "Seuls les administrateurs peuvent changer le fuseau horaire.",
+        "timezoneSaved": "Fuseau horaire enregistré."
     },
     "login": {
         "tagline": "Bon retour sur votre planificateur familial.",

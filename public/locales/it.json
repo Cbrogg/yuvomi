@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "Le nuove attività vengono assegnate a questo elenco. Puoi comunque scegliere un'altra destinazione ogni volta.",
         "tasksDefaultTargetUnavailable": "Elenco selezionato in precedenza (non più disponibile)",
         "tasksDefaultTargetEmpty": "Nessun elenco di promemoria è ancora abilitato per le attività.",
-        "tasksDefaultsSaved": "Valori predefiniti salvati"
+        "tasksDefaultsSaved": "Valori predefiniti salvati",
+        "timezoneTitle": "Fuso orario",
+        "timezoneLabel": "Fuso orario della famiglia",
+        "timezoneHint": "Vale ovunque un orario non porti con sé un proprio fuso: promemoria, conti alla rovescia, il giorno di calendario chiamato «oggi», il feed di calendario esportato e gli eventi inviati a Google o Outlook.",
+        "timezoneAuto": "Automatico ({{zone}})",
+        "timezoneAdminOnly": "Solo gli amministratori possono cambiare il fuso orario.",
+        "timezoneSaved": "Fuso orario salvato."
     },
     "login": {
         "tagline": "Bentornato nel tuo pianificatore familiare.",

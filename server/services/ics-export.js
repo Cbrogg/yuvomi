@@ -6,7 +6,7 @@
  */
 
 import { randomBytes } from 'node:crypto';
-import { serverTimeZone, utcToWall } from '../utils/timezone.js';
+import { householdTimeZone, isValidTimeZone, utcToWall } from '../utils/timezone.js';
 import { rruleLine } from './recurrence.js';
 
 function escapeICSText(s) {
@@ -225,8 +225,7 @@ function usesTzid(ev) {
 function resolveFeedZone(tz) {
   const zone = (tz || '').trim();
   if (!zone || /^(UTC|GMT|Z|Etc\/(UTC|GMT|GMT0|GMT\+0|GMT-0|Zulu|Universal|Greenwich))$/i.test(zone)) return null;
-  try { new Intl.DateTimeFormat('en-US', { timeZone: zone }); return zone; }
-  catch { return null; }
+  return isValidTimeZone(zone) ? zone : null;
 }
 
 // Eine Datums-/Zeit-Property. Werte mit eigenem Offset sind als UTC-Instant
@@ -305,7 +304,7 @@ function buildVEvent(ev, dtstamp, showAssignees = false, feedZone = null) {
   return lines.map(foldLine);
 }
 
-function buildFeed(conn, userId, now = new Date(), tz = serverTimeZone()) {
+function buildFeed(conn, userId, now = new Date(), tz = householdTimeZone(conn)) {
   const windowStart = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000)
     .toISOString().slice(0, 10);
   const feedZone = resolveFeedZone(tz);

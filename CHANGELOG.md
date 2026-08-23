@@ -7,6 +7,63 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.34.0] - 2026-08-23
+
+### Added
+
+- **The household time zone is a setting of its own** (#829, reported by @euzada). Until now the
+  only answer to "where does this household live" was the container's `TZ` variable - a compose-file
+  switch that is out of reach on Umbrel, TrueNAS and Unraid, that a redeploy dropping the
+  environment loses, and that also drives log timestamps and the backup schedule, which have nothing
+  to do with the family calendar. Settings → Personal → Appearance → Region now carries a time-zone
+  picker (admin-only, like region and data language). Leaving it on "Automatic" keeps the previous
+  behaviour exactly: `TZ`, then the host zone, then UTC. No migration, and nothing changes for an
+  installation that never opens the setting.
+
+  `GET /api/v1/preferences` gained `timezone` (what is chosen, `null` for automatic) and
+  `timezone_effective` (what actually applies, never `null`); `PUT` accepts `timezone` with an IANA
+  zone or `null`. Validation runs against ICU rather than `Intl.supportedValuesOf('timeZone')`, which
+  lists canonical names only and would reject a valid alias such as `Europe/Kiev`. UTC is offered
+  explicitly - that same list carries neither `UTC` nor any `Etc/*`, so the shipping default would
+  otherwise not have been selectable.
+
+### Fixed
+
+- **Evening appointments dropped out of the Overview west of UTC** (#829). The upcoming-events widget
+  compared the two forms that live side by side in one column - bare wall-clock time for locally
+  created events, instants for synced ones - as plain strings. `2026-08-21T21:00` sorts before
+  `2026-08-22T00:00:00.000Z` even though that appointment is still an hour away, so from the early
+  evening onwards a household in, say, Toronto lost the rest of its day from the widget. Comparison
+  now runs on actual points in time, with zone-less values read in the household zone.
+
+- **Server-side "today" followed UTC instead of the household** (#829). `new Date().toISOString()` is
+  always UTC regardless of `TZ`, and eight places derived the current calendar day from it: the
+  upcoming-events widget, the recurring split-expense scheduler (which booked an expense on the
+  evening before its due date, dated to the day before its own run), budget account balances, the
+  calendar's default month and its search resolution, the kitchen summary, the meal week and new
+  split expenses. The dashboard's date basis used the container's local getters, a third clock again.
+  All of them now read the household zone.
+
+- **A birthday on 31 December could jump a whole year** (#829). `nextBirthdayDate` mixed two clocks in
+  three lines: the year came from `getFullYear()` (the container's zone), the comparison day from
+  `toISOString()` (UTC). At 22:00 on 31 December in Toronto that yielded the year 2026 and the day
+  2027-01-01, so the birthday counted as past. Birthday reminders also fire at noon in the household
+  zone now rather than at noon UTC, which was the evening in Auckland and the early morning in Los
+  Angeles.
+
+- **Outlook received every appointment in Berlin time** (#829). The push carried a hard-coded
+  `Europe/Berlin`, documented as a limitation that deliberately ignored `TZ`; the justification was
+  parity with the Google outbound sync, although that one already read the target calendar's own zone
+  and only fell back. A household in Toronto pushed everything six hours out. Outlook now uses the
+  household zone like everything else.
+
+### Changed
+
+- **`TZ` is now the default for the household zone rather than the only way to set it** (#829). Where
+  both exist, the in-app setting wins. `TZ` keeps its other jobs unchanged - log timestamps and the
+  automated-backup schedule, whose cron expression (`BACKUP_SCHEDULE`) is an environment setting too
+  and belongs with it.
+
 ## [2.33.1] - 2026-08-23
 
 ### Fixed

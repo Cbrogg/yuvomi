@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "新任务将归入此列表。创建时你仍可每次选择其他目标。",
         "tasksDefaultTargetUnavailable": "先前选择的列表（已不可用）",
         "tasksDefaultTargetEmpty": "尚未为任务启用任何提醒列表。",
-        "tasksDefaultsSaved": "默认值已保存"
+        "tasksDefaultsSaved": "默认值已保存",
+        "timezoneTitle": "时区",
+        "timezoneLabel": "家庭时区",
+        "timezoneHint": "适用于时间本身不带时区的所有场合：提醒、倒计时、称为“今天”的日历日、导出的日历订阅源，以及推送到 Google 或 Outlook 的日程。",
+        "timezoneAuto": "自动 ({{zone}})",
+        "timezoneAdminOnly": "只有管理员可以更改时区。",
+        "timezoneSaved": "已保存时区。"
     },
     "login": {
         "tagline": "欢迎回到您的家庭计划工具。",

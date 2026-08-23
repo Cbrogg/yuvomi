@@ -7,7 +7,9 @@
 
 import { nextOccurrence, parseRRule, matchesRRuleByday } from './recurrence.js';
 import { visibilityWhere } from './visibility.js';
-import { localToUTC, utcToWall } from '../utils/timezone.js';
+import {
+  householdTimeZone, localToUTC, shiftDateKey, storedToInstantMs, todayKey, utcToWall,
+} from '../utils/timezone.js';
 
 // Zugewiesene Personen eines Events als JSON-Array (Multi-Assignment).
 const ASSIGNED_USERS_SQL = `(
@@ -163,15 +165,29 @@ export function expandRecurringEvents(events, from, to, exceptionsByEvent = null
  * @param {number}  opts.limit       Maximale Anzahl Termine (default 5)
  * @param {number}  opts.windowDays  Vorausschau-Fenster in Tagen (default 90)
  * @param {boolean} opts.fromToday   true = ab Tagesbeginn (Dashboard); false = ab jetzt (default)
+ * @param {Date}    [opts.now]        Ersetzbar für Tests - die Tagesgrenze ist genau
+ *        das, was hier schiefgehen kann, und ohne festen Zeitpunkt liesse sie sich
+ *        nur an dem einen Abend im Jahr pruefen, an dem die Suite zufaellig laeuft.
  * @returns {object[]}  Rohe, expandierte Event-Zeilen (inkl. assigned_users_json)
  */
-export function getUpcomingEvents(d, { userId = null, limit = 5, windowDays = 90, fromToday = false } = {}) {
-  const nowIso  = new Date().toISOString();
-  const nowDate = nowIso.slice(0, 10);
-  // fromToday: ganztägige Sichtbarkeit heutiger Termine (Dashboard-Widget)
-  const filterFrom = fromToday ? `${nowDate}T00:00:00` : nowIso;
+export function getUpcomingEvents(d, {
+  userId = null, limit = 5, windowDays = 90, fromToday = false, now = new Date(),
+} = {}) {
+  const tz      = householdTimeZone(d);
+  const nowDate = todayKey(d, now);
+  // fromToday: ganztägige Sichtbarkeit heutiger Termine (Dashboard-Widget) -
+  // gerechnet wird ab Mitternacht der Haushaltszone, nicht ab Mitternacht UTC.
+  const filterFromMs = fromToday
+    ? new Date(localToUTC(`${nowDate}T00:00:00`, tz)).getTime()
+    : now.getTime();
   // Fenster: heute bis +windowDays voraus (für Wiederholungs-Expansion)
-  const future  = new Date(Date.now() + windowDays * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+  const future  = shiftDateKey(nowDate, windowDays);
+  // Untere SQL-Grenze einen Tag früher als das Ergebnisfenster (#824): `DATE()`
+  // liest einen Instant als UTC-Kalendertag, und westlich von UTC liegt ein
+  // Abendtermin von heute dort schon auf morgen - er fiele aus einer Grenze
+  // heraus, die exakt auf `nowDate` sitzt. Geklammert wird danach exakt, über
+  // den Instant-Vergleich unten, deshalb blendet der Rand nichts Zusätzliches ein.
+  const sqlFrom = shiftDateKey(nowDate, -1);
 
   const rawEvents = d.prepare(`
     SELECT e.*,
@@ -199,18 +215,24 @@ export function getUpcomingEvents(d, { userId = null, limit = 5, windowDays = 90
     )
     AND ${visibilityWhere('e', 'event_assignments', 'event_id')}
     ORDER BY e.start_datetime ASC
-  `).all(nowDate, future, future, userId, userId, userId);
+  `).all(sqlFrom, future, future, userId, userId, userId);
 
   const recurringIds = rawEvents.filter((e) => e.recurrence_rule).map((e) => e.id);
   const exceptions   = loadEventExceptions(d, recurringIds);
 
-  return expandRecurringEvents(rawEvents, nowDate, future, exceptions)
+  return expandRecurringEvents(rawEvents, sqlFrom, future, exceptions)
     .filter((e) => {
-      // All-day events store start_datetime as 'YYYY-MM-DD' (no time suffix).
-      // Normalise to 'T00:00:00' before comparing, otherwise today's all-day
-      // events are always excluded ('2026-06-13' < '2026-06-13T00:00:00').
-      const start = e.all_day ? e.start_datetime.slice(0, 10) + 'T00:00:00' : e.start_datetime;
-      return start >= filterFrom;
+      // Verglichen werden ZEITPUNKTE, nicht Strings. In start_datetime liegen
+      // zwei Formen nebeneinander - zonenlose Wanduhrzeit (lokal angelegt) und
+      // Instants mit Offset oder 'Z' (synchronisiert) -, und lexikografisch ist
+      // '2026-08-21T21:00' kleiner als '2026-08-22T00:00:00.000Z', obwohl der
+      // Termin noch eine Stunde vor uns liegt. Genau so verschwanden westlich
+      // von UTC die Abendtermine aus dem Übersichts-Widget (#829).
+      // Ganztägige Termine beginnen um Mitternacht der Haushaltszone.
+      const startMs = storedToInstantMs(
+        e.all_day ? e.start_datetime.slice(0, 10) : e.start_datetime, tz
+      );
+      return startMs !== null && startMs >= filterFromMs;
     })
     .slice(0, limit);
 }

@@ -2402,7 +2402,13 @@
         "tasksDefaultTargetHint": "Neue Aufgaben werden dieser Liste zugeordnet. Beim Anlegen kannst du jedes Mal ein anderes Ziel wählen.",
         "tasksDefaultTargetUnavailable": "Zuletzt gewählte Liste (nicht mehr verfügbar)",
         "tasksDefaultTargetEmpty": "Für Aufgaben ist noch keine Erinnerungsliste freigegeben.",
-        "tasksDefaultsSaved": "Standardwerte gespeichert"
+        "tasksDefaultsSaved": "Standardwerte gespeichert",
+        "timezoneTitle": "Zeitzone",
+        "timezoneLabel": "Zeitzone des Haushalts",
+        "timezoneHint": "Gilt überall dort, wo eine Zeit keine eigene Zone trägt: Erinnerungen, Countdowns, der Kalendertag „heute“, der exportierte Kalender-Feed und Termine, die zu Google oder Outlook hinausgehen.",
+        "timezoneAuto": "Automatisch ({{zone}})",
+        "timezoneAdminOnly": "Die Zeitzone ändern nur Administratoren.",
+        "timezoneSaved": "Zeitzone gespeichert."
     },
     "login": {
         "tagline": "Willkommen zurück bei deinem Familienplaner.",

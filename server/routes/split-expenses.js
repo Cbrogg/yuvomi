@@ -12,6 +12,7 @@ import { collectErrors, date as validateDate, id as validateId, str, MAX_TEXT, M
 import { documentLinksFor, loadDocumentLinks, replaceDocumentLinks, visibleDocumentRef } from '../services/document-links.js';
 import { buildSplits, decorateMoney, minorToDecimal, parseMoneyToMinor, simplifyDebts } from '../services/split-expenses.js';
 import { syncBirthdayArtifacts } from '../services/birthdays.js';
+import { todayKey } from '../utils/timezone.js';
 
 const log = createLogger('SplitExpenses');
 const router = express.Router();
@@ -337,7 +338,7 @@ function parseExpenseBody(body, fallbackCurrency) {
     convertedCurrency,
     method,
     category,
-    expenseDate: vDate.value || new Date().toISOString().slice(0, 10),
+    expenseDate: vDate.value || todayKey(db.get()),
   };
 }
 

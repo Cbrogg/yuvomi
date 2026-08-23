@@ -14,7 +14,7 @@ const log = createLogger('CalDAV-Reminders');
 import * as db from '../db.js';
 import { parseVTODO } from './ics-parser.js';
 import { createCalDAVClient, supportsComponent } from '../utils/caldav-client.js';
-import { serverTimeZone, utcToWall } from '../utils/timezone.js';
+import { householdTimeZone, utcToWall } from '../utils/timezone.js';
 import { setItemTags, setTags } from '../utils/task-tags.js';
 import * as todoOutbound from './caldav-todo-outbound.js';
 
@@ -73,7 +73,7 @@ function mapVtodoStatus(todo, current = null) {
  * Zonenoffset. Eine Fälligkeit ohne Zonenangabe (floating) ist bereits Wanduhr
  * und bleibt unangetastet.
  */
-function splitDue(due, tz = serverTimeZone()) {
+function splitDue(due, tz = householdTimeZone(null)) {
   if (!due) return { date: null, time: null };
   if (due.length === 10) return { date: due, time: null };
 
@@ -240,7 +240,7 @@ function updateReminderSelection(accountId, listUrl, { enabled, targetModule } =
 // (#617). COALESCE, weil ein Abruf ohne URL den gespeicherten Wert nicht
 // entwerten darf.
 function upsertTask(todo, accountId, createdBy, objectUrl = null) {
-  const { date, time } = splitDue(todo.due);
+  const { date, time } = splitDue(todo.due, householdTimeZone(db.get()));
 
   const existing = db.get().prepare(
     `SELECT id, priority, status FROM tasks WHERE external_uid = ? AND external_source = 'caldav' AND external_account_id = ?`

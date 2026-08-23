@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "Nieuwe taken worden aan deze lijst toegewezen. Je kunt bij het aanmaken elke keer een ander doel kiezen.",
         "tasksDefaultTargetUnavailable": "Eerder gekozen lijst (niet meer beschikbaar)",
         "tasksDefaultTargetEmpty": "Er is nog geen herinneringslijst vrijgegeven voor taken.",
-        "tasksDefaultsSaved": "Standaardwaarden opgeslagen"
+        "tasksDefaultsSaved": "Standaardwaarden opgeslagen",
+        "timezoneTitle": "Tijdzone",
+        "timezoneLabel": "Tijdzone van het huishouden",
+        "timezoneHint": "Geldt overal waar een tijd geen eigen zone draagt: herinneringen, aftellingen, de kalenderdag die \"vandaag\" heet, de geëxporteerde agendafeed en afspraken die naar Google of Outlook gaan.",
+        "timezoneAuto": "Automatisch ({{zone}})",
+        "timezoneAdminOnly": "Alleen beheerders kunnen de tijdzone wijzigen.",
+        "timezoneSaved": "Tijdzone opgeslagen."
     },
     "login": {
         "tagline": "Welkom terug bij je gezinsplanner.",

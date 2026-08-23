@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "Las tareas nuevas se asignan a esta lista. Puedes elegir otro destino cada vez que crees una.",
         "tasksDefaultTargetUnavailable": "Lista seleccionada anteriormente (ya no disponible)",
         "tasksDefaultTargetEmpty": "Todavía no hay ninguna lista de recordatorios habilitada para tareas.",
-        "tasksDefaultsSaved": "Valores predeterminados guardados"
+        "tasksDefaultsSaved": "Valores predeterminados guardados",
+        "timezoneTitle": "Zona horaria",
+        "timezoneLabel": "Zona horaria del hogar",
+        "timezoneHint": "Se aplica siempre que una hora no lleve su propia zona: recordatorios, cuentas atrás, el día del calendario llamado «hoy», el feed de calendario exportado y los eventos enviados a Google u Outlook.",
+        "timezoneAuto": "Automática ({{zone}})",
+        "timezoneAdminOnly": "Solo los administradores pueden cambiar la zona horaria.",
+        "timezoneSaved": "Zona horaria guardada."
     },
     "login": {
         "tagline": "Bienvenido de nuevo a tu planificador familiar.",

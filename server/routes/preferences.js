@@ -10,6 +10,7 @@ import * as db from '../db.js';
 import * as holidays from '../services/holidays.js';
 import { str, MAX_SHORT } from '../middleware/validate.js';
 import { getSupportedLocales, isSupportedLocale, resolveHouseholdLocale } from '../utils/i18n.js';
+import { householdTimeZone, isValidTimeZone } from '../utils/timezone.js';
 import { retitleBirthdayEvents } from '../services/birthdays.js';
 // Geteilte isomorphe Util (#620, Allowlist in test/test-layer-boundary.js):
 // dasselbe Kennungsformat, das Event-Modal und Einstellungen verwenden.
@@ -60,6 +61,24 @@ const VALID_LANGUAGES = getSupportedLocales();
 // abgewiesen worden, obwohl der Client sie anbietet.
 const VALID_REGION = /^(custom|[a-z]{2,3}-[A-Z]{2})$/;
 const DEFAULT_TIME_FORMAT = '24h';
+
+// Zeitzone des Haushalts (#829, haushaltweit). Bis hierher war die einzige
+// Antwort auf "wo lebt dieser Haushalt" die Container-Variable `TZ` - ein
+// Compose-Schalter, den man auf Umbrel, TrueNAS oder Unraid als Nutzer nicht
+// erreicht, und der zugleich Logzeitstempel und Backup-Cron steuert. Als
+// Einstellung ist sie änderbar, überlebt ein Deployment, das die Env verliert,
+// und lässt sich prüfen.
+//
+// Leerer Wert = nicht gesetzt = der bisherige Rückfall (TZ → Systemzone → UTC),
+// damit ein Bestandshaushalt beim Update nichts merkt.
+//
+// Geprüft wird gegen ICU (`isValidTimeZone`), nicht gegen eine Liste im Repo:
+// eine gepflegte Konstante liefe von dem, was `Intl` tatsächlich kennt,
+// auseinander, und zwar genau dort, wo es niemandem auffällt. Bewusst nicht
+// gegen `Intl.supportedValuesOf('timeZone')` - das gibt nur die kanonischen
+// Namen zurück und wiese einen gültigen Alias wie `Europe/Kiev` ab. Die Liste
+// fürs Dropdown baut der Client aus seinem eigenen ICU; ein Wert, den nur er
+// kennt, bekommt hier ein 400 statt still zu landen.
 
 // Standard-Termindauer (Minuten): setzt das Ende neuer Kalender-Termine relativ
 // zum Start und dient dem Modal als Ausgangs-Dauer. Grenzen: 5 Min bis 24 h.
@@ -351,6 +370,12 @@ router.get('/', (req, res) => {
         time_format: timeFormat,
         week_start: weekStart,
         region: cfgGet('region') || null,
+        // Zwei Sichten wie bei der Sprache: was ist gewählt (Select-Zustand) und
+        // was gilt gerade. `timezone_effective` ist nie leer - ohne Einstellung
+        // steht dort die Zone, auf die der Server zurückfällt, und genau die
+        // muss die Oberfläche als Automatik-Label zeigen können (#829).
+        timezone: cfgGet('household_timezone') || null,
+        timezone_effective: householdTimeZone(db.get()),
         // Drei Sichten auf dieselbe Einstellung, weil drei verschiedene Fragen
         // dahinterstecken: was ist gewählt (Select-Zustand), was gilt gerade
         // (API-Konsument), und was ergäbe die Automatik (Label der ersten Option).
@@ -413,7 +438,7 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   try {
-    const { visible_meal_types, currency, date_format, time_format, week_start, region, language, app_name, dashboard_widgets, dashboard_today_glance, disabled_modules, hidden_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, health_cycle_enabled_user, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, tasks_default_target, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
+    const { visible_meal_types, currency, date_format, time_format, week_start, region, timezone, language, app_name, dashboard_widgets, dashboard_today_glance, disabled_modules, hidden_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, health_cycle_enabled_user, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, tasks_default_target, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
 
     if (visible_meal_types !== undefined) {
       if (!Array.isArray(visible_meal_types)) {
@@ -483,6 +508,27 @@ router.put('/', (req, res) => {
         return res.status(400).json({ error: 'Ungültige Region.', code: 400 });
       }
       cfgSet('region', region ?? '');
+    }
+
+    // Zeitzone des Haushalts (#829) - dieselbe Sorte Grundsatzentscheidung wie
+    // Region und Datensprache, also dasselbe Admin-Gate. null/'' stellt auf
+    // "automatisch" zurueck, dann gilt wieder TZ → Systemzone → UTC.
+    //
+    // Der Wert ist keine Anzeige-Hilfe: an ihm haengen der Kalendertag, den
+    // Server-Jobs "heute" nennen, die Zone im ICS-Feed, den fremde Kalender
+    // abonnieren, und die Wanduhrzeit, mit der Termine zu Google und Outlook
+    // hinausgehen. Ein Mitglied darf ihn deshalb nicht fuer alle umstellen.
+    if (timezone !== undefined) {
+      if (req.authRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required.', code: 403 });
+      }
+      if (timezone !== null && timezone !== '' && !isValidTimeZone(timezone)) {
+        return res.status(400).json({
+          error: 'Ungültige Zeitzone. Erwartet wird eine IANA-Zone wie "Europe/Berlin".', code: 400,
+        });
+      }
+      if (timezone === null || timezone === '') cfgDelete('household_timezone');
+      else cfgSet('household_timezone', timezone);
     }
 
     // Datensprache — haushaltweite Grundsatzentscheidung wie Region und Währung,
@@ -919,6 +965,8 @@ router.put('/', (req, res) => {
         time_format: savedTimeFormat,
         week_start: savedWeekStart,
         region: cfgGet('region') || null,
+        timezone: cfgGet('household_timezone') || null,
+        timezone_effective: householdTimeZone(db.get()),
         language: isSupportedLocale(cfgGet('language')) ? cfgGet('language') : null,
         language_effective: resolveHouseholdLocale(db.get()),
         language_auto: resolveHouseholdLocale(db.get(), { ignoreExplicit: true }),

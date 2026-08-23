@@ -21,6 +21,17 @@ const outlook = await import('../server/services/outlook-calendar.js');
 const { rruleToGraphRecurrence, allDayEndToExclusive, toGraphDateTime,
         localEventToGraph, contentHash } = outlook.__test;
 
+// Die Haushaltszone EXPLIZIT setzen (#829). Bis v2.27.0 stand im Push fest
+// 'Europe/Berlin', und die Tests prueften genau diesen Literalwert - eine
+// Zusicherung, die den Fehler nicht sehen konnte, weil sie ihn abschrieb. Jetzt
+// folgt der Push der Einstellung, und ohne diese Zeile pruefte die Suite die
+// Zone des Rechners, auf dem sie laeuft: in der UTC-CI 'UTC', auf einem Laptop
+// irgendetwas anderes. Bewusst NICHT 'Europe/Berlin', damit ein Rueckfall auf
+// den alten Festwert auffliegt.
+const HOUSEHOLD_TZ = 'America/Toronto';
+db.prepare("INSERT INTO sync_config (key, value) VALUES ('household_timezone', ?)")
+  .run(HOUSEHOLD_TZ);
+
 // --------------------------------------------------------
 // Fake-fetch-Helfer
 // --------------------------------------------------------
@@ -62,7 +73,7 @@ describe('rruleToGraphRecurrence', () => {
     assert.deepEqual(r.pattern, { type: 'daily', interval: 2 });
     assert.equal(r.range.type, 'noEnd');
     assert.equal(r.range.startDate, '2026-06-10');
-    assert.equal(r.range.recurrenceTimeZone, 'Europe/Berlin');
+    assert.equal(r.range.recurrenceTimeZone, HOUSEHOLD_TZ);
   });
 
   it('WEEKLY mit BYDAY und COUNT', () => {
@@ -119,7 +130,14 @@ describe('Datums- und Payload-Konvertierung', () => {
 
   it('toGraphDateTime ergänzt Sekunden bei naiver Lokalzeit', () => {
     assert.deepEqual(toGraphDateTime('2026-06-10T10:00'),
-      { dateTime: '2026-06-10T10:00:00', timeZone: 'Europe/Berlin' });
+      { dateTime: '2026-06-10T10:00:00', timeZone: HOUSEHOLD_TZ });
+  });
+
+  it('toGraphDateTime nimmt die Haushaltszone, nicht mehr fest Europe/Berlin (#829)', () => {
+    // Der Gegenbeweis zum Festwert: ein Haushalt in Toronto schickte seine
+    // Termine sechs Stunden verschoben zu Outlook, und installation.md fuehrte
+    // das als Einschraenkung ("folgt NICHT deinem TZ-Setting").
+    assert.notEqual(toGraphDateTime('2026-06-10T10:00').timeZone, 'Europe/Berlin');
   });
 
   it('toGraphDateTime normalisiert Z-Zeiten nach UTC', () => {

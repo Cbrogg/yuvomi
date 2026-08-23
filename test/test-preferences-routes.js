@@ -127,6 +127,35 @@ test('PUT region: ungültig -> 400, gültig -> persist, null -> leer', async () 
   assert.equal((await put({ region: 'de-DE' })).body.data.region, 'de-DE');
   assert.equal((await put({ region: null })).body.data.region, null);
 });
+test('PUT timezone: Mitglied -> 403, ungültig -> 400, gültig -> persist, null -> Rückfall', async () => {
+  // Admin-Gate wie bei Region und Datensprache: an der Zone haengen der
+  // Kalendertag der Server-Jobs, die Zone im abonnierten ICS-Feed und die
+  // Uhrzeit, mit der Termine zu Google und Outlook gehen (#829).
+  assert.equal((await put({ timezone: 'Asia/Tokyo' }, { role: 'member' })).status, 403);
+  assert.equal((await put({ timezone: 'Mars/Olympus_Mons' })).status, 400);
+  assert.equal((await put({ timezone: 'Asia/Tokyo' })).body.data.timezone, 'Asia/Tokyo');
+  // Alias statt kanonischem Namen: die Route prueft gegen ICU, nicht gegen
+  // `Intl.supportedValuesOf` - das fuehrt nur die kanonischen Namen.
+  assert.equal((await put({ timezone: 'Europe/Kiev' })).body.data.timezone, 'Europe/Kiev');
+  // null loescht die Einstellung; `timezone_effective` bleibt trotzdem gefuellt,
+  // sonst haette die Oberflaeche fuer "Automatisch" nichts zu beschriften.
+  const cleared = (await put({ timezone: null })).body.data;
+  assert.equal(cleared.timezone, null);
+  assert.ok(cleared.timezone_effective, 'timezone_effective ist nie leer');
+});
+test('GET timezone: gewählter Wert und geltender Wert sind zwei Felder', async () => {
+  await put({ timezone: 'Pacific/Auckland' });
+  const body = (await get()).body.data;
+  assert.equal(body.timezone, 'Pacific/Auckland');
+  assert.equal(body.timezone_effective, 'Pacific/Auckland');
+  await put({ timezone: null });
+  const fallback = (await get()).body.data;
+  assert.equal(fallback.timezone, null);
+  // Ohne Einstellung nennt `timezone_effective` den Rueckfall - nicht null, und
+  // nicht die zuletzt gewaehlte Zone.
+  assert.notEqual(fallback.timezone_effective, 'Pacific/Auckland');
+  assert.ok(fallback.timezone_effective);
+});
 
 // --------------------------------------------------------
 // app_name (str-Validator, empty->delete)

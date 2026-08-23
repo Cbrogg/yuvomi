@@ -14,6 +14,7 @@ import { getCountdowns } from '../services/countdowns.js';
 import { visibilityWhere } from '../services/visibility.js';
 import { resolveBudgetMode } from '../services/budget-visibility.js';
 import { deniedModules } from '../permissions.js';
+import { householdTimeZone, utcToWall } from '../utils/timezone.js';
 
 const log = createLogger('Dashboard');
 
@@ -142,8 +143,19 @@ router.get('/', (req, res) => {
   // 02:00), westlich davon am späten Abend die von morgen; am Monatsersten traf es
   // zusätzlich den Budget-Monat. Die CI läuft in UTC, wo beide Schlüssel gleich sind -
   // deshalb war der Fehler dort nie zu sehen (CLAUDE.md führt genau diese Falle).
-  const todayLocalKey = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  const localWeekdayIdx = (now.getDay() + 6) % 7;
+  //
+  // Seit #829 ist "lokal" nicht mehr die Zone des Containers, sondern die des
+  // HAUSHALTS (sync_config `household_timezone`, Rueckfall `TZ`). Der Unterschied
+  // zaehlt genau dann, wenn beide auseinanderfallen - und `TZ` ist auf Umbrel,
+  // TrueNAS oder Unraid nichts, was ein Nutzer erreicht. Datum, Uhrzeit und
+  // Wochentag kommen deshalb aus EINER Ablesung dieser einen Zone; drei getrennte
+  // Ableitungen waeren drei Gelegenheiten, an einer Tagesgrenze auseinanderzulaufen.
+  const householdWall = utcToWall(now.toISOString(), householdTimeZone(d));
+  const todayLocalKey = householdWall?.date
+    ?? `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  // Wochentag aus dem Schluessel statt aus `now`: `getDay()` laese die Zone des
+  // Containers und widerspraeche dem Tag darüber, sobald die beiden abweichen.
+  const localWeekdayIdx = (new Date(`${todayLocalKey}T00:00:00Z`).getUTCDay() + 6) % 7;
   const currentMonth = todayLocalKey.slice(0, 7);
   const deadline48h = new Date(now.getTime() + 48 * 60 * 60 * 1000).toISOString();
 
@@ -181,8 +193,8 @@ router.get('/', (req, res) => {
     // Lokal, nicht UTC: verglichen wird gegen `due_date || 'T' || due_time`, und
     // beide stehen als lokale Eingabewerte in der DB. Ein UTC-Zeitstempel verschob
     // die Grenze „überfällig" um den Zonen-Offset.
-    const nowIso = `${todayLocalKey}T${String(now.getHours()).padStart(2, '0')}`
-      + `:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`;
+    const nowIso = `${todayLocalKey}T${householdWall?.time
+      ?? `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}:${String(now.getSeconds()).padStart(2, '0')}`}`;
     result.urgentTasks = d.prepare(`
       SELECT t.*, u.display_name AS assigned_name, u.avatar_color AS assigned_color,
         ${ASSIGNED_USERS_SQL},
@@ -357,7 +369,7 @@ router.get('/', (req, res) => {
        ORDER BY b.name COLLATE NOCASE ASC
     `).all();
     result.birthdays = rows
-      .map((row) => hydrateBirthday(row))
+      .map((row) => hydrateBirthday(db.get(), row))
       .sort((a, b) => a.days_until - b.days_until || a.name.localeCompare(b.name))
       // FUENF, WEIL DIE KACHEL ZWEI HOCH SEIN DARF. Der Schnitt stand auf drei
       // und war damit die Obergrenze fuer JEDE Kachelgroesse: in der

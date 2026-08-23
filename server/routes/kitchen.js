@@ -38,6 +38,7 @@ import express from 'express';
 import * as db from '../db.js';
 import { createLogger } from '../logger.js';
 import { deniedModules } from '../permissions.js';
+import { todayKey } from '../utils/timezone.js';
 
 const log = createLogger('Kitchen');
 const router = express.Router();
@@ -64,7 +65,7 @@ router.get('/summary', (req, res) => {
   try {
     const today = DATE_RE.test(req.query.today ?? '')
       ? req.query.today
-      : new Date().toISOString().slice(0, 10);
+      : todayKey(db.get());
 
     /* EIN GESPERRTES MODUL ZÄHLT HIER NICHT MIT (#467).
      *

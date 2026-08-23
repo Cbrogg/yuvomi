@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "Nhiệm vụ mới được gán vào danh sách này. Bạn vẫn có thể chọn đích khác mỗi lần tạo.",
         "tasksDefaultTargetUnavailable": "Danh sách đã chọn trước đó (không còn khả dụng)",
         "tasksDefaultTargetEmpty": "Chưa có danh sách nhắc nhở nào được bật cho nhiệm vụ.",
-        "tasksDefaultsSaved": "Đã lưu giá trị mặc định"
+        "tasksDefaultsSaved": "Đã lưu giá trị mặc định",
+        "timezoneTitle": "Múi giờ",
+        "timezoneLabel": "Múi giờ của gia đình",
+        "timezoneHint": "Áp dụng ở mọi nơi mà một thời điểm không mang múi giờ riêng: lời nhắc, đếm ngược, ngày lịch được gọi là \"hôm nay\", nguồn cấp lịch đã xuất và các sự kiện gửi sang Google hoặc Outlook.",
+        "timezoneAuto": "Tự động ({{zone}})",
+        "timezoneAdminOnly": "Chỉ quản trị viên mới có thể thay đổi múi giờ.",
+        "timezoneSaved": "Đã lưu múi giờ."
     },
     "login": {
         "tagline": "Chào mừng bạn trở lại trình lập kế hoạch gia đình.",

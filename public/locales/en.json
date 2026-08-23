@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "New tasks are assigned to this list. You can still pick a different target each time you create one.",
         "tasksDefaultTargetUnavailable": "Previously selected list (no longer available)",
         "tasksDefaultTargetEmpty": "No reminder list has been enabled for tasks yet.",
-        "tasksDefaultsSaved": "Defaults saved"
+        "tasksDefaultsSaved": "Defaults saved",
+        "timezoneTitle": "Time zone",
+        "timezoneLabel": "Household time zone",
+        "timezoneHint": "Applies wherever a time carries no zone of its own: reminders, countdowns, the calendar day called \"today\", the exported calendar feed, and events pushed to Google or Outlook.",
+        "timezoneAuto": "Automatic ({{zone}})",
+        "timezoneAdminOnly": "Only administrators can change the time zone.",
+        "timezoneSaved": "Time zone saved."
     },
     "login": {
         "tagline": "Welcome back to your family planner.",

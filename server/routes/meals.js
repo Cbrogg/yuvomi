@@ -9,6 +9,7 @@ import express from 'express';
 import * as db from '../db.js';
 import { str, oneOf, date, num, collectErrors, MAX_TITLE, MAX_TEXT, MAX_SHORT, DATE_RE } from '../middleware/validate.js';
 import { addDays, mealWeekday, datesForTemplateInRange } from '../services/meal-recurrence.js';
+import { todayKey } from '../utils/timezone.js';
 
 const log = createLogger('Meals');
 
@@ -201,7 +202,7 @@ router.get('/', (req, res) => {
   try {
     const refDate = req.query.week && DATE_RE.test(req.query.week)
       ? req.query.week
-      : new Date().toISOString().slice(0, 10);
+      : todayKey(db.get());
 
     const from = weekStart(refDate);
     const to   = weekEnd(refDate);

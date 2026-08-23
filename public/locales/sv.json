@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "Nya uppgifter läggs i den här listan. Du kan välja ett annat mål varje gång du skapar en.",
         "tasksDefaultTargetUnavailable": "Tidigare vald lista (inte längre tillgänglig)",
         "tasksDefaultTargetEmpty": "Ingen påminnelselista är ännu aktiverad för uppgifter.",
-        "tasksDefaultsSaved": "Standardvärden sparade"
+        "tasksDefaultsSaved": "Standardvärden sparade",
+        "timezoneTitle": "Tidszon",
+        "timezoneLabel": "Hushållets tidszon",
+        "timezoneHint": "Gäller överallt där en tid inte bär en egen zon: påminnelser, nedräkningar, kalenderdagen som kallas ”idag”, det exporterade kalenderflödet och händelser som skickas till Google eller Outlook.",
+        "timezoneAuto": "Automatiskt ({{zone}})",
+        "timezoneAdminOnly": "Endast administratörer kan ändra tidszonen.",
+        "timezoneSaved": "Tidszonen sparades."
     },
     "login": {
         "tagline": "Välkommen tillbaka till din familjeplanerare.",

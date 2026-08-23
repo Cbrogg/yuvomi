@@ -2402,7 +2402,13 @@
         "tasksDefaultTargetHint": "새 작업은 이 목록에 할당됩니다. 만들 때마다 다른 대상을 선택할 수도 있습니다.",
         "tasksDefaultTargetUnavailable": "이전에 선택한 목록 (더 이상 사용할 수 없음)",
         "tasksDefaultTargetEmpty": "작업용으로 활성화된 미리 알림 목록이 아직 없습니다.",
-        "tasksDefaultsSaved": "기본값이 저장되었습니다"
+        "tasksDefaultsSaved": "기본값이 저장되었습니다",
+        "timezoneTitle": "시간대",
+        "timezoneLabel": "가정의 시간대",
+        "timezoneHint": "시각이 자체 시간대를 갖지 않는 모든 곳에 적용됩니다: 알림, 카운트다운, \"오늘\"이라 부르는 달력상의 날짜, 내보낸 캘린더 피드, Google 또는 Outlook으로 보내는 일정.",
+        "timezoneAuto": "자동 ({{zone}})",
+        "timezoneAdminOnly": "시간대는 관리자만 변경할 수 있습니다.",
+        "timezoneSaved": "시간대를 저장했습니다."
     },
     "login": {
         "tagline": "가족 플래너에 다시 오신 것을 환영합니다.",

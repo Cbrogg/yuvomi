@@ -11,6 +11,7 @@ import { expandRecurringEvents, getUpcomingEvents, loadEventExceptions } from '.
 import { buildMatchQuery } from '../../services/search.js';
 import { visibilityWhere } from '../../services/visibility.js';
 import { VALID_SOURCES, ASSIGNED_USERS_SQL, getUserId, serializeEvent } from './helpers.js';
+import { shiftDateKey, todayKey } from '../../utils/timezone.js';
 
 const log = createLogger('Calendar');
 const router = express.Router();
@@ -25,7 +26,7 @@ const router = express.Router();
 // --------------------------------------------------------
 router.get('/', (req, res) => {
   try {
-    const today = new Date().toISOString().slice(0, 10);
+    const today = todayKey(db.get());
     const year  = today.slice(0, 4);
     const month = today.slice(5, 7);
 
@@ -171,10 +172,10 @@ router.get('/search', (req, res) => {
     // Wiederkehrende Treffer auf die nächste Instanz ab heute auflösen (statt des
     // Serienstarts, der Jahre zurückliegen kann). Findet die Serie im 1-Jahres-
     // Fenster keine kommende Instanz, bleibt der Master-Termin unverändert (#471).
-    const today  = new Date().toISOString().slice(0, 10);
+    const today  = todayKey(db.get());
     // 2-Jahres-Fenster: fängt auch Serien, deren nächste Instanz mehr als ein Jahr
     // voraus liegt (z. B. mehrjährige Intervalle). Findet sich keine, bleibt der Master.
-    const future = new Date(Date.now() + 730 * 86400000).toISOString().slice(0, 10);
+    const future = shiftDateKey(today, 730);
     const searchExceptions = loadEventExceptions(
       db.get(), rows.filter((r) => r.recurrence_rule).map((r) => r.id)
     );

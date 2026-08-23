@@ -13,6 +13,7 @@ import {
   resolveBudgetMode, maskBudgetEntry, BUDGET_MASKED_CATEGORY,
 } from '../../services/budget-visibility.js';
 import { computeLoanSchedule, remainingPrincipalAfter } from '../../services/loan-amortization.js';
+import { todayKey } from '../../utils/timezone.js';
 
 // --------------------------------------------------------
 // Persönlich/geteilt (#476/#505): Haushalts-Modus + Sichtbarkeits-Enforcement.
@@ -722,7 +723,7 @@ export function validateAccountRef(raw) {
  * @param {boolean} includeArchived
  */
 export function listAccounts(includeArchived = false, filter = { clause: '', params: [] }) {
-  const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+  const today = todayKey(db.get()); // YYYY-MM-DD in der Haushaltszone (#829)
   // Sichtbarkeits-Filter (#476/#505): im personal-Modus dürfen fremde private
   // Einträge weder Saldo noch entry_count beeinflussen, sonst verrät ein geteiltes
   // Konto Betrag/Existenz privater Fremd-Einträge. Im shared-Modus ist f leer.

@@ -39,7 +39,7 @@
 import { nextOccurrenceAfter } from './recurrence.js';
 import { loadEventExceptions } from './calendar-events.js';
 import { visibilityWhere } from './visibility.js';
-import { serverTimeZone, utcToWall } from '../utils/timezone.js';
+import { householdTimeZone, utcToWall } from '../utils/timezone.js';
 
 // So viele Countdowns liefert der Server. Die Kachel entscheidet wie überall
 // selbst, wie viele davon sie zeigt (`listRowCap` in pages/dashboard.js) - der
@@ -104,11 +104,11 @@ function shiftKey(dateKey, days) {
  * `todayKey` bildet - ein Vergleich zweier Kalendertage taugt nur, wenn beide
  * aus demselben Kalender stammen.
  */
-function eventStartDateKey(event) {
+function eventStartDateKey(event, tz) {
   const raw = String(event.start_datetime ?? '');
   const key = event.all_day || raw.length <= 10
     ? raw.slice(0, 10)
-    : (utcToWall(raw, serverTimeZone())?.date ?? raw.slice(0, 10));
+    : (utcToWall(raw, tz)?.date ?? raw.slice(0, 10));
   return /^\d{4}-\d{2}-\d{2}$/.test(key) ? key : null;
 }
 
@@ -127,8 +127,8 @@ function eventStartDateKey(event) {
  *
  * @returns {string|null} YYYY-MM-DD oder null
  */
-export function nextEventDate(event, todayKey, exceptions = null, { graceDays = 0 } = {}) {
-  const startKey = eventStartDateKey(event);
+export function nextEventDate(event, todayKey, exceptions = null, { graceDays = 0, tz = householdTimeZone(null) } = {}) {
+  const startKey = eventStartDateKey(event, tz);
   if (!startKey) return null;
   if (!event.recurrence_rule) {
     const floor = graceDays > 0 ? shiftKey(todayKey, -graceDays) : todayKey;
@@ -241,6 +241,9 @@ export function getCountdowns(d, {
 }
 
 function eventCountdowns(d, userId, todayKey) {
+  // Einmal je Lauf statt je Termin: die Zone steht in sync_config und aendert
+  // sich innerhalb eines Requests nicht.
+  const tz = householdTimeZone(d);
   const rows = d.prepare(`
     SELECT e.id, e.title, e.start_datetime, e.recurrence_rule, e.icon, e.color, e.all_day
     FROM calendar_events e
@@ -256,7 +259,7 @@ function eventCountdowns(d, userId, todayKey) {
   const out = [];
   for (const row of rows) {
     const date = nextEventDate(row, todayKey, exceptionsByEvent.get(row.id) ?? null, {
-      graceDays: OVERDUE_GRACE_DAYS,
+      graceDays: OVERDUE_GRACE_DAYS, tz,
     });
     if (!date) continue;
     const days = daysBetween(todayKey, date);

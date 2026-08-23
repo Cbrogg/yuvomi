@@ -2402,7 +2402,13 @@
         "tasksDefaultTargetHint": "Nowe zadania trafiają na tę listę. Przy tworzeniu możesz za każdym razem wybrać inny cel.",
         "tasksDefaultTargetUnavailable": "Ostatnio wybrana lista (już niedostępna)",
         "tasksDefaultTargetEmpty": "Żadna lista przypomnień nie została jeszcze udostępniona dla zadań.",
-        "tasksDefaultsSaved": "Zapisano ustawienia domyślne"
+        "tasksDefaultsSaved": "Zapisano ustawienia domyślne",
+        "timezoneTitle": "Strefa czasowa",
+        "timezoneLabel": "Strefa czasowa gospodarstwa domowego",
+        "timezoneHint": "Obowiązuje wszędzie tam, gdzie godzina nie ma własnej strefy: przypomnienia, odliczania, dzień kalendarzowy zwany „dzisiaj”, eksportowany kanał kalendarza oraz wydarzenia wysyłane do Google lub Outlooka.",
+        "timezoneAuto": "Automatycznie ({{zone}})",
+        "timezoneAdminOnly": "Strefę czasową mogą zmieniać tylko administratorzy.",
+        "timezoneSaved": "Zapisano strefę czasową."
     },
     "login": {
         "tagline": "Witaj ponownie w swoim planerze rodzinnym.",

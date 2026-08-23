@@ -24,7 +24,7 @@ import * as outbound from './calendar-outbound.js';
 import { decodeHtmlEntities } from '../utils/html-entities.js';
 import { nearestColorId } from '../utils/ical-color.js';
 // Fallback-Zone für den Outbound-Sync, wenn Google für den Zielkalender keine liefert.
-import { serverTimeZone } from '../utils/timezone.js';
+import { householdTimeZone } from '../utils/timezone.js';
 import { assignDefaultToEvent } from './sync-assignment.js';
 import { countSourceEvents, deleteSourceEvents } from './calendar-prune.js';
 import { readSyncOutcome, withSyncOutcome } from './sync-outcome.js';
@@ -290,7 +290,7 @@ async function processPendingUpdates(calendar, colorMap = {}, metaCache = new Ma
     if (!fresh) continue; // parallel gelöscht - der Tombstone-Pfad übernimmt
 
     try {
-      const gEvent = localEventToGoogle(fresh, colorMap, activeMeta?.timeZone || serverTimeZone());
+      const gEvent = localEventToGoogle(fresh, colorMap, activeMeta?.timeZone || householdTimeZone(db.get()));
       await calendar.events.patch({ calendarId, eventId, requestBody: gEvent });
       clear(event.id);
       done++;
@@ -679,7 +679,7 @@ async function runSync() {
         continue;
       }
       try {
-        const gEvent  = localEventToGoogle(event, eventColorMap, meta?.timeZone || serverTimeZone());
+        const gEvent  = localEventToGoogle(event, eventColorMap, meta?.timeZone || householdTimeZone(db.get()));
         const created = await calendar.events.insert({ calendarId: targetId, requestBody: gEvent });
         // refId aus den Metadaten: trägt Name und Farbe des Kalenders statt der
         // rohen ID als Notnamen.
@@ -1087,7 +1087,7 @@ function normalizeRecurrenceUntil(rule, allDay) {
  * @param {string} [timeZone]  IANA-Zone, in der Google die Wanduhrzeit interpretiert.
  *                             Normalerweise die Zone des Zielkalenders (siehe sync()).
  */
-function localEventToGoogle(event, colorMap = {}, timeZone = serverTimeZone()) {
+function localEventToGoogle(event, colorMap = {}, timeZone = householdTimeZone(null)) {
   const allDay = !!event.all_day;
   const gEvent = {
     summary:     event.title,
@@ -1134,7 +1134,7 @@ export const __test = {
   localEventToGoogle, googleAllDayEndToInclusive, localAllDayEndToExclusive,
   upsertGoogleEvents, upsertExternalCalendar, setReadonly, isReadonly, isWritableRole,
   listSelection, setCalendarEnabled, recordSyncToken, getSyncToken, enabledCalendarIds,
-  fetchEventColorMap, serverTimeZone,
+  fetchEventColorMap, householdTimeZone,
   processPendingDeletions, pendingDeletionCount,
   processPendingUpdates, pendingUpdateCount,
   googleCalendarIdForEvent, currentGoogleCalendarId, loadCalendarMeta,

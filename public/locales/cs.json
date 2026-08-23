@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "Nové úkoly se přiřazují do tohoto seznamu. Při vytváření můžeš pokaždé zvolit jiný cíl.",
         "tasksDefaultTargetUnavailable": "Naposledy zvolený seznam (již není dostupný)",
         "tasksDefaultTargetEmpty": "Pro úkoly zatím není povolen žádný seznam připomínek.",
-        "tasksDefaultsSaved": "Výchozí hodnoty uloženy"
+        "tasksDefaultsSaved": "Výchozí hodnoty uloženy",
+        "timezoneTitle": "Časové pásmo",
+        "timezoneLabel": "Časové pásmo domácnosti",
+        "timezoneHint": "Platí všude tam, kde čas nemá vlastní pásmo: připomínky, odpočty, kalendářní den „dnes“, exportovaný kalendářový kanál a události odesílané do Googlu nebo Outlooku.",
+        "timezoneAuto": "Automaticky ({{zone}})",
+        "timezoneAdminOnly": "Časové pásmo mohou měnit pouze správci.",
+        "timezoneSaved": "Časové pásmo uloženo."
     },
     "login": {
         "tagline": "Vítejte zpět ve svém rodinném plánovači.",

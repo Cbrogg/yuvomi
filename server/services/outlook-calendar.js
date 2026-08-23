@@ -18,6 +18,7 @@ import crypto from 'node:crypto';
 import * as db from '../db.js';
 import { parseRRule } from './recurrence.js';
 import { visibilityWhere } from './visibility.js';
+import { householdTimeZone } from '../utils/timezone.js';
 
 // /consumers statt /common: die Entra-App ist für "Personal Microsoft accounts
 // only" registriert; so kann sich kein Organisations-Konto versehentlich anmelden.
@@ -26,8 +27,14 @@ const GRAPH_BASE = 'https://graph.microsoft.com/v1.0';
 // User.Read wird für GET /me (Anzeigename + E-Mail der Konto-Zeile) benötigt.
 const SCOPES = 'offline_access Calendars.ReadWrite User.Read';
 
-// Zeitzone hartkodiert — Parität mit dem Google-Outbound (google-calendar.js).
-const TIMEZONE = 'Europe/Berlin';
+// Die Zone, in der Yuvomi seine zonenlosen Wanduhrzeiten meint. Bis v2.27.0 stand
+// hier fest 'Europe/Berlin' - als "Parität mit dem Google-Outbound" begründet,
+// obwohl der schon damals die Zone des Zielkalenders nahm und nur als RÜCKFALL
+// auf `TZ` ging. Ein Haushalt in Toronto schickte seine Termine damit sechs
+// Stunden verschoben zu Outlook, und installation.md musste die Abweichung als
+// Einschränkung dokumentieren. Jetzt ist es dieselbe Haushaltszone wie überall
+// sonst (#829).
+const outlookTimeZone = () => householdTimeZone(db.get());
 
 /** Refresh-Token ist ungültig/abgelaufen — Konto braucht manuellen Reconnect. */
 class ReauthRequiredError extends Error {
@@ -444,9 +451,10 @@ const GRAPH_DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'fri
  * MONTHLY mit BYDAY degradiert bewusst zum absoluten Monatstag (PoC-Grenze).
  * @param {string} rrule - RRULE-Body (mit oder ohne "RRULE:"-Prefix)
  * @param {string} startDate - 'YYYY-MM-DD' (DTSTART-Datum)
+ * @param {string} [tz] - Haushaltszone für `recurrenceTimeZone`
  * @returns {{pattern: object, range: object}|null}
  */
-function rruleToGraphRecurrence(rrule, startDate) {
+function rruleToGraphRecurrence(rrule, startDate, tz = outlookTimeZone()) {
   const parsed = parseRRule(rrule);
   if (!parsed || !startDate) return null;
 
@@ -482,7 +490,7 @@ function rruleToGraphRecurrence(rrule, startDate) {
   } else {
     range = { type: 'noEnd', startDate };
   }
-  range.recurrenceTimeZone = TIMEZONE;
+  range.recurrenceTimeZone = tz;
 
   return { pattern, range };
 }
@@ -501,16 +509,16 @@ function allDayEndToExclusive(dateStr) {
  * "YYYY-MM-DDTHH:MM" (validate.js) → Sekunden ergänzen, TZ Europe/Berlin.
  * Importierte Events können Z/Offset tragen → nach UTC normalisieren.
  */
-function toGraphDateTime(dt) {
+function toGraphDateTime(dt, tz = outlookTimeZone()) {
   if (!dt) return null;
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/.test(dt)) {
-    return { dateTime: `${dt}:00`, timeZone: TIMEZONE };
+    return { dateTime: `${dt}:00`, timeZone: tz };
   }
   if (/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/.test(dt)) {
-    return { dateTime: dt, timeZone: TIMEZONE };
+    return { dateTime: dt, timeZone: tz };
   }
   const parsed = new Date(dt);
-  if (isNaN(parsed.getTime())) return { dateTime: dt, timeZone: TIMEZONE };
+  if (isNaN(parsed.getTime())) return { dateTime: dt, timeZone: tz };
   return { dateTime: parsed.toISOString().slice(0, 19), timeZone: 'UTC' };
 }
 
@@ -521,7 +529,7 @@ function toGraphDateTime(dt) {
  * sind, löst eine Zuweisungs-Änderung über den Content-Hash ein PATCH aus.
  * Kein Teilnehmer-/Reminder-/Farb-Mapping (PoC-Umfang).
  */
-function localEventToGraph(event, assigneeNames = []) {
+function localEventToGraph(event, assigneeNames = [], tz = outlookTimeZone()) {
   const allDay = !!event.all_day;
   const subject = assigneeNames.length
     ? `${event.title} (${assigneeNames.join(', ')})`
@@ -536,15 +544,15 @@ function localEventToGraph(event, assigneeNames = []) {
     const startDate = event.start_datetime.slice(0, 10);
     const endDate   = (event.end_datetime || event.start_datetime).slice(0, 10);
     payload.isAllDay = true;
-    payload.start = { dateTime: `${startDate}T00:00:00`, timeZone: TIMEZONE };
-    payload.end   = { dateTime: `${allDayEndToExclusive(endDate)}T00:00:00`, timeZone: TIMEZONE };
+    payload.start = { dateTime: `${startDate}T00:00:00`, timeZone: tz };
+    payload.end   = { dateTime: `${allDayEndToExclusive(endDate)}T00:00:00`, timeZone: tz };
   } else {
-    payload.start = toGraphDateTime(event.start_datetime);
-    payload.end   = toGraphDateTime(event.end_datetime || event.start_datetime);
+    payload.start = toGraphDateTime(event.start_datetime, tz);
+    payload.end   = toGraphDateTime(event.end_datetime || event.start_datetime, tz);
   }
 
   if (event.recurrence_rule) {
-    const recurrence = rruleToGraphRecurrence(event.recurrence_rule, event.start_datetime.slice(0, 10));
+    const recurrence = rruleToGraphRecurrence(event.recurrence_rule, event.start_datetime.slice(0, 10), tz);
     if (recurrence) payload.recurrence = recurrence;
   }
 

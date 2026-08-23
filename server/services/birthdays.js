@@ -1,4 +1,5 @@
 import { formatDateKey, resolveHouseholdFormats, translate } from '../utils/i18n.js';
+import { householdTimeZone, localToUTC, todayKey } from '../utils/timezone.js';
 import { OUTBOUND_SOURCES, markEventOutbound, queueEventDeletion } from './calendar-outbound.js';
 
 const BIRTHDAY_COLOR = '#E11D48';
@@ -35,30 +36,34 @@ function normalizedMonthDay(birthDate, year) {
   return `${year}-${pad2(month)}-${pad2(day)}`;
 }
 
-function nextBirthdayDate(birthDate, from = new Date()) {
-  const now = from instanceof Date ? from : new Date(from);
-  const thisYear = normalizedMonthDay(birthDate, now.getFullYear());
-  const today = now.toISOString().slice(0, 10);
-  return thisYear >= today
-    ? thisYear
-    : normalizedMonthDay(birthDate, now.getFullYear() + 1);
+/**
+ * Ein Geburtstag ist ein Kalendertag, kein Zeitpunkt - deshalb rechnen diese
+ * Helfer auf Datums-Keys statt auf `Date`. Vorher mischte `nextBirthdayDate`
+ * zwei Uhren in DREI Zeilen: das Jahr kam aus `getFullYear()` (Zone des
+ * Containers), der Vergleichstag aus `toISOString()` (UTC). Am 31.12. um 22:00
+ * in Toronto lieferte das Jahr 2026 und den Tag 2027-01-01 - ein Geburtstag am
+ * 31.12. galt damit als vorbei und rutschte um ein volles Jahr nach vorn.
+ * `todayKey` ist jetzt die einzige Uhr, und sie ist die des Haushalts (#829).
+ */
+function nextBirthdayDate(birthDate, today = todayKey(null)) {
+  const year = parseInt(String(today).slice(0, 4), 10);
+  const thisYear = normalizedMonthDay(birthDate, year);
+  return thisYear >= today ? thisYear : normalizedMonthDay(birthDate, year + 1);
 }
 
-function nextBirthdayAge(birthDate, from = new Date()) {
-  const next = nextBirthdayDate(birthDate, from);
+function nextBirthdayAge(birthDate, today = todayKey(null)) {
+  const next = nextBirthdayDate(birthDate, today);
   return parseInt(next.slice(0, 4), 10) - parseInt(String(birthDate).slice(0, 4), 10);
 }
 
-function daysUntilBirthday(birthDate, from = new Date()) {
-  const now = from instanceof Date ? from : new Date(from);
-  const next = nextBirthdayDate(birthDate, now);
-  const todayUtc = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate());
-  const nextUtc = Date.UTC(
-    parseInt(next.slice(0, 4), 10),
-    parseInt(next.slice(5, 7), 10) - 1,
-    parseInt(next.slice(8, 10), 10),
+function daysUntilBirthday(birthDate, today = todayKey(null)) {
+  const next = nextBirthdayDate(birthDate, today);
+  const keyUtc = (key) => Date.UTC(
+    parseInt(key.slice(0, 4), 10),
+    parseInt(key.slice(5, 7), 10) - 1,
+    parseInt(key.slice(8, 10), 10),
   );
-  return Math.round((nextUtc - todayUtc) / 86400000);
+  return Math.round((keyUtc(next) - keyUtc(String(today).slice(0, 10))) / 86400000);
 }
 
 function getOffsetMinutes(birthday) {
@@ -73,9 +78,12 @@ function getOffsetMinutes(birthday) {
   return parseInt(birthday.reminder_offset, 10) || 0;
 }
 
-function birthdayReminderAt(birthDate, offsetMin = 0, from = new Date()) {
-  const next = nextBirthdayDate(birthDate, from);
-  const baseTime = new Date(`${next}T12:00:00Z`).getTime();
+// Erinnert wird mittags - und zwar mittags dort, wo der Haushalt lebt. Vorher
+// stand hier 12:00 UTC, was in Auckland der Abend und in Los Angeles der frühe
+// Morgen ist; "mittags" ist eine Wanduhrzeit und trägt keine eigene Zone (#829).
+function birthdayReminderAt(birthDate, offsetMin = 0, today = todayKey(null), tz = householdTimeZone(null)) {
+  const next = nextBirthdayDate(birthDate, today);
+  const baseTime = new Date(localToUTC(`${next}T12:00:00`, tz)).getTime();
   return new Date(baseTime - (offsetMin || 0) * 60000).toISOString();
 }
 
@@ -257,6 +265,8 @@ function syncBirthdayCalendarEvent(database, birthday) {
 
 function syncBirthdayReminder(database, birthday, from = new Date()) {
   if (!birthday.calendar_event_id) return null;
+  const today = todayKey(database, from);
+  const tz    = householdTimeZone(database);
 
   if (birthday.reminder_offset === '') {
     database.prepare(`
@@ -267,7 +277,7 @@ function syncBirthdayReminder(database, birthday, from = new Date()) {
   }
 
   const offsetMin = getOffsetMinutes(birthday);
-  const desired = birthdayReminderAt(birthday.birth_date, offsetMin, from);
+  const desired = birthdayReminderAt(birthday.birth_date, offsetMin, today, tz);
   const existing = database.prepare(`
     SELECT * FROM reminders
     WHERE entity_type = 'event' AND entity_id = ? AND created_by = ?
@@ -364,13 +374,20 @@ function retitleBirthdayEvents(database) {
   return changed;
 }
 
-function hydrateBirthday(row, from = new Date()) {
-  const next_birthday = nextBirthdayDate(row.birth_date, from);
+/**
+ * `database` ist hier NICHT Beiwerk: `next_birthday` und `days_until` sind
+ * Kalendertage, und welcher Tag heute ist, weiss nur die Haushaltszone - die
+ * steht in sync_config (#829). Ohne Verbindung bliebe es beim Rueckfall auf die
+ * Umgebung, und die Uebersicht zaehlte westlich von UTC abends einen Tag zu wenig.
+ */
+function hydrateBirthday(database, row, from = new Date()) {
+  const today = todayKey(database, from);
+  const next_birthday = nextBirthdayDate(row.birth_date, today);
   return {
     ...row,
     next_birthday,
-    next_age: nextBirthdayAge(row.birth_date, from),
-    days_until: daysUntilBirthday(row.birth_date, from),
+    next_age: nextBirthdayAge(row.birth_date, today),
+    days_until: daysUntilBirthday(row.birth_date, today),
   };
 }
 

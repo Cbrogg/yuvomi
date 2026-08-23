@@ -53,7 +53,7 @@ function loadBirthday(id) {
 
 function sortHydrated(rows) {
   return rows
-    .map((row) => hydrateBirthday(row))
+    .map((row) => hydrateBirthday(db.get(), row))
     .sort((a, b) => a.days_until - b.days_until || a.name.localeCompare(b.name));
 }
 
@@ -119,7 +119,7 @@ router.post('/', (req, res) => {
 
     const birthday = loadBirthday(result.lastInsertRowid);
     const synced = db.transaction(() => syncBirthdayArtifacts(db.get(), birthday));
-    res.status(201).json({ data: hydrateBirthday(loadBirthday(synced.id)) });
+    res.status(201).json({ data: hydrateBirthday(db.get(), loadBirthday(synced.id)) });
   } catch (err) {
     log.error('POST / error:', err);
     res.status(500).json({ error: 'Internal error.', code: 500 });
@@ -196,7 +196,7 @@ router.put('/:id', (req, res) => {
 
     const updated = loadBirthday(id);
     db.transaction(() => syncBirthdayArtifacts(db.get(), updated));
-    res.json({ data: hydrateBirthday(loadBirthday(id)) });
+    res.json({ data: hydrateBirthday(db.get(), loadBirthday(id)) });
   } catch (err) {
     log.error('PUT /:id error:', err);
     res.status(500).json({ error: 'Internal error.', code: 500 });

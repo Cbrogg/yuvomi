@@ -37,7 +37,7 @@ import * as db from '../db.js';
 import { outboundFailureAction } from './calendar-outbound.js';
 import { patchICSTodo } from '../utils/ics-patch.js';
 import { createCalDAVClient, collectionUrlOf } from '../utils/caldav-client.js';
-import { localToUTC, serverTimeZone } from '../utils/timezone.js';
+import { householdTimeZone, localToUTC } from '../utils/timezone.js';
 import { loadTags } from '../utils/task-tags.js';
 
 const log = createLogger('CalDAV-Todo-Outbound');
@@ -116,7 +116,7 @@ export function priorityToVtodo(priority) {
  * splitDue). Ein ungeprüft als UTC verschicktes „14:30" verschöbe die Aufgabe auf
  * dem Server um den Zonenoffset.
  */
-export function dueField(date, time, tz = serverTimeZone()) {
+export function dueField(date, time, tz = householdTimeZone(null)) {
   if (!date) return null; // Property entfernen
   const day = String(date).slice(0, 10);
   if (!time) return { value: day.replace(/-/g, ''), params: ';VALUE=DATE' };
@@ -153,11 +153,11 @@ function completionFields(done, inProgress, hadCompleted) {
  * der eine rohe Zeile aus `SELECT *` durchreicht, die Tags des Servers
  * stillschweigend löschen - `reloadRow` hängt sie deshalb an.
  */
-export function icsFieldsForTask(task, hadCompleted = false) {
+export function icsFieldsForTask(task, hadCompleted = false, tz = householdTimeZone(null)) {
   const fields = {
     SUMMARY:     task.title,
     DESCRIPTION: task.description || null,
-    DUE:         dueField(task.due_date, task.due_time),
+    DUE:         dueField(task.due_date, task.due_time, tz),
     PRIORITY:    priorityToVtodo(task.priority),
     ...completionFields(task.status === 'done', task.status === 'in_progress', hadCompleted),
   };
@@ -416,7 +416,7 @@ export function buildTodoICS(module, row, uid) {
     'END:VCALENDAR',
   ].join('\r\n');
 
-  return patchICSTodo(skeleton, uid, def.icsFields(row, false));
+  return patchICSTodo(skeleton, uid, def.icsFields(row, false, householdTimeZone(db.get())));
 }
 
 /**
@@ -724,7 +724,7 @@ export async function processPendingUpdates(client, accountId, module, objectInd
     if (!fresh) continue; // parallel gelöscht - der Tombstone-Pfad übernimmt
 
     const patched = patchICSTodo(
-      known.data, row.external_uid, def.icsFields(fresh, hasCompleted(known.data))
+      known.data, row.external_uid, def.icsFields(fresh, hasCompleted(known.data), householdTimeZone(db.get()))
     );
     if (!patched) {
       log.warn(`VTODO ${row.external_uid} has no editable component in its calendar object, dropping its update.`);

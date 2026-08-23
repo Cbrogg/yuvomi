@@ -21,7 +21,7 @@ import { parseSyncTargetValue } from '../../public/utils/sync-target.js';
 import { mentionedUserIds } from '../../public/utils/mentions.js';
 import { resolvePermissions } from '../permissions.js';
 import { pushService } from '../services/push.js';
-import { serverTimeZone, utcToWall } from '../utils/timezone.js';
+import { todayKey } from '../utils/timezone.js';
 import {
   allTags, applyTagChanges, loadTags, loadTagsFor, normalizeTags,
   removeTagEverywhere, renameTag, setTags, tagKey, tagsKey, taskIdsWithTag,
@@ -141,8 +141,7 @@ function taskCategoryInUseCount(key) {
  * `due_date` ist ohnehin ein reiner Wanduhr-Wert (siehe utils/timezone.js).
  */
 function todayInHouseholdZone() {
-  return utcToWall(new Date().toISOString(), serverTimeZone())?.date
-    ?? new Date().toISOString().slice(0, 10);
+  return todayKey(db.get());
 }
 
 /** Punktewert einer Aufgabe auf eine nichtnegative Ganzzahl normalisieren. */

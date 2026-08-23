@@ -2402,7 +2402,13 @@
         "tasksDefaultTargetHint": "Ang mga bagong gawain ay napupunta sa listahang ito. Maaari ka pa ring pumili ng ibang target sa tuwing gagawa.",
         "tasksDefaultTargetUnavailable": "Dating napiling listahan (hindi na available)",
         "tasksDefaultTargetEmpty": "Wala pang listahan ng paalala na pinagana para sa mga gawain.",
-        "tasksDefaultsSaved": "Na-save ang mga default"
+        "tasksDefaultsSaved": "Na-save ang mga default",
+        "timezoneTitle": "Time zone",
+        "timezoneLabel": "Time zone ng sambahayan",
+        "timezoneHint": "Umiiral saanman walang sariling zone ang isang oras: mga paalala, countdown, ang araw sa kalendaryong tinatawag na \"ngayon\", ang na-export na calendar feed, at ang mga event na ipinapadala sa Google o Outlook.",
+        "timezoneAuto": "Awtomatiko ({{zone}})",
+        "timezoneAdminOnly": "Mga administrator lamang ang makakapagpalit ng time zone.",
+        "timezoneSaved": "Na-save ang time zone."
     },
     "login": {
         "tagline": "Maligayang pagbabalik sa iyong family planner.",

@@ -2402,7 +2402,13 @@
         "tasksDefaultTargetHint": "Tugas baru ditetapkan ke daftar ini. Kamu tetap bisa memilih target lain setiap kali membuatnya.",
         "tasksDefaultTargetUnavailable": "Daftar yang dipilih sebelumnya (tidak lagi tersedia)",
         "tasksDefaultTargetEmpty": "Belum ada daftar pengingat yang diaktifkan untuk tugas.",
-        "tasksDefaultsSaved": "Bawaan disimpan"
+        "tasksDefaultsSaved": "Bawaan disimpan",
+        "timezoneTitle": "Zona waktu",
+        "timezoneLabel": "Zona waktu rumah tangga",
+        "timezoneHint": "Berlaku di mana pun sebuah waktu tidak membawa zonanya sendiri: pengingat, hitung mundur, hari kalender yang disebut \"hari ini\", umpan kalender yang diekspor, dan acara yang dikirim ke Google atau Outlook.",
+        "timezoneAuto": "Otomatis ({{zone}})",
+        "timezoneAdminOnly": "Hanya administrator yang dapat mengubah zona waktu.",
+        "timezoneSaved": "Zona waktu disimpan."
     },
     "login": {
         "tagline": "Selamat datang kembali di perencana keluarga Anda.",

@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "Yeni görevler bu listeye atanır. Oluştururken her seferinde başka bir hedef seçebilirsin.",
         "tasksDefaultTargetUnavailable": "Daha önce seçilen liste (artık kullanılamıyor)",
         "tasksDefaultTargetEmpty": "Görevler için henüz bir anımsatıcı listesi etkinleştirilmedi.",
-        "tasksDefaultsSaved": "Varsayılanlar kaydedildi"
+        "tasksDefaultsSaved": "Varsayılanlar kaydedildi",
+        "timezoneTitle": "Saat dilimi",
+        "timezoneLabel": "Hanenin saat dilimi",
+        "timezoneHint": "Bir saatin kendi dilimi olmadığı her yerde geçerlidir: hatırlatıcılar, geri sayımlar, \"bugün\" denen takvim günü, dışa aktarılan takvim akışı ve Google ya da Outlook’a gönderilen etkinlikler.",
+        "timezoneAuto": "Otomatik ({{zone}})",
+        "timezoneAdminOnly": "Saat dilimini yalnızca yöneticiler değiştirebilir.",
+        "timezoneSaved": "Saat dilimi kaydedildi."
     },
     "login": {
         "tagline": "Aile planlayıcına tekrar hoş geldin.",

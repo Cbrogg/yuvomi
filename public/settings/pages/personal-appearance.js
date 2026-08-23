@@ -63,6 +63,62 @@ function formatOptions(selected) {
   )).join('');
 }
 
+/**
+ * Die Zeitzonen-Optionen: "Automatisch" plus alle IANA-Zonen, nach Region
+ * gruppiert.
+ *
+ * Die Liste kommt aus dem ICU des BROWSERS und nicht vom Server - sie hat
+ * einige hundert Einträge, und sie über die Preferences-Antwort zu schicken
+ * hiesse, diesen Ballast in jeden Settings-Aufruf zu legen, obwohl jeder
+ * Browser sie selbst besitzt. Der Server prüft den gewählten Wert trotzdem
+ * gegen sein eigenes ICU (#829); eine Zone, die nur der Browser kennt,
+ * bekommt ein 400 statt still zu landen.
+ *
+ * Die erste Option speichert den leeren Wert und stellt damit auf den Rückfall
+ * zurück (TZ → Systemzone → UTC). Ihr Label nennt die Zone, die dann tatsächlich
+ * gilt - sonst wäre "Automatisch" eine Zusage ohne Inhalt.
+ */
+function timeZoneOptions(selected, effective) {
+  let zones = [];
+  try { zones = Intl.supportedValuesOf('timeZone'); } catch { zones = []; }
+  // Eine gespeicherte Zone, die dieses ICU nicht (mehr) kennt, muss sichtbar
+  // bleiben: sonst zeigte das Feld "Automatisch", während der Server weiter die
+  // alte Zone benutzt - ein Select, das die Wahrheit verschweigt.
+  if (selected && !zones.includes(selected)) zones = [...zones, selected].sort();
+
+  const auto = `<option value=""${selected ? '' : ' selected'}>`
+    + `${esc(t('settings.timezoneAuto', { zone: effective || 'UTC' }))}</option>`;
+
+  // UTC von Hand davor. `Intl.supportedValuesOf('timeZone')` fuehrt WEDER `UTC`
+  // NOCH ein einziges `Etc/*` - und UTC ist ausgerechnet der Auslieferungs-
+  // Default dieser App. Ohne diese Zeile ist die eine Zone nicht waehlbar, die
+  // ein Admin ausdruecklich festnageln will, damit die Anzeige nicht mit `TZ`
+  // mitwandert. Steht vor den Gruppen statt in einer eigenen "Other"-Gruppe mit
+  // genau einem Eintrag: sie ist der Sonderfall, nicht eine Region.
+  const utc = `<option value="UTC"${selected === 'UTC' ? ' selected' : ''}>UTC</option>`;
+
+  const groups = new Map();
+  for (const zone of zones) {
+    if (zone === 'UTC') continue; // steht schon oben
+    const area = zone.includes('/') ? zone.slice(0, zone.indexOf('/')) : 'Other';
+    if (!groups.has(area)) groups.set(area, []);
+    groups.get(area).push(zone);
+  }
+  const body = [...groups.entries()].map(([area, list]) => {
+    const opts = list.map((zone) => {
+      // Das Label laesst die Region weg - die steht schon an der optgroup, und
+      // "America > America/New York" liest sich wie ein Fehler. Was uebrig
+      // bleibt, behaelt seine restlichen Schraegstriche
+      // ("Argentina/Buenos Aires"); der VALUE bleibt die volle IANA-Kennung.
+      const label = (zone.includes('/') ? zone.slice(zone.indexOf('/') + 1) : zone).replace(/_/g, ' ');
+      return `<option value="${esc(zone)}"${zone === selected ? ' selected' : ''}>${esc(label)}</option>`;
+    }).join('');
+    return `<optgroup label="${esc(area)}">${opts}</optgroup>`;
+  }).join('');
+
+  return auto + utc + body;
+}
+
 function regionOptions(selectedRegion) {
   const locale = getLocale();
   // Nach dem angezeigten Namen sortieren, nicht nach der Reihenfolge in
@@ -239,6 +295,24 @@ function renderPage(container, preferences, isAdmin) {
       <div class="settings-card">
         <p class="form-hint">${t('settings.regionAdminOnly')}</p>
       </div>`}
+      <!-- Eigene Karte, nicht in den Formatblock darunter: die Zeitzone ist
+           keine Formatierung. Datum und Uhrzeit dort ändern nur, WIE ein Wert
+           dasteht; die Zone ändert, WELCHER Tag "heute" ist, wann Erinnerungen
+           auslösen und mit welcher Uhrzeit ein Termin bei Google ankommt. -->
+      <div class="settings-card">
+        <h3 class="settings-card__title">${t('settings.timezoneTitle')}</h3>
+        ${isAdmin ? `
+        <p class="form-hint" id="timezone-hint">${t('settings.timezoneHint')}</p>
+        <div class="form-group">
+          <label class="form-label" for="timezone-select">${t('settings.timezoneLabel')}</label>
+          <select class="form-input" id="timezone-select" aria-describedby="timezone-hint timezone-error">
+            ${timeZoneOptions(preferences.timezone, preferences.timezone_effective)}
+          </select>
+        </div>
+        <div id="timezone-error" class="form-error" role="alert" hidden></div>` : `
+        <p class="form-hint">${t('settings.timezoneAdminOnly')}</p>
+        <p class="form-hint">${esc(t('settings.timezoneAuto', { zone: preferences.timezone_effective || 'UTC' }))}</p>`}
+      </div>
       <div class="settings-card" id="custom-formats"${customHidden ? ' hidden' : ''}>
         ${isAdmin ? `
         <div class="form-group">
@@ -410,6 +484,30 @@ function bindEvents(container, user) {
       showError(errorElement, error.message);
     } finally {
       if (dataLanguageSelect.isConnected) dataLanguageSelect.disabled = false;
+    }
+  });
+
+  const timezoneSelect = container.querySelector('#timezone-select');
+  timezoneSelect?.addEventListener('change', async () => {
+    const errorElement = container.querySelector('#timezone-error');
+    clearError(errorElement);
+    timezoneSelect.disabled = true;
+    try {
+      const saved = await savePreferences({ timezone: timezoneSelect.value || null });
+      // Neu beschriften statt nur zu speichern: das Label der ersten Option
+      // nennt die Zone, die bei "Automatisch" GILT. Wer von einer gesetzten Zone
+      // auf Automatisch zurückstellt, sieht sonst weiter den alten Rückfallwert.
+      // Genommen wird die PUT-Antwort, nicht ein zweiter GET - beide Felder
+      // stehen dort, und der Server hat sie gerade frisch aufgelöst.
+      timezoneSelect.replaceChildren();
+      timezoneSelect.insertAdjacentHTML(
+        'beforeend', timeZoneOptions(saved?.data?.timezone, saved?.data?.timezone_effective)
+      );
+      window.yuvomi?.showToast(t('settings.timezoneSaved'), 'success');
+    } catch (error) {
+      showError(errorElement, error.message);
+    } finally {
+      if (timezoneSelect.isConnected) timezoneSelect.disabled = false;
     }
   });
 

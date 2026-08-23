@@ -2390,7 +2390,13 @@
         "tasksDefaultTargetHint": "Az új feladatok ebbe a listába kerülnek. Létrehozáskor mindig választhatsz másik célt.",
         "tasksDefaultTargetUnavailable": "Korábban választott lista (már nem érhető el)",
         "tasksDefaultTargetEmpty": "Még nincs feladatokhoz engedélyezett emlékeztetőlista.",
-        "tasksDefaultsSaved": "Alapértékek mentve"
+        "tasksDefaultsSaved": "Alapértékek mentve",
+        "timezoneTitle": "Időzóna",
+        "timezoneLabel": "A háztartás időzónája",
+        "timezoneHint": "Mindenütt érvényes, ahol egy időpont nem hordozza a saját zónáját: emlékeztetők, visszaszámlálások, a „ma” néven ismert naptári nap, az exportált naptár-hírcsatorna, valamint a Google-be vagy az Outlookba küldött események.",
+        "timezoneAuto": "Automatikus ({{zone}})",
+        "timezoneAdminOnly": "Az időzónát csak rendszergazdák módosíthatják.",
+        "timezoneSaved": "Időzóna elmentve."
     },
     "login": {
         "tagline": "Üdv újra a családi tervezőben.",

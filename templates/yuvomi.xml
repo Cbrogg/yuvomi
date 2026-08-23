@@ -78,7 +78,7 @@ After the container starts, open the WebUI - the first visit guides you through 
   <Config Name="DB_ENCRYPTION_KEY" Target="DB_ENCRYPTION_KEY" Default="" Mode="" Description="RECOMMENDED. Strong key to encrypt the database at rest (SQLCipher). Leave empty for unencrypted SQLite. Cannot be changed later without re-encrypting. Generate with: openssl rand -base64 48" Type="Variable" Display="always" Required="false" Mask="true"/>
 
   <!-- Timezone -->
-  <Config Name="Timezone" Target="TZ" Default="Europe/Berlin" Mode="" Description="Container timezone, e.g. Europe/Berlin. Affects scheduled backups, reminders, the times in the exported calendar feed, and is the fallback zone for events pushed to Google Calendar." Type="Variable" Display="always" Required="false" Mask="false">Europe/Berlin</Config>
+  <Config Name="Timezone" Target="TZ" Default="Europe/Berlin" Mode="" Description="Container timezone, e.g. Europe/Berlin. Affects log timestamps and scheduled backups, and is the default for the household zone (reminders, the calendar day jobs call today, the exported calendar feed, events pushed to Google and Outlook). Since v2.34.0 the household zone can also be set inside the app under Settings, Personal, Appearance, Region - that setting wins where both exist." Type="Variable" Display="always" Required="false" Mask="false">Europe/Berlin</Config>
 
   <!-- HTTPS / cookie security -->
   <Config Name="SESSION_SECURE" Target="SESSION_SECURE" Default="false" Mode="" Description="Set to true only when serving Yuvomi over HTTPS behind a reverse proxy. Keep false for direct HTTP access on the LAN." Type="Variable" Display="advanced" Required="false" Mask="false">false</Config>

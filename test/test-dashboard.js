@@ -501,7 +501,7 @@ test('Angepinnte Notizen: nicht angepinnte werden ausgeschlossen', () => {
 test('Geburtstage: haushaltsweit, sortiert nach nächstem Geburtstag', () => {
   const rows = db.prepare('SELECT * FROM birthdays ORDER BY name COLLATE NOCASE ASC').all();
   const birthdays = rows
-    .map((row) => hydrateBirthday(row, new Date(`${today}T12:00:00Z`)))
+    .map((row) => hydrateBirthday(db, row, new Date(`${today}T12:00:00Z`)))
     .sort((a, b) => a.days_until - b.days_until || a.name.localeCompare(b.name))
     .slice(0, 3);
 
