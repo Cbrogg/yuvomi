@@ -3155,6 +3155,7 @@
         "currentBadge": "Saat ini",
         "currentFound": "Versi terpasang ada di rilis GitHub.",
         "currentMissing": "Versi terpasang tidak ada di rilis GitHub.",
+        "offlineNotice": "GitHub tidak dapat dihubungi. Menampilkan riwayat yang disertakan dengan versi ini.",
         "unknownVersion": "Tidak diketahui",
         "changes": "Perubahan",
         "noReleaseNotes": "Tidak ada catatan rilis untuk versi ini."

@@ -3155,6 +3155,7 @@
         "currentBadge": "Kasalukuyan",
         "currentFound": "Lumalabas ang naka-install na bersyong ito sa mga GitHub release.",
         "currentMissing": "Wala sa listahan ng mga GitHub release ang naka-install na bersyong ito.",
+        "offlineNotice": "Hindi maabot ang GitHub. Ipinapakita ang kasaysayang kasama ng bersyong ito.",
         "unknownVersion": "Hindi alam",
         "changes": "Mga pagbabago",
         "noReleaseNotes": "Walang release notes para sa bersyong ito."

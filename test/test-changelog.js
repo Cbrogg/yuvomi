@@ -99,6 +99,161 @@ test('default changelog router is an express router', () => {
 });
 
 // --------------------------------------------------------
+// Rueckfall auf die mitgelieferte CHANGELOG.md (#838)
+// --------------------------------------------------------
+
+const SAMPLE_CHANGELOG = `# Changelog
+
+## [Unreleased]
+
+- Etwas, das noch nicht ausgeliefert ist
+
+## [1.2.1] - 2026-01-02
+
+### Fixed
+
+- Ein Fehler weniger
+
+## [1.2.0] - 2026-01-01
+
+### Added
+
+- Ein Modul mehr
+`;
+
+test('parseChangelogFile schneidet Versionsbloecke und laesst Unreleased weg', () => {
+  const releases = __test.parseChangelogFile(SAMPLE_CHANGELOG);
+
+  assert.deepEqual(releases.map((r) => r.version), ['1.2.1', '1.2.0']);
+  assert.equal(releases[0].sections[0].title, 'Fixed');
+  assert.equal(releases[0].sections[0].items[0], 'Ein Fehler weniger');
+  // Der Eintrag unter [Unreleased] darf in keinem Block landen - er gehoert
+  // keiner Version und beschreibt nichts, was der laufende Stand kann.
+  const alleItems = releases.flatMap((r) => r.sections.flatMap((s) => s.items));
+  assert.equal(alleItems.some((i) => i.includes('noch nicht ausgeliefert')), false);
+});
+
+test('buildLocalPayload meldet keine neueste Version', () => {
+  const payload = __test.buildLocalPayload(() => SAMPLE_CHANGELOG, '1.2.1');
+
+  assert.equal(payload.source, 'local');
+  assert.equal(payload.current_in_releases, true);
+  // Die Datei reicht nur bis zur eigenen Version. "Die neueste ist meine"
+  // waere eine Zusicherung, die hier niemand pruefen konnte.
+  assert.equal(payload.latest_version, null);
+});
+
+test('die mitgelieferte CHANGELOG.md laesst sich lesen und parsen', () => {
+  const releases = __test.parseChangelogFile(readFileSync(__test.CHANGELOG_PATH, 'utf8'));
+
+  // Reichweiten-Nachweis: ein Parser, dessen Muster nicht mehr auf das echte
+  // Format passt, liefert sonst still eine leere Liste und der Rueckfall
+  // faellt auf nichts zurueck.
+  assert.ok(releases.length >= 10, `zu wenige Versionen geparst (${releases.length})`);
+  assert.ok(releases.every((r) => /^\d+\.\d+\.\d+$/.test(r.version)),
+    'ein Block traegt keine Versionsnummer');
+  assert.ok(releases.every((r) => r.sections.length > 0),
+    'ein Block hat keine Abschnitte');
+});
+
+test('faellt GitHub aus, kommt die mitgelieferte Datei statt 502', async () => {
+  const app = express();
+  app.use(buildRouter({
+    appVersion: '1.2.1',
+    now: () => 1000,
+    fetchFn: async () => { throw new Error('getaddrinfo ENOTFOUND api.github.com'); },
+    readChangelogFile: () => SAMPLE_CHANGELOG,
+  }));
+
+  const server = app.listen(0);
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/`);
+    assert.equal(res.status, 200);
+    const body = await res.json();
+    assert.equal(body.data.source, 'local');
+    assert.equal(body.data.releases[0].version, '1.2.1');
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('ohne mitgelieferte Datei bleibt es beim 502', async () => {
+  const app = express();
+  app.use(buildRouter({
+    appVersion: '1.2.1',
+    now: () => 1000,
+    fetchFn: async () => { throw new Error('offline'); },
+    readChangelogFile: () => { throw new Error('ENOENT'); },
+  }));
+
+  const server = app.listen(0);
+  try {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/`);
+    assert.equal(res.status, 502);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('nach einem Fehlschlag wird GitHub eine Weile nicht erneut gefragt', async () => {
+  let versuche = 0;
+  let jetzt = 1000;
+  const app = express();
+  app.use(buildRouter({
+    appVersion: '1.2.1',
+    now: () => jetzt,
+    fetchFn: async () => { versuche++; throw new Error('offline'); },
+    readChangelogFile: () => SAMPLE_CHANGELOG,
+  }));
+
+  const server = app.listen(0);
+  const hole = async () => {
+    const res = await fetch(`http://127.0.0.1:${server.address().port}/`);
+    return res.json();
+  };
+  try {
+    await hole();
+    assert.equal(versuche, 1);
+
+    // Ohne Sperre liefe jede weitere Anfrage wieder hinaus - bei sechzig
+    // unauthentifizierten Anfragen je Stunde und IP haelt das den Fehler
+    // aufrecht, statt ihn abzuwarten.
+    jetzt += 60 * 1000;
+    const zweite = await hole();
+    assert.equal(versuche, 1);
+    assert.equal(zweite.data.source, 'local');
+
+    // Nach Ablauf der Sperre wird es wieder versucht.
+    jetzt += 5 * 60 * 1000;
+    await hole();
+    assert.equal(versuche, 2);
+  } finally {
+    await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+test('.dockerignore laesst CHANGELOG.md ins Image', () => {
+  // Der Rueckfall lebt von der Datei IM IMAGE. `*.md` schliesst sie aus, die
+  // Ausnahme holt sie zurueck - faellt die Ausnahme weg, bleibt der Rueckfall
+  // still wirkungslos, und zwar nur im Container, nie beim Entwickeln.
+  const raw = readFileSync(new URL('../.dockerignore', import.meta.url), 'utf8');
+  const regeln = raw.split('\n')
+    .map((line) => line.trim())
+    .filter((line) => line && !line.startsWith('#'));
+
+  // Docker wertet die Muster in Reihenfolge aus, der LETZTE Treffer gewinnt.
+  let ausgeschlossen = false;
+  for (const regel of regeln) {
+    const negiert = regel.startsWith('!');
+    const muster = negiert ? regel.slice(1) : regel;
+    if (muster === 'CHANGELOG.md' || muster === '*.md') ausgeschlossen = !negiert;
+  }
+
+  assert.equal(ausgeschlossen, false,
+    '.dockerignore schliesst CHANGELOG.md aus - der Rueckfall aus #838 waere im Image tot');
+});
+
+// --------------------------------------------------------
 // Update-Hinweis (#490): der Vergleich hinter dem Punkt an der Navigation
 // --------------------------------------------------------
 

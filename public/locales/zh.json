@@ -3155,6 +3155,7 @@
         "currentBadge": "当前",
         "currentFound": "已安装版本出现在 GitHub 发布记录中。",
         "currentMissing": "已安装版本未列在 GitHub 发布记录中。",
+        "offlineNotice": "无法连接 GitHub。正在显示此版本随附的更新历史。",
         "unknownVersion": "未知",
         "changes": "更改",
         "noReleaseNotes": "此版本没有发布说明。"

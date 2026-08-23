@@ -3155,6 +3155,7 @@
         "currentBadge": "現在",
         "currentFound": "インストール済みバージョンは GitHub リリースにあります。",
         "currentMissing": "インストール済みバージョンは GitHub リリースにありません。",
+        "offlineNotice": "GitHub に接続できませんでした。このバージョンに同梱された履歴を表示しています。",
         "unknownVersion": "不明",
         "changes": "変更",
         "noReleaseNotes": "このバージョンのリリースノートはありません。"

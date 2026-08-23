@@ -3155,6 +3155,7 @@
         "currentBadge": "Поточна",
         "currentFound": "Установлена версія є в релізах GitHub.",
         "currentMissing": "Установленої версії немає в релізах GitHub.",
+        "offlineNotice": "GitHub недоступний. Показано історію, що постачається з цією версією.",
         "unknownVersion": "Невідома",
         "changes": "Зміни",
         "noReleaseNotes": "Для цієї версії немає приміток до випуску."

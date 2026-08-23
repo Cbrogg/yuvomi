@@ -3155,6 +3155,7 @@
         "currentBadge": "Aktuell",
         "currentFound": "Diese installierte Version ist in den GitHub-Releases enthalten.",
         "currentMissing": "Diese installierte Version ist nicht in den GitHub-Releases enthalten.",
+        "offlineNotice": "GitHub war nicht erreichbar. Angezeigt wird der mit dieser Version ausgelieferte Verlauf.",
         "unknownVersion": "Unbekannt",
         "changes": "Änderungen",
         "noReleaseNotes": "Für diese Version gibt es keine Versionshinweise."
