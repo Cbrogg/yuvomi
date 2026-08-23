@@ -1,5 +1,6 @@
 /**
- * Test: Die Übersicht gehört der Person, nicht dem Haushalt (#585)
+ * Test: Die Übersicht gehört der Person, nicht dem Haushalt (#585),
+ * und der Haushalt darf trotzdem eine Vorgabe hinterlegen (#827)
  *
  * Geprüft wird die Regel, die den Umbau trägt: Anordnung und Kopfband werden
  * AUSSCHLIESSLICH pro Nutzer geschrieben und mit Haushalts-Fallback gelesen.
@@ -22,6 +23,7 @@ const { get } = await import('../server/db.js');
 const { default: preferencesRouter } = await import('../server/routes/preferences.js');
 
 let currentUserId = 1;
+let currentRole = 'admin';
 
 const WIDGETS_A = [
   { id: 'tasks', visible: true, order: 0, size: '2x2' },
@@ -32,7 +34,8 @@ const WIDGETS_HOUSEHOLD = [{ id: 'calendar', visible: true, order: 0, size: '4x2
 function clearDashboardPreferences() {
   get().prepare(`
     DELETE FROM sync_config
-    WHERE key IN ('dashboard_widgets', 'dashboard_today_glance')
+    WHERE key IN ('dashboard_widgets', 'dashboard_today_glance',
+                  'dashboard_widgets_default', 'dashboard_today_glance_default')
        OR key LIKE 'dashboard_widgets:user:%'
        OR key LIKE 'dashboard_today_glance:user:%'
   `).run();
@@ -53,7 +56,7 @@ function startApp() {
   app.use(express.json());
   app.use((req, _res, next) => {
     req.authUserId = currentUserId;
-    req.authRole = 'admin';
+    req.authRole = currentRole;
     next();
   });
   app.use('/', preferencesRouter);
@@ -80,6 +83,7 @@ const write = async (baseUrl, body) => {
 test.beforeEach(() => {
   clearDashboardPreferences();
   currentUserId = 1;
+  currentRole = 'admin';
 });
 
 test('ohne jede Einstellung bleibt es beim Standard', async () => {
@@ -164,6 +168,147 @@ test('die Prüfung der Anordnung gilt weiterhin, auch pro Nutzer', async () => {
     assert.equal((await write(baseUrl, { dashboard_today_glance: '0' })).status, 400);
     assert.equal(householdValue('dashboard_widgets:user:1'), null,
       'eine abgewiesene Anordnung darf nichts hinterlassen');
+  } finally {
+    await close();
+  }
+});
+
+// ── Die Vorgabe des Haushalts (#827) ─────────────────────────────────────────
+//
+// Der Wunsch: der Admin richtet die Übersicht so ein, wie sie für die Familie
+// sinnvoll ist, und wer nie in den Anpassen-Modus geht, bekommt genau das. Die
+// Mechanik dafür lag längst da - gelesen wurde der Haushaltswert bei jedem
+// Request -, geschrieben hat ihn nur nie jemand.
+
+const WIDGETS_DEFAULT = [
+  { id: 'calendar', visible: true, order: 0, size: '4x2' },
+  { id: 'tasks', visible: true, order: 1, size: '2x2' },
+];
+
+test('der Admin hinterlegt eine Vorgabe, und wer nichts Eigenes hat, bekommt sie', async () => {
+  const { baseUrl, close } = await startApp();
+  try {
+    const saved = await write(baseUrl, {
+      dashboard_widgets_default: WIDGETS_DEFAULT,
+      dashboard_today_glance_default: false,
+    });
+    assert.equal(saved.status, 200);
+    assert.deepEqual(JSON.parse(householdValue('dashboard_widgets_default')), WIDGETS_DEFAULT);
+    assert.equal(householdValue('dashboard_today_glance_default'), '0');
+
+    for (const userId of [2, 3]) {
+      currentUserId = userId;
+      const data = await read(baseUrl);
+      assert.deepEqual(data.dashboard_widgets, WIDGETS_DEFAULT, `Nutzer ${userId} bekommt die Vorgabe nicht`);
+      assert.equal(data.dashboard_today_glance, false);
+      assert.equal(data.dashboard_follows_default, true);
+    }
+  } finally {
+    await close();
+  }
+});
+
+test('die Vorgabe überschreibt niemanden, der sich seine Übersicht eingerichtet hat', async () => {
+  const { baseUrl, close } = await startApp();
+  try {
+    currentUserId = 2;
+    await write(baseUrl, { dashboard_widgets: WIDGETS_A, dashboard_today_glance: false });
+
+    currentUserId = 1;
+    await write(baseUrl, { dashboard_widgets_default: WIDGETS_DEFAULT });
+
+    currentUserId = 2;
+    const mine = await read(baseUrl);
+    assert.deepEqual(mine.dashboard_widgets, WIDGETS_A,
+      'die Vorgabe hat eine persönliche Anordnung plattgemacht');
+    assert.equal(mine.dashboard_follows_default, false);
+    // Wohin ein Zurücksetzen führen würde, muss die Oberfläche zeigen können.
+    assert.deepEqual(mine.dashboard_widgets_default, WIDGETS_DEFAULT);
+  } finally {
+    await close();
+  }
+});
+
+test('zurücksetzen löscht den eigenen Stand, statt die Vorgabe zu kopieren', async () => {
+  const { baseUrl, close } = await startApp();
+  try {
+    await write(baseUrl, { dashboard_widgets_default: WIDGETS_DEFAULT, dashboard_today_glance_default: true });
+
+    currentUserId = 2;
+    await write(baseUrl, { dashboard_widgets: WIDGETS_A, dashboard_today_glance: false });
+    assert.ok(householdValue('dashboard_widgets:user:2'));
+
+    const reset = await write(baseUrl, { dashboard_widgets: null, dashboard_today_glance: null });
+    assert.equal(reset.status, 200);
+    assert.equal(householdValue('dashboard_widgets:user:2'), null, 'der eigene Stand liegt noch da');
+    assert.equal(householdValue('dashboard_today_glance:user:2'), null);
+    assert.deepEqual(reset.data.dashboard_widgets, WIDGETS_DEFAULT);
+    assert.equal(reset.data.dashboard_follows_default, true);
+
+    // DER EIGENTLICHE PUNKT: nach dem Zurücksetzen wirkt auch die NÄCHSTE
+    // Änderung des Admins. Ein Zurücksetzen, das die Vorgabe kopiert hätte,
+    // wäre hier grün und in vier Wochen still falsch.
+    currentUserId = 1;
+    await write(baseUrl, { dashboard_widgets_default: WIDGETS_HOUSEHOLD });
+    currentUserId = 2;
+    assert.deepEqual((await read(baseUrl)).dashboard_widgets, WIDGETS_HOUSEHOLD);
+  } finally {
+    await close();
+  }
+});
+
+test('die Vorgabe geht dem Bestandswert vor, und ohne Vorgabe bleibt der Bestand', async () => {
+  const { baseUrl, close } = await startApp();
+  try {
+    // Der alte haushaltweite Schlüssel ist ein Fossil aus der Zeit vor #585:
+    // er trägt, was zuletzt jemand gespeichert hat. Er bleibt der Fallback,
+    // solange niemand eine Vorgabe gesetzt hat.
+    seedHouseholdValue('dashboard_widgets', JSON.stringify(WIDGETS_HOUSEHOLD));
+    currentUserId = 2;
+    assert.deepEqual((await read(baseUrl)).dashboard_widgets, WIDGETS_HOUSEHOLD);
+    // Und er ist KEINE Vorgabe: die Oberfläche darf einen Zufallsstand nicht
+    // als bewusste Entscheidung des Haushalts ausgeben.
+    assert.equal((await read(baseUrl)).dashboard_widgets_default, null);
+
+    currentUserId = 1;
+    await write(baseUrl, { dashboard_widgets_default: WIDGETS_DEFAULT });
+    currentUserId = 2;
+    assert.deepEqual((await read(baseUrl)).dashboard_widgets, WIDGETS_DEFAULT);
+
+    currentUserId = 1;
+    await write(baseUrl, { dashboard_widgets_default: null });
+    currentUserId = 2;
+    assert.deepEqual((await read(baseUrl)).dashboard_widgets, WIDGETS_HOUSEHOLD,
+      'ohne Vorgabe muss der Bestand wieder greifen');
+  } finally {
+    await close();
+  }
+});
+
+test('nur ein Admin hinterlegt die Vorgabe - der eigene Stand bleibt jedem selbst überlassen', async () => {
+  const { baseUrl, close } = await startApp();
+  try {
+    currentRole = 'member';
+    assert.equal((await write(baseUrl, { dashboard_widgets_default: WIDGETS_DEFAULT })).status, 403);
+    assert.equal((await write(baseUrl, { dashboard_today_glance_default: false })).status, 403);
+    assert.equal(householdValue('dashboard_widgets_default'), null);
+
+    // Das eigene Layout und das Zurücksetzen brauchen kein Admin-Recht.
+    assert.equal((await write(baseUrl, { dashboard_widgets: WIDGETS_A })).status, 200);
+    assert.equal((await write(baseUrl, { dashboard_widgets: null })).status, 200);
+  } finally {
+    await close();
+  }
+});
+
+test('die Prüfung gilt auch für die Vorgabe', async () => {
+  const { baseUrl, close } = await startApp();
+  try {
+    assert.equal((await write(baseUrl, { dashboard_widgets_default: {} })).status, 400);
+    assert.equal((await write(baseUrl, { dashboard_widgets_default: [{ id: '../weather' }] })).status, 400);
+    assert.equal((await write(baseUrl, { dashboard_today_glance_default: '0' })).status, 400);
+    assert.equal(householdValue('dashboard_widgets_default'), null,
+      'eine abgewiesene Vorgabe darf nichts hinterlassen');
   } finally {
     await close();
   }

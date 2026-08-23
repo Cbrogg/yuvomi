@@ -199,6 +199,15 @@ function cfgUserSet(key, userId, value) {
   if (!userId) return;
   cfgSet(userCfgKey(key, userId), value);
 }
+// Den eigenen Wert LOESCHEN heisst "ich folge wieder dem Haushalt" - und das
+// bleibt es auch nach der naechsten Aenderung des Admins. Den Haushaltswert
+// stattdessen zu KOPIEREN waere die naheliegende und die falsche Variante: sie
+// friert den heutigen Stand auf dem Konto ein, und der Folger driftet ab der
+// ersten spaeteren Aenderung still davon weg (#827).
+function cfgUserDelete(key, userId) {
+  if (!userId) return;
+  cfgDelete(userCfgKey(key, userId));
+}
 
 // Drei Sichten auf den Zyklus-Tab (#760), nach demselben Muster wie `language`:
 // was der Haushalt erlaubt, was ich für mich gewählt habe, und was am Ende gilt.
@@ -223,11 +232,48 @@ function healthCycleViews(userId) {
 // Der Fallback stand beim Umbau erst nur im GET; die PUT-Antwort las weiter den
 // Haushaltswert und meldete damit nach dem Speichern den Stand zurück, den man
 // gerade ersetzt hatte. Zwei Ausdrücke für dieselbe Regel sind einer zu viel.
-function dashboardPersonalViews(userId) {
-  const glance = cfgUserGet('dashboard_today_glance', userId) ?? cfgGet('dashboard_today_glance');
+/**
+ * Drei Fragen, drei Sichten - dasselbe Muster wie bei Sprache und Zeitzone:
+ * was gilt fuer mich, was hat der Haushalt als Vorgabe hinterlegt, und folge
+ * ich ihr ueberhaupt noch.
+ *
+ * DIE VORGABE HAT EINEN EIGENEN SCHLUESSEL (#827). Der alte haushaltweite
+ * `dashboard_widgets` ist ein Fossil aus der Zeit vor #585: er traegt, was
+ * zuletzt irgendjemand gespeichert hat, nicht das, was ein Admin als Vorgabe
+ * gewaehlt haette. Ihn zu ueberschreiben hiesse, einen Zufallsstand zur
+ * bewussten Entscheidung zu erklaeren - und die Oberflaeche koennte "noch keine
+ * Vorgabe gesetzt" nicht mehr von "so soll es sein" unterscheiden. Er bleibt
+ * deshalb stehen und wirkt als letzte Stufe der Kette, damit Bestandshaushalte
+ * ihre gewohnte Anordnung behalten.
+ *
+ * Ein ZWEITER Grund fuer den eigenen Schluessel steht in test-settings-admin-gate.js:
+ * ein Schluessel, der sowohl per `cfgSet` als auch per `cfgUserSet` geschrieben
+ * wird, ist fuer diesen Guard nicht mehr entscheidbar (`ambiguous`), und dessen
+ * Grenze ist mit Wetter und Zyklus-Schalter bereits ausgeschoepft.
+ */
+function dashboardDefaults() {
   return {
-    dashboard_widgets: parseWidgetConfig(cfgUserGet('dashboard_widgets', userId) ?? cfgGet('dashboard_widgets')),
-    dashboard_today_glance: glance !== '0',
+    widgets: cfgGet('dashboard_widgets_default') ?? cfgGet('dashboard_widgets'),
+    glance: cfgGet('dashboard_today_glance_default') ?? cfgGet('dashboard_today_glance'),
+  };
+}
+
+function dashboardPersonalViews(userId) {
+  const ownWidgets = cfgUserGet('dashboard_widgets', userId);
+  const ownGlance = cfgUserGet('dashboard_today_glance', userId);
+  const fallback = dashboardDefaults();
+  return {
+    dashboard_widgets: parseWidgetConfig(ownWidgets ?? fallback.widgets),
+    dashboard_today_glance: (ownGlance ?? fallback.glance) !== '0',
+    // Die Vorgabe des Haushalts, damit die Oberflaeche zeigen kann, wohin ein
+    // Zuruecksetzen fuehrt. `null` heisst: es gibt keine.
+    dashboard_widgets_default: cfgGet('dashboard_widgets_default') === null
+      ? null
+      : parseWidgetConfig(cfgGet('dashboard_widgets_default')),
+    dashboard_today_glance_default: (cfgGet('dashboard_today_glance_default') ?? '1') !== '0',
+    // Folge ich der Vorgabe? Nur wer NICHTS Eigenes hinterlegt hat, tut das -
+    // und nur fuer den hat "zuruecksetzen" nichts zu tun.
+    dashboard_follows_default: ownWidgets === null && ownGlance === null,
   };
 }
 
@@ -440,7 +486,7 @@ router.get('/', (req, res) => {
 
 router.put('/', (req, res) => {
   try {
-    const { visible_meal_types, currency, date_format, time_format, week_start, region, timezone, language, app_name, dashboard_widgets, dashboard_today_glance, disabled_modules, hidden_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, health_cycle_enabled_user, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, tasks_default_target, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
+    const { visible_meal_types, currency, date_format, time_format, week_start, region, timezone, language, app_name, dashboard_widgets, dashboard_today_glance, dashboard_widgets_default, dashboard_today_glance_default, disabled_modules, hidden_modules, module_order, mobile_nav_order, housekeeping_payment_tasks, budget_mode, calendar_default_duration, calendar_default_reminders, calendar_default_assign_me, calendar_default_target, health_cycle_enabled, health_cycle_enabled_user, rewards_require_approval, tasks_subtasks_expanded, tasks_default_points, tasks_default_target, weather_provider, weather_lat, weather_lon, weather_city, weather_units, weather_auto_locate, weather_user, holiday_country, holiday_subdivision, holiday_group, holiday_show_public, holiday_show_school, holiday_public_color, holiday_school_color } = req.body;
 
     if (visible_meal_types !== undefined) {
       if (!Array.isArray(visible_meal_types)) {
@@ -574,22 +620,71 @@ router.put('/', (req, res) => {
     // Das Kopfband „Heute auf einen Blick" (#740) fährt mit, weil es im selben
     // PUT gespeichert wird: bliebe es haushaltweit, schaltete ein persönliches
     // Ausblenden es weiterhin für alle ab - genau der Bruch, den #585 meldet.
+    // `null` ist hier kein leeres Layout, sondern der Rueckweg: mein eigener
+    // Stand wird geloescht, und damit gilt wieder die Vorgabe des Haushalts -
+    // heute und nach jeder spaeteren Aenderung daran (#827).
     if (dashboard_widgets !== undefined) {
-      if (!Array.isArray(dashboard_widgets)) {
+      if (dashboard_widgets === null) {
+        cfgUserDelete('dashboard_widgets', req.authUserId);
+      } else if (!Array.isArray(dashboard_widgets)) {
         return res.status(400).json({ error: 'dashboard_widgets muss ein Array sein', code: 400 });
+      } else {
+        const normalized = normalizeWidgetConfig(dashboard_widgets);
+        if (normalized === null) {
+          return res.status(400).json({ error: 'dashboard_widgets enthält ungültige Einträge', code: 400 });
+        }
+        cfgUserSet('dashboard_widgets', req.authUserId, JSON.stringify(normalized));
       }
-      const normalized = normalizeWidgetConfig(dashboard_widgets);
-      if (normalized === null) {
-        return res.status(400).json({ error: 'dashboard_widgets enthält ungültige Einträge', code: 400 });
-      }
-      cfgUserSet('dashboard_widgets', req.authUserId, JSON.stringify(normalized));
     }
 
     if (dashboard_today_glance !== undefined) {
-      if (typeof dashboard_today_glance !== 'boolean') {
+      if (dashboard_today_glance === null) {
+        cfgUserDelete('dashboard_today_glance', req.authUserId);
+      } else if (typeof dashboard_today_glance !== 'boolean') {
         return res.status(400).json({ error: 'dashboard_today_glance muss ein Boolean sein', code: 400 });
+      } else {
+        cfgUserSet('dashboard_today_glance', req.authUserId, dashboard_today_glance ? '1' : '0');
       }
-      cfgUserSet('dashboard_today_glance', req.authUserId, dashboard_today_glance ? '1' : '0');
+    }
+
+    // DIE VORGABE DES HAUSHALTS (#827). Sie gilt fuer alle, die sich noch keine
+    // eigene Uebersicht eingerichtet haben - typischerweise die Mitglieder, die
+    // nie in den Anpassen-Modus gehen. Deshalb Admin-Gate wie bei Region,
+    // Datensprache und Zeitzone.
+    //
+    // SIE UEBERSCHREIBT NIEMANDEN. Wer eine eigene Anordnung hat, behaelt sie;
+    // ein Haushaltswert, der persoenliche Arrangements plattmacht, ist die
+    // Sorte Schalter, die man einmal benutzt und danach bereut. Der Preis dafuer
+    // ist der Rueckweg oben - ohne ihn waere die Vorgabe fuer jeden unsichtbar,
+    // der je eine Kachel verschoben hat.
+    if (dashboard_widgets_default !== undefined) {
+      if (req.authRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required.', code: 403 });
+      }
+      if (dashboard_widgets_default === null) {
+        cfgDelete('dashboard_widgets_default');
+      } else if (!Array.isArray(dashboard_widgets_default)) {
+        return res.status(400).json({ error: 'dashboard_widgets_default muss ein Array sein', code: 400 });
+      } else {
+        const normalized = normalizeWidgetConfig(dashboard_widgets_default);
+        if (normalized === null) {
+          return res.status(400).json({ error: 'dashboard_widgets_default enthält ungültige Einträge', code: 400 });
+        }
+        cfgSet('dashboard_widgets_default', JSON.stringify(normalized));
+      }
+    }
+
+    if (dashboard_today_glance_default !== undefined) {
+      if (req.authRole !== 'admin') {
+        return res.status(403).json({ error: 'Admin access required.', code: 403 });
+      }
+      if (dashboard_today_glance_default === null) {
+        cfgDelete('dashboard_today_glance_default');
+      } else if (typeof dashboard_today_glance_default !== 'boolean') {
+        return res.status(400).json({ error: 'dashboard_today_glance_default muss ein Boolean sein', code: 400 });
+      } else {
+        cfgSet('dashboard_today_glance_default', dashboard_today_glance_default ? '1' : '0');
+      }
     }
 
     if (disabled_modules !== undefined) {

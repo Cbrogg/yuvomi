@@ -2036,7 +2036,10 @@ function renderTodayCockpit(data, cfg = [], editing = false) {
  * - der Masthead soll weiter mit Datum, Gruss und Wetter sprechen, nicht mit
  * Betriebszustand. Im Bearbeiten-Modus entfaellt er: dort wird nicht
  * aktualisiert, und die Werkzeugleiste braucht ihren Platz. */
-function renderDashboardOverview(user, editing = false, weather = null, updatedAt = null) {
+function renderDashboardOverview(user, editing = false, weather = null, updatedAt = null, scope = {}) {
+  // Wer der Vorgabe des Haushalts folgt, hat nichts zurueckzusetzen; wer sie
+  // setzen darf, ist Admin (#827).
+  const { followsDefault = true, canPublish = false } = scope;
   const dateLabel = mastheadDateLabel();
   const updated = !editing && updatedAt
     ? `<p class="dashboard-overview__updated">${esc(t('dashboard.updatedAt', { time: formatTime(updatedAt) }))}</p>`
@@ -2057,12 +2060,21 @@ function renderDashboardOverview(user, editing = false, weather = null, updatedA
                und nicht weiß, ob man sie gerade den Kindern wegnimmt (Critique
                2026-08-16). Ein Satz im Anpassen-Modus beantwortet sie im
                richtigen Moment. -->
-          <p class="dashboard-customize-scope">${t('dashboard.customizeScopeHint')}</p>
+          <div class="dashboard-customize-scope">
+            <p>${t('dashboard.customizeScopeHint')}</p>
+            ${followsDefault ? `<p class="dashboard-customize-scope__state">${t('dashboard.customizeFollowsDefault')}</p>` : ''}
+          </div>
           <div class="dashboard-customize-toolbar" role="toolbar" aria-label="${t('dashboard.customizeTitle')}">
+            ${canPublish ? `
+            <button class="btn btn--ghost" id="dashboard-customize-publish">
+              <i data-lucide="users" class="icon-sm" aria-hidden="true"></i>
+              ${t('dashboard.customizeSetDefault')}
+            </button>` : ''}
+            ${followsDefault ? '' : `
             <button class="btn btn--ghost" id="dashboard-customize-reset">
               <i data-lucide="rotate-ccw" class="icon-sm" aria-hidden="true"></i>
               ${t('dashboard.customizeReset')}
-            </button>
+            </button>`}
             <button class="btn btn--secondary" id="dashboard-customize-cancel">${t('common.cancel')}</button>
             <button class="btn btn--primary" id="dashboard-customize-save">${t('common.save')}</button>
           </div>` : ''}
@@ -3326,6 +3338,10 @@ export async function render(container, { user }) {
   // mich und mal alle traefe.
   let glanceVisible = true;
   let savedGlanceVisible = true;
+  // Folge ich der Vorgabe des Haushalts, habe ich nichts Eigenes gespeichert -
+  // dann gibt es auch nichts zurueckzusetzen (#827).
+  let followsDefault = true;
+  const canPublish = user?.role === 'admin';
   let isCustomizing = false;
   let currency     = 'EUR';
   let visibleMealTypes = MEAL_ORDER;
@@ -3355,6 +3371,7 @@ export async function render(container, { user }) {
     savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
     glanceVisible = prefsRes.data?.dashboard_today_glance !== false;
     savedGlanceVisible = glanceVisible;
+    followsDefault = prefsRes.data?.dashboard_follows_default !== false;
     // Das Skelett des NAECHSTEN Aufrufs lernt hier seine Kachelform.
     rememberLayoutHint(widgetConfig);
     currency     = prefsRes.data?.currency ?? 'EUR';
@@ -3403,6 +3420,9 @@ export async function render(container, { user }) {
     await api.put('/preferences', { dashboard_widgets: widgetConfig, dashboard_today_glance: glanceVisible });
     savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
     savedGlanceVisible = glanceVisible;
+    // Ab jetzt liegt ein eigener Stand vor - die Vorgabe des Haushalts erreicht
+    // mich erst wieder, wenn ich ihn loesche.
+    followsDefault = false;
     rememberLayoutHint(widgetConfig);
     isCustomizing = false;
     // Wird die Zyklus-Kachel gerade erst eingeblendet, ihren owner-only Slice
@@ -3449,17 +3469,91 @@ export async function render(container, { user }) {
    * dritte (Critique 2026-08-16). Solange die Anordnung dem Haushalt gehörte,
    * war „auf Standard" eindeutig. Seit sie der Person gehört, kann der Satz auch
    * „zurück zu dem, was die Familie hatte" oder „zurück zu meinem letzten Stand"
-   * heißen - und keine der beiden trifft zu. Der Folgentext sagt jetzt, was
-   * wirklich passiert, statt es die Nutzerin herausfinden zu lassen. */
+   * heißen - und keine der beiden trifft zu.
+   *
+   * SEIT #827 IST ES DER RÜCKWEG ZUR VORGABE, und zwar durch LÖSCHEN des
+   * eigenen Standes, nicht durch Hineinladen der Vorgabe in den Editor. Der
+   * Unterschied zeigt sich erst später: ein hineingeladenes und gespeichertes
+   * Layout friert die heutige Vorgabe auf dem Konto ein, und die nächste
+   * Änderung des Admins erreicht mich nie wieder. Deshalb schreibt diese
+   * Funktion `null` und wartet nicht auf „Speichern" - sie IST das Speichern. */
   async function resetDashboardConfig() {
     const confirmed = await confirmModal(t('dashboard.customizeResetConfirm'), {
       confirmLabel: t('dashboard.customizeReset'),
       detail: t('dashboard.customizeResetDetail'),
     });
     if (!confirmed) return;
-    widgetConfig = DEFAULT_WIDGET_CONFIG.map((w) => ({ ...w }));
-    glanceVisible = true;
+    const previousConfig = savedWidgetConfig.map((w) => ({ ...w }));
+    const previousGlance = savedGlanceVisible;
+    try {
+      const res = await api.put('/preferences', { dashboard_widgets: null, dashboard_today_glance: null });
+      widgetConfig = normalizeDashboardConfig(res.data?.dashboard_widgets ?? DEFAULT_WIDGET_CONFIG);
+      glanceVisible = res.data?.dashboard_today_glance !== false;
+    } catch {
+      window.yuvomi?.showToast(t('common.errorGeneric'), 'danger');
+      return;
+    }
+    savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+    savedGlanceVisible = glanceVisible;
+    followsDefault = true;
+    rememberLayoutHint(widgetConfig);
+    isCustomizing = false;
+    if (widgetConfig.some((w) => w.id === 'cycle' && w.visible)) await ensureCycleSlice();
     rebuildDashboard(widgetConfig);
+    // Ein Zurücksetzen ist so umkehrbar wie jedes andere Speichern (#821):
+    // der vorherige eigene Stand wird zurückgeschrieben, nicht nachgebaut.
+    window.yuvomi?.showToast(t('dashboard.customizeResetDone'), 'success', 6000, async () => {
+      try {
+        widgetConfig = previousConfig.map((w) => ({ ...w }));
+        glanceVisible = previousGlance;
+        await api.put('/preferences', { dashboard_widgets: widgetConfig, dashboard_today_glance: glanceVisible });
+        savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+        savedGlanceVisible = glanceVisible;
+        followsDefault = false;
+        rememberLayoutHint(widgetConfig);
+      } catch {
+        window.yuvomi?.showToast(t('common.errorGeneric'), 'danger');
+      }
+      isCustomizing = false;
+      rebuildDashboard(widgetConfig);
+    });
+  }
+
+  /* DIE VORGABE DES HAUSHALTS (#827) entsteht dort, wo man eine Übersicht
+   * ohnehin einrichtet - im Anpassen-Modus. Ein zweites Arrangier-Werkzeug in
+   * den Einstellungen wäre eine zweite Fassung derselben Oberfläche, und die
+   * beiden liefen auseinander.
+   *
+   * WER DER VORGABE FOLGT, HÄNGT SICH MIT DEM VERÖFFENTLICHEN NICHT AB: für ihn
+   * wird nichts Persönliches geschrieben. Ein Admin, der die Vorgabe setzt und
+   * damit stillschweigend einen eigenen Stand bekäme, verlöre jede spätere
+   * Änderung eines zweiten Admins - und würde es nicht merken. */
+  async function publishHouseholdDefault() {
+    const confirmed = await confirmModal(t('dashboard.customizeSetDefaultConfirm'), {
+      confirmLabel: t('dashboard.customizeSetDefault'),
+      detail: t('dashboard.customizeSetDefaultDetail'),
+    });
+    if (!confirmed) return;
+    const payload = {
+      dashboard_widgets_default: widgetConfig,
+      dashboard_today_glance_default: glanceVisible,
+    };
+    if (!followsDefault) {
+      payload.dashboard_widgets = widgetConfig;
+      payload.dashboard_today_glance = glanceVisible;
+    }
+    try {
+      await api.put('/preferences', payload);
+    } catch {
+      window.yuvomi?.showToast(t('common.errorGeneric'), 'danger');
+      return;
+    }
+    savedWidgetConfig = widgetConfig.map((w) => ({ ...w }));
+    savedGlanceVisible = glanceVisible;
+    rememberLayoutHint(widgetConfig);
+    isCustomizing = false;
+    rebuildDashboard(widgetConfig);
+    window.yuvomi?.showToast(t('dashboard.customizeSetDefaultDone'), 'success');
   }
 
   function wireDashboardEditMode() {
@@ -3634,7 +3728,7 @@ export async function render(container, { user }) {
     const weatherCardShown = cfg.some((w) => w.id === 'weather' && w.visible);
     setHtml(shell, `
       <section class="dashboard-masthead dashboard-masthead--${greetingPeriod()}${mastheadSlim}">
-        ${renderDashboardOverview(user, isCustomizing, weatherCardShown ? null : weather, lastLoadedAt)}
+        ${renderDashboardOverview(user, isCustomizing, weatherCardShown ? null : weather, lastLoadedAt, { followsDefault, canPublish })}
         ${cockpitHtml}
       </section>
       ${renderDashboardLayout(cfg, data, weather, currency, { editing: isCustomizing, visibleMealTypes, glanceHidden: !glanceVisible })}
@@ -3660,6 +3754,7 @@ export async function render(container, { user }) {
     container.querySelector('#dashboard-customize-save')?.addEventListener('click', saveDashboardConfig, { signal: _fabController.signal });
     container.querySelector('#dashboard-customize-cancel')?.addEventListener('click', cancelDashboardConfig, { signal: _fabController.signal });
     container.querySelector('#dashboard-customize-reset')?.addEventListener('click', resetDashboardConfig, { signal: _fabController.signal });
+    container.querySelector('#dashboard-customize-publish')?.addEventListener('click', publishHouseholdDefault, { signal: _fabController.signal });
     wireDashboardEditMode();
   }
 

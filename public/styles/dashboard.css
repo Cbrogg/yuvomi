@@ -2447,11 +2447,24 @@ svg.weather-forecast__icon {
 /* Die Reichweite steht ueber den Knoepfen, nicht neben ihnen: sie beantwortet
    eine Frage, die vor dem Speichern entsteht, und darf die Knopfreihe nicht
    schmaler machen (#585, Critique 2026-08-16). */
+/* Der Hinweis-Block ueber der Anpassen-Leiste: erst der Satz zur Reichweite,
+ * darunter - nur fuer Folger der Haushalts-Vorgabe - der Satz, WORAN man gerade
+ * haengt (#827). Zwei Zeilen, damit "gilt nur fuer dich" und "du folgst der
+ * Vorgabe" nicht als ein Widerspruch in einem Satz stehen: das eine sagt, wen
+ * eine Aenderung trifft, das andere, woher der aktuelle Stand kommt. */
 .dashboard-customize-scope {
   margin: 0 0 var(--space-2) 0;
   text-align: right;
   color: var(--color-text-secondary);
   font-size: var(--text-sm);
+}
+
+.dashboard-customize-scope p {
+  margin: 0;
+}
+
+.dashboard-customize-scope__state {
+  color: var(--color-text-tertiary);
 }
 
 /* Kein min-height-Override hier: der Basis-.btn ist bereits 48px (mobil) / 40px

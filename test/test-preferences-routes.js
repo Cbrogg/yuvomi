@@ -200,12 +200,22 @@ test('dashboard_today_glance ist standardmäßig an - der Bestand kennt den Schl
   const res = await get();
   assert.equal(res.body.data.dashboard_today_glance, true);
 });
-test('PUT dashboard_today_glance: alles ausser Boolean -> 400', async () => {
+test('PUT dashboard_today_glance: alles ausser Boolean und null -> 400', async () => {
   // '0'/'1' waeren die DB-Schreibweise, nicht die der API - wer sie schickt,
   // meint etwas anderes als er bekaeme.
   assert.equal((await put({ dashboard_today_glance: '0' })).status, 400);
   assert.equal((await put({ dashboard_today_glance: 0 })).status, 400);
-  assert.equal((await put({ dashboard_today_glance: null })).status, 400);
+});
+test('null ist kein ungueltiger Boolean, sondern der Rueckweg zur Vorgabe (#827)', async () => {
+  // Dieselbe Schreibweise wie bei `timezone` und `language` nebenan: null heisst
+  // nicht "aus", sondern "ich habe hier nichts Eigenes". Bis v2.34.0 war es ein
+  // 400 - es gab schlicht keinen Weg zurueck.
+  assert.equal((await put({ dashboard_today_glance: false })).status, 200);
+  assert.equal((await get()).body.data.dashboard_follows_default, false);
+  assert.equal((await put({ dashboard_today_glance: null })).status, 200);
+  const back = await get();
+  assert.equal(back.body.data.dashboard_today_glance, true, 'die Vorgabe greift nicht wieder');
+  assert.equal(back.body.data.dashboard_follows_default, true);
 });
 test('dashboard_today_glance haelt beide Richtungen ueber den GET', async () => {
   assert.equal((await put({ dashboard_today_glance: false })).status, 200);

@@ -1302,8 +1302,14 @@ test('das Kopfband faehrt im selben Anpassen-Zyklus wie die Kacheln (#740)', () 
     + withoutGlance.join('\n  '));
   assert.match(source, /function cancelDashboardConfig\(\)[\s\S]{0,200}?glanceVisible = savedGlanceVisible/,
     'Abbrechen stellt das Kopfband nicht zurueck');
-  assert.match(source, /function resetDashboardConfig[\s\S]{0,600}?glanceVisible = true/,
-    'Zuruecksetzen stellt das Kopfband nicht auf den Standard');
+  // SEIT #827 IST "STANDARD" DIE VORGABE DES HAUSHALTS, nicht mehr der
+  // Auslieferungszustand: Zuruecksetzen loescht den eigenen Stand und uebernimmt,
+  // was der Server daraufhin zurueckmeldet. Das Kopfband muss diesen Weg
+  // mitgehen - eine feste `true` waere hier wieder die halbe Ruecknahme.
+  assert.match(source, /function resetDashboardConfig[\s\S]{0,1400}?glanceVisible = res\.data\?\.dashboard_today_glance !== false/,
+    'Zuruecksetzen holt das Kopfband nicht aus der Vorgabe zurueck');
+  assert.match(source, /dashboard_widgets: null, dashboard_today_glance: null/,
+    'Zuruecksetzen muss BEIDE eigenen Werte loeschen - sonst folgt die Haelfte weiter dem alten Stand');
   assert.match(source, /glanceVisible = previousGlance/,
     'Rueckgaengig nimmt das Kopfband nicht mit zurueck');
   assert.match(source, /previousGlance !== glanceVisible/,

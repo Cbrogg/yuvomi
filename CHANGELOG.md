@@ -9,6 +9,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **The household can set a default overview, and members can follow it again** (#827, requested by
+  @avalynnrose). Most family members never open customize mode, so what they see should be the
+  arrangement an admin chose. An admin now arranges the overview and publishes it from the customize
+  toolbar ("Set as household default"); everyone who has not arranged their own overview sees it
+  from that moment, including the next change to it. Nobody's personal arrangement is overwritten -
+  that is deliberate, a household switch that flattens personal layouts is used once and regretted.
+
+  "Reset" is now the way back: it deletes your own arrangement instead of loading the default into
+  it. The difference only shows up later - a copied default freezes today's state onto your account
+  and you stop following every change made after it. The button is hidden for anyone who has nothing
+  of their own to reset, and the reset itself is undoable like any other save.
+
 - **Israeli new shekel (ILS) and an Israel region preset** (#841, requested by @zivawernick). ILS is
   now selectable as the household currency and in Subscriptions and Shared expenses, and Settings →
   Personal → Appearance → Region offers Israel (ILS, DD.MM.YYYY, 24-hour - the CLDR defaults for
