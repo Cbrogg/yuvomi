@@ -26,6 +26,8 @@ import { readFileSync } from 'node:fs';
 import { buildOpenApiSpec } from '../openapi.js';
 import { tokenAllows } from '../scopes.js';
 import { moduleAccessVerdict, MODULE_ACCESS_ALLOW } from '../permissions.js';
+import { toLocalDateKey } from '../../public/utils/date.js';
+import { taskScopeNeedsToday, taskScopeWhere } from '../services/task-scope.js';
 import { visibilityWhere } from '../services/visibility.js';
 import { loadTagsFor, normalizeTags, setTags, tagKey } from '../utils/task-tags.js';
 
@@ -48,14 +50,18 @@ function listTasks(db, actorId, args) {
   let sql = `
     SELECT t.id, t.title, t.status, t.priority, t.category, t.due_date, t.due_time
     FROM tasks t
-    WHERE t.parent_task_id IS NULL
+    WHERE ${taskScopeWhere('t', { includeFuture: !!args.include_future, bind: '@today' })}
       -- Sichtbarkeit (#474): kein Zugriff auf private/eingeschränkte Aufgaben
       -- anderer. Stand hier bisher nicht, obwohl die Termin-Abfrage sie führt -
       -- ein MCP-Token sah damit jede private Aufgabe des Haushalts, und mit den
       -- Tags (#586) käme deren Freitext gleich mit.
       AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
   `;
+  // Dieselbe Auswahl wie `GET /api/v1/tasks` und die Uebersicht (#825): eine
+  // Automatisierung, die andere Aufgaben sieht als das UI, ist der Grund, aus
+  // dem hier schon einmal die Sichtbarkeit nachgezogen werden musste.
   const params = { me: actorId };
+  if (taskScopeNeedsToday({ includeFuture: !!args.include_future })) params.today = toLocalDateKey();
   // Das Archiv ist seit #688 eine eigene Achse (tasks.archived_at), kein
   // Statuswert mehr. `status: 'archived'` bleibt als Eingabe erlaubt und meint
   // unverändert „zeig mir die Ablage" - nur wird jetzt die Ablage gefragt und
@@ -508,6 +514,7 @@ const CORE_TOOLS = [
       type: 'object',
       properties: {
         status: { type: 'string', enum: ['open', 'in_progress', 'done', 'archived'], description: 'Filter by task status. "archived" is not a status but the separate archive: it lists the filed-away tasks with whatever status they carry.' },
+        include_future: { type: 'boolean', description: 'Include tasks that only start at a later date. Left out by default, matching the app: a task with a start date next week is not up yet.' },
         tag: {
           type: 'array',
           items: { type: 'string' },

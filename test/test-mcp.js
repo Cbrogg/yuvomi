@@ -30,7 +30,14 @@ db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
   applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );`);
 db.exec(MIGRATIONS_SQL[1]);
+db.exec(MIGRATIONS_SQL[41]);  // tasks.start_date (geplante Aufgaben)
 db.exec(MIGRATIONS_SQL[74]);  // access_permissions (Modulrechte, #467)
+// DIESE DREI SIND EINE AUSWAHL, KEIN SCHEMA: Migration 1 legt `tasks` in der
+// Fassung von damals an, jede spaeter ergaenzte Spalte fehlt hier. Wer eine
+// Abfrage der MCP-Tools um ein Feld erweitert, das nach Migration 1 kam, muss
+// dessen Migration hier nachtragen - sonst scheitert der Test an einer
+// fehlenden Spalte und nicht an dem, was er pruefen soll. `start_date` (41)
+// kam auf genau diesem Weg dazu (#825).
 
 const uid = db.prepare(
   `INSERT INTO users (username, display_name, password_hash, avatar_color, role)
@@ -187,6 +194,29 @@ test('tools/call list_tasks: enthält den neu angelegten Task', async () => {
   assert.equal(res.result.isError, false);
   const tasks = parseContent(res);
   assert.ok(tasks.some((t) => t.title === 'Müll rausbringen'), 'neuer Task muss gelistet sein');
+});
+
+// Dieselbe Auswahl wie UI und REST-API (#825). Ohne diese Zusicherung faellt
+// MCP still zurueck: die Tools bauen ihre Abfragen selbst und laufen an jedem
+// Pfad-Guard vorbei, weil sie express nie durchlaufen - genau der Weg, auf dem
+// hier schon einmal die Sichtbarkeit (#474) gefehlt hat.
+test('tools/call list_tasks: was erst spaeter beginnt, ist noch nicht dran', async () => {
+  const inAWeek = new Date(Date.now() + 7 * 86400000).toISOString().slice(0, 10);
+  db.prepare(
+    `INSERT INTO tasks (title, created_by, status, visibility, start_date) VALUES (?, ?, 'open', 'all', ?)`
+  ).run('Erst naechste Woche', uid, inAWeek);
+
+  const listed = parseContent(await toolCall('list_tasks', {}));
+  assert.ok(
+    !listed.some((t) => t.title === 'Erst naechste Woche'),
+    'eine erst spaeter beginnende Aufgabe darf nicht als anstehend gemeldet werden',
+  );
+
+  const withFuture = parseContent(await toolCall('list_tasks', { include_future: true }));
+  assert.ok(
+    withFuture.some((t) => t.title === 'Erst naechste Woche'),
+    'mit include_future muss sie erscheinen - sonst waere sie ueber MCP gar nicht erreichbar',
+  );
 });
 
 test('tools/call create_task + list_tasks: Tags reisen mit (#586)', async () => {

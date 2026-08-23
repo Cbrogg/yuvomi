@@ -536,6 +536,12 @@ const MIGRATIONS_SQL = {
     CREATE INDEX IF NOT EXISTS idx_budget_loan_payments_loan ON budget_loan_payments(loan_id);
     CREATE INDEX IF NOT EXISTS idx_budget_loan_payments_paid_date ON budget_loan_payments(paid_date);
   `,
+  // v41: Startdatum fuer Aufgaben (geplante / zukuenftige Aufgaben).
+  // Gespiegelt aus db.js MIGRATIONS - wie alles hier.
+  41: `
+    ALTER TABLE tasks ADD COLUMN start_date TEXT;
+    CREATE INDEX IF NOT EXISTS idx_tasks_start_date ON tasks(start_date);
+  `,
   42: `
     ALTER TABLE users ADD COLUMN oidc_sub      TEXT;
     ALTER TABLE users ADD COLUMN oidc_provider TEXT;

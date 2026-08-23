@@ -45,6 +45,14 @@ const SHARED_ISOMORPHIC = new Set([
   // Benachrichtigung. Zwei Fassungen hieße: ein Name steht farbig da, und
   // niemand erfährt, dass er gemeint war.
   'public/utils/mentions.js',
+  // #825: Der lokale Kalendertag. `start_date` und `due_date` sind Tage, die
+  // jemand lokal eingegeben hat - wer sie gegen `date('now')` oder
+  // `toISOString()` prueft, vergleicht sie mit dem UTC-Tag und liegt westlich
+  // von UTC abends, oestlich davon morgens um einen Tag daneben. Genau deshalb
+  // nennt CLAUDE.md diese Funktion als DIE Antwort auf die Falle. Eine zweite
+  // Fassung im Backend waere die dritte im Repo und wuerde von der ersten nur
+  // dort abweichen, wo es niemandem auffaellt: nicht in der CI, die in UTC laeuft.
+  'public/utils/date.js',
 ]);
 
 const SOURCE_EXT = /\.(js|mjs)$/;

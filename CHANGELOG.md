@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The overview now selects the same tasks as the Tasks module** (discussion #825). Both answer the
+  same question - "what is up?" - and each had its own copy of the rules, which had drifted. The
+  module leaves out subtasks (`parent_task_id IS NULL`) and anything that only starts later
+  (`start_date`); the overview knew neither rule. A subtask therefore stood in "Today at a glance" as
+  a context-free line of its own, without the instruction it belongs to, and a task starting next
+  week was already sitting there today. Both sides were green on their own tests - the fault lived in
+  the difference between them, which is the same shape as #467 (the dashboard bypassing module
+  permissions) and #769 (a writing path that never got the visibility check).
+
+  The two shared rules now live in `services/task-scope.js`, the way `calendar-events.js` has always
+  been shared between the calendar route and the dashboard. **The metric tiles were changed as well,
+  not just the list**: `urgentTasks` caps at five while the counts are unbounded, so filtering only
+  the list would have put two rows under a tile claiming four. What the filters must not do is run
+  after the cap - the same lesson as #647.
+
+  **A third copy turned up while moving the first two.** The MCP tool `list_tasks` had one of the two
+  rules and not the other, so an automation was told about tasks that will not start for another
+  week. It shares the helper now and gained an `include_future` flag, named like the one the REST API
+  already has. MCP tools build their own queries and never pass through Express, so no path guard
+  covers them - that is the same route by which the visibility check (#474) once went missing there.
+
+  Deliberately left in the module: status, priority, person, category, tags and the archive axis
+  (#688). Those are a viewer's wishes about a list, not a statement about what a list may contain at
+  all. Only the two rules both sides need, and disagreed on, are shared.
+
+  One thing fell out of the move: the module compared `start_date` against SQLite's `date('now')`,
+  which is the UTC day, while `start_date` is a locally entered calendar day. West of UTC a task
+  therefore began the evening before its start date, east of it not until the following morning. The
+  shared helper takes the day as a parameter, and both callers pass their local one. CI runs in UTC,
+  where the two are identical - which is exactly why this kind of fault is never visible there.
+
+
 ## [2.31.0] - 2026-08-23
 
 ### Added

@@ -10,11 +10,13 @@ import * as db from '../db.js';
 import { documentVisibleSql } from '../services/document-access.js';
 import { nextDueAfterCompletion } from '../services/recurrence.js';
 import { syncTaskRewards } from '../services/rewards.js';
+import { taskScopeNeedsToday, taskScopeWhere } from '../services/task-scope.js';
 import { normalizeVisibility, visibilityWhere } from '../services/visibility.js';
 import {
   flushOutbound, markTodoOutbound, queueTodoDeletion,
 } from '../services/caldav-todo-outbound.js';
 import { uniqueKey } from '../utils/category-slug.js';
+import { toLocalDateKey } from '../../public/utils/date.js';
 import { parseSyncTargetValue } from '../../public/utils/sync-target.js';
 import { mentionedUserIds } from '../../public/utils/mentions.js';
 import { resolvePermissions } from '../permissions.js';
@@ -723,13 +725,14 @@ router.get('/', (req, res) => {
                  ORDER BY s.created_at ASC) s) AS subtasks
       FROM tasks t
       LEFT JOIN users u ON t.assigned_to = u.id
-      WHERE t.parent_task_id IS NULL
+      WHERE ${taskScopeWhere('t', { includeFuture: !!include_future })}
     `;
     const params = [];
 
-    if (!include_future) {
-      sql += ` AND (t.start_date IS NULL OR t.start_date <= date('now'))`;
-    }
+    // DER TAGESSCHLÜSSEL MUSS ALS ERSTER PARAMETER STEHEN: das Scope-Fragment
+    // sitzt am Anfang der WHERE-Klausel, also vor jedem Filter unten. Die
+    // SELECT-Klausel bindet ihre sechs `me` erst am Ende per unshift davor.
+    if (taskScopeNeedsToday({ includeFuture: !!include_future })) params.push(toLocalDateKey());
 
     // Status, Priorität und Person nehmen mehrere Werte entgegen und verknüpfen
     // sie ODER (#671). Anders als bei den Tags unten ist das keine Geschmacks-

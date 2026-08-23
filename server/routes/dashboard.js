@@ -9,6 +9,7 @@ import express from 'express';
 import * as db from '../db.js';
 import { hydrateBirthday } from '../services/birthdays.js';
 import { getUpcomingEvents } from '../services/calendar-events.js';
+import { taskScopeWhere } from '../services/task-scope.js';
 import { getCountdowns } from '../services/countdowns.js';
 import { visibilityWhere } from '../services/visibility.js';
 import { resolveBudgetMode } from '../services/budget-visibility.js';
@@ -195,6 +196,7 @@ router.get('/', (req, res) => {
         -- archivierte Aufgabe ist aus dem Lauf genommen, und wer sie von hier aus
         -- öffnete, fand sie in der Liste nicht wieder.
         AND t.archived_at IS NULL
+        AND ${taskScopeWhere('t', { bind: '@today' })}
         AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
       ORDER BY
         CASE WHEN __due_sort IS NOT NULL AND __due_sort < @now THEN 0 ELSE 1 END ASC,
@@ -205,7 +207,7 @@ router.get('/', (req, res) => {
           WHEN 'low' THEN 3 ELSE 4
         END ASC
       LIMIT 5
-    `).all({ now: nowIso, me: userId }).map(({ __due_sort, ...task }) => addAssignedUsers(task));
+    `).all({ now: nowIso, me: userId, today: todayLocalKey }).map(({ __due_sort, ...task }) => addAssignedUsers(task));
   } catch (err) {
     log.error('urgentTasks error:', err.message);
     result.urgentTasks = [];
@@ -222,8 +224,9 @@ router.get('/', (req, res) => {
     result.openTaskCount = d.prepare(`
       SELECT COUNT(*) AS n FROM tasks t
       WHERE t.status != 'done' AND t.archived_at IS NULL
+        AND ${taskScopeWhere('t', { bind: '@today' })}
         AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
-    `).get({ me: userId }).n;
+    `).get({ me: userId, today: todayLocalKey }).n;
   } catch (err) {
     log.error('openTaskCount error:', err.message);
     result.openTaskCount = null;
@@ -236,6 +239,7 @@ router.get('/', (req, res) => {
       SELECT COUNT(*) AS n FROM tasks t
       WHERE t.status != 'done' AND t.archived_at IS NULL
         AND t.due_date IS NOT NULL AND t.due_date < @today
+        AND ${taskScopeWhere('t', { bind: '@today' })}
         AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
     `).get({ today: todayLocalKey, me: userId }).n;
   } catch (err) {
@@ -590,6 +594,7 @@ router.get('/', (req, res) => {
       FROM tasks t JOIN task_assignments ta ON ta.task_id = t.id
       WHERE t.status != 'done' AND t.archived_at IS NULL
         AND t.due_date IS NOT NULL AND t.due_date <= @today
+        AND ${taskScopeWhere('t', { bind: '@today' })}
         AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
       GROUP BY ta.user_id
     `).all({ today: todayLocalKey, me: userId });
@@ -606,6 +611,7 @@ router.get('/', (req, res) => {
       SELECT COUNT(*) AS n FROM tasks t
       WHERE t.status = 'done' AND t.archived_at IS NULL
         AND t.due_date = @today
+        AND ${taskScopeWhere('t', { bind: '@today' })}
         AND ${visibilityWhere('t', 'task_assignments', 'task_id', '@me')}
     `).get({ today: todayLocalKey, me: userId }).n;
   } catch (err) {

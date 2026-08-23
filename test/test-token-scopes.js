@@ -110,6 +110,11 @@ db.exec(`CREATE TABLE IF NOT EXISTS schema_migrations (
   applied_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now'))
 );`);
 db.exec(MIGRATIONS_SQL[1]);
+// v41 traegt `tasks.start_date` nach: Migration 1 legt `tasks` in der Fassung
+// von damals an, und `list_tasks` liest die Spalte seit #825. Eine Auswahl
+// einzelner Migrationen ist kein Schema - wer eine MCP-Abfrage um ein spaeter
+// ergaenztes Feld erweitert, traegt dessen Migration hier nach.
+db.exec(MIGRATIONS_SQL[41]);
 
 const uid = db.prepare(
   `INSERT INTO users (username, display_name, password_hash, avatar_color, role)
