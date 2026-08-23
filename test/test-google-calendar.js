@@ -358,7 +358,9 @@ test('localEventToGoogle: ohne event.color bleibt colorId ungesetzt', () => {
 // --------------------------------------------------------
 console.log('\n[Google Calendar Test] upsertGoogleEvents – Farbsync\n');
 
-// Seed-User (created_by = 1 in upsertGoogleEvents)
+// Seed-User: bekommt die ID 1 und war damit genau der Grund, warum diese Suite
+// den Fremdschlüssel-Fehler aus #839 nie sehen konnte. Der Fall mit einer
+// anderen Besitzer-ID steht am Ende der Datei.
 db.prepare(`INSERT INTO users (username, display_name, password_hash, role)
   VALUES ('admin', 'Admin', 'x', 'admin')`).run();
 
@@ -616,6 +618,54 @@ test('Die Serie behaelt ihre Ortszeit ueber den Zeitumstellungs-Wechsel', () => 
     [...times].join(','), '19:00',
     'Jedes Vorkommen steht um 19:00 Ortszeit - vor UND nach der Umstellung am 1. November'
   );
+});
+
+// --------------------------------------------------------
+// created_by ohne den Installations-Nutzer (Issue #839)
+// --------------------------------------------------------
+// Steht bewusst am Ende: der Abschnitt löscht Nutzer 1, und dessen Termine
+// gehen per ON DELETE CASCADE mit. Jeder Test davor hat seine Zusicherungen
+// zu diesem Zeitpunkt bereits geprüft.
+console.log('\n[Google Calendar Test] created_by ohne Nutzer 1 (#839)\n');
+
+db.prepare(`INSERT INTO users (username, display_name, password_hash, role)
+  VALUES ('zweiter', 'Zweiter', 'x', 'member')`).run();
+const secondUserId = db.prepare(`SELECT id FROM users WHERE username = 'zweiter'`).get().id;
+db.prepare(`DELETE FROM users WHERE username = 'admin'`).run();
+
+test('Import läuft weiter, wenn der Nutzer mit ID 1 gelöscht wurde', () => {
+  const calRefId = upsertExternalCalendar('google', 'primary', 'Mein Kalender', '#FF0000');
+  const item = { ...gEvent, id: 'evt-839-no-user-1' };
+  upsertGoogleEvents([item], calRefId, '#FF0000', COLOR_MAP);
+  const row = db.prepare(
+    'SELECT created_by FROM calendar_events WHERE external_calendar_id = ?'
+  ).get('evt-839-no-user-1');
+  assert(row, 'Das Event muss angelegt werden - vorher scheiterte der Insert am Fremdschlüssel');
+  assertEqual(row.created_by, secondUserId, 'Besitzer ist der erste noch existierende Nutzer');
+});
+
+test('Ohne jeden Nutzer wird übersprungen, statt am Fremdschlüssel zu scheitern', () => {
+  db.prepare('DELETE FROM users').run();
+  const calRefId = upsertExternalCalendar('google', 'primary', 'Mein Kalender', '#FF0000');
+  const item = { ...gEvent, id: 'evt-839-no-user-at-all' };
+
+  // Dass hinterher keine Zeile steht, sichert für sich genommen nichts zu - das
+  // galt auch vorher, nur weil der Insert abstürzte. Zusicherung ist, dass er
+  // gar nicht erst versucht wird, und das steht im Fehlerkanal.
+  const errors = [];
+  const realError = console.error;
+  console.error = (...args) => errors.push(args.join(' '));
+  try { upsertGoogleEvents([item], calRefId, '#FF0000', COLOR_MAP); }
+  finally { console.error = realError; }
+
+  assert(
+    !errors.some((line) => line.includes('FOREIGN KEY')),
+    `Kein Insert-Versuch ohne Besitzer erwartet, geloggt wurde: ${errors.join(' | ')}`
+  );
+  const row = db.prepare(
+    'SELECT id FROM calendar_events WHERE external_calendar_id = ?'
+  ).get('evt-839-no-user-at-all');
+  assertEqual(row, undefined, 'Kein Nutzer, kein Besitzer - und der Lauf bricht trotzdem nicht ab');
 });
 
 // --------------------------------------------------------
