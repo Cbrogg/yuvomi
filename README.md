@@ -74,7 +74,7 @@ Turn on what your household needs; the rest stays out of the way.
 
 | Module | In one line |
 |---|---|
-| **Tasks** | Kanban board with deadlines, priorities, subtasks, tags, recurring schedules and multi-member assignment. Attach documents and discuss a task in comments. |
+| **Tasks** | Kanban board with deadlines, priorities, subtasks, tags, recurring schedules and multi-member assignment. Attach documents and discuss a task in comments. Lock a task so only its creator and admins can redefine it, while everyone else can still tick it off. |
 | **Shopping** | Shared lists grouped by aisle and ordered to match your shop, with swipe gestures and one-tap import from the meal plan. |
 | **Meals** | Weekly drag-and-drop planner with a recipe sidebar and direct export to the shopping list. |
 | **Recipes** | Create, duplicate and scale recipes, then pre-fill meal slots or send the ingredients to a shopping list. A Mealie or Tandoor instance can be mirrored read-only. |

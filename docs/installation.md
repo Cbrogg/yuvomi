@@ -239,9 +239,9 @@ docker compose up -d
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
 
 > **Pinning a version.** Every release is also published under immutable tags:
-> `2.29.0` (exact version), `2.29` (latest patch of that minor), plus a moving `main`
+> `2.30.0` (exact version), `2.30` (latest patch of that minor), plus a moving `main`
 > tag for the current development state. To pin production to a known-good release,
-> set `image: ghcr.io/ulsklyc/yuvomi:2.29.0` in your compose file and bump it
+> set `image: ghcr.io/ulsklyc/yuvomi:2.30.0` in your compose file and bump it
 > deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
@@ -287,7 +287,7 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.29.0
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.30.0
 yuvomi  | [Yuvomi] Environment: production
 yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
@@ -1361,6 +1361,13 @@ yours. A task without a target stays local, as every task did before. Lists mapp
 are not offered as task destinations: a task sent there would come back as a shopping item.
 Subtasks are never uploaded on their own, and a task that has already been uploaded cannot be moved
 to a different list.
+
+One boundary worth knowing if you use both mirroring and the task lock: a **locked** task is closed
+to everyone but its creator and admins inside Yuvomi, but an **inbound sync still rewrites its
+mirrored fields**. The sync runs with the household's CalDAV credentials rather than as a member,
+and whoever holds those has full access to the list anyway; the alternative would be to let the
+mirror diverge silently, which is worse. Keep tasks you want locked on a list nobody else can write
+to, or leave them local.
 
 If the page shows no lists at all, the server is not advertising any collection that accepts
 `VTODO`. Create a task list in your CalDAV server (in Radicale, Nextcloud or your client of

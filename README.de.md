@@ -74,7 +74,7 @@ Schalte an, was dein Haushalt braucht; der Rest bleibt aus dem Weg.
 
 | Modul | In einer Zeile |
 |---|---|
-| **Aufgaben** | Kanban-Board mit Fristen, Prioritäten, Unteraufgaben, Tags, Wiederholungen und Mehrfachzuweisung. Dokumente anhängen und in Kommentaren besprechen. |
+| **Aufgaben** | Kanban-Board mit Fristen, Prioritäten, Unteraufgaben, Tags, Wiederholungen und Mehrfachzuweisung. Dokumente anhängen und in Kommentaren besprechen. Eine Aufgabe lässt sich sperren, sodass nur Ersteller:in und Admins sie umschreiben, alle anderen sie aber weiter abhaken können. |
 | **Einkauf** | Geteilte Listen nach Gang gruppiert und in der Reihenfolge deines Ladens, mit Wischgesten und Ein-Tipp-Import aus dem Essensplan. |
 | **Mahlzeiten** | Wochenplaner per Drag-and-drop mit Rezept-Seitenleiste und direktem Export in die Einkaufsliste. |
 | **Rezepte** | Rezepte anlegen, duplizieren und skalieren, Mahlzeiten damit vorbelegen oder die Zutaten auf eine Einkaufsliste schicken. Eine Mealie- oder Tandoor-Instanz lässt sich lesend spiegeln. |
