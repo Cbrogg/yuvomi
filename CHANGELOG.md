@@ -7,6 +7,62 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.33.0] - 2026-08-23
+
+### Added
+
+- **`POST /api/v1/documents` takes a `folder_key`.** It names the system folder a module files its
+  receipts in (`budget`, `tasks`, `splitExpenses`, `inventory`, `housekeeping`, `calendarItems`) and
+  is what identifies that folder; `folder_name` is now only the label used if the folder still has to
+  be created. Sending `folder_name` alone keeps working and matches on the name, so an older client
+  files exactly as before.
+
+### Fixed
+
+- **The changelog no longer needs GitHub to show anything** (#838). The view was a plain proxy to
+  `api.github.com`: if that call failed you got a 502 and "could not be loaded right now", with no
+  reason and no content. For a self-hosted app, needing someone else's network to read your own
+  history is the wrong dependency, and the ways there are ordinary - a container without outbound
+  network, a timeout, or GitHub's limit of 60 unauthenticated requests per hour and IP. The
+  `CHANGELOG.md` that ships with the app now goes into the image and carries the view when GitHub
+  does not answer, with the same thirty releases and the same parser.
+
+  It says which one you are looking at, and it reports the latest version as **unknown** rather than
+  claiming you are up to date - the bundled file cannot know about anything newer than itself. The
+  client does not record the check as done either, so the update question is not treated as settled
+  for six hours when GitHub never answered.
+
+  A second problem sat underneath: only successes were cached, so once GitHub started failing, every
+  request went out again. A household could push itself into the rate limit and keep the failure
+  alive. Failures are now backed off for five minutes.
+
+- **A module's document folder is found by a stable key, not by its translated name** (migration
+  v157). Six modules file receipts in a folder of their own, and the identity of that folder was its
+  display name - which the client sent, in its own language. Three faults followed from that one
+  decision. Two members with different language settings created **two folders**, each holding half
+  the receipts, which is the normal case in a multilingual household rather than an edge case. Every
+  correction to a translation split the folder again; migration v146 had to clean that up once, and
+  PR #837 was about to trigger it a second time. And a folder someone renamed came back under its old
+  name with the next receipt, so the rename looked like a move it never was.
+
+  `module_key` carries the identity now and the name is a label that may change freely, so a
+  migration like v146 will never be needed again. Existing folders are bound to their key by written-
+  out name lists, the same way v146 worked and for the same reason. Where a household holds the same
+  folder in two languages, the **older** one takes the key and nothing is merged - that would be a
+  decision about someone else's documents.
+
+  The lookup also existed in two copies, in the documents route and in the calendar helper, and now
+  lives in `services/document-folders.js`.
+
+- **The housekeeping folder is named after the module whose receipts it holds.** It differed in
+  twelve of twenty-four languages, and two of those - `HouseKeeping` (en) and `HázTartás` (hu) - were
+  simply typos. Before v157 that was a data fault rather than a cosmetic one.
+
+- **Filipino reads more like Filipino** (PR #837, thanks @anobongjimwel). 214 values across the
+  navigation, dashboard, tasks, shopping, meals, calendar, contacts, budget and settings. The follow-
+  up carried the two renames through: `Imbentaryo` now stands in all four places the module name
+  appears, and seven strings that still said `despensa` follow the module's `Paminggalan`.
+
 ## [2.32.0] - 2026-08-23
 
 ### Added

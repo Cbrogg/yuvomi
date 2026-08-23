@@ -1,4 +1,4 @@
-<!-- version: 2.32.0 -->
+<!-- version: 2.33.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -45,8 +45,10 @@
       dem Merge uebersetzt - genau die Handarbeit, die er sich mit seiner
       Bitte ersparen wollte.
 -->
-The overview now shows the same tasks as the Tasks module does. Subtasks used to turn up there as rows of their own, without the task they belong to, and anything scheduled to start next week was already sitting in the list today. Both are gone, and the counts above the list follow the same rule, so a tile and the rows beneath it no longer disagree about how much is open.
+The changelog no longer needs a connection to GitHub. Until now Yuvomi fetched its release history live, so an instance without outbound network, or one behind a busy shared IP, saw nothing but an error. The history that ships with your installation is used instead when GitHub does not answer, and the view tells you that is what you are reading. It reports the newest available version as unknown in that case rather than claiming you are up to date, because a bundled file cannot know about anything newer than itself.
 
-If you have connected an AI assistant to Yuvomi, its task listing follows the same rule now and stops reporting work that has not started yet. Ask for the scheduled ones explicitly when you do want to see them.
+Documents filed by a module now land in one folder regardless of who uploads them. The folder was previously identified by its translated name, so two people using Yuvomi in different languages ended up with two folders and half the receipts in each. Existing folders keep their name and contents, and renaming one no longer causes a second to appear the next time something is filed.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.32.0
+Filipino has been revised throughout by a native speaker, and the housekeeping folder is now named after the module it belongs to in every language.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.33.0
