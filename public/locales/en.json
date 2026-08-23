@@ -2740,7 +2740,7 @@
         "deleteFolderConfirmDetail": "They stay visible in the all-documents view and can also be reached through the filter for documents without a folder. Sharing and categories are unchanged.",
         "folderRenamedToast": "Folder renamed.",
         "folderDeletedToast": "Folder deleted.",
-        "housekeepingFolder": "HouseKeeping",
+        "housekeepingFolder": "Housekeeping",
         "calendarItemsFolder": "Calendar items",
         "folderBrowserTitle": "Folders",
         "emptyPrimary": "Add document",

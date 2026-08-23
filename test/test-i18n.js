@@ -189,20 +189,40 @@ test('Modulnamen sind in nav und in den API-Token-Scopes wortgleich', () => {
 // "Sdílené výdaje" gegen "Společné výdaje" - und keine der beiden Listen oben
 // sah ihn, weil er unter `documents.*` liegt statt unter `nav.*`.
 //
-// Er steht hier und nicht bei der Migration, die ihn einmalig umbenannt hat
-// (v146): die Migration ist ein historischer Fakt und laeuft genau einmal, die
-// REGEL gilt fuer jede kuenftige Uebersetzung. Ein Uebersetzer, der den Ordner
-// beim naechsten Sprachdurchgang anders nennt, laesst `ensureFolder`
-// (server/routes/documents.js) sonst still einen zweiten Ordner anlegen.
-test('der Beleg-Ordner der Gemeinsamen Ausgaben heisst wie das Modul', () => {
+// WAS DIESER GUARD SEIT v157 NICHT MEHR TUT: Daten schuetzen. Bis dahin war
+// der Anzeigename die Identitaet des Ordners, ein abweichender Name legte
+// also einen zweiten an - genau das musste v146 einmal aufraeumen. Diese
+// Aufgabe traegt jetzt `module_key` (services/document-folders.js), und eine
+// Umbenennung ist folgenlos. Geblieben ist der Grund, aus dem der Name
+// urspruenglich auffiel: zwei Woerter fuer dieselbe Sache verwirren, wenn die
+// Oberflaeche das Modul so und seinen Ordner anders nennt.
+//
+// Die Liste ist bewusst kurz und benannt statt einer Regel ueber alle
+// `documents.*Folder`: der Beleg-Ordner des Budgets heisst in JEDER Sprache
+// "Belege" und nicht "Budget", und auch der Ordner der Haushaltshilfe traegt
+// in neun Sprachen einen eigenen Namen. Eine mechanische Regel meldete diese
+// vierzig gewollten Abweichungen als Fehler. Aufgenommen wird ein Ordner
+// deshalb erst, wenn er den Modulnamen in allen Sprachen bereits traegt.
+const FOLDER_NAMED_LIKE_MODULE = [
+  ['splitExpenses.title', 'documents.splitExpensesFolder'],
+  // Der Inventar-Ordner kam dazu, als PR #837 `nav.inventory` ins Filipino
+  // uebersetzte und die drei uebrigen Stellen stehen liess.
+  ['inventory.title', 'documents.inventoryFolder'],
+];
+
+test('der Beleg-Ordner heisst wie das Modul, dessen Belege er traegt', () => {
   const drift = [];
   for (const locale of LOCALES) {
     const keys = flatten(JSON.parse(readLocale(locale)));
-    const title = keys.get('splitExpenses.title');
-    const folder = keys.get('documents.splitExpensesFolder');
-    assert.ok(title, `${locale}: splitExpenses.title fehlt`);
-    assert.ok(folder, `${locale}: documents.splitExpensesFolder fehlt`);
-    if (title !== folder) drift.push(`${locale}: Modul ${JSON.stringify(title)}, Ordner ${JSON.stringify(folder)}`);
+    for (const [titleKey, folderKey] of FOLDER_NAMED_LIKE_MODULE) {
+      const title = keys.get(titleKey);
+      const folder = keys.get(folderKey);
+      assert.ok(title, `${locale}: ${titleKey} fehlt`);
+      assert.ok(folder, `${locale}: ${folderKey} fehlt`);
+      if (title !== folder) {
+        drift.push(`${locale}: ${titleKey} ${JSON.stringify(title)}, Ordner ${JSON.stringify(folder)}`);
+      }
+    }
   }
   assert.deepEqual(drift, [],
     `Der Beleg-Ordner traegt einen anderen Namen als das Modul:\n  ${drift.join('\n  ')}`);

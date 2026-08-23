@@ -2740,7 +2740,7 @@
         "deleteFolderConfirmDetail": "Az összes dokumentum nézetében továbbra is látszanak, és a mappa nélküli dokumentumok szűrőjén át is elérhetők. A megosztás és a kategóriák nem változnak.",
         "folderRenamedToast": "Mappa átnevezve.",
         "folderDeletedToast": "Mappa törölve.",
-        "housekeepingFolder": "HázTartás",
+        "housekeepingFolder": "Háztartás",
         "calendarItemsFolder": "Naptár elemei",
         "folderBrowserTitle": "Mappák",
         "emptyPrimary": "Dokumentum hozzáadása",

@@ -2178,6 +2178,7 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
       // auffindbar sein, nicht namenlos zwischen den Verträgen liegen.
       const receipts = bindDocumentAttachField(panel, {
         category: 'finance',
+        folderKey: 'budget',
         folderName: t('documents.budgetFolder'),
         documentName: (file) => t('budget.receiptDocumentName', {
           title: panel.querySelector('#bm-title').value.trim() || file.name,

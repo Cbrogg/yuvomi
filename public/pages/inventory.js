@@ -1367,6 +1367,7 @@ function buildItemForm({ mode, item = null }) {
     wireBlurValidation(panel);
     const attachments = bindDocumentAttachField(panel, {
       category: () => panel.querySelector('#inv-attachment-category').value,
+      folderKey: 'inventory',
       folderName: t('documents.inventoryFolder'),
       documentName: (file) => t('inventory.attachmentDocumentName', {
         name: panel.querySelector('#inv-name').value.trim() || file.name,
