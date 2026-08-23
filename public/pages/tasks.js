@@ -1397,6 +1397,7 @@ function wireTaskForm(panel, { task = null, container }) {
   // hier wird nur noch verdrahtet.
   taskDocuments = bindDocumentAttachField(panel, {
     category: 'other',
+    folderKey: 'tasks',
     folderName: t('documents.tasksFolder'),
     // Die Datei erbt die Sichtbarkeit ihrer Aufgabe. Ohne das laege der Beleg
     // einer PRIVATEN Aufgabe als familiensichtbares Dokument im Dokumente-Modul:

@@ -977,6 +977,7 @@ function openVisitEditModal(visit, content, { onDone } = {}) {
               allowed_member_ids: [],
               original_name: file.name,
               content_data: await readFileAsDataUrl(file),
+              folder_key: 'housekeeping',
               folder_name: t('documents.housekeepingFolder'),
             });
             receiptDocumentId = receipt.data?.id || receiptDocumentId;

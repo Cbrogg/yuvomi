@@ -108,7 +108,12 @@ export function renderDocumentAttachField({
  *        Uploads. Ein fester String (Standard) oder eine Funktion, die bei
  *        jedem commit() frisch ausgewertet wird - für Aufrufer mit einem
  *        Kategorie-Auswahlfeld im Formular (z. B. Inventar).
- * @param {string} [options.folderName] - Zielordner für neue Uploads
+ * @param {string} [options.folderKey] - Schlüssel des Systemordners, in dem das
+ *        Modul seine Belege ablegt ('budget', 'tasks', ...). Er bestimmt, WELCHER
+ *        Ordner gemeint ist; `folderName` ist nur dessen Beschriftung, falls er
+ *        erst noch entstehen muss. Vor Migration v157 trug der Name selbst die
+ *        Identität, und zwei Sprachen ergaben zwei Ordner.
+ * @param {string} [options.folderName] - Beschriftung für einen neu entstehenden Ordner
  * @param {string|Function} [options.visibility] - Sichtbarkeit neuer Uploads.
  *        Fester String oder eine Funktion, die bei jedem commit() frisch
  *        ausgewertet wird - fuer Formulare, in denen die Sichtbarkeit des
@@ -121,6 +126,7 @@ export function renderDocumentAttachField({
  */
 export function bindDocumentAttachField(panel, {
   category = 'other',
+  folderKey = '',
   folderName = '',
   visibility = 'family',
   allowedMemberIds = null,
@@ -278,6 +284,7 @@ export function bindDocumentAttachField(panel, {
           allowed_member_ids: vis === 'restricted' && allowedMemberIds ? allowedMemberIds() : [],
           original_name: item.file.name,
           content_data: await readFileAsDataUrl(item.file),
+          ...(folderKey ? { folder_key: folderKey } : {}),
           ...(folderName ? { folder_name: folderName } : {}),
         });
         item.kind = 'document';

@@ -5,12 +5,15 @@
  */
 
 import { StorageError } from '../../services/document-storage.js';
+import { ensureModuleFolder } from '../../services/document-folders.js';
 import { MAX_UPLOAD_BYTES, MAX_UPLOAD_MB } from '../../utils/upload-limit.js';
 
 export const VALID_SOURCES  = ['local', 'google', 'apple', 'ics'];
 // Ein Termin-Anhang ist ein Upload wie jeder andere und teilt deshalb die
 // gemeinsame Grenze (#806).
 export const MAX_ATTACHMENT_BYTES = MAX_UPLOAD_BYTES;
+// Nur noch die Beschriftung, falls der Client keine mitschickt - die
+// Identitaet des Ordners traegt seit v157 der Schluessel `calendarItems`.
 export const DEFAULT_ATTACHMENT_FOLDER = 'Calendar items';
 export const ATTACHMENT_MIME = new Set([
   'image/png',
@@ -137,13 +140,14 @@ export function googleTarget(body) {
   return { value: id, error: null };
 }
 
+/**
+ * Termin-Anhaenge landen im Systemordner `calendarItems`. Die Aufloesung
+ * kommt aus `services/document-folders.js` - sie stand hier in einer zweiten
+ * Kopie neben der in `routes/documents.js`, und beide suchten ueber den
+ * uebersetzten Namen statt ueber den Schluessel (Migration v157).
+ */
 export function ensureDocumentFolder(database, name, actorId) {
-  const folderName = typeof name === 'string' ? name.trim() : '';
-  if (!folderName) return null;
-  const existing = database.prepare('SELECT id FROM family_document_folders WHERE name = ? COLLATE NOCASE').get(folderName);
-  if (existing) return existing.id;
-  const result = database.prepare('INSERT INTO family_document_folders (name, created_by) VALUES (?, ?)').run(folderName, actorId);
-  return result.lastInsertRowid;
+  return ensureModuleFolder(database, { key: 'calendarItems', name }, actorId);
 }
 
 export function createAttachmentDocument(database, attachment, staged, body, actorId) {

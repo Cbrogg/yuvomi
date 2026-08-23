@@ -9,6 +9,7 @@ import * as db from '../db.js';
 import { createLogger } from '../logger.js';
 import { str, collectErrors, id as validateId, MAX_TEXT, MAX_TITLE } from '../middleware/validate.js';
 import { documentVisibleSql } from '../services/document-access.js';
+import { ensureModuleFolder, isModuleFolderKey } from '../services/document-folders.js';
 import { getAdapter as defaultGetDmsAdapter } from '../services/dms/index.js';
 import { getStatus as getGoogleDriveStatus } from '../services/google-drive-storage.js';
 import {
@@ -179,13 +180,8 @@ function replaceAccess(documentId, memberIds) {
   for (const memberId of memberIds) insert.run(documentId, memberId);
 }
 
-function ensureFolder(name, actorId) {
-  const folderName = typeof name === 'string' ? name.trim() : '';
-  if (!folderName) return null;
-  const existing = db.get().prepare('SELECT id FROM family_document_folders WHERE name = ? COLLATE NOCASE').get(folderName);
-  if (existing) return existing.id;
-  const result = db.get().prepare('INSERT INTO family_document_folders (name, created_by) VALUES (?, ?)').run(folderName, actorId);
-  return result.lastInsertRowid;
+function ensureFolder(key, name, actorId) {
+  return ensureModuleFolder(db.get(), { key, name }, actorId);
 }
 
 async function resolveDocumentContent(document) {
@@ -582,6 +578,12 @@ router.post('/', async (req, res) => {
     const errors = collectErrors([vName, vDescription, vOriginalName, vFolderName]);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
+    // `folder_key` benennt den Systemordner eines Moduls, `folder_name` nur
+    // seine Beschriftung. Ein unbekannter Schluessel wird still verworfen und
+    // faellt auf den Namen zurueck - eine aeltere App-Version, die ihn noch
+    // nicht mitschickt, legt weiter ueber den Namen ab (Migration v157).
+    const folderKey = isModuleFolderKey(req.body.folder_key) ? req.body.folder_key : null;
+
     const category = CATEGORIES.includes(req.body.category) ? req.body.category : 'other';
     const visibility = VISIBILITIES.includes(req.body.visibility) ? req.body.visibility : 'family';
     const vFolderId = req.body.folder_id !== undefined && req.body.folder_id !== null && req.body.folder_id !== ''
@@ -600,7 +602,7 @@ router.post('/', async (req, res) => {
     });
     const database = db.get();
     const row = database.transaction(() => {
-      const folderId = vFolderId.value ?? ensureFolder(vFolderName.value, userId(req));
+      const folderId = vFolderId.value ?? ensureFolder(folderKey, vFolderName.value, userId(req));
       const result = database.prepare(`
         INSERT INTO family_documents (
           name, description, category, visibility, folder_id, original_name,

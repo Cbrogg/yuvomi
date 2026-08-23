@@ -955,6 +955,7 @@ function openExpenseModal(expense = null) {
       // Ausgabe - ein Kassenbon soll dort auffindbar bleiben.
       const receipts = bindDocumentAttachField(panel, {
         category: 'finance',
+        folderKey: 'splitExpenses',
         folderName: t('documents.splitExpensesFolder'),
         documentName: (file) => t('splitExpenses.receiptDocumentName', {
           title: panel.querySelector('[name="title"]').value.trim() || file.name,
@@ -1060,6 +1061,7 @@ function openSettlementModal() {
       // übernommen - mehrere Nachweise für eine Überweisung gibt es nicht.
       const proof = bindDocumentAttachField(panel, {
         category: 'finance',
+        folderKey: 'splitExpenses',
         folderName: t('documents.splitExpensesFolder'),
         documentName: (file) => t('splitExpenses.proofDocumentName', {
           group: group?.name || '',

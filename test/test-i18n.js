@@ -189,11 +189,13 @@ test('Modulnamen sind in nav und in den API-Token-Scopes wortgleich', () => {
 // "Sdílené výdaje" gegen "Společné výdaje" - und keine der beiden Listen oben
 // sah ihn, weil er unter `documents.*` liegt statt unter `nav.*`.
 //
-// Er steht hier und nicht bei der Migration, die ihn einmalig umbenannt hat
-// (v146): die Migration ist ein historischer Fakt und laeuft genau einmal, die
-// REGEL gilt fuer jede kuenftige Uebersetzung. Ein Uebersetzer, der den Ordner
-// beim naechsten Sprachdurchgang anders nennt, laesst `ensureFolder`
-// (server/routes/documents.js) sonst still einen zweiten Ordner anlegen.
+// WAS DIESER GUARD SEIT v157 NICHT MEHR TUT: Daten schuetzen. Bis dahin war
+// der Anzeigename die Identitaet des Ordners, ein abweichender Name legte
+// also einen zweiten an - genau das musste v146 einmal aufraeumen. Diese
+// Aufgabe traegt jetzt `module_key` (services/document-folders.js), und eine
+// Umbenennung ist folgenlos. Geblieben ist der Grund, aus dem der Name
+// urspruenglich auffiel: zwei Woerter fuer dieselbe Sache verwirren, wenn die
+// Oberflaeche das Modul so und seinen Ordner anders nennt.
 //
 // Die Liste ist bewusst kurz und benannt statt einer Regel ueber alle
 // `documents.*Folder`: der Beleg-Ordner des Budgets heisst in JEDER Sprache
