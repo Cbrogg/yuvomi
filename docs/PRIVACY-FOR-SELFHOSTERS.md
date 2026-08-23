@@ -385,15 +385,19 @@ Konfiguration so, dass du auf einen EU-Provider umstellen könntest.
   Änderungsverlauf öffnet bzw. die App nach einer neueren Version sieht
   (Versions-Hinweis an der Navigation); die Antwort wird serverseitig
   **30 Minuten gecacht**, sodass GitHub nicht bei jedem Klick kontaktiert wird.
+  Nach einem fehlgeschlagenen Abruf pausiert der Kanal **5 Minuten**, statt es
+  bei jeder Anfrage erneut zu versuchen.
 - **Was wird übertragen:** ausschließlich die IP deines Yuvomi-Servers und der
   User-Agent `Yuvomi/1.0` — keine Nutzerdaten, keine Instanz-Kennung, keine
   installierte Version. Anfragen gehen vom Backend aus, nie vom Browser.
 - **Drittland:** GitHub Inc./Microsoft, USA — DPF-zertifiziert (Status prüfen).
 - **AVV:** nein (keine Verarbeitung personenbezogener Nutzerdaten im Auftrag);
   Transparenzhinweis in der Datenschutzerklärung genügt. Wer den Kanal ganz
-  vermeiden will, blockiert ausgehende Verbindungen zu `api.github.com` — die
-  App funktioniert dann vollständig weiter, nur Änderungsverlauf und
-  Versions-Hinweis bleiben leer.
+  vermeiden will, blockiert ausgehende Verbindungen zu `api.github.com`. Die App
+  funktioniert dann vollständig weiter, und der **Änderungsverlauf ebenfalls**:
+  Antwortet GitHub nicht, zeigt die Ansicht die mit dem Image ausgelieferte
+  `CHANGELOG.md` und sagt das auch. Nur der Hinweis auf eine neuere Version
+  bleibt aus — den kann eine Instanz ohne Netz nach draußen nicht kennen.
 
 ### 2.13 Mealie-Rezept-Sync
 
