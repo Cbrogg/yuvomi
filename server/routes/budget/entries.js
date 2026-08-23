@@ -10,7 +10,7 @@ import { str, oneOf, date as validateDate, num, rrule, collectErrors, MAX_TITLE,
 import { normalizeBudgetVisibility } from '../../services/budget-visibility.js';
 import { attachmentsFor, replaceAttachments, withAttachments } from './attachments.js';
 import {
-  budgetFilter, getBudgetMode, mayEdit, bookedOnly,
+  budgetFilter, budgetCategoryExpr, maskEntries, getBudgetMode, mayEdit, bookedOnly,
   DATE_RE, thisMonthLocalKey, cents,
   generateRecurringInstances, RECURRENCE_INTERVAL_KEYS, MAX_INTERVAL_COUNT,
   normalizeIntervalCount, effectiveMonthly,
@@ -66,16 +66,22 @@ router.get('/summary', (req, res) => {
       WHERE date BETWEEN ? AND ?${filter.clause}${bookedOnly()}
     `).get(from, to, ...filter.params);
 
+    // Fremde 'shared_amount'-Eintraege laufen unter dem Sammel-Bucket (#659):
+    // ihr Betrag zaehlt mit, ihre Kategorie verriete sonst den Zweck.
+    const catExpr = budgetCategoryExpr(req, 'budget_entries');
     const byCategory = db.get().prepare(`
-      SELECT category,
+      SELECT ${catExpr.expr} AS category,
              SUM(CASE WHEN amount > 0 THEN amount ELSE 0 END) AS income,
              SUM(CASE WHEN amount < 0 THEN amount ELSE 0 END) AS expenses,
              SUM(amount) AS total
       FROM budget_entries
       WHERE date BETWEEN ? AND ?${filter.clause}${bookedOnly()}
-      GROUP BY category
+      -- GROUP BY 1, nicht GROUP BY category: bei gleichnamigem Output-Alias
+      -- gewinnt in SQLite die ECHTE Spalte, und dann gruppierte die Auswertung
+      -- weiter nach der unmaskierten Kategorie - der Sammel-Bucket bliebe leer.
+      GROUP BY 1
       ORDER BY ABS(SUM(amount)) DESC
-    `).all(from, to, ...filter.params);
+    `).all(...catExpr.params, from, to, ...filter.params);
 
     // Was noch aussteht, wird eigens ausgewiesen (#637). Ohne diese Zahl
     // verschwaende eine erwartete Buchung spurlos aus der Uebersicht, und die
@@ -132,13 +138,17 @@ router.get('/export', (req, res) => {
       ? `budget-${from}_${to}.csv`
       : `budget-${req.query.month || thisMonthLocalKey()}.csv`;
     const filter = budgetFilter(req, 'b');
-    const entries = db.get().prepare(`
+    // Der Export ist ein Lesepfad wie jeder andere: fremde 'shared_amount'-
+    // Eintraege muessen auch hier ihren Betrag beitragen, ohne ihren Zweck zu
+    // nennen (#659). Ohne die Maske waere die CSV der bequemste Weg, genau das
+    // auszulesen, was die Oberflaeche verbirgt.
+    const entries = maskEntries(req, db.get().prepare(`
       SELECT b.*, u.display_name AS creator_name
       FROM budget_entries b
       LEFT JOIN users u ON u.id = b.created_by
       WHERE b.date BETWEEN ? AND ?${filter.clause}
       ORDER BY b.date ASC
-    `).all(from, to, ...filter.params);
+    `).all(from, to, ...filter.params));
 
     const header = 'Date,Title,Amount,Category,Subcategory,Recurring,Status,Created by\n';
     const csvSafe = (val) => {
@@ -149,13 +159,13 @@ router.get('/export', (req, res) => {
     const rows   = entries.map((e) =>
       [
         e.date,
-        csvSafe(e.title),
+        csvSafe(e.details_hidden ? 'Private entry' : e.title),
         // Punkt-Dezimal ohne Tausendertrennung: in einem komma-getrennten CSV
         // wäre ein Komma-Dezimaltrenner ein zweites Feldtrennzeichen (Spalte
         // zerreißt). Punkt-Dezimal ist maschinenlesbar, überall parsebar und
         // deckt sich mit der region-abhängigen Anzeige für Punkt-Locales (#521).
         e.amount.toFixed(2),
-        e.category,
+        e.details_hidden ? 'Private' : e.category,
         e.subcategory || '',
         e.is_recurring ? 'Yes' : 'No',
         // Der Export ist ein Beleg: eine erwartete Buchung darf darin nicht wie
@@ -237,7 +247,9 @@ router.get('/', (req, res) => {
     sql += ' ORDER BY b.date DESC, b.created_at DESC';
 
     const entries = db.get().prepare(sql).all(...params);
-    res.json({ data: withAttachments(entries, req.authUserId || req.session.userId) });
+    res.json({
+      data: maskEntries(req, withAttachments(entries, req.authUserId || req.session.userId)),
+    });
   } catch (err) {
     log.error('', err);
     res.status(500).json({ error: 'Internal error', code: 500 });

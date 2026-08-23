@@ -7,6 +7,38 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A budget entry can share its amount while keeping its purpose private** (discussion #659).
+  `private` and `shared` answered two questions with one word: whether an entry counts towards the
+  totals, and whether it shows its details. On a shared account that is too coarse. Someone booking a
+  private expense usually wants to hide what it was *for*, not that money left the account - and
+  hiding both is exactly why everyone else's balance is then wrong, because the account really does
+  hold less. The third level, "amount only", splits the two apart: the amount counts for everyone in
+  account balances, net worth and every total, while title, category and receipts stay with the
+  owner. Another member sees the row with its date and amount and a neutral placeholder instead of
+  the title. Dropping the row entirely would have been cheaper and is the wrong call: the visible
+  rows would then no longer add up to the displayed balance, which reads as a bug rather than as a
+  promise being kept.
+
+  **The distinction runs through every read path, and it needed two filters instead of one.** One
+  answers "does it count" and treats the new level like `shared`; the other answers "may I see what
+  it was for" and is as strict as `private`. Anything aggregating **by category** needed the second
+  one, because a correct total still leaks the purpose through its breakdown - the monthly summary
+  and the statistics tab therefore file another member's amount-only entries under a neutral
+  collecting bucket rather than under their real category. The CSV export is masked as well;
+  otherwise it would be the most convenient way to read out exactly what the interface hides. In the
+  Inventory module the level behaves like `private` and the entry stays invisible: a link between a
+  booking and an object *is* a statement about what the money was for, and unlike a balance, nothing
+  there adds up wrong when the booking is missing.
+
+  **Deliberately not a household setting.** One config value would have been far cheaper, and it was
+  rejected for a specific reason: whoever flips it removes the guarantee for everyone in the
+  household, including members who wanted it, and an admin could do so unilaterally. A privacy
+  promise a third party can switch off is not one. The choice stays on the individual entry, with the
+  person whose privacy it is. Loans and subscriptions keep their two levels and act through the
+  entries they generate; a value sent to them is rounded down to `private`, never up to `shared`.
+
 ## [2.30.0] - 2026-08-23
 
 ### Added

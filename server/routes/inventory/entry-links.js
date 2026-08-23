@@ -6,9 +6,15 @@
  *        budget-sichtbarkeitsgefiltert) braucht - anders als document-links.js,
  *        das von Budget UND Split-Expenses geteilt wird.
  *
- * Sichtbarkeit exakt wie server/routes/budget/helpers.js#budgetFilter():
+ * Sichtbarkeit wie server/routes/budget/helpers.js#budgetFilter():
  * im 'shared'-Modus (Standard) sieht jede:r alles, erst 'personal' filtert
  * nach visibility/owner_id. Kein Admin-Bypass.
+ *
+ * MIT EINER ABWEICHUNG (#659): fremde 'shared_amount'-Buchungen sind hier
+ * unsichtbar, obwohl ihr Betrag anderswo mitzaehlt. Eine Verknuepfung sagt
+ * aus, WOFUER das Geld war - also genau das, was die Stufe verbirgt - und
+ * anders als bei einem Kontostand fehlt hier keine Summe, wenn die Buchung
+ * wegbleibt. Deshalb budgetDetailsVisibleWhere() statt budgetVisibilityWhere().
  *
  * Erwartete (is_pending) Buchungen sind grundsaetzlich nicht verknuepfbar -
  * nicht nur aus der Summe ausgeschlossen (Design-Doc §5.3), sondern gar nicht
@@ -16,7 +22,7 @@
  */
 
 import * as db from '../../db.js';
-import { resolveBudgetMode, budgetVisibilityWhere } from '../../services/budget-visibility.js';
+import { resolveBudgetMode, budgetDetailsVisibleWhere } from '../../services/budget-visibility.js';
 
 export const ROLES = ['purchase', 'refund', 'instalment', 'maintenance', 'accessory'];
 
@@ -31,7 +37,7 @@ function mode() {
  */
 export function visibleEntry(entryId, userId) {
   const m = mode();
-  const clause = budgetVisibilityWhere('be', '?', { mode: m });
+  const clause = budgetDetailsVisibleWhere('be', '?', { mode: m });
   const params = [entryId];
   if (m === 'personal') params.push(userId);
   return db.get().prepare(`SELECT be.* FROM budget_entries be WHERE be.id = ? AND ${clause}`).get(...params);
@@ -103,7 +109,7 @@ export function loadLinkedEntriesForItems(itemIds, userId) {
   if (!ids.length) return byItem;
 
   const m = mode();
-  const visClause = budgetVisibilityWhere('be', '?', { mode: m });
+  const visClause = budgetDetailsVisibleWhere('be', '?', { mode: m });
   const placeholders = ids.map(() => '?').join(', ');
   const params = [...ids];
   if (m === 'personal') params.push(userId);

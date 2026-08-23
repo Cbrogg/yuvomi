@@ -79,7 +79,19 @@ const SUBCATEGORY_I18N = () => ({
   subscription_other:         t('budget.subcatSubscriptionOther'),
 });
 
+/** Muss mit BUDGET_MASKED_CATEGORY in server/services/budget-visibility.js uebereinstimmen. */
+const MASKED_CATEGORY = '__private__';
+
+/* Reihenfolge = Offenheit, von geschlossen nach offen. 'shared_amount' steht
+ * zwischen den beiden, weil es genau das ist: die halbe Oeffnung (#659).
+ * Muss mit BUDGET_VISIBILITY_VALUES im gleichnamigen Server-Modul uebereinstimmen. */
+const VISIBILITY_LEVELS = ['private', 'shared_amount', 'shared'];
+
 function categoryLabel(category) {
+  // Der Sammel-Bucket fremder 'shared_amount'-Buchungen (#659) ist keine echte
+  // Kategorie und steht in keiner Kategorienliste - er kommt vom Server als
+  // Schluessel, damit die Maske nicht an einer Sprache klebt.
+  if (category === MASKED_CATEGORY) return t('budget.maskedCategory');
   const item = typeof category === 'object'
     ? category
     : [...expenseCategories(), ...incomeCategories()].find((c) => c.key === category);
@@ -999,10 +1011,20 @@ function renderEntries() {
     const sharedBadge = (state.budgetMode === 'personal' && e.visibility === 'shared')
       ? ` <span class="budget-badge budget-badge--shared">${esc(t('budget.householdBadge'))}</span>`
       : '';
+    // Fremde Buchung, die nur ihren Betrag teilt (#659). Die Zeile bleibt
+    // stehen, damit die Summe der Liste den Kontostand ergibt - ohne sie fehlte
+    // im Saldo ein Betrag, den nichts erklaert. Was fehlt, ist der Zweck, und
+    // das sagt die Zeile auch: ein Platzhalter statt eines geleerten Titels,
+    // sonst laese sich die Maske als Datenfehler.
+    const masked = !!e.details_hidden;
+    const maskedBadge = masked
+      ? ` <span class="budget-badge budget-badge--masked">${esc(t('budget.amountOnlyBadge'))}</span>`
+      : '';
+    const displayTitle = masked ? t('budget.maskedEntryTitle') : e.title;
     // Beleg-Marke (#583): zeigt an, dass zu dieser Buchung ein Nachweis liegt.
     // Zählt bewusst nicht mit - die Zahl beantwortet keine Frage, die man vor
     // dem Öffnen der Buchung hat.
-    const receiptCount = e.attachments?.length ?? 0;
+    const receiptCount = masked ? 0 : (e.attachments?.length ?? 0);
     const receiptMark = receiptCount
       ? ` <span class="budget-recur-mark" role="img" aria-label="${esc(t('budget.receiptsAttachedLabel', { count: receiptCount }))}"><i data-lucide="paperclip" class="icon-sm" aria-hidden="true"></i></span>`
       : '';
@@ -1024,20 +1046,29 @@ function renderEntries() {
     // (role=button + tabindex); ein echtes <button> geht nicht, weil der
     // Lösch-Button darin verschachtelt ist. Das aria-label hält den
     // Lösch-Button-Namen aus dem Zeilen-Namen heraus.
-    return `
-      <div class="list-row budget-entry${pending ? ' budget-entry--pending' : ''}" data-id="${e.id}" role="button" tabindex="0"
-           aria-label="${esc(t('budget.editEntry'))}: ${esc(e.title)}, ${amountText}">
-        <div class="budget-entry__indicator ${indClass}"></div>
-        <div class="list-row__main">
-          <div class="list-row__name budget-entry__title">${esc(e.title)}${sharedBadge}${pendingBadge}</div>
-          <div class="list-row__meta budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}${receiptMark}</div>
-        </div>
-        <div class="budget-entry__amount ${amtClass}">${amountText}</div>
-        <div class="list-row__actions">
+    /* Eine maskierte Zeile ist keine Bedienflaeche: es gibt nichts zu oeffnen
+     * (der Server liefert die Felder gar nicht erst mit) und nichts zu
+     * loeschen oder zu bestaetigen - das darf ohnehin nur der Eigentuemer.
+     * Ohne role=button waere sie sonst ein Knopf, der nichts tut. */
+    const rowInteraction = masked
+      ? `aria-label="${esc(t('budget.maskedEntryTitle'))}, ${amountText}"`
+      : `data-id="${e.id}" role="button" tabindex="0"
+           aria-label="${esc(t('budget.editEntry'))}: ${esc(e.title)}, ${amountText}"`;
+    const rowActions = masked ? '' : `
           ${confirmBtn}
           <button class="row-action row-action--danger" data-action="delete" data-id="${e.id}" aria-label="${t('budget.deleteLabel')}">
             <i data-lucide="trash-2" class="icon-md" aria-hidden="true"></i>
-          </button>
+          </button>`;
+
+    return `
+      <div class="list-row budget-entry${pending ? ' budget-entry--pending' : ''}${masked ? ' budget-entry--masked' : ''}" ${rowInteraction}>
+        <div class="budget-entry__indicator ${indClass}"></div>
+        <div class="list-row__main">
+          <div class="list-row__name budget-entry__title">${esc(displayTitle)}${sharedBadge}${maskedBadge}${pendingBadge}</div>
+          <div class="list-row__meta budget-entry__meta">${date} · ${esc(categoryMeta)}${acctMeta}${recurTag}${receiptMark}</div>
+        </div>
+        <div class="budget-entry__amount ${amtClass}">${amountText}</div>
+        <div class="list-row__actions">${rowActions}
         </div>
       </div>
     `;
@@ -1938,12 +1969,14 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
 
     ${state.budgetMode === 'personal' ? `
     <div class="form-group js-entry-field">
-      <label class="toggle">
-        <input type="checkbox" id="bm-shared" ${isEdit && entry.visibility === 'shared' ? 'checked' : ''}>
-        <span class="toggle__track"></span>
-        <span>${t('budget.sharedToggleLabel')}</span>
-      </label>
-      <p class="form-hint">${t('budget.sharedToggleHint')}</p>
+      <label class="form-label" for="bm-visibility">${t('budget.visibilityLabel')}</label>
+      <select class="form-input" id="bm-visibility">
+        ${VISIBILITY_LEVELS.map((level) => `
+          <option value="${level}" ${(isEdit ? entry.visibility : 'shared') === level ? 'selected' : ''}>
+            ${esc(t(`budget.visibility_${level}`))}
+          </option>`).join('')}
+      </select>
+      <p class="form-hint" id="bm-visibility-hint">${esc(t(`budget.visibilityHint_${isEdit ? entry.visibility : 'shared'}`))}</p>
     </div>` : ''}
 
     <div class="js-entry-field">
@@ -2156,6 +2189,18 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
         panel.querySelector('#bm-recurrence-options').hidden = !e.target.checked;
       });
 
+      /* Der Hilfetext gehoert zur gewaehlten Stufe, nicht zum Feld: die drei
+       * Stufen unterscheiden sich in einer Feinheit ("zaehlt mit, zeigt aber
+       * nichts"), die ein einziger Satz unter dem Feld nicht fuer alle drei
+       * gleichzeitig sagen kann (#659). */
+      const visibilitySel = panel.querySelector('#bm-visibility');
+      if (visibilitySel) {
+        visibilitySel.addEventListener('change', () => {
+          panel.querySelector('#bm-visibility-hint').textContent =
+            t(`budget.visibilityHint_${visibilitySel.value}`);
+        });
+      }
+
       // „Alle 2 Wochen" muss beim Umschalten mitwandern (#636): das Wort hinter
       // der Zahl gehört zur Einheit, nicht zum Feld.
       const intervalSel   = panel.querySelector('#bm-interval');
@@ -2231,9 +2276,11 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
             recurrence_confirm: confirmFirst,
           };
           if (accountId !== undefined) body.account_id = accountId;
-          // Sichtbarkeit nur im personal-Modus mitsenden (#476/#505).
-          const sharedEl = panel.querySelector('#bm-shared');
-          if (sharedEl) body.visibility = sharedEl.checked ? 'shared' : 'private';
+          // Sichtbarkeit nur im personal-Modus mitsenden (#476/#505, #659).
+          const visibilityEl = panel.querySelector('#bm-visibility');
+          if (visibilityEl && VISIBILITY_LEVELS.includes(visibilityEl.value)) {
+            body.visibility = visibilityEl.value;
+          }
           // Belege erst hier hochladen, und nur für die Anfragen, die sie auch
           // verarbeiten (#583). Bricht der Nutzer vorher ab, bleibt keine
           // verwaiste Datei im Dokumente-Modul zurück.

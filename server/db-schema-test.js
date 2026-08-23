@@ -157,7 +157,10 @@ const MIGRATIONS_SQL = {
       created_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
       updated_at      TEXT    NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%SZ', 'now')),
       owner_id        INTEGER REFERENCES users(id) ON DELETE SET NULL,
-      visibility      TEXT    NOT NULL DEFAULT 'shared' CHECK (visibility IN ('private', 'shared'))
+      -- Dritte Stufe 'shared_amount' (#659, Migration 156): Betrag zaehlt wie
+      -- 'shared', Details bleiben wie bei 'private' beim Owner.
+      visibility      TEXT    NOT NULL DEFAULT 'shared'
+                              CHECK (visibility IN ('private', 'shared', 'shared_amount'))
     );
     CREATE TABLE IF NOT EXISTS budget_categories (
       key        TEXT PRIMARY KEY,

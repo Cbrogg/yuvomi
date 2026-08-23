@@ -16,7 +16,7 @@ import {
 } from '../services/subscriptions.js';
 import { getRates } from '../services/subscription-rates.js';
 import { findLogoOptions } from '../services/subscription-logo.js';
-import { normalizeBudgetVisibility, budgetVisibilityWhere, canEditEntry, resolveBudgetMode } from '../services/budget-visibility.js';
+import { normalizeObjectVisibility, budgetVisibilityWhere, canEditEntry, resolveBudgetMode } from '../services/budget-visibility.js';
 
 const log = createLogger('Subscriptions');
 const router = express.Router();
@@ -564,7 +564,7 @@ router.post('/', async (req, res) => {
     });
     if (endErrors.length) return res.status(400).json({ error: endErrors.join(' '), code: 400 });
     const me = actorId(req);
-    const visibility = normalizeBudgetVisibility(
+    const visibility = normalizeObjectVisibility(
       req.body.visibility,
       budgetMode() === 'personal' ? 'private' : 'shared'
     );
@@ -604,7 +604,7 @@ router.put('/:id', async (req, res) => {
     const value = (key, fallback) => req.body[key] === undefined ? fallback : req.body[key];
     // Sichtbarkeit umschaltbar; owner_id bleibt fix (#476/#505).
     const nextVisibility = req.body.visibility !== undefined
-      ? normalizeBudgetVisibility(req.body.visibility)
+      ? normalizeObjectVisibility(req.body.visibility)
       : current.visibility;
     // Ende-Bedingung aus zusammengeführten Werten (#594): unbenutzte Felder werden
     // konsequent auf null gesetzt, damit ein Moduswechsel keine Altwerte mitschleppt.

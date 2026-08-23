@@ -8,7 +8,10 @@
 import { readFileSync } from 'node:fs';
 import path from 'path';
 import * as db from '../../db.js';
-import { budgetVisibilityWhere, budgetScopeWhere, canEditEntry, resolveBudgetMode } from '../../services/budget-visibility.js';
+import {
+  budgetVisibilityWhere, budgetScopeWhere, budgetDetailsHiddenWhere, canEditEntry,
+  resolveBudgetMode, maskBudgetEntry, BUDGET_MASKED_CATEGORY,
+} from '../../services/budget-visibility.js';
 import { computeLoanSchedule, remainingPrincipalAfter } from '../../services/loan-amortization.js';
 
 // --------------------------------------------------------
@@ -47,6 +50,39 @@ export function budgetFilter(req, alias, { scoped = true } = {}) {
     if (scope === 'mine') params.push(me); // household-Fragment hat keinen Bind
   }
   return { clause, params };
+}
+
+/**
+ * Kategorie-Ausdruck für Aggregationen (#659). Fremde 'shared_amount'-Einträge
+ * laufen unter einem neutralen Sammel-Bucket statt unter ihrer echten
+ * Kategorie - sonst verriete ausgerechnet die Kategorie-Auswertung den Zweck,
+ * den die Stufe schützt, obwohl der Betrag korrekt mitzählt.
+ *
+ * Der Bind gehört in die SELECT-Liste und damit VOR die WHERE-Binds:
+ *   .all(...categoryExpr.params, from, to, ...filter.params)
+ *
+ * @returns {{ expr: string, params: number[] }}
+ */
+export function budgetCategoryExpr(req, alias) {
+  const mode = getBudgetMode();
+  if (mode !== 'personal') return { expr: `${alias}.category`, params: [] };
+  return {
+    expr: `CASE WHEN ${budgetDetailsHiddenWhere(alias, '?', { mode })}`
+        + ` THEN '${BUDGET_MASKED_CATEGORY}' ELSE ${alias}.category END`,
+    params: [viewerId(req)],
+  };
+}
+
+/**
+ * Maskiert die Zweck-Felder fremder 'shared_amount'-Einträge in einer bereits
+ * geladenen Liste (#659). Betrag, Datum und Konto bleiben stehen; der Saldo
+ * bleibt dadurch aus der Liste nachvollziehbar.
+ */
+export function maskEntries(req, rows) {
+  const mode = getBudgetMode();
+  if (mode !== 'personal') return rows;
+  const me = viewerId(req);
+  return rows.map((row) => maskBudgetEntry(row, me, mode));
 }
 
 /** Prüft Schreib-Berechtigung im personal-Modus; im shared-Modus immer erlaubt. */

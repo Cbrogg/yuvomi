@@ -7,7 +7,7 @@ import express from 'express';
 import { createLogger } from '../../logger.js';
 import * as db from '../../db.js';
 import { str, num, date as validateDate, month as validateMonth, collectErrors, MAX_TITLE, MAX_SHORT } from '../../middleware/validate.js';
-import { normalizeBudgetVisibility } from '../../services/budget-visibility.js';
+import { normalizeObjectVisibility } from '../../services/budget-visibility.js';
 import { computeLoanSchedule, MAX_LOAN_MONTHS } from '../../services/loan-amortization.js';
 import {
   budgetFilter, mayEdit, getBudgetMode, loanSummaryRow, loadLoan, refreshLoanStatus, cents,
@@ -338,7 +338,7 @@ router.post('/loans', (req, res) => {
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
     const me = req.authUserId || req.session.userId;
-    const visibility = normalizeBudgetVisibility(
+    const visibility = normalizeObjectVisibility(
       req.body.visibility,
       getBudgetMode() === 'personal' ? 'private' : 'shared'
     );

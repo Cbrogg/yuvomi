@@ -165,7 +165,8 @@
  * Vordergrundfarbe (in Light dunkler, in Dark heller) — so bleibt der Kontrast
  * theme-übergreifend ≥4.5:1 (reiner Akzent ergab in Light nur ~4.1:1). Kein
  * hardcodierter Wert. */
-.budget-badge--shared {
+.budget-badge--shared,
+.budget-badge--masked {
   display: inline-block;
   vertical-align: middle;
   margin-inline-start: var(--space-1);
@@ -177,6 +178,18 @@
   color: var(--color-text-secondary);
   background: var(--color-fill-well);
   white-space: nowrap;
+}
+
+/* „Nur Betrag" an fremden Buchungen, die ihren Zweck verbergen (#659). Teilt
+ * die Pille des Haushalt-Badges, weil es dasselbe tut: ZUORDNEN, welcher Art
+ * diese Zeile ist. Kein Warnton - hier ist nichts schiefgegangen, die Zeile
+ * hält sich nur an eine Abmachung.
+ *
+ * Der Titel ist an dieser Zeile ein Platzhalter und kein Name, deshalb tritt
+ * er auf die sekundäre Textfarbe zurück. Betrag und Datum bleiben im vollen
+ * Ton: sie sind der Grund, warum die Zeile überhaupt dasteht. */
+.budget-entry--masked .budget-entry__title {
+  color: var(--color-text-secondary);
 }
 
 /* Erwartete, noch nicht bestätigte Buchung (#637). Die Zeile steht in der
