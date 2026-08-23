@@ -95,13 +95,24 @@ test('mindestens die drei bekannten Seiten mit lokalisierten Kategorien werden e
   }
 });
 
+/* EIN AUSWAHLFELD IST NICHT IMMER EIN <option> (#814). Die Uebersicht bietet
+ * die Aufgaben-Kategorien als Checkbox-Liste an - dieselbe Sorte Beschriftung,
+ * dieselbe Falle, aber ein anderes Tag. Die erste Fassung suchte woertlich nach
+ * <option> und meldete die neue Seite als "Muster greift nicht mehr": richtig
+ * alarmiert, falsch begruendet.
+ *
+ * Gesucht wird deshalb der TRAEGER DES SCHLUESSELS - `value="${esc(x.key)}"` -
+ * und die Beschriftung bis zum Ende seines Elements. Das deckt <option> wie
+ * <label> ab und faellt beim naechsten Tag nicht wieder um. */
+const CATEGORY_CONTROL_RE = /value="\$\{esc\((\w+)\.key\)\}"([\s\S]*?)<\/(?:option|label)>/g;
+
 for (const { file, src } of localizedPages) {
-  test(`${file}: kein <option>-Label kommt roh aus .name`, () => {
-    const options = [...src.matchAll(/<option\s+value="\$\{esc\((\w+)\.key\)\}"[^>]*>([\s\S]*?)<\/option>/g)];
-    assert.ok(options.length > 0, `keine Kategorie-Options in ${file} gefunden - das Muster greift nicht mehr`);
-    for (const [, variable, label] of options) {
+  test(`${file}: kein Kategorie-Label kommt roh aus .name`, () => {
+    const controls = [...src.matchAll(CATEGORY_CONTROL_RE)];
+    assert.ok(controls.length > 0, `keine Kategorie-Auswahl in ${file} gefunden - das Muster greift nicht mehr`);
+    for (const [, variable, label] of controls) {
       assert.ok(!new RegExp(`\\b${variable}\\.name\\b`).test(label),
-        `${file}: die Option liest ihr Label direkt aus ${variable}.name - bei einer Seed-Kategorie `
+        `${file}: die Auswahl liest ihr Label direkt aus ${variable}.name - bei einer Seed-Kategorie `
         + 'ist name NULL und die Beschriftung bleibt leer (#783). Ueber den Label-Resolver gehen.');
     }
   });
