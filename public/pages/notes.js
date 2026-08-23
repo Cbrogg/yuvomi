@@ -550,7 +550,14 @@ function openNoteModal({ mode, note = null }) {
   openSharedModal({
     title: isEdit && note.title && note.title.trim() ? note.title : (isEdit ? t('notes.viewNote') : t('notes.newNote')),
     content,
-    size: 'md',
+    // 'lg' statt 'md' (#826): eine Notiz ist fast nur Textflaeche und bekam
+    // dieselbe Breite wie ein Formular aus vier kurzen Feldern. Das ist der
+    // Dialog, der einheitlich ist, wo er es nicht sein sollte. 'lg' (680px) ist
+    // dabei die Groesse, die das Haus fuer inhaltsreiche Dialoge schon fuehrt
+    // (Dokumente, Kontakte, Einkauf, Budget) - keine neue Zahl. 'xl' waere zu
+    // weit: bei 960px wird die Zeile zum Lesen wie zum Schreiben zu lang, und
+    // die Leseansicht derselben Notiz haengt an derselben Breite.
+    size: 'lg',
     onSave(panel) {
       // Reader/Editor-Umschalter (#507): beide Panes bleiben im DOM, damit
       // Dirty-Check und Feld-Verdrahtung intakt bleiben und der Toggle nichts
