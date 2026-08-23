@@ -7,6 +7,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.32.0] - 2026-08-23
+
+### Added
+
+- **The MCP tool `list_tasks` takes an `include_future` flag** (discussion #825). It is off by
+  default, which is the point: the tool now selects exactly what the app shows, so an automation is
+  no longer told about a task that will not start for another week. Set it to `true` to get the
+  scheduled ones as well. The name matches the query parameter `GET /api/v1/tasks` has always had,
+  rather than inventing a second word for the same axis.
+
 ### Fixed
 
 - **The overview now selects the same tasks as the Tasks module** (discussion #825). Both answer the

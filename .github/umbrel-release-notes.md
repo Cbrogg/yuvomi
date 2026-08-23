@@ -1,4 +1,4 @@
-<!-- version: 2.31.0 -->
+<!-- version: 2.32.0 -->
 <!--
   Die `releaseNotes` fuer den Umbrel-App-Store, von Hand fuer JEDEN Release
   geschrieben. `umbrel-publish.yml` nimmt den Text unter diesem Kommentar
@@ -45,8 +45,8 @@
       dem Merge uebersetzt - genau die Handarbeit, die er sich mit seiner
       Bitte ersparen wollte.
 -->
-This update adds a third way to file a budget entry: share the amount, but keep the purpose to yourself. Until now an entry was either private, which hid it from everyone else and left their account balance short by that amount, or shared with everything on it. The new setting counts the amount towards everybody's account balance and the household's net worth, while the title, the category and any receipts stay with you. The others see the row with its date and its amount and a neutral placeholder where the title would be, so the balance still adds up to what the list shows. You pick this per entry, alongside private and shared.
+The overview now shows the same tasks as the Tasks module does. Subtasks used to turn up there as rows of their own, without the task they belong to, and anything scheduled to start next week was already sitting in the list today. Both are gone, and the counts above the list follow the same rule, so a tile and the rows beneath it no longer disagree about how much is open.
 
-Nothing changes for entries you already have, and the setting only appears if your household runs Budget in its personal mode, where each member owns their own entries.
+If you have connected an AI assistant to Yuvomi, its task listing follows the same rule now and stops reporting work that has not started yet. Ask for the scheduled ones explicitly when you do want to see them.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.31.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.32.0
