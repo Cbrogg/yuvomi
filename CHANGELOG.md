@@ -30,6 +30,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   already has. MCP tools build their own queries and never pass through Express, so no path guard
   covers them - that is the same route by which the visibility check (#474) once went missing there.
 
+  **The test schema mirror turned out to be mislabelled**, found while adding an entry to it for this
+  fix. `server/db-schema-test.js` hands test suites individual migrations by version number, and
+  seven of them carried the wrong one: keys 15 through 21 held the contents of 22 through 28, a
+  straight offset. No suite used any of the seven, so nothing was ever red - whoever had picked one
+  up would have got a schema they did not ask for. The numbers are corrected and
+  `npm run test:schema-mirror` holds the mapping in place. It checks the weaker, workable claim
+  rather than equality: an entry may not touch an object its migration does not touch. The mirror is
+  deliberately an extract - it omits what a test database does not need - so a strict comparison
+  would have needed more exceptions than it was worth.
+
   Deliberately left in the module: status, priority, person, category, tags and the archive axis
   (#688). Those are a viewer's wishes about a list, not a statement about what a list may contain at
   all. Only the two rules both sides need, and disagreed on, are shared.

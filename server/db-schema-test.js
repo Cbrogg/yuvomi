@@ -3,9 +3,27 @@
  * Zweck: SQL-Strings aus MIGRATIONS für node:sqlite-Tests exportieren.
  *        Nur für Testzwecke - db.js nutzt die MIGRATIONS direkt intern.
  * Abhängigkeiten: keine
+ *
+ * WAS DIESE DATEI IST, UND WAS NICHT: ein AUSZUG, kein Schema. Eine Testsuite
+ * fährt nicht alle Migrationen, sondern `MIGRATIONS_SQL[1]` und dazu die
+ * einzelnen späteren, die sie braucht. Ein Eintrag lässt deshalb weg, was eine
+ * Testdatenbank nicht braucht, und `1` ist gar nicht die Migration von damals,
+ * sondern das Grundschema mit einigen später ergänzten Spalten (`locked`,
+ * `archived_at`, `visibility`) bereits eingearbeitet - `start_date` (v41) etwa
+ * ist NICHT darin.
+ *
+ * DIE FOLGE, an der man sonst hängenbleibt: erweitert man eine Abfrage in
+ * `server/` um ein Feld, das nach v1 dazukam, scheitert irgendeine fremde Suite
+ * mit `no such column` - an einer Stelle, die mit ihrem Prüfzweck nichts zu tun
+ * hat. Dann gehört die zugehörige Migration in die betroffene Testdatei, nicht
+ * die Spalte in den Eintrag `1`.
+ *
+ * Die Schlüssel sind Migrations-VERSIONEN. Das war sieben Einträge lang nicht
+ * so: 15 bis 21 trugen den Inhalt von 22 bis 28, und weil niemand sie fuhr,
+ * fiel es nie auf. `npm run test:schema-mirror` hält die Zuordnung jetzt fest.
  */
 
-// SQL-String für Migration v1 (gespiegelt aus db.js MIGRATIONS[0].up)
+// Grundschema (Migration v1, plus einzelne später ergänzte Spalten - siehe oben).
 // Änderungen in db.js MIGRATIONS müssen hier synchron gehalten werden.
 const MIGRATIONS_SQL = {
   1: `
@@ -401,10 +419,10 @@ const MIGRATIONS_SQL = {
   14: `
     ALTER TABLE calendar_events ADD COLUMN icon TEXT NOT NULL DEFAULT 'calendar';
   `,
-  15: `
+  22: `
     UPDATE calendar_events SET icon = 'drill' WHERE icon = 'tooth';
   `,
-  16: `
+  23: `
     ALTER TABLE contacts ADD COLUMN family_user_id INTEGER REFERENCES users(id) ON DELETE CASCADE;
     CREATE UNIQUE INDEX IF NOT EXISTS idx_contacts_family_user
       ON contacts(family_user_id) WHERE family_user_id IS NOT NULL;
@@ -420,10 +438,10 @@ const MIGRATIONS_SQL = {
       SELECT 1 FROM contacts WHERE contacts.family_user_id = users.id
     );
   `,
-  17: `
+  24: `
     UPDATE calendar_events SET icon = 'tooth' WHERE icon = 'drill';
   `,
-  18: `
+  25: `
     CREATE TABLE tasks_new (
       id              INTEGER PRIMARY KEY AUTOINCREMENT,
       title           TEXT    NOT NULL,
@@ -454,7 +472,7 @@ const MIGRATIONS_SQL = {
     CREATE INDEX IF NOT EXISTS idx_tasks_assigned       ON tasks(assigned_to);
     CREATE INDEX IF NOT EXISTS idx_tasks_parent         ON tasks(parent_task_id);
   `,
-  19: `
+  26: `
     CREATE TABLE IF NOT EXISTS family_documents (
       id               INTEGER PRIMARY KEY AUTOINCREMENT,
       name             TEXT    NOT NULL,
@@ -493,13 +511,13 @@ const MIGRATIONS_SQL = {
     CREATE INDEX IF NOT EXISTS idx_family_documents_created_by ON family_documents(created_by);
     CREATE INDEX IF NOT EXISTS idx_family_document_access_user ON family_document_access(user_id);
   `,
-  20: `
+  27: `
     ALTER TABLE calendar_events ADD COLUMN attachment_name TEXT;
     ALTER TABLE calendar_events ADD COLUMN attachment_mime TEXT;
     ALTER TABLE calendar_events ADD COLUMN attachment_size INTEGER;
     ALTER TABLE calendar_events ADD COLUMN attachment_data TEXT;
   `,
-  21: `
+  28: `
     CREATE TABLE IF NOT EXISTS budget_loans (
       id                INTEGER PRIMARY KEY AUTOINCREMENT,
       title             TEXT    NOT NULL,
