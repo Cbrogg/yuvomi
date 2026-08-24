@@ -187,6 +187,7 @@ function makeDb() {
     CREATE UNIQUE INDEX idx_password_resets_hash ON password_resets(token_hash);
     CREATE TABLE contacts (id INTEGER PRIMARY KEY AUTOINCREMENT,
       family_user_id INTEGER, email TEXT);
+    CREATE TABLE split_expense_guest_users (user_id INTEGER PRIMARY KEY);
   `);
   // alice hat ein echtes Passwort, sso hat nur den Platzhalter - beide mit
   // hinterlegter Adresse, damit der Reset an ihnen nicht schon daran scheitert.
@@ -198,6 +199,11 @@ function makeDb() {
     .run('sso', OIDC_PASSWORD_SENTINEL, 'sub-linked-847');
   db.prepare("INSERT INTO contacts (family_user_id, email) VALUES (1, 'alice@test')").run();
   db.prepare("INSERT INTO contacts (family_user_id, email) VALUES (2, 'sso@test')").run();
+  // Ein Gast aus den geteilten Ausgaben: externes Konto mit echtem Passwort,
+  // das der Schalter nicht mitnehmen darf.
+  db.prepare("INSERT INTO users (id, username, password_hash) VALUES (3,'gast','$2b$12$fakehash')").run();
+  db.prepare('INSERT INTO split_expense_guest_users (user_id) VALUES (3)').run();
+  db.prepare("INSERT INTO contacts (family_user_id, email) VALUES (3, 'gast@test')").run();
   return db;
 }
 
@@ -312,6 +318,44 @@ test('ein ausgestellter Token laeuft ins Leere, wenn die Passwort-Anmeldung abge
     'das bestehende Passwort bleibt unangetastet');
 });
 
+test('ein Gast aus den geteilten Ausgaben behaelt seinen Reset', async () => {
+  // Der Schalter gilt dem HAUSHALT. Ein Split-Gast ist eine externe Person, die
+  // ein Admin mit vergebenem Passwort anlegt und die im Identitaetsanbieter des
+  // Haushalts nichts zu suchen hat - ein globaler Riegel haette diese Konten
+  // stumm unbrauchbar gemacht, samt der bereits bestehenden (Review zu #849).
+  const db = makeDb();
+  const { app, sent } = await makeAuthApp(db);
+  await withOidc({ AUTH_ALLOW_PASSWORD_LOGIN: 'false' }, async () => {
+    await callJson(app, 'POST', '/auth/forgot-password', { identifier: 'gast' });
+  });
+  assert.equal(sent.length, 1, 'der Gast muss seinen Link bekommen');
+  assert.equal(sent[0].to, 'gast@test');
+});
+
+test('das Haushaltsmitglied bekommt im selben Zustand keinen', async () => {
+  // Gegenprobe zum Test darueber - ohne sie belegt er nur, dass irgendetwas
+  // durchgeht.
+  const db = makeDb();
+  const { app, sent } = await makeAuthApp(db);
+  await withOidc({ AUTH_ALLOW_PASSWORD_LOGIN: 'false' }, async () => {
+    await callJson(app, 'POST', '/auth/forgot-password', { identifier: 'alice' });
+  });
+  assert.equal(sent.length, 0);
+});
+
+test('auch der zweite Fail-open-Zustand meldet sich beim Start', () => {
+  // Er ist der ERWARTETE Zustand einer frischen Installation, sieht von aussen
+  // aber aus wie der eingeschaltete Riegel. Ohne Hinweis haelt der Betreiber
+  // das Formular fuer zu, waehrend es offen steht.
+  withOidc({ AUTH_ALLOW_PASSWORD_LOGIN: 'false' }, () => {
+    const warning = passwordLoginWarning({ hasLinkedSsoAccount: false });
+    assert.ok(warning, 'ohne Warnung ist der Zustand von aussen nicht erkennbar');
+    assert.match(warning, /no account is linked/);
+    assert.equal(passwordLoginWarning({ hasLinkedSsoAccount: true }), null,
+      'greift der Riegel wirklich, gibt es nichts zu melden');
+  });
+});
+
 // ─── Die Regeln an ihren Quellen ─────────────────────────────────────────────
 //
 // Diese drei pruefen den Code selbst. Die Routen dahinter haengen an Session
@@ -409,6 +453,39 @@ test('die Sichtbarkeit von sso_only haengt am geltenden Zugang, nicht an der Ses
   assert.match(body, /const isAdmin = req\.authRole === 'admin'/);
   assert.doesNotMatch(body, /req\.session\?\.role/,
     'die Session ist hier die falsche Quelle');
+});
+
+test('die Doppelpruefung der Adresse folgt exakt dem Linker', () => {
+  // Eine engere Pruefung waere schlimmer als keine: sie gaebe gruenes Licht fuer
+  // genau die Faelle, an denen der Linker spaeter scheitert - andere
+  // Schreibweise, oder dieselbe Adresse als ZWEITadresse eines anderen
+  // Mitglieds. Das Konto stuende dann ohne Passwort und ohne Verknuepfung da.
+  const start = authSrc.indexOf('function assertSsoOnlyAllowed');
+  const body = authSrc.slice(start, authSrc.indexOf('\n}', start));
+  assert.match(body, /lower\(c\.email\) = lower\(\?\) OR lower\(ce\.value\) = lower\(\?\)/,
+    'die Clash-Pruefung kennt weder lower() noch die Zweitadressen');
+  assert.match(body, /LEFT JOIN contact_emails/);
+});
+
+test('der Reset wird nicht beworben, wenn es kein Passwort mehr gibt', () => {
+  // Sind ALLE Konten per Umschalter auf SSO gestellt, ist der Link eine
+  // Sackgasse - auch wenn SMTP und BASE_URL stehen.
+  //
+  // Geprueft wird die ZUWEISUNG, nicht das Vorkommen: die erste Fassung dieses
+  // Guards suchte nur nach `hasResettable` irgendwo in der Datei und blieb
+  // gruen, als die Gegenprobe den Term aus der Bedingung nahm - die Definition
+  // stand ja noch da. Ein Guard ueber eine Zeile deckt eine Zeile ab, keine
+  // Regel.
+  const index = readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
+  // Die BERECHNUNG, nicht die Initialisierung: `let passwordResetEnabled = false`
+  // steht davor und haette den Guard mit dem Wert `false` zufriedengestellt.
+  const start = index.indexOf('passwordResetEnabled = isPasswordLoginEnabled');
+  assert.ok(start > 0, 'die Berechnung ist nicht mehr auffindbar');
+  const expr = index.slice(start, index.indexOf(';', start));
+  assert.match(expr, /hasResettable/,
+    'die Reset-Faehigkeit haengt nicht davon ab, ob es ueberhaupt ein Passwort gibt');
+  assert.match(index, /password_hash != \?/,
+    '/version prueft nicht, ob ueberhaupt ein Konto ein Passwort hat');
 });
 
 test('die Anmeldeseite fragt beide Wege in EINEM Aufruf ab', () => {

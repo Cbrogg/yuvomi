@@ -114,12 +114,23 @@ export function isPasswordLoginEnabled({ hasLinkedSsoAccount = true } = {}) {
  * Betreiber glaubt, das Formular sei zu, und es ist offen.
  * @returns {string|null}
  */
-export function passwordLoginWarning() {
+export function passwordLoginWarning({ hasLinkedSsoAccount = true } = {}) {
   if (process.env.AUTH_ALLOW_PASSWORD_LOGIN !== 'false') return null;
-  if (isOidcEnabled()) return null;
-  return 'AUTH_ALLOW_PASSWORD_LOGIN=false is ignored because OIDC is not fully configured '
-    + '(OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_REDIRECT_URI). '
-    + 'Password login stays enabled - otherwise nobody could sign in.';
+  if (!isOidcEnabled()) {
+    return 'AUTH_ALLOW_PASSWORD_LOGIN=false is ignored because OIDC is not fully configured '
+      + '(OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_REDIRECT_URI). '
+      + 'Password login stays enabled - otherwise nobody could sign in.';
+  }
+  // Der zweite Fail-open-Zustand braucht dieselbe Meldung wie der erste. Er ist
+  // der ERWARTETE Zustand einer frischen Installation, aber von aussen sieht er
+  // aus wie der eingeschaltete Riegel - und ohne Hinweis haelt der Betreiber
+  // das Anmeldeformular fuer zu, waehrend es offen steht.
+  if (!hasLinkedSsoAccount) {
+    return 'AUTH_ALLOW_PASSWORD_LOGIN=false has no effect yet because no account is linked to '
+      + 'the OIDC provider. Password login stays enabled until somebody signs in through SSO '
+      + 'at least once - otherwise nobody could sign in at all.';
+  }
+  return null;
 }
 
 /**

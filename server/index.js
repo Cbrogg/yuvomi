@@ -32,7 +32,7 @@ import { startScheduler as startPushScheduler } from './services/push-scheduler.
 import { startScheduler as startMedicationScheduler } from './services/medication-scheduler.js';
 import { startScheduler as startRecipeProviderScheduler } from './services/recipe-provider-sync.js';
 import { emailService } from './services/email.js';
-import { passwordLoginWarning } from './services/oidc.js';
+import { passwordLoginWarning, OIDC_PASSWORD_SENTINEL } from './services/oidc.js';
 import dashboardRouter from './routes/dashboard.js';
 import tasksRouter from './routes/tasks.js';
 import shoppingRouter from './routes/shopping.js';
@@ -259,7 +259,14 @@ function buildVersionPayload(includeVersion = false) {
   // gar nicht erst erscheinen - die Routen weisen ihn ohnehin ab.
   let passwordResetEnabled = false;
   try {
+    // Drei Bedingungen, und die dritte ist neu: sind ALLE Konten auf SSO
+    // umgestellt, gibt es kein Passwort mehr, das ein Reset zuruecksetzen
+    // koennte - der Link waere eine Sackgasse, obwohl SMTP steht. Die Abfrage
+    // haelt bei der ersten Zeile an.
+    const hasResettable = !!db.get()
+      .prepare('SELECT 1 FROM users WHERE password_hash != ? LIMIT 1').get(OIDC_PASSWORD_SENTINEL);
     passwordResetEnabled = isPasswordLoginEnabled()
+      && hasResettable
       && emailService.isConfigured()
       && Boolean(String(process.env.BASE_URL || '').trim());
   } catch {
@@ -570,8 +577,13 @@ app.listen(PORT, () => {
   logYuvomi.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
 
   // Ein Sicherheitsschalter, der still nicht greift, ist schlimmer als keiner:
-  // der Betreiber glaubt, das Anmeldeformular sei zu (#847).
-  const loginWarning = passwordLoginWarning();
+  // der Betreiber glaubt, das Anmeldeformular sei zu (#847). Beide Fail-open-
+  // Zustaende melden sich, auch der erwartete einer frischen Installation.
+  let linkedSso = true;
+  try {
+    linkedSso = !!db.get().prepare('SELECT 1 FROM users WHERE oidc_sub IS NOT NULL LIMIT 1').get();
+  } catch { /* ohne Antwort lieber keine falsche Entwarnung */ }
+  const loginWarning = passwordLoginWarning({ hasLinkedSsoAccount: linkedSso });
   if (loginWarning) logYuvomi.warn(loginWarning);
 
   // Erster Sync nach 10 Sekunden (warten bis DB vollständig initialisiert)

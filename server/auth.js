@@ -858,21 +858,33 @@ export function isPasswordLoginEnabled(database = null) {
 }
 
 /**
+ * Ist dieses Konto ein Gast aus den geteilten Ausgaben? (#847)
+ *
+ * Solche Konten legt ein Admin fuer externe Personen an - Mitfahrer, Freunde,
+ * Nachbarn - und vergibt ihnen dabei ein Passwort. Sie gehoeren nicht zum
+ * Haushalt und tauchen in dessen Identitaetsanbieter nicht auf, also nimmt
+ * `AUTH_ALLOW_PASSWORD_LOGIN` sie nicht mit.
+ *
+ * @param {number} userId
+ * @returns {boolean}
+ */
+function isSplitExpenseGuest(userId, database = null) {
+  try {
+    return !!(database || db.get())
+      .prepare('SELECT 1 FROM split_expense_guest_users WHERE user_id = ?').get(userId);
+  } catch {
+    // Fehlt die Tabelle (aeltere Testschemata), gibt es auch keine Gaeste.
+    return false;
+  }
+}
+
+/**
  * POST /api/v1/auth/login
  * Body: { username: string, password: string }
  * Response: { user: { id, username, display_name, avatar_color, role, family_role } }
  */
 router.post('/login', loginLimiter, async (req, res) => {
   try {
-    // Wer die eingebaute Anmeldung abgeschaltet hat, hat sie damit auch fuer
-    // alles abgeschaltet, was das Formular umgeht (#847). Der Riegel sitzt
-    // deshalb an der Route und nicht nur an der Oberflaeche - eine Regel, die
-    // nur die Anmeldeseite kennt, ist keine Regel, sondern eine Bitte.
-    if (!isPasswordLoginEnabled()) {
-      log.warn('Login rejected: password login is disabled', { ip: req.ip });
-      return res.status(403).json({ error: 'Password login is disabled.', code: 403 });
-    }
-
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -916,6 +928,25 @@ router.post('/login', loginLimiter, async (req, res) => {
     if (isStaff) {
       log.warn('Login blocked for housekeeping staff account', { ip: req.ip, username });
       return res.status(403).json({ error: 'This account cannot sign in.', code: 403 });
+    }
+
+    // Wer die eingebaute Anmeldung abgeschaltet hat, hat sie auch fuer alles
+    // abgeschaltet, was das Formular umgeht (#847) - eine Regel, die nur die
+    // Anmeldeseite kennt, ist keine Regel, sondern eine Bitte.
+    //
+    // Der Schalter gilt aber dem HAUSHALT, und ein Gast aus den geteilten
+    // Ausgaben ist keiner: er ist eine externe Person, die der Admin mit einem
+    // vergebenen Passwort anlegt und die im Identitaetsanbieter des Haushalts
+    // nichts zu suchen hat. Ein globaler Riegel haette diese Konten stumm
+    // unbrauchbar gemacht, samt der bereits bestehenden.
+    //
+    // Steht hier und nicht am Anfang der Route, weil die Entscheidung das Konto
+    // kennen muss - und weil eine Ablehnung VOR der Passwortpruefung verraten
+    // haette, welche Benutzernamen es gibt. Dieselbe Reihenfolge wie beim
+    // Ausschluss darueber: erst die Zugangsdaten, dann die Berechtigung.
+    if (!isPasswordLoginEnabled() && !isSplitExpenseGuest(user.id)) {
+      log.warn('Login rejected: password login is disabled', { ip: req.ip, username });
+      return res.status(403).json({ error: 'Password login is disabled.', code: 403 });
     }
 
     // Zweiter Faktor (#672): das Passwort stimmt, die Sitzung entsteht aber
@@ -997,7 +1028,8 @@ export function buildResetRoutes(targetRouter, {
       // gehen auch die beiden neuen Gruende (#847) durch dieselbe Antwort -
       // ein eigener Statuscode fuer "dieses Konto hat kein Passwort" wuerde
       // verraten, welche Konten per SSO gefuehrt werden.
-      if (userId && isPasswordLoginEnabled(getDb()) && hasResettablePassword(userId)
+      if (userId && (isPasswordLoginEnabled(getDb()) || isSplitExpenseGuest(userId, getDb()))
+          && hasResettablePassword(userId)
           && emailService.isConfigured()) {
         const to = emailFor(userId);
         // Reset links MUST use an explicitly configured, trusted origin.
@@ -1045,7 +1077,8 @@ export function buildResetRoutes(targetRouter, {
       // haben (#847). Ein noch gueltiger Token darf diese Entscheidung nicht
       // ueberholen. Bewusst dieselbe Meldung wie ein ungueltiger Token: der
       // Unterschied ginge sonst an jemanden, der das Konto nicht besitzt.
-      if (!isPasswordLoginEnabled(getDb()) || !hasResettablePassword(userId)) {
+      if ((!isPasswordLoginEnabled(getDb()) && !isSplitExpenseGuest(userId, getDb()))
+          || !hasResettablePassword(userId)) {
         resetService.consumeToken(token);
         return res.status(400).json({ error: 'Invalid or expired token.', code: 400 });
       }
@@ -2157,11 +2190,23 @@ function assertSsoOnlyAllowed(ssoOnly, password, { linked = false, email = null,
   }
   // Und sie muss dieses eine Konto meinen: `findOrCreateOidcUser` verknuepft
   // nur bei GENAU einem Treffer und laesst zwei Kandidaten unangetastet.
+  //
+  // Die Bedingung ist bewusst dieselbe wie dort - `lower()` UND die
+  // Zweitadressen aus `contact_emails`. Eine engere Pruefung hier waere
+  // schlimmer als keine: sie gaebe gruenes Licht fuer genau die Faelle, an
+  // denen der Linker spaeter scheitert (andere Gross-/Kleinschreibung, oder
+  // dieselbe Adresse als Zweitadresse eines anderen Mitglieds), und das Konto
+  // stuende dann ohne Passwort und ohne Verknuepfung da.
   const clash = db.get().prepare(`
-    SELECT 1 FROM contacts
-    WHERE email = ? AND family_user_id IS NOT NULL AND family_user_id IS NOT ?
+    SELECT 1
+    FROM users u
+    JOIN contacts c ON c.family_user_id = u.id
+    LEFT JOIN contact_emails ce ON ce.contact_id = c.id
+    WHERE u.id IS NOT ?
+      AND u.oidc_sub IS NULL
+      AND (lower(c.email) = lower(?) OR lower(ce.value) = lower(?))
     LIMIT 1
-  `).get(address, excludeUserId);
+  `).get(excludeUserId, address, address);
   if (clash) {
     return 'This email address already belongs to another member, so SSO could not tell the accounts apart.';
   }
