@@ -2439,27 +2439,125 @@ test('verborgene Reveal-Aktionen bleiben nicht klickbar', () => {
 });
 
 /**
- * Die Küche baut Leerzustände nur über den geteilten Renderer.
+ * KEINE Seite baut Leerzustände von Hand - app-weit, nicht nur die Küche.
  *
  * `utils/empty-state.js` erzwingt Reihenfolge (Icon, Titel, Beschreibung,
- * Hinweis, CTA) und die ARIA-Rolle je Variante. Solange Seiten das Markup
- * daneben von Hand zusammensetzen, driften die Zustände wieder auseinander -
- * genau das war der Ausgangsbefund (drei Grammatiken, drei vertikale Achsen).
+ * Hinweis, CTA), die Überschriften-Semantik des Titels und die ARIA-Rolle je
+ * Variante. Solange Seiten das Markup daneben von Hand zusammensetzen, driften
+ * die Zustände wieder auseinander - genau das war der Ausgangsbefund (drei
+ * Grammatiken, drei vertikale Achsen).
  *
- * Absichtlich auf die Küche begrenzt: die übrigen 15 Seiten bauen ihre
- * Leerzustände noch von Hand (152 Fundstellen, Stand 2026-07-30). Das ist ein
- * bekannter Rückstand, kein Regressionsrisiko - dieser Guard hält fest, was
- * bereits migriert ist.
+ * Vorgeschichte dieses Guards: Er stand von 2026-07-30 bis 2026-08-24 auf einer
+ * Allowlist der vier Küchen-Seiten, mit dem Vermerk „die übrigen 15 Seiten
+ * bauen ihre Leerzustände noch von Hand (152 Fundstellen)". Eine Allowlist
+ * deckt die Dateien ab, die schon in Ordnung sind, und schweigt über die
+ * anderen - der Rückstand war grün. Beim Ausrollen fand sich in diesen 15
+ * Seiten: 52 handgebaute Zustände, davon **keiner einzige** mit `role`, 48 mit
+ * einem `<div>` statt einer Überschrift als Titel, und vier Ladefehler ohne
+ * jeden Ausweg. Deshalb ist die Regel jetzt die Regel und nicht die Liste.
+ *
+ * Geprüft wird der CONTAINER (`class="empty-state"`), nicht die Teilklassen.
+ * `empty-state__icon` allein ist erlaubt: die Dashboard-Kacheln führen mit
+ * `.widget__empty` bewusst eine eigene, kleinere Grammatik und teilen sich nur
+ * das Icon-Format.
  */
-test('die Küchen-Seiten bauen Leerzustände nur über den geteilten Renderer', () => {
-  for (const page of ['meals', 'recipes', 'shopping', 'pantry']) {
-    const src = read(`../public/pages/${page}.js`);
-    const handRolled = [...src.matchAll(/class="empty-state|className\s*=\s*['"]empty-state/g)];
-    assert.equal(handRolled.length, 0,
-      `${page}.js baut .empty-state-Markup von Hand (${handRolled.length}x) statt emptyStateEl()/mountEmptyState() zu rufen`);
-    assert.match(src, /\b(mountEmptyState|emptyStateEl)\b/,
-      `${page}.js ruft den geteilten Leerzustands-Renderer nicht auf`);
+test('keine Seite baut .empty-state-Markup von Hand', () => {
+  // Der Renderer selbst ist die eine Stelle, an der das Markup entstehen darf.
+  const RENDERER = '../public/utils/empty-state.js';
+  const offenders = [];
+  for (const file of walkFrontendFiles('../public/')) {
+    if (file === RENDERER || file.startsWith('../public/vendor/')) continue;
+    const src = read(file);
+    const hits = [
+      ...src.matchAll(/class="empty-state(?:["\s])/g),
+      ...src.matchAll(/className\s*=\s*['"]empty-state(?:['"\s])/g),
+    ];
+    if (hits.length) offenders.push(`${file} (${hits.length}x)`);
   }
+  assert.deepEqual(offenders, [],
+    'Leerzustands-Markup von Hand statt emptyStateEl()/emptyStateHTML()/mountEmptyState():\n'
+    + offenders.join('\n'));
+});
+
+/**
+ * Der Renderer ist die einzige Quelle der Grammatik - auch für die String-Form.
+ *
+ * `emptyStateHTML()` ist bewusst `emptyStateEl(...).outerHTML` und keine zweite
+ * Komposition. Eine parallele String-Fassung wäre exakt der Mechanismus, der
+ * die Zustände überhaupt auseinanderlaufen liess: zwei Stellen, die dasselbe
+ * bauen, halten nie lange dasselbe.
+ */
+test('die String-Ausgabe des Leerzustands leitet sich aus der Element-Fassung ab', () => {
+  const src = read('../public/utils/empty-state.js');
+  assert.match(src, /export function emptyStateHTML[\s\S]{0,600}?return emptyStateEl\(opts\)\.outerHTML;/,
+    'emptyStateHTML() baut eigenes Markup statt emptyStateEl() zu serialisieren');
+  assert.match(src, /export function emptyHintHTML[\s\S]{0,300}?return emptyHintEl\(text, opts\)\.outerHTML;/,
+    'emptyHintHTML() baut eigenes Markup statt emptyHintEl() zu serialisieren');
+  // Ein onClick überlebt die Serialisierung nicht. Ohne diese Schranke wäre der
+  // CTA still tot - sichtbar, klickbar, ohne Wirkung.
+  assert.match(src, /emptyStateHTML[\s\S]{0,400}?action\?\.onClick[\s\S]{0,300}?throw new TypeError/,
+    'emptyStateHTML() nimmt ein onClick entgegen, das die String-Ausgabe nicht überlebt');
+});
+
+/**
+ * Kein Fehlerzustand ohne Ausweg.
+ *
+ * Die Variante `error` ist die einzige, bei der die Sackgasse teuer ist: die
+ * Seite ist leer, die Ursache liegt am Server, und ohne CTA bleibt nur der
+ * Neuladeknopf des Browsers - den auf einem Telefon in einer installierten PWA
+ * nicht jeder findet. `mountLoadError()` erzwingt den Ausweg ueber seine
+ * Signatur; wer die Variante direkt setzt, umgeht diese Zusicherung.
+ *
+ * Belegt an vier Stellen, die vor dem Ausrollen der Grammatik genau so
+ * dastanden: Abonnements, Haushaltshilfe, Belohnungen und die geteilten
+ * Ausgaben im Budget zeigten bei HTTP 500 eine Meldung ohne jede Handlung.
+ * Die Haushaltshilfe setzte als Erklaerung obendrein `err.message` - bei allen
+ * Routen das unlokalisierte englische „Internal server error.".
+ *
+ * Geprueft wird die REGEL (jede error-Variante fuehrt eine Aktion), nicht eine
+ * Liste erlaubter Dateien: der globale Fehlerbildschirm im Router setzt die
+ * Variante zu Recht selbst und besteht den Guard, weil er einen Ausweg hat.
+ */
+test('jeder Fehler-Leerzustand fuehrt eine Aktion', () => {
+  const offenders = [];
+  for (const file of walkFrontendFiles('../public/')) {
+    if (file.startsWith('../public/vendor/')) continue;
+    // Ohne Blockkommentare: die Doku des Renderers nennt `variant: 'error'`
+    // selbst, um vor genau diesem Aufruf zu warnen. Ein Guard, der seine eigene
+    // Begruendung als Verstoss liest, zwingt zum Umschreiben der Erklaerung.
+    const src = withoutBlockComments(read(file));
+    for (const match of src.matchAll(/variant:\s*'error'/g)) {
+      // Der Aufruf-Rumpf ab der Variante bis zur schliessenden Klammer der
+      // Optionen - grosszuegig gefenstert, die Aufrufe sind kurz.
+      const window_ = src.slice(match.index, match.index + 700);
+      const end = window_.search(/\n\s*\}\);/);
+      const call = end === -1 ? window_ : window_.slice(0, end);
+      if (!/\baction\b|\bactions\b|\bonRetry\b/.test(call)) {
+        offenders.push(`${file} -> ${call.replace(/\s+/g, ' ').slice(0, 90)}`);
+      }
+    }
+  }
+  assert.deepEqual(offenders, [],
+    'Fehler-Leerzustand ohne Aktion - eine Sackgasse. mountLoadError() nutzen '
+    + 'oder eine action mitgeben:\n' + offenders.join('\n'));
+});
+
+/**
+ * Ein Leerzustand ohne Titel ist ausschliesslich die kompakte Form.
+ *
+ * Die Flächenform ist auf einer leeren Seite der einzige Inhalt; ohne Titel
+ * hätte der erste Bildschirm eines Moduls keine Überschrift. Umgekehrt darf die
+ * kompakte Form (`emptyHintEl`) keinen führen - sie steht in einem Abschnitt,
+ * dessen Kopf den Kontext schon nennt.
+ */
+test('der Leerzustands-Titel ist eine Überschrift, und die kompakte Form hat keine', () => {
+  const src = read('../public/utils/empty-state.js');
+  assert.match(src, /if \(title\) parts\.push\(`<h2 class="empty-state__title">/,
+    'der Titel ist keine <h2> mehr oder wird auch ohne Text gesetzt');
+  assert.doesNotMatch(src, /<div class="empty-state__title"/,
+    'der Renderer setzt den Titel als <div> - damit ist der Leerzustand strukturlos');
+  assert.match(src, /export function emptyHintEl[\s\S]{0,400}?emptyStateEl\(\{ compact: true/,
+    'emptyHintEl() baut wieder eigenes Markup statt den Renderer zu rufen');
 });
 
 /**
@@ -5661,8 +5759,12 @@ test('route failures expose a localized recoverable alert instead of raw technic
   const router = read('../public/router.js');
   const notesPage = read('../public/pages/notes.js');
 
-  assert.match(router, /function renderError\(container,\s*err\)[\s\S]*state\.setAttribute\(['"]role['"],\s*['"]alert['"]\)/);
-  assert.match(router, /desc\.textContent\s*=\s*friendlyError\(err\)/);
+  // Die Rolle kommt seit der Vereinheitlichung aus der Variante des geteilten
+  // Renderers (`error` -> `role="alert"`, utils/empty-state.js) statt aus einem
+  // setAttribute hier. Geprueft wird deshalb die Variante - die Rolle selbst
+  // haelt der Renderer-Guard weiter oben fest.
+  assert.match(router, /function renderError\(container,\s*err\)[\s\S]*emptyStateEl\(\{[\s\S]{0,200}?variant:\s*'error'/);
+  assert.match(router, /function renderError\(container,\s*err\)[\s\S]*description:\s*friendlyError\(err\)/);
   assert.match(router, /state\.focus\(\{\s*preventScroll:\s*true\s*\}\)/);
   assert.match(router, /Failed to fetch\|NetworkError\|Load failed/i);
   assert.match(router, /return t\(['"]common\.errorServer['"]\)/);
