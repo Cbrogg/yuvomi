@@ -26,7 +26,7 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { findPageFab } from '/utils/fab.js';
 import { nowFields, todayKey, zonedDateKey, zonedTimeKey } from '/utils/timezone.js';
 import { maxUploadBytes, maxUploadMb } from '/utils/upload-limit.js';
-import { emptyStateHTML, emptyHintHTML } from '/utils/empty-state.js';
+import { emptyStateHTML, emptyHintHTML, mountLoadError } from '/utils/empty-state.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -448,6 +448,9 @@ function chipAssigneeTitleSuffix(ev) {
 
 let state = {
   view:          'month',
+  // Fehlerobjekt des letzten Bereichs-Ladeversuchs, oder null. Nicht `true`:
+  // `mountLoadError` liest daraus den Statuscode.
+  loadError:     null,
   today:         '',
   cursor:        null,     // aktuell angezeigte Referenz-Datum (YYYY-MM-DD)
   events:        [],
@@ -1012,6 +1015,7 @@ async function loadRange(from, to) {
       }),
       api.get(`/calendar/holidays?from=${from}&to=${to}`).catch(() => ({ data: [] })),
     ]);
+    state.loadError = null;
     state.events   = (evRes.data ?? []).map(localizeBirthdayEvent);
     state.tasks    = filterTasksForCalendar(taskRes.data ?? []);
     state.holidays = holRes.data ?? [];
@@ -1020,11 +1024,16 @@ async function loadRange(from, to) {
     state.offlineSince = navigator.onLine ? null : await getCachedAt(calPath);
   } catch (err) {
     console.error('[Calendar] loadRange Fehler:', err);
+    // Der Toast allein liess ein leeres Monatsgitter stehen - nicht zu
+    // unterscheiden von einem Monat ohne Termine - und in der Agenda den
+    // Leerzustand „Keine Termine" samt „Neuer Termin". Dieselbe Verwechslung,
+    // die Einkauf und Essensplan 2026-07-30 hatten (Critique P0). `renderView`
+    // prueft das Feld jetzt vor allen vier Ansichten.
+    state.loadError = err;
     state.events   = [];
     state.tasks    = [];
     state.holidays = [];
     state.offlineSince = null;
-    window.yuvomi?.showToast(t('calendar.loadError'), 'danger');
   }
   state.rangeFrom = from;
   state.rangeTo   = to;
@@ -1531,6 +1540,21 @@ function renderView() {
   _monthGridResizeObserver?.disconnect();
   _monthGridResizeObserver = null;
   body.replaceChildren();
+
+  // Vor allen vier Ansichten: nach einem Ladefehler sind Termine, Aufgaben und
+  // Feiertage ebenfalls leer. Das Gitter waere dann von einem leeren Monat
+  // nicht zu unterscheiden, die Agenda zeigte ihren Leerzustand.
+  if (state.loadError) {
+    mountLoadError(body, {
+      title: t('calendar.loadError'),
+      description: t('common.loadErrorDescription'),
+      error: state.loadError,
+      retryLabel: t('common.retry'),
+      onRetry: async () => { await loadRange(state.rangeFrom, state.rangeTo); renderView(); },
+    });
+    updateOfflineNotice();
+    return;
+  }
 
   // Tages-Buckets einmal pro Render-Pass aufbauen; danach wieder deaktivieren,
   // damit spätere State-Mutationen (Modals etc.) keinen veralteten Index lesen.

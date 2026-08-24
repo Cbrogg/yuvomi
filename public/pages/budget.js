@@ -189,6 +189,9 @@ function accountName(id) {
 let state = {
   month:       '',   // YYYY-MM
   entries:     [],
+  // Fehlerobjekt des letzten Monats-Ladeversuchs, oder null. Nicht `true`:
+  // `mountLoadError` liest daraus den Statuscode.
+  loadError:   null,
   summary:     null,
   prevSummary: null, // Vormonat für Monatsvergleich
   loans:       { loans: [], summary: { active_count: 0, remaining_amount: 0, remaining_installments: 0 } },
@@ -345,6 +348,7 @@ async function loadMonth(month) {
       api.get(`/budget/summary?month=${prevMonth}${scopeQuery}`),
       api.get('/budget/loans'),
     ]);
+    state.loadError   = null;
     state.month       = month;
     state.entries     = entriesRes.data;
     state.summary     = summaryRes.data;
@@ -352,12 +356,17 @@ async function loadMonth(month) {
     state.loans       = loansRes.data;
   } catch (err) {
     console.error('[Budget] loadMonth Fehler:', err);
+    // Der Toast allein war die falsche Antwort: er verging, und darunter blieb
+    // „Keine Eintraege diesen Monat" mit „Eintrag erstellen" stehen - ein
+    // Serverfehler sah damit aus wie ein leerer Monat, und die Summen zeigten
+    // 0. Dieselbe Verwechslung, die Einkauf und Essensplan 2026-07-30 hatten
+    // (Critique P0). `renderBody` prueft das Feld jetzt VOR dem Leer-Zweig.
+    state.loadError   = err;
     state.month       = month;
     state.entries     = [];
     state.summary     = { income: 0, expenses: 0, balance: 0, byCategory: [] };
     state.prevSummary = null;
     state.loans       = { loans: [], summary: { active_count: 0, remaining_amount: 0, remaining_installments: 0 } };
-    window.yuvomi?.showToast(t('budget.loadError'), 'danger');
   }
 }
 
@@ -606,6 +615,22 @@ function renderBody() {
   const body = _container.querySelector('#budget-body');
   if (!body) return;
   updateLabel();
+
+  // Vor jedem Tab-Zweig: nach einem Ladefehler sind Eintraege UND Summen leer,
+  // und ohne diese Pruefung gewinnt der Leer-Zweig. Der Wiederholen-Weg laedt
+  // den Monat neu und rendert danach denselben Tab.
+  if (state.loadError) {
+    updateTabs();
+    setHtml(body, '<div class="budget-tab-panel page-scrollport" id="budget-error-panel"></div>');
+    mountLoadError(body.querySelector('#budget-error-panel'), {
+      title: t('budget.loadError'),
+      description: t('common.loadErrorDescription'),
+      error: state.loadError,
+      retryLabel: t('common.retry'),
+      onRetry: async () => { await loadMonth(state.month); renderBody(); },
+    });
+    return;
+  }
 
   const s    = state.summary;
   const p    = state.prevSummary;

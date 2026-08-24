@@ -19,7 +19,7 @@ import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { isPreviewable } from '/utils/document-preview.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { splitMentions, applyMention } from '/utils/mentions.js';
-import { emptyStateHTML } from '/utils/empty-state.js';
+import { emptyStateHTML, mountLoadError } from '/utils/empty-state.js';
 import '/components/category-manager.js';
 import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
@@ -1132,6 +1132,13 @@ ${syncTargetFieldHtml(task)}
 
 let state = {
   tasks:           [],
+  // Das Fehlerobjekt des letzten Ladeversuchs, oder null. Nicht `true`:
+  // `mountLoadError` liest daraus den Statuscode.
+  loadError:       null,
+  // Der angemeldete Nutzer, wie ihn render() bekommt. Gehalten fuer den
+  // Wiederholen-Weg des Ladefehlers: aus `currentUserId` allein liesse sich
+  // `isAdmin` nicht rekonstruieren, und der Retry haette die Rechte gesenkt.
+  user:            null,
   users:           [],
   categories:      [],
   allTags:         [],       // [{ tag, count }] für Filterleiste und Vorschläge (#586)
@@ -2927,6 +2934,22 @@ function wireKanbanTouch(container) {
 // --------------------------------------------------------
 
 function renderTaskList(container) {
+  // VOR der Kanban-Weiche: nach einem Ladefehler ist `state.tasks` ebenfalls
+  // leer, und beide Ansichten haengen an demselben `#task-list`. Nur die
+  // Reihenfolge trennt hier „nichts angelegt" von „nicht geladen".
+  if (state.loadError) {
+    const listEl = container.querySelector('#task-list');
+    if (listEl) {
+      mountLoadError(listEl, {
+        title: t('tasks.listLoadError'),
+        description: t('common.loadErrorDescription'),
+        error: state.loadError,
+        retryLabel: t('common.retry'),
+        onRetry: () => render(container, { user: state.user }),
+      });
+    }
+    return;
+  }
   if (state.viewMode === 'kanban') {
     renderKanban(container);
     return;
@@ -3760,6 +3783,7 @@ function wireTaskList(container) {
 // --------------------------------------------------------
 
 export async function render(container, { user }) {
+  state.user = user ?? null;
   state.currentUserId = user?.id ?? null;
   loadCollapsedGroups();
   // Die Rolle entscheidet nur darüber, ob ein fremder Kommentar entfernt werden
@@ -3916,6 +3940,7 @@ export async function render(container, { user }) {
       // mit in den Ladefehler ziehen, deshalb eigener Fallback.
       api.get('/preferences').catch(() => ({ data: {} })),
     ]);
+    state.loadError = null;
     state.tasks = tasksData.data ?? [];
     state.users = metaData.users ?? [];
     state.categories = metaData.categories ?? [];
@@ -3925,7 +3950,13 @@ export async function render(container, { user }) {
     state.defaultSyncTarget = preferencesData.data?.tasks_default_target || '';
   } catch (err) {
     console.error('[Tasks] Ladefehler:', err.message);
-    window.yuvomi.showToast(t('tasks.loadError'), 'danger');
+    // Der Toast allein war die falsche Antwort: er verging, und darunter blieb
+    // „Keine Aufgaben - alles erledigt?" mit „Aufgabe erstellen" stehen. Bei
+    // einem Serverfehler behauptet das nicht nur Datenverlust, es behauptet
+    // Erledigung - und bietet als einzigen Ausweg eine schreibende Handlung.
+    // Dieselbe Verwechslung, die Einkauf und Essensplan 2026-07-30 hatten
+    // (Critique P0); `renderTaskList` prueft das Feld jetzt VOR dem Leer-Zweig.
+    state.loadError = err;
     state.tasks = [];
     state.users = [];
     state.categories = [];
