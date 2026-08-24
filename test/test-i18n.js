@@ -160,6 +160,51 @@ test('alle Locale-Dateien enden mit einem Zeilenumbruch', () => {
 // fallen von selbst heraus, statt als benannte Ausnahme gepflegt zu werden -
 // und ein kuenftiger Scope, der eine Route bekommt, faellt automatisch unter
 // die Regel.
+test('jeder statisch geschriebene t()-Schlüssel steht auch in der Referenz-Locale', () => {
+  // Die Gegenrichtung zu allem anderen in dieser Datei: dort wird geprüft, dass
+  // die Locales untereinander deckungsgleich sind - hier, dass der CODE keinen
+  // Schlüssel benutzt, den es nirgends gibt. Ein solcher Aufruf fällt in keiner
+  // der anderen Prüfungen auf, weil er in KEINER Locale steht und die Dateien
+  // damit weiter identisch sind. Sichtbar wird er erst im Browser, wo t() den
+  // Schlüssel selbst zurückgibt: `settings.cancel` stand als Beschriftung auf
+  // einem Knopf, weil der Schlüssel `common.cancel` heißt (#672).
+  //
+  // Bewusst nur STATISCHE Aufrufe `t('a.b')`. Zusammengesetzte Schlüssel
+  // (`t(\`settings.oidcLinkError_${err}\`)`) lassen sich hier nicht auflösen;
+  // sie zu erraten hieße, Rauschen zu melden, und ein Guard, der Rauschen
+  // meldet, wird abgeschaltet statt befolgt.
+  const files = [];
+  const walk = (dir) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      if (entry.name === 'vendor' || entry.name === 'locales') continue;
+      const child = new URL(`${entry.name}${entry.isDirectory() ? '/' : ''}`, dir);
+      if (entry.isDirectory()) walk(child);
+      else if (entry.name.endsWith('.js')) files.push(child);
+    }
+  };
+  walk(new URL('../public/', import.meta.url));
+
+  const offenders = [];
+  for (const file of files) {
+    const source = readFileSync(file, 'utf8');
+    for (const match of source.matchAll(/\bt\(\s*(['"])([a-zA-Z0-9_.]+)\1/g)) {
+      const key = match[2];
+      if (reference.has(key)) continue;
+      // Ein Plural-Basisschlüssel darf über seine Varianten aufgelöst werden.
+      if (referenceKeys.some((k) => k.startsWith(`${key}_`) && PLURAL_SUFFIX.test(k))) continue;
+      const line = source.slice(0, match.index).split('\n').length;
+      offenders.push(`${file.pathname.split('/public/')[1]}:${line} → ${key}`);
+    }
+  }
+
+  assert.deepEqual(
+    offenders,
+    [],
+    `Diese t()-Aufrufe nennen einen Schlüssel, den de.json nicht kennt - im Browser `
+    + `steht dann der Schlüssel selbst in der Oberfläche:\n${offenders.join('\n')}`,
+  );
+});
+
 test('Modulnamen sind in nav und in den API-Token-Scopes wortgleich', () => {
   const drift = [];
   let compared = 0;
