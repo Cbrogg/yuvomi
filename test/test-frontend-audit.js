@@ -2681,6 +2681,54 @@ test('Fokusringe lesen die Tokens aus tokens.css §7b', () => {
  * Grob, aber ausreichend: die Küchen-Seiten deklarieren durchgängig mit
  * `function name()` an der linken Spalte.
  */
+/**
+ * Kein Ladefehler lebt nur in einem Toast.
+ *
+ * Das ist die Schwester des Kuechen-Guards darueber, app-weit statt auf vier
+ * Seiten. Sie musste kommen, weil die Live-Probe (2026-08-24, HTTP 500 auf die
+ * Modul-API) genau zwei Seiten fand, die den Defekt der Kueche vom 2026-07-30
+ * nie mitbekommen hatten:
+ *
+ *   /tasks   "Keine Aufgaben - alles erledigt?"  [Aufgabe erstellen]
+ *   /budget  "Keine Eintraege diesen Monat"      [Eintrag erstellen]
+ *
+ * Bei /tasks ist es die schlimmere Formulierung: der Serverfehler wurde als
+ * ERLEDIGUNG gemeldet. Beide Loader taten dasselbe wie Einkauf und Essensplan
+ * damals - Sammlung leeren, Meldung in einen Toast, fertig. Von den zwei
+ * Aussagen ueberlebte die falsche, denn der Toast verging und der Leerzustand
+ * blieb.
+ *
+ * Geprueft wird die Kombination, nicht der Toast an sich: ein Toast NEBEN einem
+ * gesetzten Fehlerfeld oder einem `throw` ist in Ordnung. Verboten ist nur,
+ * eine Sammlung zu leeren und den Fehler danach ausschliesslich verklingen zu
+ * lassen.
+ */
+test('kein Ladefehler wird nur in einen Toast gelegt', () => {
+  const offenders = [];
+  for (const file of walkFrontendFiles('../public/')) {
+    if (!file.endsWith('.js') || file.startsWith('../public/vendor/')) continue;
+    const src = withoutBlockComments(read(file));
+    for (const [name, body] of topLevelFunctions(src)) {
+      const block = body.slice(body.search(/\bcatch\s*[({]/));
+      if (!/\bcatch\s*[({]/.test(body)) continue;
+      const toastsLoadError = /showToast\s*\(\s*t\(\s*['"][\w.]*[lL]oadError/.test(block);
+      if (!toastsLoadError) continue;
+      // Leert der Rumpf eine Sammlung? Dann steht danach ein Leerzustand.
+      const clearsCollection = /\.\w+\s*=\s*\[\]/.test(block);
+      if (!clearsCollection) continue;
+      // Ein Ausweg ist da, wenn der Fehler festgehalten oder weitergereicht wird.
+      const keepsError = /\.\w*[eE]rror\s*=\s*(?!null|false)/.test(block)
+        || /\bthrow\b/.test(block)
+        || /\bmountLoadError\s*\(/.test(block);
+      if (!keepsError) offenders.push(`${file}: ${name}()`);
+    }
+  }
+  assert.deepEqual(offenders, [],
+    'Ladefehler nur als Toast, waehrend die geleerte Sammlung darunter einen '
+    + 'Leerzustand zeigt - der Toast vergeht, die falsche Aussage bleibt:\n'
+    + offenders.join('\n'));
+});
+
 function topLevelFunctions(src) {
   const out = [];
   const pattern = /^(?:export\s+)?(?:async\s+)?function\s+(\w+)/gm;
