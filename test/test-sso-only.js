@@ -388,6 +388,20 @@ test('der letzte SSO-Administrator kann seine Verknuepfung nicht loesen', () => 
     'geprueft werden muss, ob ein ANDERER verknuepfter Admin bleibt');
 });
 
+test('der letzte SSO-Administrator faellt auf keinem der drei Wege weg', () => {
+  // Verknuepfung loesen, herabstufen, Konto loeschen - alle drei sind
+  // gewoehnliche Verwaltung, und jeder einzelne haette den Riegel des ganzen
+  // Haushalts nebenbei aufgemacht. Ein Riegel an nur einem davon ist keiner
+  // (Review zu #849, Runde 5).
+  assert.match(authSrc, /function assertSsoAdminWouldRemain/,
+    'die Frage steht nicht an einer Stelle');
+  const calls = (authSrc.match(/assertSsoAdminWouldRemain\(/g) || []).length;
+  assert.ok(calls >= 3, `die Frage wird nur ${calls - 1}x gestellt, gebraucht werden PATCH und DELETE`);
+  // Und der dritte Weg, der seine eigene Antwort gibt:
+  const unlink = authSrc.slice(authSrc.indexOf('export function unlinkOidcAccount'));
+  assert.match(unlink.slice(0, unlink.indexOf('\n}')), /last_sso_admin/);
+});
+
 // ─── Die Regeln an ihren Quellen ─────────────────────────────────────────────
 //
 // Diese drei pruefen den Code selbst. Die Routen dahinter haengen an Session
@@ -452,8 +466,14 @@ test('kein Weg legt ein Konto an, das seinen Zugang sofort verliert', () => {
   // Erreichbarkeitspruefung.
   assert.match(authSrc, /const ssoOnly = !isPasswordLoginEnabled\(getDb\(\)\)/,
     'die Einladungsannahme fragt den Schalter nicht');
-  assert.match(authSrc, /This invitation has no email address/,
-    'eine Einladung ohne Adresse muss stehen bleiben statt in ein totes Konto zu laufen');
+  // Die Einladungsannahme prueft ueber DIESELBE Funktion wie das Anlegen durch
+  // einen Admin - eine eigene, schwaechere Pruefung an dieser Stelle war genau
+  // der Befund aus Runde 5: `invite.email` VORHANDEN genuegt nicht, sie muss
+  // dieses eine Konto meinen.
+  assert.match(authSrc, /assertSsoOnlyAllowed\(true, '', \{ email: invite\.email \}\)/,
+    'die Einladungsannahme umgeht die Erreichbarkeitspruefung');
+  assert.match(authSrc, /Ask for a new invitation/,
+    'die Absage muss sagen, wie es weitergeht - die Einladung bleibt stehen');
   assert.match(authSrc, /password_required: isPasswordLoginEnabled/,
     'die Vorschau sagt der /join-Seite nicht, ob sie nach einem Passwort fragen soll');
 });

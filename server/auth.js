@@ -467,6 +467,45 @@ function assertAdminWouldRemain(targetUserId, nextRole) {
   return row.count > 0 ? null : 'At least one system admin must remain.';
 }
 
+/**
+ * Bleibt nach dieser Aenderung ein per SSO verknuepfter Administrator uebrig? (#847)
+ *
+ * Der Zustand "SSO ist der einzige Weg hinein" haengt genau daran. Faellt der
+ * letzte solche Administrator weg, sieht die Regel null Treffer, faellt
+ * fail-open und macht Anmeldeformular, Anmelderoute und Passwort-Reset des
+ * ganzen Haushalts wieder auf - still, ohne Aenderung an der Umgebung und ohne
+ * Neustart.
+ *
+ * Wegfallen kann er auf DREI Wegen, und alle drei sind gewoehnliche Verwaltung:
+ * Verknuepfung loesen, zum Mitglied herabstufen, Konto loeschen. Ein Riegel an
+ * nur einem davon ist kein Riegel - deshalb steht die Frage hier einmal und
+ * wird dreimal gestellt.
+ *
+ * @param {number} targetUserId  das betroffene Konto
+ * @param {string|null} nextRole  die Rolle danach; `null` = Konto verschwindet
+ * @returns {string|null} Fehlermeldung oder null
+ */
+function assertSsoAdminWouldRemain(targetUserId, nextRole) {
+  // Nur wenn der Schalter ueberhaupt gesetzt ist - sonst gibt es nichts zu
+  // bewahren, und jede Verwaltungsaktion kostete eine Abfrage.
+  if (passwordLoginAllowedByEnv() || !isOidcEnabled()) return null;
+  if (nextRole === 'admin') return null;
+
+  const current = db.get()
+    .prepare('SELECT role, oidc_sub FROM users WHERE id = ?').get(targetUserId);
+  if (!current || current.role !== 'admin' || !current.oidc_sub) return null;
+
+  const other = db.get().prepare(`
+    SELECT 1 FROM users
+    WHERE oidc_sub IS NOT NULL AND role = 'admin' AND id != ?
+    LIMIT 1
+  `).get(targetUserId);
+  if (other) return null;
+
+  return 'This is the last administrator linked to SSO. Removing that link would switch password '
+    + 'login back on for the whole household. Link another administrator first.';
+}
+
 function updateUserRoleSessions(userId, role) {
   const allSessions = db.get().prepare('SELECT sid, sess FROM sessions').all();
   const updateSession = db.get().prepare('UPDATE sessions SET sess = ? WHERE sid = ?');
@@ -826,14 +865,14 @@ export function unlinkOidcAccount(database, userId) {
   // Passwort (die Zeile darueber), es sperrt sich also nicht selbst aus. Es
   // ginge um die Einstellung des Betreibers.
   if (!passwordLoginAllowedByEnv() && isOidcEnabled()) {
-    const otherAdmin = database.prepare(`
-      SELECT 1 FROM users
-      WHERE oidc_sub IS NOT NULL AND role = 'admin' AND id != ?
-      LIMIT 1
-    `).get(userId);
-    if (!otherAdmin) {
-      const self = database.prepare("SELECT role FROM users WHERE id = ?").get(userId);
-      if (self?.role === 'admin') return { ok: false, reason: 'last_sso_admin' };
+    const self = database.prepare('SELECT role FROM users WHERE id = ?').get(userId);
+    if (self?.role === 'admin') {
+      const otherAdmin = database.prepare(`
+        SELECT 1 FROM users
+        WHERE oidc_sub IS NOT NULL AND role = 'admin' AND id != ?
+        LIMIT 1
+      `).get(userId);
+      if (!otherAdmin) return { ok: false, reason: 'last_sso_admin' };
     }
   }
 
@@ -1302,12 +1341,17 @@ export function buildInviteRoutes(targetRouter, {
       // SSO-Anmeldung es findet.
       const ssoOnly = !isPasswordLoginEnabled(getDb());
       if (ssoOnly) {
-        if (!invite.email) {
-          // Ohne Adresse kann die Verknuepfung nicht greifen. Lieber die
-          // Einladung stehen lassen, als sie in ein unerreichbares Konto zu
-          // verbrauchen - ein Admin kann sie mit Adresse neu ausstellen.
+        // Dieselbe Pruefung wie beim Anlegen durch einen Admin, und aus
+        // demselben Grund: eine vorhandene Adresse genuegt nicht, sie muss
+        // dieses eine Konto MEINEN. Gehoert sie schon einem anderen
+        // unverknuepften Mitglied - auch in anderer Schreibweise oder als
+        // dessen Zweitadresse -, findet der Linker zwei Kandidaten und
+        // verknuepft gar nicht. Die Einladung waere verbraucht und das Konto
+        // unerreichbar.
+        const linkError = assertSsoOnlyAllowed(true, '', { email: invite.email });
+        if (linkError) {
           return res.status(400).json({
-            error: 'This invitation has no email address, which SSO needs to link the account. Ask for a new invitation.',
+            error: `${linkError} Ask for a new invitation.`,
             code: 400,
           });
         }
@@ -2426,6 +2470,11 @@ router.patch('/users/:id', requireAuth, requireAdmin, csrfMiddleware, async (req
     const adminError = assertAdminWouldRemain(userId, nextRole);
     if (adminError) return res.status(400).json({ error: adminError, code: 400 });
 
+    // Dieselbe Frage fuer den SSO-Zustand: eine Herabstufung darf den Riegel
+    // des Haushalts nicht nebenbei aufmachen (#847).
+    const ssoAdminError = assertSsoAdminWouldRemain(userId, nextRole);
+    if (ssoAdminError) return res.status(400).json({ error: ssoAdminError, code: 400 });
+
     // Nur ein echter UEBERGANG schreibt und meldet ab. Die Verwaltung schickt
     // den Umschalter bei JEDER Speicherung mit, also auch beim Aendern des
     // Namens oder der Farbe eines laengst SSO-gefuehrten Kontos - der Zweig
@@ -2576,6 +2625,11 @@ router.delete('/users/:id', requireAuth, requireAdmin, csrfMiddleware, (req, res
     if (userId === req.authUserId) {
       return res.status(400).json({ error: 'You cannot delete your own account.', code: 400 });
     }
+
+    // Der dritte Weg, auf dem der letzte SSO-Administrator verschwinden kann
+    // (#847). `null` = das Konto bleibt gar keine Rolle uebrig.
+    const ssoAdminError = assertSsoAdminWouldRemain(userId, null);
+    if (ssoAdminError) return res.status(400).json({ error: ssoAdminError, code: 400 });
 
     const result = db.transaction(() => {
       const birthday = db.get().prepare('SELECT * FROM birthdays WHERE family_user_id = ?').get(userId);
