@@ -325,6 +325,27 @@ test('der Rueckweg aus SSO-only verlangt ein Passwort', () => {
   assert.match(authSrc, /Turning off SSO-only requires setting a password/);
 });
 
+test('was Anlegen und Aendern zurueckgeben, traegt sso_only mit', () => {
+  // Die Verwaltung uebernimmt die Antwort direkt in ihre Mitgliederliste. Fehlt
+  // das Feld, zeigt der Umschalter direkt nach dem Anlegen AUS, obwohl das Konto
+  // kein Passwort hat - und die naechste beliebige Aenderung schickt
+  // `sso_only: false` mit, das der Server ohne Passwort abweist. Der Fehler
+  // erschiene dann an einer Stelle, die mit der Ursache nichts zu tun hat.
+  // Gefunden im Review zu PR #849, nicht von den Tests darueber.
+  const bodies = {};
+  for (const route of ["router.post('/users'", "router.patch('/users/:id'"]) {
+    const start = authSrc.indexOf(route);
+    assert.ok(start > 0, `${route} nicht gefunden`);
+    bodies[route] = authSrc.slice(start, authSrc.indexOf('router.', start + 10));
+  }
+  for (const [route, body] of Object.entries(bodies)) {
+    assert.match(body, /adminUserRow\(/,
+      `${route} liest die Antwort nicht ueber adminUserRow - sso_only fehlt darin`);
+  }
+  assert.match(authSrc, /function adminUserRow[\s\S]{0,400}sso_only/,
+    'adminUserRow selektiert das Flag nicht mit');
+});
+
 test('die Anmeldeseite fragt beide Wege in EINEM Aufruf ab', () => {
   // Ein zweiter blockierender Aufruf vor dem ersten Paint waere ein zweiter
   // Grund, warum die Anmeldeseite haengt.

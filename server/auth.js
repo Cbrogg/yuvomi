@@ -2025,6 +2025,29 @@ router.delete('/api-tokens/:id', requireAuth, requireAdmin, csrfMiddleware, (req
 });
 
 /**
+ * Liest ein Konto so, wie die Verwaltungsoberflaeche es braucht: oeffentliche
+ * Felder PLUS `sso_only` (#847).
+ *
+ * Die Familienverwaltung uebernimmt die Antwort von POST/PATCH direkt in ihre
+ * Mitgliederliste. Faehrt `sso_only` darin nicht mit, zeigt der Umschalter
+ * unmittelbar nach dem Anlegen AUS, obwohl das Konto kein Passwort hat - und
+ * die naechste beliebige Aenderung schickt `sso_only: false` mit, was der
+ * Server ohne Passwort abweist. Der Fehler erschiene dann an einer Stelle, die
+ * mit der Ursache nichts zu tun hat.
+ *
+ * Nur fuer die beiden Admin-Routen gedacht; `GET /users` entscheidet die
+ * Sichtbarkeit selbst, weil es auch Nicht-Admins bedient.
+ *
+ * @param {number|bigint} userId
+ * @returns {object|undefined}
+ */
+function adminUserRow(userId) {
+  return db.get()
+    .prepare(`SELECT ${USER_PUBLIC_COLUMNS}, (password_hash = ?) AS sso_only FROM users WHERE id = ?`)
+    .get(OIDC_PASSWORD_SENTINEL, userId);
+}
+
+/**
  * Prueft, ob ein Konto ohne Passwort gefuehrt werden darf (#847).
  *
  * Zwei Bedingungen, beide aus demselben Grund - ein Konto ohne Passwort und
@@ -2128,7 +2151,7 @@ router.post('/users', requireAuth, requireAdmin, csrfMiddleware, async (req, res
       return created;
     });
 
-    const createdUser = db.get().prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(result.lastInsertRowid);
+    const createdUser = adminUserRow(result.lastInsertRowid);
 
     res.status(201).json({
       user: publicUser(createdUser),
@@ -2250,7 +2273,7 @@ router.patch('/users/:id', requireAuth, requireAdmin, csrfMiddleware, async (req
       if (userId === req.authUserId && req.session) req.session.role = nextRole;
     }
 
-    const updated = db.get().prepare(`SELECT ${USER_PUBLIC_COLUMNS} FROM users WHERE id = ?`).get(userId);
+    const updated = adminUserRow(userId);
     res.json({ user: publicUser(updated) });
   } catch (err) {
     if (err.message && err.message.includes('UNIQUE constraint')) {
