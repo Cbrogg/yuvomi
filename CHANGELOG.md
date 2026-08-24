@@ -7,6 +7,68 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.38.0] - 2026-08-24
+
+### Added
+
+- **The shared empty-state renderer covers all four shapes.** `public/utils/empty-state.js` is a
+  public browser library (see MODULES.md), and it previously offered only what the four kitchen tabs
+  needed: one element, one call to action, a mandatory title. New: `emptyStateHTML()` and
+  `emptyHintHTML()` for callers that build template strings, a `compact` variant, an optional title,
+  `actions` (plural) for the rarer state with two ways out, `details` for a collapsible technical
+  block, and `className` on both the container and the button.
+
+  The string form is deliberately `emptyStateEl(...).outerHTML` rather than a second composition -
+  a parallel string version is exactly the mechanism that let these states drift apart in the first
+  place. An `onClick` does not survive serialisation and is therefore a hard caller error instead of
+  a silently dead button.
+
+  **Two markup details changed for anyone selecting into it:** the description is now a `<p>`
+  instead of a `<div>` (it is a sentence of prose, and the hint below it always was one), and a
+  missing title no longer renders an empty `<h2>` - the element is omitted. A heading without text
+  is worse for a screen reader than no heading.
+
+### Changed
+
+- **Every empty state in the app now speaks the same grammar** (#496). The shared renderer had been
+  rolled out to the four kitchen tabs in July and stopped there; the remaining 15 pages kept
+  assembling the markup by hand. What that left behind, measured across those pages: 52 hand-rolled
+  empty states, **not one of them carrying an ARIA role**, 48 using a `<div>` where the title should
+  be a heading, and four load errors with no way out at all. So no "nothing found" was ever
+  announced, no error was recognisable as one, and on an otherwise blank page the first screen of a
+  module had no heading at all.
+
+  The global error screen behind a failed route now uses the same grammar. It already had its role
+  and its way out right, but its title was a `<div>` too.
+
+- Updated the dependencies: `googleapis` to 176 and the development-only `puppeteer` to 25.8, plus
+  `openid-client` to 6.8.7, and realigned the `allowScripts` build-script pins to match. The two
+  `googleapis` majors break `merchantapi`, `discoveryengine`, `securityposture`, `compute` and
+  `assuredworkloads` - none of which Yuvomi uses; of that bundle it touches only Calendar v3 and
+  Drive v3.
+
+### Fixed
+
+- **A server error no longer claims there is nothing there.** Tasks, Budget and Calendar reported a
+  failed load through a toast alone, emptied their collection on the way, and left the empty state
+  standing underneath. Of the two statements the wrong one survived: the toast faded after seconds,
+  the claim stayed. On an HTTP 500 the tasks page said **"No tasks - all done?"** with "Create task"
+  as the only offer, Budget said "No entries this month", and the calendar showed an empty month
+  grid (its agenda view, "No appointments"). All three offered a writing action as the only way
+  forward, on a screen whose data was in fact still there. Each now keeps the error object, checks
+  it before the empty branch, and shows the status code with a retry.
+
+- Four error states were dead ends with no action at all: Subscriptions, Housekeeping, Rewards and
+  the shared expenses inside Budget. Housekeeping also printed the raw `err.message` as its
+  explanation, which on every route is the untranslated English "Internal server error." sitting in
+  an otherwise translated interface; Budget's shared expenses used the *module name* as the error
+  title and so read like an empty page.
+
+- A search term containing `&`, `<` or `>` displayed as `&amp;` in the "no results" line on the
+  tasks page. The term was escaped once before being handed to the translation function and once
+  more on the way into the markup.
+
+
 ## [2.37.0] - 2026-08-24
 
 ### Added

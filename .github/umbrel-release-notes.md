@@ -1,8 +1,10 @@
-<!-- version: 2.37.0 -->
-Yuvomi can now ask for a second factor when you sign in. Anyone in the household can turn it on for themselves under Settings, Personal, Account: scan the square code with an authenticator app, type the six-digit code it shows once, and keep the ten recovery codes that appear. They are shown that one time only, so write them down or save them somewhere safe before closing the page. From then on the app asks for a code after your password, and a recovery code takes its place if the phone with the app is lost. Nothing changes for anyone who does not turn it on, and nothing needs configuring first.
+<!-- version: 2.38.0 -->
+When something goes wrong on the server, Yuvomi no longer tells you your data is gone. Until now a failed load looked exactly like an empty page: the tasks list said "No tasks - all done?" and offered to create one, the budget said there were no entries this month, and the calendar showed an empty grid. In each case the information was still safely there, and the only button on screen was one that would have written something new. All three now say plainly that loading failed, show the error code, and offer to try again.
 
-If you have made Yuvomi reachable from outside your home, this is worth the two minutes it takes. It also works alongside single sign-on, and an administrator can require it for everyone under Settings, Administration, Family, where the same page shows who has already set it up. Turning it off asks for a code rather than your password, because a password is exactly what a second factor is meant to outlast.
+Four other screens had the opposite problem: they reported an error but gave you nothing to do about it, so the only way forward was to reload the browser. Subscriptions, Housekeeping, Rewards and the shared expenses inside Budget now all offer a retry, and the housekeeping page no longer shows an untranslated technical message in place of an explanation.
 
-One fix for households east of Europe: a task due today appeared under "This week" in New Zealand and nearby time zones. It now lands in the right group everywhere.
+Every empty view in the app now looks and behaves the same way, whichever module you are in: the same layout, the same wording for "nothing here yet" versus "nothing matched your search", and the same kind of button to move on. Screen readers benefit most from this: search results that found nothing are now announced instead of passing silently, errors are announced as errors, and the heading on an otherwise empty page is a real heading again.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.37.0
+Nothing needs configuring and nothing changes about your data.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.38.0
