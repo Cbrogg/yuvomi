@@ -1056,10 +1056,24 @@ function insertEvent(fields) {
 const isoIn = (ms) => new Date(Date.now() + ms).toISOString().slice(0, 19);
 const HOUR = 3600000;
 const DAY = 24 * HOUR;
-// Tagesbeginn heute (UTC). Robust gegen die Tageszeit: ein Event hier ist immer
-// "heute" und nie in der Zukunft, anders als now-Nh (rollt nach Mitternacht UTC
-// auf gestern und macht den fromToday-Test #230 flaky).
-const todayStartIso = () => `${new Date().toISOString().slice(0, 10)}T00:00:00`;
+// Kalendertag in der LOKALEN Zone, als YYYY-MM-DD.
+//
+// Diese Datei prueft ab Zeile ~1950 selbst, dass die Dashboard-ROUTE ihren
+// Kalendertag nicht aus `toISOString()` zieht - und benutzte fuer ihre eigenen
+// Testdaten genau dieses Muster. `getUpcomingEvents` vergleicht gegen den
+// lokalen Tag, `insertEvent` speichert Wanduhrzeit ohne Zone: ein aus UTC
+// gebildetes Datum liegt oestlich von UTC zwischen lokaler und UTC-Mitternacht
+// einen Tag zu frueh. Zwischen 00:00 und 02:00 MESZ fielen drei Tests um und
+// rissen die gesamte npm-test-Kette mit, waehrend die CI in UTC laeuft und
+// davon nie etwas sah. Das ist die Falle aus CLAUDE.md, nur spiegelverkehrt:
+// dort kippt der Tag westlich von UTC, hier oestlich.
+const localDateKey = (date = new Date()) => {
+  const pad = (n) => String(n).padStart(2, '0');
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+};
+
+// Tagesbeginn heute: immer "heute" und nie in der Zukunft, anders als now-Nh.
+const todayStartIso = () => `${localDateKey()}T00:00:00`;
 
 // Wiederkehrender Wochentermin, dessen Master-Start 14 Tage in der Vergangenheit liegt.
 // Die nächste Instanz liegt in 7 Tagen relativ zum Master, also innerhalb des Fensters.
@@ -1282,7 +1296,7 @@ test('getUpcomingEvents: private ICS-Termine fremder User werden ausgeblendet', 
 // Bug-Fixes: ganztägige Termine + Geburtstags-Filterung
 // --------------------------------------------------------
 test('getUpcomingEvents: ganztägiger Termin heute erscheint mit fromToday=true (Issue #360)', () => {
-  const todayDate = new Date().toISOString().slice(0, 10);
+  const todayDate = localDateKey();
   insertEvent({
     title: 'Ganztägiger Termin heute',
     start_datetime: todayDate, // kein T-Teil – genau das war das Problem
@@ -1295,7 +1309,7 @@ test('getUpcomingEvents: ganztägiger Termin heute erscheint mit fromToday=true 
 });
 
 test('getUpcomingEvents: ganztägiger Termin in der Zukunft erscheint (Issue #360)', () => {
-  const futureDate = new Date(Date.now() + 3 * DAY).toISOString().slice(0, 10);
+  const futureDate = localDateKey(new Date(Date.now() + 3 * DAY));
   insertEvent({
     title: 'Ganztägiger Zukunfts-Termin',
     start_datetime: futureDate,
