@@ -249,7 +249,9 @@
     "syncIntervalHint": "Ogni quanto Yuvomi sincronizza calendari e contatti. Aumentalo se il tuo provider limita la frequenza.",
     "errSyncInterval": "Inserisci un numero intero positivo di minuti.",
     "sectionPrivateNetwork": "Accesso alla tua rete domestica",
-    "privateNetworkHint": "Per impostazione predefinita Yuvomi rifiuta le connessioni verso indirizzi della tua rete, il che protegge da un server indotto a raggiungere servizi interni. Abilita ciò che davvero hai in casa."
+    "privateNetworkHint": "Per impostazione predefinita Yuvomi rifiuta le connessioni verso indirizzi della tua rete, il che protegge da un server indotto a raggiungere servizi interni. Abilita ciò che davvero hai in casa.",
+    "authPasswordLogin": "Mantieni l'accesso con nome utente e password",
+    "authPasswordLoginHint": "Disattivarlo rende l'SSO l'unico modo per entrare: il modulo di accesso e il ripristino della password scompaiono. Se il provider diventa irraggiungibile, la via di ritorno è modificare il file .env e riavviare."
   },
   "welcome": {
     "title": "Ti diamo il benvenuto in Yuvomi",

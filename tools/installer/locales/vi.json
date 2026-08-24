@@ -249,7 +249,9 @@
     "syncIntervalHint": "Yuvomi đồng bộ lịch và danh bạ bao lâu một lần. Tăng lên nếu nhà cung cấp giới hạn tần suất.",
     "errSyncInterval": "Hãy nhập một số nguyên dương tính bằng phút.",
     "sectionPrivateNetwork": "Truy cập mạng gia đình",
-    "privateNetworkHint": "Theo mặc định, Yuvomi từ chối kết nối tới các địa chỉ trong mạng của bạn, giúp tránh việc máy chủ bị lừa truy cập dịch vụ nội bộ. Hãy bật những gì bạn thực sự chạy tại nhà."
+    "privateNetworkHint": "Theo mặc định, Yuvomi từ chối kết nối tới các địa chỉ trong mạng của bạn, giúp tránh việc máy chủ bị lừa truy cập dịch vụ nội bộ. Hãy bật những gì bạn thực sự chạy tại nhà.",
+    "authPasswordLogin": "Giữ đăng nhập bằng tên người dùng và mật khẩu",
+    "authPasswordLoginHint": "Tắt tùy chọn này khiến SSO là lối vào duy nhất: biểu mẫu đăng nhập và đặt lại mật khẩu sẽ biến mất. Nếu nhà cung cấp không truy cập được, đường quay lại là sửa tệp .env và khởi động lại."
   },
   "welcome": {
     "title": "Chào mừng đến với Yuvomi",

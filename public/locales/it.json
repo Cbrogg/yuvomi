@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Chi in famiglia ha già configurato un secondo fattore - e se è obbligatorio per tutti.",
         "twoFactorRequireLabel": "Obbligatorio per tutti",
         "twoFactorMemberOn": "configurato",
-        "twoFactorMemberOff": "non configurato"
+        "twoFactorMemberOff": "non configurato",
+        "memberSsoOnlyLabel": "Solo accesso con SSO",
+        "memberSsoOnlyHint": "L'account non riceve alcuna password. Il membro può accedere solo tramite SSO.",
+        "memberSsoOnlyEditHint": "Con l'interruttore attivo l'account perde la sua password ed entra solo tramite SSO. Per disattivarlo occorre impostare una nuova password."
     },
     "login": {
         "tagline": "Bentornato nel tuo pianificatore familiare.",
@@ -2476,7 +2479,8 @@
         "twoFactorInvalid": "Il codice non è corretto.",
         "twoFactorExpired": "L'accesso è scaduto. Accedi di nuovo.",
         "twoFactorMissing": "Inserisci il codice.",
-        "twoFactorCancel": "Annulla"
+        "twoFactorCancel": "Annulla",
+        "ssoOnlyHint": "L'accesso a questa famiglia avviene esclusivamente tramite SSO."
     },
     "setup": {
         "title": "Benvenuto in Yuvomi",
@@ -3235,7 +3239,8 @@
         "identifierLabel": "Nome utente o email",
         "submit": "Invia link",
         "sent": "Se esiste un account corrispondente, è stato inviato un link di ripristino.",
-        "backToLogin": "Torna al login"
+        "backToLogin": "Torna al login",
+        "unavailable": "Questa famiglia non offre il ripristino della password. Contatta l'amministratore della tua famiglia."
     },
     "resetPassword": {
         "title": "Imposta una nuova password",

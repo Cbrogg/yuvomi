@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Evde kimlerin ikinci adımı kurduğu - ve herkes için zorunlu olup olmadığı.",
         "twoFactorRequireLabel": "Herkes için zorunlu",
         "twoFactorMemberOn": "kuruldu",
-        "twoFactorMemberOff": "kurulmadı"
+        "twoFactorMemberOff": "kurulmadı",
+        "memberSsoOnlyLabel": "Yalnızca SSO ile giriş",
+        "memberSsoOnlyHint": "Hesap şifre almaz. Üye yalnızca SSO ile giriş yapabilir.",
+        "memberSsoOnlyEditHint": "Anahtar açıkken hesap şifresini kaybeder ve yalnızca SSO ile girer. Kapatmak için yeni bir şifre belirlenmelidir."
     },
     "login": {
         "tagline": "Aile planlayıcına tekrar hoş geldin.",
@@ -2476,7 +2479,8 @@
         "twoFactorInvalid": "Bu kod doğru değil.",
         "twoFactorExpired": "Oturum açma süresi doldu. Lütfen tekrar giriş yap.",
         "twoFactorMissing": "Lütfen kodu gir.",
-        "twoFactorCancel": "İptal"
+        "twoFactorCancel": "İptal",
+        "ssoOnlyHint": "Bu haneye giriş yalnızca SSO ile yapılır."
     },
     "setup": {
         "title": "Yuvomi’a hoş geldiniz",
@@ -3235,7 +3239,8 @@
         "identifierLabel": "Kullanıcı adı veya e-posta",
         "submit": "Bağlantıyı gönder",
         "sent": "Eşleşen bir hesap varsa, sıfırlama bağlantısı gönderildi.",
-        "backToLogin": "Girişe dön"
+        "backToLogin": "Girişe dön",
+        "unavailable": "Bu hane şifre sıfırlama sunmuyor. Lütfen hane yöneticinizle iletişime geçin."
     },
     "resetPassword": {
         "title": "Yeni parola belirle",

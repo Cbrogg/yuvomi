@@ -18,6 +18,18 @@ const AVATAR_COLORS = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#
 const MAX_AVATAR_DATA_LENGTH = 768 * 1024;
 const randomAvatarColor = () => AVATAR_COLORS[Math.floor(Math.random() * AVATAR_COLORS.length)];
 
+/**
+ * Ist auf diesem Server SSO konfiguriert? (#847)
+ *
+ * Entscheidet, ob die Verwaltung ueberhaupt anbietet, ein Konto ohne Passwort
+ * zu fuehren - ohne SSO waere das ein Konto, in das niemand hineinkaeme, und
+ * der Server weist es aus demselben Grund ab. Eine Modulvariable statt eines
+ * vierten Parameters durch renderPage/bindEvents/bindEditButtons: es ist eine
+ * Eigenschaft des Servers, die sich waehrend eines Seitenaufrufs nicht aendert,
+ * und keine Angabe zu einem einzelnen Mitglied.
+ */
+let ssoAvailable = false;
+
 function initials(name) {
   if (!name) return '?';
   return name.split(' ').map((w) => w[0]).slice(0, 2).join('').toUpperCase();
@@ -192,7 +204,14 @@ function renderPage(container) {
               <input class="settings-color-button" type="color" id="new-avatar-color" value="${randomAvatarColor()}" />
             </div>
           </div>
-          <div class="form-group">
+          ${ssoAvailable ? `
+          ${toggleRowHtml({
+            label: t('settings.memberSsoOnlyLabel'),
+            attrs: { id: 'new-member-sso-only' },
+          })}
+          <p class="form-hint">${t('settings.memberSsoOnlyHint')}</p>
+          ` : ''}
+          <div class="form-group" id="new-member-password-group">
             <label class="form-label" for="new-member-password">${t('settings.memberPasswordLabel')}</label>
             <input class="form-input" type="password" id="new-member-password" minlength="8" required autocomplete="new-password" />
           </div>
@@ -603,7 +622,15 @@ async function openEditMemberModal(member, currentUser, users, container) {
           <yuvomi-datepicker type="date" id="edit-member-birth-date" value="${esc(member.birth_date || '')}"></yuvomi-datepicker>
           <p class="form-hint">${t('settings.memberContactBirthdayHint')}</p>
         </div>
-        <div class="form-group">
+        ${ssoAvailable ? `
+        ${toggleRowHtml({
+          label: t('settings.memberSsoOnlyLabel'),
+          checked: member.sso_only === true,
+          attrs: { id: 'edit-member-sso-only' },
+        })}
+        <p class="form-hint">${t('settings.memberSsoOnlyEditHint')}</p>
+        ` : ''}
+        <div class="form-group" id="edit-member-password-group">
           <label class="form-label" for="edit-member-password">${t('settings.resetPasswordLabel')}</label>
           <input class="form-input" type="password" id="edit-member-password" minlength="8" autocomplete="new-password" placeholder="${t('settings.resetPasswordPlaceholder')}" />
           <p class="form-hint">${t('settings.resetPasswordHint')}</p>
@@ -657,6 +684,24 @@ async function openEditMemberModal(member, currentUser, users, container) {
 
       if (caregiverIds !== null) bindUserMultiSelect(panel, 'member_caregivers');
 
+      // Der Umschalter fuehrt das Passwortfeld in beide Richtungen (#847): an
+      // versteckt es, aus macht es zur Pflicht - aber nur, wenn das Konto
+      // gerade wirklich keines hat. Sonst verlangte das Formular ein neues
+      // Passwort dafuer, dass man einen Umschalter zweimal beruehrt hat.
+      const ssoToggle = panel.querySelector('#edit-member-sso-only');
+      const pwGroup = panel.querySelector('#edit-member-password-group');
+      const pwField = panel.querySelector('#edit-member-password');
+      const syncSsoOnly = () => {
+        const on = ssoToggle?.checked === true;
+        if (pwGroup) pwGroup.hidden = on;
+        if (pwField) {
+          pwField.required = !on && member.sso_only === true;
+          if (on) pwField.value = '';
+        }
+      };
+      ssoToggle?.addEventListener('change', syncSsoOnly);
+      syncSsoOnly();
+
       panel.querySelector('#edit-member-cancel')?.addEventListener('click', closeModal);
       panel.querySelector('#edit-member-form')?.addEventListener('submit', async (event) => {
         event.preventDefault();
@@ -682,6 +727,7 @@ async function openEditMemberModal(member, currentUser, users, container) {
             email: panel.querySelector('#edit-member-email')?.value.trim() || null,
             birth_date: parseDateInput(birthDateRaw) || null,
             ...(newPassword ? { password: newPassword } : {}),
+            ...(ssoToggle ? { sso_only: ssoToggle.checked } : {}),
           });
           // Betreuung getrennt speichern: sie lebt im Gesundheitsmodul, nicht am
           // Nutzerdatensatz (#584).
@@ -708,6 +754,28 @@ async function openEditMemberModal(member, currentUser, users, container) {
   });
 }
 
+/**
+ * Haelt Passwortfeld und SSO-Umschalter im Neu-Formular im Einklang (#847).
+ *
+ * Vor allem `required`: ein ausgeblendetes Pflichtfeld laesst der Browser nicht
+ * absenden und kann den Grund auch nicht anzeigen - das Formular waere ohne
+ * sichtbare Ursache tot. Modul-Funktion und nicht lokal in `bindEvents`, weil
+ * auch der Abbrechen-Weg das Formular zuruecksetzt und denselben Abgleich
+ * braucht, dort aber weiter oben steht.
+ *
+ * @param {HTMLElement} container
+ */
+function syncSsoOnlyField(container) {
+  const on = container.querySelector('#new-member-sso-only')?.checked === true;
+  const group = container.querySelector('#new-member-password-group');
+  const field = container.querySelector('#new-member-password');
+  if (group) group.hidden = on;
+  if (field) {
+    field.required = !on;
+    if (on) field.value = '';
+  }
+}
+
 function bindEvents(container, currentUser, users) {
   const addMemberBtn = container.querySelector('#add-member-btn');
   if (addMemberBtn) {
@@ -724,6 +792,7 @@ function bindEvents(container, currentUser, users) {
       container.querySelector('#add-member-form-card').classList.add('settings-card--hidden');
       container.querySelector('#add-member-btn').hidden = false;
       container.querySelector('#add-member-form').reset();
+      syncSsoOnlyField(container);
       container.querySelector('#new-avatar-color').value = randomAvatarColor();
       container.querySelector('#member-error').hidden = true;
     });
@@ -731,6 +800,10 @@ function bindEvents(container, currentUser, users) {
 
   const addMemberForm = container.querySelector('#add-member-form');
   if (addMemberForm) {
+    addMemberForm.querySelector('#new-member-sso-only')
+      ?.addEventListener('change', () => syncSsoOnlyField(container));
+    syncSsoOnlyField(container);
+
     addMemberForm.addEventListener('submit', async (event) => {
       event.preventDefault();
       const errorEl = container.querySelector('#member-error');
@@ -741,10 +814,13 @@ function bindEvents(container, currentUser, users) {
         return;
       }
 
+      const ssoOnly = container.querySelector('#new-member-sso-only')?.checked === true;
       const data = {
         username: container.querySelector('#new-username').value.trim(),
         display_name: container.querySelector('#new-display-name').value.trim(),
-        password: container.querySelector('#new-member-password').value,
+        // Beides zugleich weist der Server ab - er kann nicht raten, welches
+        // von beidem gemeint war.
+        ...(ssoOnly ? { sso_only: true } : { password: container.querySelector('#new-member-password').value }),
         avatar_color: container.querySelector('#new-avatar-color').value,
         family_role: container.querySelector('#new-family-role').value,
         system_admin: container.querySelector('#new-system-admin')?.checked === true,
@@ -760,6 +836,7 @@ function bindEvents(container, currentUser, users) {
         users.push(res.user);
         renderMemberList(container, users, currentUser?.id);
         addMemberForm.reset();
+        syncSsoOnlyField(container);
         container.querySelector('#new-avatar-color').value = randomAvatarColor();
         container.querySelector('#add-member-form-card').classList.add('settings-card--hidden');
         container.querySelector('#add-member-btn').hidden = false;
@@ -860,6 +937,14 @@ async function loadTwoFactorHousehold(container) {
 }
 
 export async function render(container, { user } = {}) {
+  // Ein Ausfall dieser Abfrage darf die Verwaltung nicht kosten: ohne Antwort
+  // bleibt es beim bisherigen Formular mit Pflicht-Passwort.
+  try {
+    ssoAvailable = (await api.get('/auth/oidc/config'))?.enabled === true;
+  } catch {
+    ssoAvailable = false;
+  }
+
   renderPage(container);
   await loadMembers(container, user || {});
   await loadTwoFactorHousehold(container);

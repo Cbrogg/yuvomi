@@ -156,7 +156,9 @@
     "syncIntervalHint": "Wie oft Yuvomi Kalender und Kontakte abgleicht. Höher stellen, wenn dein Anbieter die Rate begrenzt.",
     "errSyncInterval": "Bitte eine positive ganze Zahl in Minuten angeben.",
     "sectionPrivateNetwork": "Zugriff auf dein Heimnetz",
-    "privateNetworkHint": "Yuvomi lehnt Verbindungen zu Adressen im eigenen Netz standardmäßig ab - das schützt davor, dass der Server dazu gebracht wird, interne Dienste zu erreichen. Gib frei, was du zu Hause wirklich betreibst."
+    "privateNetworkHint": "Yuvomi lehnt Verbindungen zu Adressen im eigenen Netz standardmäßig ab - das schützt davor, dass der Server dazu gebracht wird, interne Dienste zu erreichen. Gib frei, was du zu Hause wirklich betreibst.",
+    "authPasswordLogin": "Anmeldung mit Benutzername und Passwort beibehalten",
+    "authPasswordLoginHint": "Ausschalten macht SSO zum einzigen Weg hinein: Anmeldeformular und Passwort-Reset verschwinden. Ist der Anbieter nicht erreichbar, führt der Weg zurück über die .env-Datei und einen Neustart."
   },
   "review": {
     "title": "Überprüfung",

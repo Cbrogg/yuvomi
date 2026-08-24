@@ -45,6 +45,75 @@ export function isOidcSignupAllowed() {
 }
 
 /**
+ * Der `password_hash` eines Kontos, das ausschliesslich per SSO hineinkommt.
+ *
+ * Kein bcrypt-Hash, sondern ein Platzhalter: `verifyPassword` laeuft trotzdem
+ * durch (Timing) und kann nie zutreffen, weil kein bcrypt-Vergleich gegen einen
+ * Nicht-Hash gelingt. Damit ist "dieses Konto hat kein Passwort" ein Zustand in
+ * der Spalte selbst und nicht eine zusaetzliche Spalte, die irgendwo
+ * mitgeprueft werden muesste.
+ *
+ * Liegt hier und nicht in `auth.js`, seit ihn ausser der Anmeldung auch das
+ * Anlegen, das Aendern und der Passwort-Reset kennen muessen (#847): eine
+ * zweite Schreibweise des Platzhalters waere ein Konto mit einem Passwort, das
+ * niemand gesetzt hat.
+ */
+export const OIDC_PASSWORD_SENTINEL = '$oidc$';
+
+/**
+ * Traegt dieses Konto den Platzhalter statt eines echten Passworts?
+ * @param {string|null|undefined} passwordHash
+ * @returns {boolean}
+ */
+export function isSsoOnlyAccount(passwordHash) {
+  return passwordHash === OIDC_PASSWORD_SENTINEL;
+}
+
+/**
+ * Darf man sich mit Benutzername und Passwort anmelden? (#847)
+ *
+ * Wer seinen Haushalt an einen Identitaetsanbieter haengt, hat bisher trotzdem
+ * eine zweite Tuer offen: das Anmeldeformular, den Passwort-Reset und an jedem
+ * Konto einen Hash. Fuer ein Setup, in dem der Anbieter die einzige Wahrheit
+ * ueber Identitaeten ist, ist das eine Tuer zu viel.
+ *
+ * Zwei Eigenschaften sind Absicht:
+ *
+ * 1. Nur der ausdrueckliche Wert `false` schaltet ab. Ein Sicherheitsschalter,
+ *    der auf jeden gesetzten Wert reagiert, macht aus einem Tippfehler eine
+ *    Aussperrung - dieselbe Regel wie bei `OIDC_ALLOW_SIGNUP`.
+ *
+ * 2. Ohne vollstaendig konfiguriertes OIDC wird der Schalter IGNORIERT. Sonst
+ *    schliesst eine einzelne Zeile in der `.env` den Haushalt aus seiner
+ *    eigenen App aus, ohne dass es einen zweiten Weg hinein gaebe. Der Server
+ *    meldet diesen Fall beim Start (siehe `passwordLoginWarning`).
+ *
+ * Gelesen wird pro Aufruf, nicht beim Import - siehe `isOidcSignupAllowed`.
+ * @returns {boolean}
+ */
+export function isPasswordLoginEnabled() {
+  if (process.env.AUTH_ALLOW_PASSWORD_LOGIN !== 'false') return true;
+  // Fail-open: ohne SSO gaebe es keinen Weg hinein.
+  return !isOidcEnabled();
+}
+
+/**
+ * Gibt den Warntext zurueck, wenn `AUTH_ALLOW_PASSWORD_LOGIN=false` gesetzt,
+ * aber wirkungslos ist - sonst `null`. Der Aufrufer loggt ihn beim Start.
+ *
+ * Ein still ignorierter Sicherheitsschalter ist schlimmer als gar keiner: der
+ * Betreiber glaubt, das Formular sei zu, und es ist offen.
+ * @returns {string|null}
+ */
+export function passwordLoginWarning() {
+  if (process.env.AUTH_ALLOW_PASSWORD_LOGIN !== 'false') return null;
+  if (isOidcEnabled()) return null;
+  return 'AUTH_ALLOW_PASSWORD_LOGIN=false is ignored because OIDC is not fully configured '
+    + '(OIDC_ISSUER, OIDC_CLIENT_ID, OIDC_CLIENT_SECRET, OIDC_REDIRECT_URI). '
+    + 'Password login stays enabled - otherwise nobody could sign in.';
+}
+
+/**
  * Gibt die initialisierte OIDC-Configuration zurück (Discovery bei erstem Aufruf).
  * Gibt null zurück wenn OIDC nicht konfiguriert ist.
  * @returns {Promise<import('openid-client').Configuration|null>}

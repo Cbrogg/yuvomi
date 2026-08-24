@@ -156,7 +156,9 @@
     "syncIntervalHint": "Seberapa sering Yuvomi menyinkronkan kalender dan kontak. Naikkan jika penyedia membatasi laju.",
     "errSyncInterval": "Masukkan bilangan bulat positif dalam menit.",
     "sectionPrivateNetwork": "Akses ke jaringan rumahmu",
-    "privateNetworkHint": "Secara bawaan Yuvomi menolak koneksi ke alamat di jaringanmu sendiri, yang melindungi dari server yang diperdaya untuk menjangkau layanan internal. Aktifkan yang benar-benar kamu jalankan di rumah."
+    "privateNetworkHint": "Secara bawaan Yuvomi menolak koneksi ke alamat di jaringanmu sendiri, yang melindungi dari server yang diperdaya untuk menjangkau layanan internal. Aktifkan yang benar-benar kamu jalankan di rumah.",
+    "authPasswordLogin": "Pertahankan masuk dengan nama pengguna dan kata sandi",
+    "authPasswordLoginHint": "Mematikannya menjadikan SSO satu-satunya jalan masuk: formulir masuk dan pengaturan ulang kata sandi menghilang. Jika penyedia tidak dapat dijangkau, jalan kembalinya adalah menyunting berkas .env dan memulai ulang."
   },
   "review": {
     "title": "Tinjauan",

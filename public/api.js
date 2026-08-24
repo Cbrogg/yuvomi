@@ -238,6 +238,26 @@ const auth = {
   },
   forgotPassword: (identifier) => api.post('/auth/forgot-password', { identifier }),
   resetPassword: (token, password) => api.post('/auth/reset-password', { token, password }),
+  /**
+   * Kann dieser Server einen Passwort-Reset ueberhaupt durchfuehren?
+   *
+   * Zwei Gruende sprechen dagegen und beide fuehren zu derselben Sackgasse:
+   * kein zustellbarer Weg (SMTP oder BASE_URL fehlt) oder gar kein Passwort,
+   * das sich zuruecksetzen liesse (SSO als einziger Anmeldeweg, #847). Die
+   * beiden Reset-Seiten fragen deshalb nicht nach dem Grund, sondern nach der
+   * Faehigkeit - der Server fasst beide in `password_reset_enabled` zusammen.
+   *
+   * Ein Fehlschlag gilt bewusst als "moeglich": eine kurzzeitig unerreichbare
+   * `/version` darf niemanden von seinem Reset aussperren.
+   * @returns {Promise<boolean>}
+   */
+  passwordResetAvailable: async () => {
+    try {
+      return (await api.get('/version'))?.password_reset_enabled !== false;
+    } catch {
+      return true;
+    }
+  },
   // Einladungen: die ersten drei sind Admin-Routen, die letzten beiden öffentlich
   // (die /join-Seite ruft sie ohne Session auf).
   createInvite: (data) => api.post('/auth/invites', data),

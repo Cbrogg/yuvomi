@@ -415,8 +415,9 @@ export const schemas = {
             password_reset_enabled: {
               type: 'boolean',
               description: 'True when self-service password reset can actually deliver a mail '
-                + '(SMTP configured AND BASE_URL set). The login page gates the "forgot password" '
-                + 'link on this flag so it is never a dead end.',
+                + '(SMTP configured AND BASE_URL set) and there are passwords to reset at all '
+                + '(AUTH_ALLOW_PASSWORD_LOGIN not switched off). The login page gates the '
+                + '"forgot password" link on this flag so it is never a dead end.',
             },
           },
           required: ['app_name', 'setup_required', 'password_reset_enabled'],
@@ -434,6 +435,11 @@ export const schemas = {
             phone: { type: ['string', 'null'] },
             email: { type: ['string', 'null'] },
             birth_date: { type: ['string', 'null'], format: 'date' },
+            sso_only: {
+              type: 'boolean',
+              description: 'Only present on GET /auth/users for administrators: the account carries no '
+                + 'password and can only be entered through SSO.',
+            },
           },
           required: ['id', 'username', 'display_name', 'avatar_color', 'role', 'family_role'],
         },
@@ -508,7 +514,13 @@ export const schemas = {
           properties: {
             username: { type: 'string' },
             display_name: { type: 'string' },
-            password: { type: 'string' },
+            password: { type: 'string', description: 'Required unless sso_only is true.' },
+            sso_only: {
+              type: 'boolean',
+              description: 'Create the account without a password, so it can only be entered through SSO. '
+                + 'Requires OIDC to be configured, and rejects a password sent alongside it. '
+                + 'Deliberately explicit rather than inferred from a missing password.',
+            },
             avatar_color: { type: 'string' },
             avatar_data: { type: ['string', 'null'], description: 'PNG, JPEG, or WebP data URL.' },
             family_role: { type: 'string', enum: ['dad', 'mom', 'parent', 'child', 'grandparent', 'relative', 'other'] },
@@ -517,7 +529,7 @@ export const schemas = {
             email: { type: ['string', 'null'] },
             birth_date: { type: ['string', 'null'], format: 'date' },
           },
-          required: ['username', 'display_name', 'password'],
+          required: ['username', 'display_name'],
         },
         UserUpdateRequest: {
           type: 'object',
@@ -525,6 +537,12 @@ export const schemas = {
             username: { type: 'string' },
             display_name: { type: 'string' },
             password: { type: 'string', description: 'Write-only. Omit or leave empty to keep the current password.' },
+            sso_only: {
+              type: 'boolean',
+              description: 'Switch the account between having a password and entering only through SSO. '
+                + 'true clears the password; false requires a password to be sent with it, otherwise the '
+                + 'account would be left with no way in at all. Omit to leave unchanged.',
+            },
             avatar_color: { type: 'string' },
             avatar_data: { type: ['string', 'null'], description: 'PNG, JPEG, or WebP data URL. Use null to remove.' },
             family_role: { type: 'string', enum: ['dad', 'mom', 'parent', 'child', 'grandparent', 'relative', 'other'] },

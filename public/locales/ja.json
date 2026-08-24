@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "世帯の誰が二要素認証をすでに設定しているか、そして全員に必須かどうか。",
         "twoFactorRequireLabel": "全員に必須",
         "twoFactorMemberOn": "設定済み",
-        "twoFactorMemberOff": "未設定"
+        "twoFactorMemberOff": "未設定",
+        "memberSsoOnlyLabel": "SSO サインインのみ",
+        "memberSsoOnlyHint": "このアカウントにはパスワードが設定されません。メンバーは SSO でのみサインインできます。",
+        "memberSsoOnlyEditHint": "オンにするとアカウントはパスワードを失い、SSO でのみ入れるようになります。オフにするには新しいパスワードの設定が必要です。"
     },
     "login": {
         "tagline": "家族のプランナーへおかえりなさい。",
@@ -2476,7 +2479,8 @@
         "twoFactorInvalid": "コードが正しくありません。",
         "twoFactorExpired": "ログインの有効期限が切れました。もう一度ログインしてください。",
         "twoFactorMissing": "コードを入力してください。",
-        "twoFactorCancel": "キャンセル"
+        "twoFactorCancel": "キャンセル",
+        "ssoOnlyHint": "この世帯へのサインインは SSO のみです。"
     },
     "setup": {
         "title": "Yuvomi へようこそ",
@@ -3235,7 +3239,8 @@
         "identifierLabel": "ユーザー名またはメールアドレス",
         "submit": "リンクを送信",
         "sent": "該当するアカウントがあれば、再設定用のリンクを送信しました。",
-        "backToLogin": "ログインに戻る"
+        "backToLogin": "ログインに戻る",
+        "unavailable": "この世帯ではパスワードの再設定を提供していません。世帯の管理者にお問い合わせください。"
     },
     "resetPassword": {
         "title": "新しいパスワードを設定",

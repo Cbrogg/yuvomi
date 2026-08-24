@@ -249,7 +249,9 @@
     "syncIntervalHint": "Com que frequência o Yuvomi sincroniza calendários e contatos. Aumente se o seu provedor limitar a taxa.",
     "errSyncInterval": "Informe um número inteiro positivo de minutos.",
     "sectionPrivateNetwork": "Acesso à sua rede doméstica",
-    "privateNetworkHint": "Por padrão, o Yuvomi recusa conexões para endereços na sua própria rede, o que protege contra um servidor ser induzido a alcançar serviços internos. Ative o que você realmente executa em casa."
+    "privateNetworkHint": "Por padrão, o Yuvomi recusa conexões para endereços na sua própria rede, o que protege contra um servidor ser induzido a alcançar serviços internos. Ative o que você realmente executa em casa.",
+    "authPasswordLogin": "Manter o início de sessão com nome de utilizador e senha",
+    "authPasswordLoginHint": "Desativá-lo torna o SSO a única forma de entrar: o formulário de início de sessão e a reposição da senha desaparecem. Se o fornecedor ficar inacessível, o caminho de volta é editar o ficheiro .env e reiniciar."
   },
   "welcome": {
     "title": "Boas-vindas ao Yuvomi",

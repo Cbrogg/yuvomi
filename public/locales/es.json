@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Quién en el hogar ya ha configurado un segundo factor, y si es obligatorio para todos.",
         "twoFactorRequireLabel": "Obligatorio para todos",
         "twoFactorMemberOn": "configurado",
-        "twoFactorMemberOff": "sin configurar"
+        "twoFactorMemberOff": "sin configurar",
+        "memberSsoOnlyLabel": "Solo inicio de sesión con SSO",
+        "memberSsoOnlyHint": "La cuenta no recibe contraseña. El miembro solo puede iniciar sesión con SSO.",
+        "memberSsoOnlyEditHint": "Con el interruptor activado, la cuenta pierde su contraseña y solo entra mediante SSO. Para desactivarlo hay que establecer una contraseña nueva."
     },
     "login": {
         "tagline": "Bienvenido de nuevo a tu planificador familiar.",
@@ -2476,7 +2479,8 @@
         "twoFactorInvalid": "El código no es correcto.",
         "twoFactorExpired": "El inicio de sesión ha caducado. Vuelve a iniciar sesión.",
         "twoFactorMissing": "Introduce el código.",
-        "twoFactorCancel": "Cancelar"
+        "twoFactorCancel": "Cancelar",
+        "ssoOnlyHint": "El acceso a este hogar se realiza exclusivamente mediante SSO."
     },
     "setup": {
         "title": "Bienvenido a Yuvomi",
@@ -3235,7 +3239,8 @@
         "identifierLabel": "Nombre de usuario o correo",
         "submit": "Enviar enlace",
         "sent": "Si existe una cuenta que coincida, se ha enviado un enlace para restablecerla.",
-        "backToLogin": "Volver al inicio de sesión"
+        "backToLogin": "Volver al inicio de sesión",
+        "unavailable": "Este hogar no ofrece restablecimiento de contraseña. Ponte en contacto con la administración de tu hogar."
     },
     "resetPassword": {
         "title": "Establecer una contraseña nueva",

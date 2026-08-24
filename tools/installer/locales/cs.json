@@ -156,7 +156,9 @@
     "syncIntervalHint": "Jak často Yuvomi synchronizuje kalendáře a kontakty. Zvyš, pokud tě poskytovatel omezuje.",
     "errSyncInterval": "Zadej celé kladné číslo minut.",
     "sectionPrivateNetwork": "Přístup do domácí sítě",
-    "privateNetworkHint": "Yuvomi ve výchozím nastavení odmítá spojení na adresy ve tvé síti, což chrání před tím, aby byl server přiměn k oslovení interních služeb. Povol to, co doma opravdu provozuješ."
+    "privateNetworkHint": "Yuvomi ve výchozím nastavení odmítá spojení na adresy ve tvé síti, což chrání před tím, aby byl server přiměn k oslovení interních služeb. Povol to, co doma opravdu provozuješ.",
+    "authPasswordLogin": "Zachovat přihlášení uživatelským jménem a heslem",
+    "authPasswordLoginHint": "Vypnutím se SSO stane jedinou cestou dovnitř: přihlašovací formulář i obnova hesla zmizí. Pokud je poskytovatel nedostupný, cesta zpět vede přes úpravu souboru .env a restart."
   },
   "review": {
     "title": "Přehled",

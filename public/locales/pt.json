@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Quem no agregado já configurou um segundo fator - e se é obrigatório para todos.",
         "twoFactorRequireLabel": "Obrigatório para todos",
         "twoFactorMemberOn": "configurado",
-        "twoFactorMemberOff": "não configurado"
+        "twoFactorMemberOff": "não configurado",
+        "memberSsoOnlyLabel": "Apenas início de sessão com SSO",
+        "memberSsoOnlyHint": "A conta não recebe senha. O membro só pode iniciar sessão através de SSO.",
+        "memberSsoOnlyEditHint": "Com o interruptor ligado, a conta perde a sua senha e só entra através de SSO. Para o desligar é preciso definir uma nova senha."
     },
     "login": {
         "tagline": "Bem-vindo de volta ao teu planeador familiar.",
@@ -2476,7 +2479,8 @@
         "twoFactorInvalid": "O código não está correto.",
         "twoFactorExpired": "A sessão de início expirou. Inicia sessão novamente.",
         "twoFactorMissing": "Introduz o código.",
-        "twoFactorCancel": "Cancelar"
+        "twoFactorCancel": "Cancelar",
+        "ssoOnlyHint": "O acesso a este agregado familiar é feito exclusivamente através de SSO."
     },
     "setup": {
         "title": "Bem-vindo ao Yuvomi",
@@ -3235,7 +3239,8 @@
         "identifierLabel": "Nome de utilizador ou e-mail",
         "submit": "Enviar ligação",
         "sent": "Se existir uma conta correspondente, foi enviada uma ligação para repor.",
-        "backToLogin": "Voltar ao início de sessão"
+        "backToLogin": "Voltar ao início de sessão",
+        "unavailable": "Este agregado familiar não oferece reposição de senha. Contacte o administrador do seu agregado familiar."
     },
     "resetPassword": {
         "title": "Definir nova palavra-passe",

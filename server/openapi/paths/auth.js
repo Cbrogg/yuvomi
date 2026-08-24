@@ -127,10 +127,13 @@ export function authPaths() {
     },
     '/api/v1/auth/oidc/config': {
       get: op({
-        summary: 'Get OIDC login availability',
+        summary: 'Get sign-in availability',
         tag: 'Auth',
         auth: false,
-        description: 'Public login-page bootstrap endpoint. Returns whether OIDC is configured and enabled.',
+        description: 'Public login-page bootstrap endpoint. Returns which ways in this server offers: '
+          + 'whether OIDC is configured and enabled, and whether password login is allowed '
+          + '(AUTH_ALLOW_PASSWORD_LOGIN, ignored unless OIDC is fully configured). The login page waits '
+          + 'for this single answer before painting, so it never shows a form that then disappears.',
       }),
     },
     '/api/v1/auth/oidc/start': {
@@ -369,7 +372,9 @@ export function authPaths() {
       get: op({
         summary: 'List family users',
         tag: 'Auth',
-        description: 'Authenticated endpoint used for assignment pickers. Returns public user fields for all family members.',
+        description: 'Authenticated endpoint used for assignment pickers. Returns public user fields for all family members. '
+          + 'Administrators additionally get sso_only per member; how someone else signs in is not a detail every '
+          + 'member needs, for the same reason the 2FA overview is a separate admin endpoint.',
       }),
       post: op({
         summary: 'Create user',

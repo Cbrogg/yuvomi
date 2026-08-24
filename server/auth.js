@@ -14,7 +14,14 @@ import { collectErrors, date as validateDate, str, MAX_SHORT, MAX_TITLE } from '
 import { createLogger } from './logger.js';
 import { deleteBirthdayArtifacts, syncBirthdayArtifacts } from './services/birthdays.js';
 import * as oidcClient from 'openid-client';
-import { isOidcEnabled, isOidcSignupAllowed, getConfig as getOidcConfig } from './services/oidc.js';
+import {
+  isOidcEnabled,
+  isOidcSignupAllowed,
+  isPasswordLoginEnabled,
+  isSsoOnlyAccount,
+  OIDC_PASSWORD_SENTINEL,
+  getConfig as getOidcConfig,
+} from './services/oidc.js';
 import { emailService as defaultEmailService } from './services/email.js';
 import { passwordResetService as defaultResetService } from './services/password-reset.js';
 import { inviteService as defaultInviteService } from './services/invites.js';
@@ -331,6 +338,10 @@ function publicUser(row) {
     // Nur wenn die Query das Flag mitselektiert (GET /users); andere
     // publicUser-Pfade behalten ihre bisherige Feldmenge.
     ...(row.is_worker !== undefined && { is_worker: Boolean(row.is_worker) }),
+    // Ebenso bedingt, und zusaetzlich nur fuer Administratoren (#847): "dieses
+    // Konto hat ein Passwort" ist dieselbe Sorte Angabe wie die
+    // 2FA-Uebersicht, die aus demselben Grund nicht an /auth/users haengt.
+    ...(row.sso_only !== undefined && { sso_only: Boolean(row.sso_only) }),
   };
 }
 
@@ -658,13 +669,6 @@ function sanitizeOidcUsername(raw) {
 }
 
 /**
- * Passwort-Platzhalter eines rein per SSO angelegten Kontos. Kein Hash, also
- * kann sich damit niemand anmelden - und genau daran erkennt das Lösen einer
- * Verknüpfung, dass es den letzten Zugang wegnähme.
- */
-const OIDC_PASSWORD_SENTINEL = '$oidc$';
-
-/**
  * Findet oder erstellt einen User anhand der (validierten) OIDC-Claims.
  *
  * Identität primär über den (kryptografisch validierten) `sub`. Existiert kein
@@ -809,7 +813,7 @@ export function unlinkOidcAccount(database, userId) {
     .prepare('SELECT id, oidc_sub, password_hash FROM users WHERE id = ?').get(userId);
   if (!user) return { ok: false, reason: 'user_gone' };
   if (!user.oidc_sub) return { ok: false, reason: 'not_linked' };
-  if (user.password_hash === OIDC_PASSWORD_SENTINEL) return { ok: false, reason: 'no_password' };
+  if (isSsoOnlyAccount(user.password_hash)) return { ok: false, reason: 'no_password' };
 
   database.prepare('UPDATE users SET oidc_sub = NULL, oidc_provider = NULL WHERE id = ?').run(userId);
   return { ok: true };
@@ -828,6 +832,15 @@ const avatarColors = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#F
  */
 router.post('/login', loginLimiter, async (req, res) => {
   try {
+    // Wer die eingebaute Anmeldung abgeschaltet hat, hat sie damit auch fuer
+    // alles abgeschaltet, was das Formular umgeht (#847). Der Riegel sitzt
+    // deshalb an der Route und nicht nur an der Oberflaeche - eine Regel, die
+    // nur die Anmeldeseite kennt, ist keine Regel, sondern eine Bitte.
+    if (!isPasswordLoginEnabled()) {
+      log.warn('Login rejected: password login is disabled', { ip: req.ip });
+      return res.status(403).json({ error: 'Password login is disabled.', code: 403 });
+    }
+
     const { username, password } = req.body;
 
     if (!username || !password) {
@@ -923,6 +936,20 @@ export function buildResetRoutes(targetRouter, {
     return byEmail?.id ?? null;
   }
 
+  /**
+   * Hat dieses Konto ueberhaupt ein Passwort, das man zuruecksetzen koennte?
+   *
+   * Ein rein per SSO angelegtes Konto traegt den Platzhalter statt eines Hashs.
+   * Der Reset hat diesen Zustand bis #847 nicht gekannt und haette ihm ein
+   * echtes, funktionierendes Passwort gegeben - genau die zweite Tuer, die der
+   * Platzhalter zuhalten soll. Wer den Reset ausloest, braucht dafuer nur eine
+   * E-Mail-Adresse aus den Kontakten, nicht das Konto selbst.
+   */
+  function hasResettablePassword(userId) {
+    const row = getDb().prepare('SELECT password_hash FROM users WHERE id = ?').get(userId);
+    return !!row && !isSsoOnlyAccount(row.password_hash);
+  }
+
   function emailFor(userId) {
     const row = getDb().prepare(
       'SELECT email FROM contacts WHERE family_user_id = ? AND email IS NOT NULL AND email != \'\' LIMIT 1'
@@ -934,8 +961,12 @@ export function buildResetRoutes(targetRouter, {
     try {
       const { identifier } = req.body || {};
       const userId = resolveUser(identifier);
-      // Anti-enumeration: identical response regardless of outcome.
-      if (userId && emailService.isConfigured()) {
+      // Anti-enumeration: identical response regardless of outcome. Deshalb
+      // gehen auch die beiden neuen Gruende (#847) durch dieselbe Antwort -
+      // ein eigener Statuscode fuer "dieses Konto hat kein Passwort" wuerde
+      // verraten, welche Konten per SSO gefuehrt werden.
+      if (userId && isPasswordLoginEnabled() && hasResettablePassword(userId)
+          && emailService.isConfigured()) {
         const to = emailFor(userId);
         // Reset links MUST use an explicitly configured, trusted origin.
         // Never derive it from the request Host header (password-reset
@@ -975,6 +1006,15 @@ export function buildResetRoutes(targetRouter, {
       }
       const userId = resetService.verifyToken(token);
       if (!userId) {
+        return res.status(400).json({ error: 'Invalid or expired token.', code: 400 });
+      }
+      // Zwischen dem Ausstellen des Tokens und dem Einloesen kann der Admin das
+      // Konto auf SSO umgestellt oder die eingebaute Anmeldung abgeschaltet
+      // haben (#847). Ein noch gueltiger Token darf diese Entscheidung nicht
+      // ueberholen. Bewusst dieselbe Meldung wie ein ungueltiger Token: der
+      // Unterschied ginge sonst an jemanden, der das Konto nicht besitzt.
+      if (!isPasswordLoginEnabled() || !hasResettablePassword(userId)) {
+        resetService.consumeToken(token);
         return res.status(400).json({ error: 'Invalid or expired token.', code: 400 });
       }
       const hash = await hashPassword(password);
@@ -1229,11 +1269,19 @@ router.post('/logout', requireAuth, csrfMiddleware, (req, res) => {
 /**
  * GET /api/v1/auth/oidc/config
  * Öffentlicher Endpunkt — kein Auth, kein CSRF.
- * Gibt zurück ob OIDC konfiguriert und aktiviert ist.
- * Response: { enabled: boolean }
+ * Beantwortet vollständig, welche Anmeldewege dieser Server anbietet.
+ * Response: { enabled: boolean, password_login_enabled: boolean }
+ *
+ * `password_login_enabled` liegt bewusst hier und nicht in `/version` (#847):
+ * die Anmeldeseite wartet auf genau diese eine Antwort, bevor sie zeichnet, um
+ * kein Formular einzublenden, das gleich wieder verschwindet. Ein zweiter
+ * blockierender Aufruf waere ein zweiter Grund, warum die Seite haengt.
  */
 router.get('/oidc/config', (_req, res) => {
-  res.json({ enabled: isOidcEnabled() });
+  res.json({
+    enabled: isOidcEnabled(),
+    password_login_enabled: isPasswordLoginEnabled(),
+  });
 });
 
 /**
@@ -1301,7 +1349,7 @@ router.get('/oidc/link', requireAuth, (req, res) => {
     provider:   user.oidc_provider ?? null,
     // Ein per SSO angelegtes Konto hat kein Passwort - das Lösen nähme ihm den
     // einzigen Zugang. Die Oberfläche erklärt das, statt den Fehler abzuwarten.
-    can_unlink: !!user.oidc_sub && user.password_hash !== OIDC_PASSWORD_SENTINEL,
+    can_unlink: !!user.oidc_sub && !isSsoOnlyAccount(user.password_hash),
   });
 });
 
@@ -1830,14 +1878,25 @@ router.get('/users', requireAuth, (req, res) => {
     // is_worker markiert Konten der Haushaltshilfe (housekeeping_workers),
     // damit die Familien-Verwaltung sie nicht als Familienmitglied labelt
     // (Audit A2-25e). Muster wie der Worker-Ausschluss in routes/family.js.
-    const users = db.get()
-      .prepare(`
-        SELECT ${USER_PUBLIC_COLUMNS},
-               EXISTS(SELECT 1 FROM housekeeping_workers hw WHERE hw.user_id = users.id) AS is_worker
-        FROM users
-        ORDER BY display_name
-      `)
-      .all();
+    // Der Anmeldeweg eines fremden Kontos geht nur Administratoren etwas an -
+    // siehe den Kommentar in publicUser (#847). Der Platzhalter wird gebunden
+    // und nicht in die Query geschrieben, damit hier keine zusammengesetzte SQL
+    // steht, der man erst ansehen muss, dass ihre Bestandteile konstant sind.
+    const isAdmin = req.session?.role === 'admin';
+    const users = isAdmin
+      ? db.get().prepare(`
+          SELECT ${USER_PUBLIC_COLUMNS},
+                 EXISTS(SELECT 1 FROM housekeeping_workers hw WHERE hw.user_id = users.id) AS is_worker,
+                 (password_hash = ?) AS sso_only
+          FROM users
+          ORDER BY display_name
+        `).all(OIDC_PASSWORD_SENTINEL)
+      : db.get().prepare(`
+          SELECT ${USER_PUBLIC_COLUMNS},
+                 EXISTS(SELECT 1 FROM housekeeping_workers hw WHERE hw.user_id = users.id) AS is_worker
+          FROM users
+          ORDER BY display_name
+        `).all();
     res.json({ data: users.map(publicUser) });
   } catch (err) {
     log.error('Users error:', err);
@@ -1966,10 +2025,41 @@ router.delete('/api-tokens/:id', requireAuth, requireAdmin, csrfMiddleware, (req
 });
 
 /**
+ * Prueft, ob ein Konto ohne Passwort gefuehrt werden darf (#847).
+ *
+ * Zwei Bedingungen, beide aus demselben Grund - ein Konto ohne Passwort und
+ * ohne SSO ist ein Konto, in das niemand hineinkommt:
+ *
+ * - OIDC muss konfiguriert sein. Sonst legte der Admin ein totes Konto an.
+ * - Passwort und `sso_only` schliessen sich aus. Kaeme beides, muesste der
+ *   Server raten, welches der beiden der Admin ernst gemeint hat.
+ *
+ * @param {boolean} ssoOnly
+ * @param {string|undefined} password
+ * @returns {string|null} Fehlermeldung oder null
+ */
+function assertSsoOnlyAllowed(ssoOnly, password) {
+  if (!ssoOnly) return null;
+  if (!isOidcEnabled()) {
+    return 'An account without a password requires OIDC to be configured.';
+  }
+  if (password) {
+    return 'An account without a password cannot be given a password at the same time.';
+  }
+  return null;
+}
+
+/**
  * POST /api/v1/auth/users
  * Admin only. Erstellt neues Familienmitglied.
- * Body: { username, display_name, password, avatar_color?, family_role?, system_admin? }
+ * Body: { username, display_name, password?, sso_only?, avatar_color?, family_role?, system_admin? }
  * Response: { user: { id, username, display_name, avatar_color, role } }
+ *
+ * `sso_only: true` legt ein Konto ohne Passwort an (#847). Bis dahin musste ein
+ * Admin, der ein Konto fuer einen SSO-Nutzer vorbereitet, ein Passwort
+ * erfinden - und das erfundene Passwort blieb ein funktionierender Zugang.
+ * Ausdruecklich ein eigenes Feld und nicht "Passwort weggelassen": ein
+ * vergessenes Feld darf nie still ein Konto ohne Passwort ergeben.
  */
 router.post('/users', requireAuth, requireAdmin, csrfMiddleware, async (req, res) => {
   try {
@@ -1977,18 +2067,23 @@ router.post('/users', requireAuth, requireAdmin, csrfMiddleware, async (req, res
       username,
       display_name,
       password,
+      sso_only,
       avatar_color = avatarColors[crypto.randomInt(avatarColors.length)],
       avatar_data,
       family_role = 'other',
       system_admin = req.body.role === 'admin',
     } = req.body;
     const role = system_admin === true || system_admin === 'true' ? 'admin' : 'member';
+    const ssoOnly = sso_only === true || sso_only === 'true';
 
-    if (!username || !display_name || !password) {
+    const ssoOnlyError = assertSsoOnlyAllowed(ssoOnly, password);
+    if (ssoOnlyError) return res.status(400).json({ error: ssoOnlyError, code: 400 });
+
+    if (!username || !display_name || (!ssoOnly && !password)) {
       return res.status(400).json({ error: 'Username, display name, and password are required.', code: 400 });
     }
 
-    if (normalizePassword(password).length < 8) {
+    if (!ssoOnly && normalizePassword(password).length < 8) {
       return res.status(400).json({ error: 'Password must be at least 8 characters long.', code: 400 });
     }
 
@@ -2013,7 +2108,7 @@ router.post('/users', requireAuth, requireAdmin, csrfMiddleware, async (req, res
       return res.status(400).json({ error: memberFields.errors.join(' '), code: 400 });
     }
 
-    const hash = await hashPassword(password);
+    const hash = ssoOnly ? OIDC_PASSWORD_SENTINEL : await hashPassword(password);
 
     const result = db.transaction(() => {
       const created = db.get()
@@ -2052,6 +2147,12 @@ router.post('/users', requireAuth, requireAdmin, csrfMiddleware, async (req, res
  * Admin only. Updates a family member profile, system-admin flag, and
  * optionally resets the member's password (e.g. when they forgot it and
  * have no working email for the self-service reset flow).
+ *
+ * `sso_only` schaltet ein bestehendes Konto zwischen "hat ein Passwort" und
+ * "kommt nur per SSO herein" um (#847). Damit ist das Entfernen eines Passworts
+ * eine Entscheidung pro Konto, die der Admin ausdruecklich trifft - und keine
+ * Nebenwirkung einer Umgebungsvariablen, die beim Zuruecksetzen stillschweigend
+ * jedes Passwort im Haushalt geloescht haette.
  */
 router.patch('/users/:id', requireAuth, requireAdmin, csrfMiddleware, async (req, res) => {
   try {
@@ -2097,10 +2198,27 @@ router.patch('/users/:id', requireAuth, requireAdmin, csrfMiddleware, async (req
       return res.status(400).json({ error: 'Password must be at least 8 characters long.', code: 400 });
     }
 
+    // undefined = unveraendert; nur ein mitgesendetes Feld schaltet um.
+    const ssoOnly = req.body.sso_only !== undefined
+      ? (req.body.sso_only === true || req.body.sso_only === 'true')
+      : null;
+    const ssoOnlyError = assertSsoOnlyAllowed(ssoOnly === true, newPassword);
+    if (ssoOnlyError) return res.status(400).json({ error: ssoOnlyError, code: 400 });
+
+    // Zurueck zu "hat ein Passwort" geht nur MIT einem Passwort: sonst bliebe
+    // der Platzhalter stehen und das Konto haette weder SSO-Pflicht noch einen
+    // Zugang, den jemand kennt.
+    const existingHash = db.get().prepare('SELECT password_hash FROM users WHERE id = ?').get(userId)?.password_hash;
+    if (ssoOnly === false && isSsoOnlyAccount(existingHash) && !newPassword) {
+      return res.status(400).json({ error: 'Turning off SSO-only requires setting a password.', code: 400 });
+    }
+
     const adminError = assertAdminWouldRemain(userId, nextRole);
     if (adminError) return res.status(400).json({ error: adminError, code: 400 });
 
-    const newPasswordHash = newPassword ? await hashPassword(newPassword) : null;
+    const newPasswordHash = ssoOnly === true
+      ? OIDC_PASSWORD_SENTINEL
+      : (newPassword ? await hashPassword(newPassword) : null);
 
     db.transaction(() => {
       db.get().prepare(`

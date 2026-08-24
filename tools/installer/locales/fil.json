@@ -156,7 +156,9 @@
     "syncIntervalHint": "Gaano kadalas nagsi-sync ang Yuvomi ng mga kalendaryo at contact. Taasan kung nililimitahan ka ng provider mo.",
     "errSyncInterval": "Maglagay ng positibong buong bilang ng minuto.",
     "sectionPrivateNetwork": "Access sa home network mo",
-    "privateNetworkHint": "Bilang default ay tinatanggihan ng Yuvomi ang koneksyon sa mga address sa sarili mong network, na nagpoprotekta laban sa panlilinlang sa server para maabot ang mga internal na serbisyo. I-enable ang talagang pinapatakbo mo sa bahay."
+    "privateNetworkHint": "Bilang default ay tinatanggihan ng Yuvomi ang koneksyon sa mga address sa sarili mong network, na nagpoprotekta laban sa panlilinlang sa server para maabot ang mga internal na serbisyo. I-enable ang talagang pinapatakbo mo sa bahay.",
+    "authPasswordLogin": "Panatilihin ang pag-login gamit ang username at password",
+    "authPasswordLoginHint": "Kapag ito ay naka-off, ang SSO na lang ang paraan para makapasok: mawawala ang login form at ang pag-reset ng password. Kung hindi maabot ang provider, ang daan pabalik ay ang pag-edit ng .env file at pag-restart."
   },
   "review": {
     "title": "Suriin",

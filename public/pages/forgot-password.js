@@ -12,7 +12,42 @@ function wireLinks(container) {
     a.addEventListener('click', (e) => { e.preventDefault(); window.yuvomi.navigate(a.getAttribute('href')); }));
 }
 
+/**
+ * Zeigt, dass dieser Server keinen Passwort-Reset anbieten kann, und schickt
+ * den Weg zurueck mit. Geteilt von beiden Reset-Seiten (#847).
+ * @param {HTMLElement} container
+ */
+function renderUnavailable(container) {
+  container.replaceChildren();
+  container.insertAdjacentHTML('beforeend', `
+    <main class="auth-page" id="main-content">
+      <div class="auth-card card card--padded">
+        <h1 class="auth-card__title">${esc(t('forgotPassword.title'))}</h1>
+        <p class="auth-card__intro">${esc(t('forgotPassword.unavailable'))}</p>
+        <p class="auth-form__forgot"><a href="/login" data-link>${esc(t('forgotPassword.backToLogin'))}</a></p>
+      </div>
+    </main>
+  `);
+  wireLinks(container);
+}
+
 export async function render(container) {
+  // Ein Reset, den dieser Server nicht durchfuehren kann, ist eine Sackgasse -
+  // ohne SMTP/BASE_URL ebenso wie mit SSO als einzigem Anmeldeweg (#847). Die
+  // Anmeldeseite blendet den Link dann schon aus; wer die Adresse direkt
+  // aufruft, bekommt hier den Grund statt eines Formulars, dessen Absenden
+  // folgenlos bliebe.
+  //
+  // Bewusst eine Auskunft und kein `navigate('/login')`: der Router verwirft
+  // eine Navigation, die aus einem laufenden `render()` heraus startet
+  // (`isNavigating`), und zurueck bliebe eine leere Seite. Ein Weiterschicken
+  // ohne Begruendung waere hier ohnehin das schlechtere Verhalten - wer auf
+  // "Passwort vergessen" geklickt hat, will wissen, warum das nicht geht.
+  if (!(await auth.passwordResetAvailable())) {
+    renderUnavailable(container);
+    return;
+  }
+
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     <main class="auth-page" id="main-content">

@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Qui, dans le foyer, a déjà configuré un deuxième facteur - et s'il est obligatoire pour tous.",
         "twoFactorRequireLabel": "Obligatoire pour tous",
         "twoFactorMemberOn": "configuré",
-        "twoFactorMemberOff": "non configuré"
+        "twoFactorMemberOff": "non configuré",
+        "memberSsoOnlyLabel": "Connexion SSO uniquement",
+        "memberSsoOnlyHint": "Le compte ne reçoit pas de mot de passe. Le membre ne peut se connecter que via le SSO.",
+        "memberSsoOnlyEditHint": "Lorsque l'option est activée, le compte perd son mot de passe et n'entre plus que via le SSO. Pour la désactiver, il faut définir un nouveau mot de passe."
     },
     "login": {
         "tagline": "Bon retour sur votre planificateur familial.",
@@ -2476,7 +2479,8 @@
         "twoFactorInvalid": "Ce code n'est pas correct.",
         "twoFactorExpired": "La connexion a expiré. Reconnecte-toi.",
         "twoFactorMissing": "Saisis le code.",
-        "twoFactorCancel": "Annuler"
+        "twoFactorCancel": "Annuler",
+        "ssoOnlyHint": "La connexion à ce foyer se fait exclusivement via le SSO."
     },
     "setup": {
         "title": "Bienvenue sur Yuvomi",
@@ -3235,7 +3239,8 @@
         "identifierLabel": "Nom d'utilisateur ou e-mail",
         "submit": "Envoyer le lien",
         "sent": "Si un compte correspondant existe, un lien de réinitialisation a été envoyé.",
-        "backToLogin": "Retour à la connexion"
+        "backToLogin": "Retour à la connexion",
+        "unavailable": "Ce foyer ne propose pas de réinitialisation du mot de passe. Contactez l'administrateur de votre foyer."
     },
     "resetPassword": {
         "title": "Définir un nouveau mot de passe",

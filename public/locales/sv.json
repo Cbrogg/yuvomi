@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Vilka i hushållet som redan har ställt in en andra faktor - och om den krävs av alla.",
         "twoFactorRequireLabel": "Krävs av alla",
         "twoFactorMemberOn": "inställd",
-        "twoFactorMemberOff": "inte inställd"
+        "twoFactorMemberOff": "inte inställd",
+        "memberSsoOnlyLabel": "Endast SSO-inloggning",
+        "memberSsoOnlyHint": "Kontot får inget lösenord. Medlemmen kan bara logga in via SSO.",
+        "memberSsoOnlyEditHint": "Med reglaget på förlorar kontot sitt lösenord och kommer bara in via SSO. För att stänga av det måste ett nytt lösenord anges."
     },
     "login": {
         "tagline": "Välkommen tillbaka till din familjeplanerare.",
@@ -2476,7 +2479,8 @@
         "twoFactorInvalid": "Koden stämmer inte.",
         "twoFactorExpired": "Inloggningen har gått ut. Logga in igen.",
         "twoFactorMissing": "Ange koden.",
-        "twoFactorCancel": "Avbryt"
+        "twoFactorCancel": "Avbryt",
+        "ssoOnlyHint": "Inloggning till det här hushållet sker uteslutande via SSO."
     },
     "setup": {
         "title": "Välkommen till Yuvomi",
@@ -3235,7 +3239,8 @@
         "identifierLabel": "Användarnamn eller e-post",
         "submit": "Skicka länk",
         "sent": "Om ett matchande konto finns har en återställningslänk skickats.",
-        "backToLogin": "Tillbaka till inloggningen"
+        "backToLogin": "Tillbaka till inloggningen",
+        "unavailable": "Det här hushållet erbjuder ingen lösenordsåterställning. Kontakta administratören för ditt hushåll."
     },
     "resetPassword": {
         "title": "Ange ett nytt lösenord",
