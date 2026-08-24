@@ -1,10 +1,8 @@
-<!-- version: 2.36.0 -->
-Times now read the same on every device in the household. The previous release gave the household a time zone of its own; with this one the app's display follows it too, so a phone that travels to another country shows the clock at home rather than the one where it happens to be. It also settles an inconsistency that was easy to see and hard to explain: an appointment you typed in yourself and one synced from Google, Apple or a CalDAV server are stored differently, and away from home the two used to show different times even when they were the same appointment. Nothing changes unless the household time zone is set under Settings, Personal, Appearance, Region; without it the display keeps following each device as before.
+<!-- version: 2.37.0 -->
+Yuvomi can now ask for a second factor when you sign in. Anyone in the household can turn it on for themselves under Settings, Personal, Account: scan the square code with an authenticator app, type the six-digit code it shows once, and keep the ten recovery codes that appear. They are shown that one time only, so write them down or save them somewhere safe before closing the page. From then on the app asks for a code after your password, and a recovery code takes its place if the phone with the app is lost. Nothing changes for anyone who does not turn it on, and nothing needs configuring first.
 
-An appointment that carries its own colour now keeps it, even when the appointment is assigned to someone. Until now the colour of the assigned person came first, which hid colours that had arrived from a CalDAV calendar or been picked by hand. An appointment without its own colour still takes the colour of the person it belongs to, and who it belongs to is shown by the avatars beside it either way.
+If you have made Yuvomi reachable from outside your home, this is worth the two minutes it takes. It also works alongside single sign-on, and an administrator can require it for everyone under Settings, Administration, Family, where the same page shows who has already set it up. Turning it off asks for a code rather than your password, because a password is exactly what a second factor is meant to outlast.
 
-Writing a note has more room. The note window used to be as narrow as a form with a few short fields, which is the wrong shape for something that is mostly text; it now opens at the width used elsewhere for documents and contacts, for reading a note as well as writing one.
+One fix for households east of Europe: a task due today appeared under "This week" in New Zealand and nearby time zones. It now lands in the right group everywhere.
 
-One smaller fix: the time zone setting introduced in the previous release showed "Automatic" again the next time the page was opened, although the choice had been saved correctly. It now shows what is actually set.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.36.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.37.0

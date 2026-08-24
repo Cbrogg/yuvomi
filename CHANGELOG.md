@@ -7,6 +7,49 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.37.0] - 2026-08-24
+
+### Added
+
+- **Two-factor authentication** (#672, requested by @BradNut, seconded by @schuster-cb). Yuvomi holds
+  contact details, medical records, receipts and documents, and plenty of households run it on a VPS
+  that answers from the open internet. Until now a leaked or reused password was the whole lock. Each
+  member can now turn on a second factor for themselves under Settings -> Personal -> Account: scan
+  the QR code with any authenticator app, enter the six-digit code once, and keep the ten recovery
+  codes that appear. They are shown exactly once; afterwards the server holds only their hashes.
+
+  Nothing to configure and no new dependency. There is no environment variable, Yuvomi never reaches
+  the network for this, and both the TOTP arithmetic and the QR encoder are part of the app: a
+  time-based code is an HMAC over a counter, which `node:crypto` already does, and QR has been a
+  frozen standard since 2000. That puts the burden of proof on the tests rather than on an upstream,
+  so they carry the full vector sets from RFC 4226 and RFC 6238, and the QR is read back by a second,
+  independently written decoder across every length it can produce.
+
+  **Turning it off asks for a code, not the password.** Against a hijacked session only the second
+  factor helps, and accounts that sign in through SSO have no password to prove anything with.
+  Whoever lost their device uses a recovery code instead.
+
+  **Single sign-on does not skip it.** One could argue the provider already authenticated, possibly
+  with a second factor of its own, but a promise that depends on how you signed in is not a promise -
+  and the household-wide requirement below would otherwise bind only those who take the password
+  route.
+
+  **An admin can require it household-wide** under Settings -> Administration -> Family, where the
+  same card also shows who has already set one up. Making the decision without seeing who it affects
+  would be a blind one. The requirement blocks *turning off* and puts a notice on every account page
+  without a second factor; it deliberately does not reject sessions that already exist, because in a
+  household where nobody has set one up yet that would lock everyone out, including the admin.
+
+  Eight new endpoints under `/api/v1/auth/2fa`, described in the OpenAPI document.
+
+### Fixed
+
+- **A task due today no longer appears under "This week" east of UTC+12.** The due-date grouping
+  subtracted a date parsed as UTC midnight from local midnight, so the difference carried the zone
+  offset; from twelve hours on it rounded up to a whole day. The calendar day now comes from the same
+  source as everywhere else in the app and follows the household's time zone (#829). New Zealand and
+  Kiribati were affected; the rest of the world saw the correct group by coincidence of arithmetic.
+
 ## [2.36.0] - 2026-08-23
 
 ### Changed
