@@ -23,6 +23,7 @@ import '/components/category-manager.js';
 import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
 import { isSoloHousehold } from '/utils/household.js';
+import { todayKey, parseLocalDateKey } from '/utils/date.js';
 import { isNavModuleReadOnly } from '/permissions.js';
 
 // --------------------------------------------------------
@@ -261,7 +262,17 @@ function groupBy(tasks, mode) {
     let key;
     if (!task.due_date)                  key = groupNoDate;
     else {
-      const diff = Math.round((new Date(task.due_date) - new Date().setHours(0,0,0,0)) / 86400000);
+      // Beide Seiten als KALENDERTAG rechnen, nicht als Instant.
+      //
+      // `new Date('2026-08-24')` ist UTC-Mitternacht, `setHours(0,0,0,0)` die
+      // lokale - die Differenz trug damit den Zonen-Offset mit. Ab +12 Stunden
+      // rundete sie auf einen ganzen Tag auf, und eine heute faellige Aufgabe
+      // stand in Neuseeland unter „Diese Woche" statt unter „Heute" (in
+      // Kiritimati ebenso). Der Kalendertag kommt jetzt aus `todayKey()` und
+      // folgt damit derselben Zone wie der Rest der App (#829).
+      const diff = Math.round(
+        (parseLocalDateKey(task.due_date) - parseLocalDateKey(todayKey())) / 86400000,
+      );
       if (diff < 0)       key = groupOverdue;
       else if (diff === 0) key = groupToday;
       else if (diff <= 3)  key = groupThisWeek;
