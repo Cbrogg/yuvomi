@@ -462,7 +462,8 @@
         "lockedLabel": "التحرير",
         "lockedDetail": "المنشئ والمسؤولون فقط",
         "tagsSkippedLocked": "تم تخطي {{count}} مهام مقفلة.",
-        "tagsSkippedLocked_one": "تم تخطي مهمة {{count}} مقفلة."
+        "tagsSkippedLocked_one": "تم تخطي مهمة {{count}} مقفلة.",
+        "listLoadError": "تعذر تحميل المهام."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وجبات",

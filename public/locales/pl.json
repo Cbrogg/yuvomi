@@ -474,7 +474,8 @@
         "lockedLabel": "Edycja",
         "lockedDetail": "Tylko autor i administratorzy",
         "tagsSkippedLocked": "Pominięto {{count}} zablokowanych zadań.",
-        "tagsSkippedLocked_one": "Pominięto {{count}} zablokowane zadanie."
+        "tagsSkippedLocked_one": "Pominięto {{count}} zablokowane zadanie.",
+        "listLoadError": "Nie udało się załadować zadań."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} posiłki",

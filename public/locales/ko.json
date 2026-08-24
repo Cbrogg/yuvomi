@@ -474,7 +474,8 @@
         "lockedLabel": "편집",
         "lockedDetail": "작성자와 관리자만",
         "tagsSkippedLocked": "잠긴 작업 {{count}}개를 건너뛰었습니다.",
-        "tagsSkippedLocked_one": "잠긴 작업 {{count}}개를 건너뛰었습니다."
+        "tagsSkippedLocked_one": "잠긴 작업 {{count}}개를 건너뛰었습니다.",
+        "listLoadError": "할 일을 불러오지 못했습니다."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}개 식사",

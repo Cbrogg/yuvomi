@@ -462,7 +462,8 @@
         "lockedLabel": "Szerkesztés",
         "lockedDetail": "Csak a létrehozó és az adminisztrátorok",
         "tagsSkippedLocked": "{{count}} zárolt feladat kihagyva.",
-        "tagsSkippedLocked_one": "{{count}} zárolt feladat kihagyva."
+        "tagsSkippedLocked_one": "{{count}} zárolt feladat kihagyva.",
+        "listLoadError": "A feladatok betöltése sikertelen."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} étkezésből",

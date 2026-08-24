@@ -462,7 +462,8 @@
         "lockedLabel": "Modifica",
         "lockedDetail": "Solo il creatore e gli amministratori",
         "tagsSkippedLocked": "{{count}} attività bloccate ignorate.",
-        "tagsSkippedLocked_one": "{{count}} attività bloccata ignorata."
+        "tagsSkippedLocked_one": "{{count}} attività bloccata ignorata.",
+        "listLoadError": "Impossibile caricare i compiti."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pasti",

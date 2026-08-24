@@ -462,7 +462,8 @@
         "lockedLabel": "Editing",
         "lockedDetail": "Creator and administrators only",
         "tagsSkippedLocked": "{{count}} locked tasks skipped.",
-        "tagsSkippedLocked_one": "{{count}} locked task skipped."
+        "tagsSkippedLocked_one": "{{count}} locked task skipped.",
+        "listLoadError": "Tasks could not be loaded."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} meals",

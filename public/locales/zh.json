@@ -462,7 +462,8 @@
         "lockedLabel": "编辑",
         "lockedDetail": "仅创建者和管理员",
         "tagsSkippedLocked": "已跳过 {{count}} 个锁定的任务。",
-        "tagsSkippedLocked_one": "已跳过 {{count}} 个锁定的任务。"
+        "tagsSkippedLocked_one": "已跳过 {{count}} 个锁定的任务。",
+        "listLoadError": "无法加载任务。"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} 餐",

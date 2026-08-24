@@ -462,7 +462,8 @@
         "lockedLabel": "Edição",
         "lockedDetail": "Apenas o criador e os administradores",
         "tagsSkippedLocked": "{{count}} tarefas bloqueadas ignoradas.",
-        "tagsSkippedLocked_one": "{{count}} tarefa bloqueada ignorada."
+        "tagsSkippedLocked_one": "{{count}} tarefa bloqueada ignorada.",
+        "listLoadError": "Não foi possível carregar as tarefas."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} refeições",

@@ -474,7 +474,8 @@
         "lockedLabel": "Bearbeiten",
         "lockedDetail": "Nur Ersteller:in und Administratoren",
         "tagsSkippedLocked": "{{count}} gesperrte Aufgaben übersprungen.",
-        "tagsSkippedLocked_one": "{{count}} gesperrte Aufgabe übersprungen."
+        "tagsSkippedLocked_one": "{{count}} gesperrte Aufgabe übersprungen.",
+        "listLoadError": "Aufgaben konnten nicht geladen werden."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} Mahlzeiten",

@@ -462,7 +462,8 @@
         "lockedLabel": "Modification",
         "lockedDetail": "Créateur et administrateurs uniquement",
         "tagsSkippedLocked": "{{count}} tâches verrouillées ignorées.",
-        "tagsSkippedLocked_one": "{{count}} tâche verrouillée ignorée."
+        "tagsSkippedLocked_one": "{{count}} tâche verrouillée ignorée.",
+        "listLoadError": "Impossible de charger les tâches."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} repas",

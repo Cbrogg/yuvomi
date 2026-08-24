@@ -462,7 +462,8 @@
         "lockedLabel": "Chỉnh sửa",
         "lockedDetail": "Chỉ người tạo và quản trị viên",
         "tagsSkippedLocked": "Đã bỏ qua {{count}} công việc bị khoá.",
-        "tagsSkippedLocked_one": "Đã bỏ qua {{count}} công việc bị khoá."
+        "tagsSkippedLocked_one": "Đã bỏ qua {{count}} công việc bị khoá.",
+        "listLoadError": "Không thể tải nhiệm vụ."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} bữa ăn",

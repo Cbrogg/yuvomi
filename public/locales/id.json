@@ -474,7 +474,8 @@
         "lockedLabel": "Penyuntingan",
         "lockedDetail": "Hanya pembuat dan administrator",
         "tagsSkippedLocked": "{{count}} tugas terkunci dilewati.",
-        "tagsSkippedLocked_one": "{{count}} tugas terkunci dilewati."
+        "tagsSkippedLocked_one": "{{count}} tugas terkunci dilewati.",
+        "listLoadError": "Tugas tidak dapat dimuat."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} hidangan",

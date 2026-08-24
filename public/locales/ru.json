@@ -462,7 +462,8 @@
         "lockedLabel": "Изменение",
         "lockedDetail": "Только автор и администраторы",
         "tagsSkippedLocked": "Пропущено заблокированных задач: {{count}}.",
-        "tagsSkippedLocked_one": "Пропущена {{count}} заблокированная задача."
+        "tagsSkippedLocked_one": "Пропущена {{count}} заблокированная задача.",
+        "listLoadError": "Не удалось загрузить задачи."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} приёма пищи",

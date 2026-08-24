@@ -462,7 +462,8 @@
         "lockedLabel": "Düzenleme",
         "lockedDetail": "Yalnızca oluşturan kişi ve yöneticiler",
         "tagsSkippedLocked": "{{count}} kilitli görev atlandı.",
-        "tagsSkippedLocked_one": "{{count}} kilitli görev atlandı."
+        "tagsSkippedLocked_one": "{{count}} kilitli görev atlandı.",
+        "listLoadError": "Görevler yüklenemedi."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} öğünden",

@@ -474,7 +474,8 @@
         "lockedLabel": "ویرایش",
         "lockedDetail": "فقط سازنده و مدیران",
         "tagsSkippedLocked": "{{count}} وظیفهٔ قفل‌شده رد شد.",
-        "tagsSkippedLocked_one": "{{count}} وظیفهٔ قفل‌شده رد شد."
+        "tagsSkippedLocked_one": "{{count}} وظیفهٔ قفل‌شده رد شد.",
+        "listLoadError": "کارها بارگذاری نشدند."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} وعده",

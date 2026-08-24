@@ -462,7 +462,8 @@
         "lockedLabel": "Úpravy",
         "lockedDetail": "Pouze autor a administrátoři",
         "tagsSkippedLocked": "Přeskočeno {{count}} zamčených úkolů.",
-        "tagsSkippedLocked_one": "Přeskočen {{count}} zamčený úkol."
+        "tagsSkippedLocked_one": "Přeskočen {{count}} zamčený úkol.",
+        "listLoadError": "Úkoly se nepodařilo načíst."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} jídla",

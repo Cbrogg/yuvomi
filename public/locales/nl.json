@@ -462,7 +462,8 @@
         "lockedLabel": "Bewerken",
         "lockedDetail": "Alleen de maker en beheerders",
         "tagsSkippedLocked": "{{count}} vergrendelde taken overgeslagen.",
-        "tagsSkippedLocked_one": "{{count}} vergrendelde taak overgeslagen."
+        "tagsSkippedLocked_one": "{{count}} vergrendelde taak overgeslagen.",
+        "listLoadError": "Taken konden niet worden geladen."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} maaltijden",

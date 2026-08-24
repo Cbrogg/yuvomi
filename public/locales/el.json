@@ -462,7 +462,8 @@
         "lockedLabel": "Επεξεργασία",
         "lockedDetail": "Μόνο ο δημιουργός και οι διαχειριστές",
         "tagsSkippedLocked": "Παραλείφθηκαν {{count}} κλειδωμένες εργασίες.",
-        "tagsSkippedLocked_one": "Παραλείφθηκε {{count}} κλειδωμένη εργασία."
+        "tagsSkippedLocked_one": "Παραλείφθηκε {{count}} κλειδωμένη εργασία.",
+        "listLoadError": "Δεν ήταν δυνατή η φόρτωση των εργασιών."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} γεύματα",

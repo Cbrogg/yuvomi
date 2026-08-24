@@ -462,7 +462,8 @@
         "lockedLabel": "編集",
         "lockedDetail": "作成者と管理者のみ",
         "tagsSkippedLocked": "ロックされた {{count}} 件のタスクをスキップしました。",
-        "tagsSkippedLocked_one": "ロックされた {{count}} 件のタスクをスキップしました。"
+        "tagsSkippedLocked_one": "ロックされた {{count}} 件のタスクをスキップしました。",
+        "listLoadError": "タスクを読み込めませんでした。"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}}件の食事",

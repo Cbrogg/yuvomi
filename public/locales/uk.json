@@ -462,7 +462,8 @@
         "lockedLabel": "Редагування",
         "lockedDetail": "Лише автор і адміністратори",
         "tagsSkippedLocked": "Пропущено заблокованих завдань: {{count}}.",
-        "tagsSkippedLocked_one": "Пропущено {{count}} заблоковане завдання."
+        "tagsSkippedLocked_one": "Пропущено {{count}} заблоковане завдання.",
+        "listLoadError": "Не вдалося завантажити завдання."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} прийоми їжі",

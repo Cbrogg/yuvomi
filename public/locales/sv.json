@@ -462,7 +462,8 @@
         "lockedLabel": "Redigering",
         "lockedDetail": "Endast skaparen och administratörer",
         "tagsSkippedLocked": "{{count}} låsta uppgifter hoppades över.",
-        "tagsSkippedLocked_one": "{{count}} låst uppgift hoppades över."
+        "tagsSkippedLocked_one": "{{count}} låst uppgift hoppades över.",
+        "listLoadError": "Uppgifter kunde inte laddas."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} måltider",
