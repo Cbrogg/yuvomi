@@ -22,6 +22,7 @@ import { parseScopes, serializeScopes, normalizeScopes } from './scopes.js';
 import { hashPassword, normalizePassword, verifyPassword } from './utils/password.js';
 import { resolvePermissions, buildSessionModuleAccess, clientPermissions } from './permissions.js';
 import { requireAdmin } from './middleware/require-admin.js';
+import * as twoFactor from './services/two-factor.js';
 
 const log = createLogger('Auth');
 const router = express.Router();
@@ -269,6 +270,22 @@ const passwordResetLimiter = rateLimit({
   legacyHeaders: false,
   message: { error: 'Zu viele Anfragen. Bitte warte kurz.', code: 429 },
 });
+
+// Eigener Limiter für den zweiten Faktor (#672). Zählt wie der Reset-Limiter
+// ALLE Antworten: ein TOTP-Code hat sechs Stellen, also eine Million
+// Möglichkeiten, von denen das Toleranzfenster jederzeit drei gültig hält.
+// Würden erfolgreiche Versuche übersprungen, könnte ein Angreifer mit einem
+// erbeuteten Passwort beliebig oft raten - der Login selbst war ja korrekt.
+const twoFactorLimiter = rateLimit({
+  windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS) || 60_000,
+  max: parseInt(process.env.RATE_LIMIT_MAX_ATTEMPTS) || 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Zu viele Versuche. Bitte warte kurz.', code: 429 },
+});
+
+// Wie lange ein bestandenes Passwort auf den zweiten Faktor warten darf.
+const TWO_FACTOR_WINDOW_MS = 5 * 60 * 1000;
 
 function hashApiToken(token) {
   return crypto.createHash('sha256').update(token, 'utf8').digest('hex');
@@ -585,6 +602,37 @@ function setupAuthSession(req, res, user) {
   });
 }
 
+/**
+ * Die Antwort auf eine geglueckte Anmeldung. Steht einmal, weil sie an zwei
+ * Stellen faellig wird: beim Login ohne zweiten Faktor und nach dessen
+ * Pruefung. Zwei Kopien waeren zwei Gelegenheiten, ein Feld zu vergessen.
+ *
+ * @param {import('express').Request} req
+ * @param {object} user Zeile aus `users`
+ * @returns {object}
+ */
+function loginPayload(req, user) {
+  return {
+    user: {
+      id:           user.id,
+      username:     user.username,
+      display_name: user.display_name,
+      avatar_color: user.avatar_color,
+      avatar_data:  user.avatar_data,
+      role:         user.role,
+      family_role:  user.family_role,
+      access_scope: db.get().prepare('SELECT 1 FROM split_expense_guest_users WHERE user_id = ?').get(user.id) ? 'split_guest' : 'family',
+    },
+    permissions: clientPermissions(db.get(), user),
+    // Auch hier, nicht nur an /me: nach dem Login navigiert der Router
+    // direkt weiter, ohne /me noch einmal zu fragen. Ohne diese Zeile
+    // stuende ein Solo-Haushalt bis zum naechsten Kaltstart wieder voller
+    // Familienfelder.
+    householdSize: householdSize(db.get()),
+    csrfToken: req.session.csrfToken,
+  };
+}
+
 // --------------------------------------------------------
 /**
  * Bringt einen Claim-Wert auf das app-weite Username-Format
@@ -812,27 +860,22 @@ router.post('/login', loginLimiter, async (req, res) => {
       return res.status(403).json({ error: 'This account cannot sign in.', code: 403 });
     }
 
+    // Zweiter Faktor (#672): das Passwort stimmt, die Sitzung entsteht aber
+    // noch nicht. Der Wartezustand traegt bewusst einen ANDEREN Schluessel als
+    // `userId` - `requireAuth` prueft genau den und ist damit blind fuer einen
+    // halb angemeldeten Zustand. Ein neuer Schluessel kann hier nichts
+    // aufschliessen, was der alte nicht schon aufgeschlossen haette.
+    if (twoFactor.isEnabled(db.get(), user.id)) {
+      req.session.pendingTwoFactor = { userId: user.id, expiresAt: Date.now() + TWO_FACTOR_WINDOW_MS };
+      return res.json({
+        twoFactorRequired: true,
+        recoveryAvailable: twoFactor.getStatus(db.get(), user.id).recovery_remaining > 0,
+      });
+    }
+
     try {
       await setupAuthSession(req, res, user);
-      res.json({
-        user: {
-          id:           user.id,
-          username:     user.username,
-          display_name: user.display_name,
-          avatar_color: user.avatar_color,
-          avatar_data:  user.avatar_data,
-          role:         user.role,
-          family_role:  user.family_role,
-          access_scope: db.get().prepare('SELECT 1 FROM split_expense_guest_users WHERE user_id = ?').get(user.id) ? 'split_guest' : 'family',
-        },
-        permissions: clientPermissions(db.get(), user),
-        // Auch hier, nicht nur an /me: nach dem Login navigiert der Router
-        // direkt weiter, ohne /me noch einmal zu fragen. Ohne diese Zeile
-        // stuende ein Solo-Haushalt bis zum naechsten Kaltstart wieder voller
-        // Familienfelder.
-        householdSize: householdSize(db.get()),
-        csrfToken: req.session.csrfToken,
-      });
+      res.json(loginPayload(req, user));
     } catch (sessionErr) {
       log.error('Session regeneration failed:', sessionErr);
       res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -1362,6 +1405,24 @@ router.get('/oidc/callback', async (req, res) => {
       // non-standard, u. a. Synology DSM SSO: der reine Kontoname ohne Directory-Teil
       username:           userinfo.username ?? claims.username,
     });
+
+    // Der zweite Faktor gilt AUCH auf diesem Weg (#672).
+    //
+    // Es gaebe ein Argument dagegen: bei SSO hat der Provider authentifiziert,
+    // womoeglich selbst mit zweitem Faktor, und ein weiterer waere doppelt.
+    // Zwei Dinge wiegen schwerer. Erstens hat der Nutzer ihn HIER
+    // eingeschaltet - eine Zusage, die von der Anmeldeart abhaengt, ist keine.
+    // Zweitens, und das entscheidet: die haushaltsweite Pflicht waere sonst
+    // ueber diesen Weg auszuhebeln, und damit waere sie keine Pflicht,
+    // sondern eine Bitte an die, die den Passwort-Weg nehmen.
+    //
+    // Der Wartezustand ist derselbe wie beim Passwort-Login, deshalb landet
+    // der Browser auf der Anmeldeseite und wird dort nach dem Code gefragt.
+    if (twoFactor.isEnabled(db.get(), user.id)) {
+      req.session.pendingTwoFactor = { userId: user.id, expiresAt: Date.now() + TWO_FACTOR_WINDOW_MS };
+      return res.redirect('/login?two_factor=1');
+    }
+
     await setupAuthSession(req, res, user);
 
     res.redirect('/');
@@ -1489,6 +1550,249 @@ router.get('/me', requireAuth, (req, res) => {
     });
   } catch (err) {
     log.error('/me error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+// --------------------------------------------------------
+// Zwei-Faktor-Anmeldung (#672)
+// --------------------------------------------------------
+
+/**
+ * Holt den Wartezustand aus der Session und prüft ihn auf Frist.
+ * @param {import('express').Request} req
+ * @returns {{ userId: number }|null}
+ */
+function consumePendingTwoFactor(req) {
+  const pending = req.session?.pendingTwoFactor;
+  if (!pending) return null;
+  if (!pending.expiresAt || pending.expiresAt < Date.now()) {
+    delete req.session.pendingTwoFactor;
+    return null;
+  }
+  return pending;
+}
+
+/**
+ * POST /api/v1/auth/2fa/verify
+ * Zweiter Schritt der Anmeldung. Body: { code: string }
+ *
+ * Der Code darf ein TOTP-Code oder ein Wiederherstellungscode sein - welcher
+ * es war, steht in der Antwort, damit die Oberfläche auf zur Neige gehende
+ * Codes hinweisen kann.
+ */
+router.post('/2fa/verify', twoFactorLimiter, async (req, res) => {
+  try {
+    const pending = consumePendingTwoFactor(req);
+    if (!pending) {
+      return res.status(401).json({ error: 'No pending sign-in.', code: 401 });
+    }
+
+    const code = String(req.body?.code || '');
+    if (code.length > 64) {
+      return res.status(400).json({ error: 'Input is too long.', code: 400 });
+    }
+
+    const result = twoFactor.verifySecondFactor(db.get(), pending.userId, code);
+    if (!result.valid) {
+      log.warn('Second factor failed', { ip: req.ip, userId: pending.userId });
+      return res.status(401).json({ error: 'Invalid code.', code: 401 });
+    }
+
+    const user = db.get().prepare('SELECT * FROM users WHERE id = ?').get(pending.userId);
+    if (!user) {
+      delete req.session.pendingTwoFactor;
+      return res.status(401).json({ error: 'Invalid credentials.', code: 401 });
+    }
+
+    // `regenerate` legt eine neue, leere Session an - der Wartezustand ist
+    // danach von selbst fort, und ein vor der Anmeldung untergeschobener
+    // Sitzungsschlüssel taugt nichts mehr.
+    await setupAuthSession(req, res, user);
+    log.info('Second factor accepted', { userId: user.id, method: result.method });
+
+    res.json({
+      ...loginPayload(req, user),
+      twoFactorMethod: result.method,
+      recoveryRemaining: result.recovery_remaining,
+    });
+  } catch (err) {
+    log.error('Second factor error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+/**
+ * GET /api/v1/auth/2fa
+ * Zustand für die eigene Einstellungsseite.
+ */
+router.get('/2fa', requireAuth, (req, res) => {
+  try {
+    res.json({ data: twoFactor.getStatus(db.get(), req.authUserId) });
+  } catch (err) {
+    log.error('2FA status error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+/**
+ * POST /api/v1/auth/2fa/setup
+ * Erzeugt ein Geheimnis und liefert QR-Bild plus Klartext. Noch nicht scharf -
+ * das wird es erst mit /2fa/enable.
+ */
+router.post('/2fa/setup', requireAuth, csrfMiddleware, (req, res) => {
+  try {
+    const user = db.get().prepare('SELECT id, username FROM users WHERE id = ?').get(req.authUserId);
+    if (!user) return res.status(401).json({ error: 'User not found.', code: 401 });
+
+    const { secret, uri, qr } = twoFactor.beginSetup(db.get(), user);
+    res.json({ data: { secret, uri, qr } });
+  } catch (err) {
+    if (err.code === 'already_enabled') {
+      return res.status(409).json({ error: err.message, code: 409 });
+    }
+    log.error('2FA setup error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+/**
+ * POST /api/v1/auth/2fa/enable
+ * Body: { code: string }
+ * Bestätigt die Einrichtung und liefert die Wiederherstellungscodes - einmalig,
+ * im Klartext. Danach stehen sie nur noch als Hash in der Datenbank.
+ */
+router.post('/2fa/enable', requireAuth, csrfMiddleware, twoFactorLimiter, (req, res) => {
+  try {
+    const code = String(req.body?.code || '');
+    if (code.length > 64) return res.status(400).json({ error: 'Input is too long.', code: 400 });
+
+    const { recovery_codes: codes } = twoFactor.confirmSetup(db.get(), req.authUserId, code);
+
+    // Alle anderen Sitzungen dieses Kontos beenden: wer den zweiten Faktor
+    // einschaltet, will nicht, dass eine alte Anmeldung ohne ihn weiterläuft.
+    invalidateUserSessions(req.authUserId, req.sessionID);
+
+    res.json({ data: { recovery_codes: codes } });
+  } catch (err) {
+    if (err.code === 'invalid_code') {
+      return res.status(400).json({ error: err.message, code: 400, reason: 'invalid_code' });
+    }
+    if (err.code === 'no_pending_setup' || err.code === 'already_enabled') {
+      return res.status(409).json({ error: err.message, code: 409, reason: err.code });
+    }
+    log.error('2FA enable error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+/**
+ * POST /api/v1/auth/2fa/disable
+ * Body: { code: string }
+ *
+ * Verlangt einen gültigen zweiten Faktor, kein Passwort: gegen eine gekaperte
+ * Sitzung hilft nur der Faktor selbst, und OIDC-Konten haben gar kein Passwort,
+ * mit dem sie sich hier ausweisen könnten. Wer sein Gerät verloren hat, nimmt
+ * einen Wiederherstellungscode.
+ *
+ * Verlangt der Haushalt die Zwei-Faktor-Anmeldung, ist Abschalten gesperrt.
+ */
+router.post('/2fa/disable', requireAuth, csrfMiddleware, twoFactorLimiter, (req, res) => {
+  try {
+    if (!twoFactor.isEnabled(db.get(), req.authUserId)) {
+      return res.status(409).json({ error: 'Two-factor authentication is not enabled.', code: 409, reason: 'not_enabled' });
+    }
+    if (twoFactor.isRequiredForHousehold(db.get())) {
+      return res.status(403).json({ error: 'Two-factor authentication is required for this household.', code: 403, reason: 'required' });
+    }
+
+    const code = String(req.body?.code || '');
+    if (code.length > 64) return res.status(400).json({ error: 'Input is too long.', code: 400 });
+
+    const result = twoFactor.verifySecondFactor(db.get(), req.authUserId, code);
+    if (!result.valid) {
+      log.warn('2FA disable rejected', { ip: req.ip, userId: req.authUserId });
+      return res.status(400).json({ error: 'Invalid code.', code: 400, reason: 'invalid_code' });
+    }
+
+    twoFactor.disable(db.get(), req.authUserId);
+    res.json({ data: twoFactor.getStatus(db.get(), req.authUserId) });
+  } catch (err) {
+    log.error('2FA disable error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+/**
+ * POST /api/v1/auth/2fa/recovery-codes
+ * Body: { code: string }
+ * Wirft alle bisherigen Wiederherstellungscodes weg und liefert einen neuen
+ * Satz. Auch das verlangt den zweiten Faktor.
+ */
+router.post('/2fa/recovery-codes', requireAuth, csrfMiddleware, twoFactorLimiter, (req, res) => {
+  try {
+    if (!twoFactor.isEnabled(db.get(), req.authUserId)) {
+      return res.status(409).json({ error: 'Two-factor authentication is not enabled.', code: 409, reason: 'not_enabled' });
+    }
+    const code = String(req.body?.code || '');
+    if (code.length > 64) return res.status(400).json({ error: 'Input is too long.', code: 400 });
+
+    const result = twoFactor.verifySecondFactor(db.get(), req.authUserId, code);
+    if (!result.valid) {
+      return res.status(400).json({ error: 'Invalid code.', code: 400, reason: 'invalid_code' });
+    }
+
+    const { recovery_codes: codes } = twoFactor.regenerateRecoveryCodes(db.get(), req.authUserId);
+    res.json({ data: { recovery_codes: codes } });
+  } catch (err) {
+    log.error('2FA recovery codes error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+/**
+ * GET /api/v1/auth/2fa/overview
+ * Wer im Haushalt hat den zweiten Faktor eingerichtet.
+ *
+ * Bewusst eine eigene Admin-Route und nicht ein Feld an /auth/users: das liest
+ * jedes Mitglied, und wer welchen Schutz hat, ist keine Angabe fuer alle.
+ */
+router.get('/2fa/overview', requireAuth, requireAdmin, (_req, res) => {
+  try {
+    res.json({ data: twoFactor.householdOverview(db.get()), required: twoFactor.isRequiredForHousehold(db.get()) });
+  } catch (err) {
+    log.error('2FA overview error:', err);
+    res.status(500).json({ error: 'Internal server error.', code: 500 });
+  }
+});
+
+/**
+ * PUT /api/v1/auth/2fa/require
+ * Body: { required: boolean }
+ * Schaltet die haushaltsweite Pflicht ein oder aus.
+ *
+ * Bewusst eine eigene Route mit `requireAdmin` als MIDDLEWARE und kein Feld an
+ * `PUT /preferences`. Dort läge die Rechteprüfung als `if`-Zweig im Handler,
+ * wie bei Zeitzone und Sprache - für eine Anzeige-Einstellung tragbar, für die
+ * Frage, wer die Zwei-Faktor-Pflicht setzen darf, nicht. Der Settings-Guard
+ * (`test-settings-admin-gate.js`) sieht genau diesen Unterschied und hat den
+ * ersten Anlauf zu Recht abgewiesen: eine Berechtigungsregel, die in einem
+ * Feld-Zweig wohnt, ist von außen nicht als solche zu erkennen.
+ *
+ * Die Pflicht sperrt niemanden aus. Sie verbietet das ABSCHALTEN und stellt
+ * allen ohne zweiten Faktor einen Hinweis auf ihre Kontoseite. Eine Pflicht,
+ * die bestehende Anmeldungen sofort abwiese, hätte in einem Haushalt ohne
+ * eingerichtete Geräte genau eine Folge: niemand kommt mehr hinein, auch der
+ * Admin nicht.
+ */
+router.put('/2fa/require', requireAuth, requireAdmin, csrfMiddleware, (req, res) => {
+  try {
+    const required = req.body?.required === true || req.body?.required === '1';
+    twoFactor.setRequiredForHousehold(db.get(), required);
+    log.info('Household two-factor requirement changed', { userId: req.authUserId, required });
+    res.json({ data: { required: twoFactor.isRequiredForHousehold(db.get()) } });
+  } catch (err) {
+    log.error('2FA requirement error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
   }
 });

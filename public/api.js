@@ -61,11 +61,14 @@ async function apiFetch(path, options = {}, _retried = false) {
   if (response.status === 401) {
     // Beim Login-Endpunkt bedeutet 401 "falsche Zugangsdaten", nicht "Session abgelaufen".
     // auth:expired würde die Login-Seite neu rendern und die Fehlermeldung verwerfen.
-    if (path !== '/auth/login') {
+    // Für den zweiten Faktor gilt dasselbe: dort heißt 401 "falscher Code" oder
+    // "der Wartezustand ist abgelaufen" - beides gehört auf die Anmeldeseite
+    // gesagt und nicht in einen Sitzungsabbruch übersetzt (#672).
+    if (path !== '/auth/login' && path !== '/auth/2fa/verify') {
       window.dispatchEvent(new CustomEvent('auth:expired'));
       throw new Error('Sitzung abgelaufen.');
     }
-    // Für /auth/login: fall-through zum generischen !response.ok-Handler unten.
+    // Für beide: fall-through zum generischen !response.ok-Handler unten.
   }
 
   // CSRF-Token-Desync (haeufig nach iOS-PWA-Resume): einmal GET /auth/me
@@ -174,6 +177,20 @@ const auth = {
     setHouseholdSize(res?.householdSize);
     return res;
   },
+  // Zweiter Schritt der Anmeldung (#672). Der Code darf ein TOTP-Code oder ein
+  // Wiederherstellungscode sein - welcher es war, sagt die Antwort.
+  verifyTwoFactor: async (code) => {
+    const res = await api.post('/auth/2fa/verify', { code });
+    setPermissions(res?.permissions);
+    setHouseholdSize(res?.householdSize);
+    return res;
+  },
+  // Verwaltung des eigenen zweiten Faktors.
+  getTwoFactor: () => api.get('/auth/2fa'),
+  setupTwoFactor: () => api.post('/auth/2fa/setup', {}),
+  enableTwoFactor: (code) => api.post('/auth/2fa/enable', { code }),
+  disableTwoFactor: (code) => api.post('/auth/2fa/disable', { code }),
+  regenerateRecoveryCodes: (code) => api.post('/auth/2fa/recovery-codes', { code }),
   logout: async () => {
     try {
       return await api.post('/auth/logout');

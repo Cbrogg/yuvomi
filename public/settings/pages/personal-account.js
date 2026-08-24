@@ -174,7 +174,301 @@ function consumeOidcNotice() {
   };
 }
 
-function renderPage(container, user, refreshFailed, accessNotice, oidcState, oidcNotice) {
+/**
+ * Zwei-Faktor-Anmeldung (#672).
+ *
+ * Drei Zustaende in einer Karte: aus, in Einrichtung, an. Die Einrichtung wird
+ * bewusst nicht in einen Dialog gelegt - der QR-Code will nebenher offen
+ * bleiben, waehrend man in einer zweiten App den Code abliest.
+ *
+ * @param {{ enabled: boolean, pending: boolean, recovery_remaining: number, required: boolean }|null} state
+ * @returns {string}
+ */
+function twoFactorCardHtml(state) {
+  if (!state) return '';
+
+  const body = state.enabled
+    ? `
+      <p class="form-hint settings-2fa__status settings-2fa__status--on">
+        <i data-lucide="shield-check" aria-hidden="true"></i>
+        <span>${t('settings.twoFactorActive')}</span>
+      </p>
+      <p class="form-hint">${t('settings.twoFactorRecoveryLeft', { count: state.recovery_remaining })}</p>
+      ${state.recovery_remaining === 0
+        ? `<p class="form-error" role="status">${t('settings.twoFactorNoRecoveryLeft')}</p>`
+        : ''}
+      <div class="settings-form-actions">
+        <button type="button" class="btn btn--secondary" id="two-factor-regenerate">${t('settings.twoFactorNewCodes')}</button>
+        ${state.required
+          ? ''
+          : `<button type="button" class="btn btn--danger-outline" id="two-factor-disable">${t('settings.twoFactorDisable')}</button>`}
+      </div>
+      ${state.required ? `<p class="form-hint">${t('settings.twoFactorRequiredByHousehold')}</p>` : ''}
+    `
+    : `
+      <p class="form-hint">${t('settings.twoFactorHint')}</p>
+      ${state.required ? `<p class="form-error" role="status">${t('settings.twoFactorRequiredSetUpNow')}</p>` : ''}
+      <div class="settings-form-actions">
+        <button type="button" class="btn btn--primary" id="two-factor-start">${t('settings.twoFactorSetUp')}</button>
+      </div>
+    `;
+
+  return `
+    <div class="settings-card" id="two-factor-card">
+      <h3 class="settings-card__title">${t('settings.twoFactorTitle')}</h3>
+      ${body}
+      <div id="two-factor-error" class="form-error" role="alert" hidden></div>
+    </div>
+  `;
+}
+
+/**
+ * Der Einrichtungsschritt: QR-Bild, Geheimnis zum Abtippen, Code-Eingabe.
+ * @param {HTMLElement} card
+ * @param {{ secret: string, uri: string, qr: string }} setup
+ */
+function renderTwoFactorSetup(card, setup) {
+  card.replaceChildren();
+  // Das Geheimnis wird in Vierergruppen gezeigt: 32 Zeichen am Stueck tippt
+  // niemand fehlerfrei ab, und abtippen muss, wer die Kamera nicht nutzen kann.
+  const grouped = setup.secret.replace(/(.{4})/g, '$1 ').trim();
+
+  card.insertAdjacentHTML('beforeend', `
+    <h3 class="settings-card__title">${t('settings.twoFactorTitle')}</h3>
+    <ol class="settings-2fa__steps">
+      <li>${t('settings.twoFactorStepScan')}</li>
+      <li>${t('settings.twoFactorStepEnter')}</li>
+    </ol>
+    <div class="settings-2fa__qr">
+      <img src="${esc(setup.qr)}" alt="${esc(t('settings.twoFactorQrAlt'))}" width="222" height="222">
+    </div>
+    <p class="form-hint">${t('settings.twoFactorManualHint')}</p>
+    <p class="settings-2fa__secret"><code>${esc(grouped)}</code></p>
+    <form id="two-factor-enable-form" class="settings-form">
+      <div class="form-group">
+        <label class="form-label" for="two-factor-code">${t('settings.twoFactorCodeLabel')}</label>
+        <input class="form-input settings-2fa__code" type="text" id="two-factor-code"
+               inputmode="numeric" autocomplete="one-time-code" spellcheck="false"
+               maxlength="8" required aria-describedby="two-factor-error">
+      </div>
+      <div id="two-factor-error" class="form-error" role="alert" hidden></div>
+      <div class="settings-form-actions">
+        <button type="submit" class="btn btn--primary">${t('settings.twoFactorConfirm')}</button>
+        <button type="button" class="btn btn--secondary" id="two-factor-cancel">${t('common.cancel')}</button>
+      </div>
+    </form>
+  `);
+  window.lucide?.createIcons({ el: card });
+  card.querySelector('#two-factor-code')?.focus();
+}
+
+/**
+ * Die Wiederherstellungscodes. Sie stehen genau hier und genau einmal - danach
+ * kennt der Server nur noch ihre Hashes. Deshalb kein beilaeufiger Hinweis,
+ * sondern ein eigener Schritt, den man bestaetigen muss.
+ *
+ * @param {HTMLElement} card
+ * @param {string[]} codes
+ * @param {() => void} onDone
+ */
+function renderRecoveryCodes(card, codes, onDone) {
+  card.replaceChildren();
+  card.insertAdjacentHTML('beforeend', `
+    <h3 class="settings-card__title">${t('settings.twoFactorRecoveryTitle')}</h3>
+    <p class="form-hint">${t('settings.twoFactorRecoveryLead')}</p>
+    <ul class="settings-2fa__codes">
+      ${codes.map((code) => `<li><code>${esc(code)}</code></li>`).join('')}
+    </ul>
+    <div class="settings-form-actions">
+      <button type="button" class="btn btn--secondary" id="two-factor-copy">${t('settings.twoFactorCopyCodes')}</button>
+      <button type="button" class="btn btn--secondary" id="two-factor-download">${t('settings.twoFactorDownloadCodes')}</button>
+      <button type="button" class="btn btn--primary" id="two-factor-done">${t('settings.twoFactorCodesSaved')}</button>
+    </div>
+    <p class="form-hint" id="two-factor-copy-status" role="status"></p>
+  `);
+
+  const status = card.querySelector('#two-factor-copy-status');
+
+  card.querySelector('#two-factor-copy')?.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(codes.join('\n'));
+      status.textContent = t('settings.twoFactorCopied');
+    } catch {
+      // Ohne Zwischenablage-Recht bleibt der sichtbare Text der Weg - die Codes
+      // stehen ja oben. Ein Fehlerbanner waere hier groesser als das Problem.
+      status.textContent = t('settings.twoFactorCopyFailed');
+    }
+  });
+
+  card.querySelector('#two-factor-download')?.addEventListener('click', () => {
+    const blob = new Blob([`${codes.join('\n')}\n`], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = 'yuvomi-recovery-codes.txt';
+    link.click();
+    URL.revokeObjectURL(url);
+  });
+
+  card.querySelector('#two-factor-done')?.addEventListener('click', onDone);
+}
+
+/**
+ * Fragt einen zweiten Faktor ab, bevor eine Handlung ihn verlangt (Abschalten,
+ * neue Codes). Bewusst kein Passwort: OIDC-Konten haben keins, und gegen eine
+ * gekaperte Sitzung hilft nur der Faktor selbst.
+ *
+ * @param {HTMLElement} card
+ * @param {{ title: string, lead: string, confirm: string, danger?: boolean }} texts
+ * @param {(code: string) => Promise<void>} onConfirm
+ * @param {() => void} onCancel
+ */
+function askForCode(card, texts, onConfirm, onCancel) {
+  card.replaceChildren();
+  card.insertAdjacentHTML('beforeend', `
+    <h3 class="settings-card__title">${esc(texts.title)}</h3>
+    <p class="form-hint">${esc(texts.lead)}</p>
+    <form id="two-factor-confirm-form" class="settings-form">
+      <div class="form-group">
+        <label class="form-label" for="two-factor-confirm-code">${t('settings.twoFactorCodeOrRecoveryLabel')}</label>
+        <input class="form-input settings-2fa__code" type="text" id="two-factor-confirm-code"
+               inputmode="text" autocomplete="one-time-code" spellcheck="false"
+               maxlength="24" required aria-describedby="two-factor-error">
+      </div>
+      <div id="two-factor-error" class="form-error" role="alert" hidden></div>
+      <div class="settings-form-actions">
+        <button type="submit" class="btn ${texts.danger ? 'btn--danger' : 'btn--primary'}">${esc(texts.confirm)}</button>
+        <button type="button" class="btn btn--secondary" id="two-factor-cancel">${t('common.cancel')}</button>
+      </div>
+    </form>
+  `);
+
+  const form  = card.querySelector('#two-factor-confirm-form');
+  const input = card.querySelector('#two-factor-confirm-code');
+  const error = card.querySelector('#two-factor-error');
+  input.focus();
+
+  card.querySelector('#two-factor-cancel')?.addEventListener('click', onCancel);
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearError(error);
+    const code = input.value.trim();
+    if (!code) {
+      showError(error, t('settings.twoFactorCodeMissing'));
+      return;
+    }
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      await onConfirm(code);
+    } catch (err) {
+      button.disabled = false;
+      showError(error, twoFactorErrorText(err));
+      input.select();
+    }
+  });
+}
+
+/**
+ * Uebersetzt einen Fehler der 2FA-Routen. Der Server nennt den Grund in
+ * `reason`, damit die Oberflaeche nicht am englischen Text hangeln muss.
+ * @param {any} err
+ * @returns {string}
+ */
+function twoFactorErrorText(err) {
+  if (err?.status === 429) return t('settings.twoFactorTooManyAttempts');
+  const reason = err?.data?.reason;
+  if (reason === 'invalid_code') return t('settings.twoFactorInvalidCode');
+  if (reason === 'required')     return t('settings.twoFactorRequiredByHousehold');
+  if (reason === 'not_enabled')  return t('settings.twoFactorNotEnabled');
+  return err?.message || t('settings.twoFactorGenericError');
+}
+
+/**
+ * Haengt die Karte an ihre Schaltflaechen. Jeder Schritt zeichnet die Karte neu,
+ * statt Felder ein- und auszublenden - so gibt es zu jedem Zeitpunkt genau eine
+ * sichtbare Handlung und keinen halb ausgefuellten Zwischenstand.
+ *
+ * @param {HTMLElement} container
+ * @param {() => Promise<void>} reload
+ */
+function bindTwoFactorEvents(container, reload) {
+  const card = container.querySelector('#two-factor-card');
+  if (!card) return;
+  const error = card.querySelector('#two-factor-error');
+
+  card.querySelector('#two-factor-start')?.addEventListener('click', async (event) => {
+    const button = event.currentTarget;
+    clearError(error);
+    button.disabled = true;
+    try {
+      const { data } = await auth.setupTwoFactor();
+      renderTwoFactorSetup(card, data);
+      bindSetupForm(card, reload);
+    } catch (err) {
+      button.disabled = false;
+      showError(error, twoFactorErrorText(err));
+    }
+  });
+
+  card.querySelector('#two-factor-disable')?.addEventListener('click', () => {
+    askForCode(card, {
+      title:   t('settings.twoFactorDisableTitle'),
+      lead:    t('settings.twoFactorDisableLead'),
+      confirm: t('settings.twoFactorDisable'),
+      danger:  true,
+    }, async (code) => {
+      await auth.disableTwoFactor(code);
+      await reload();
+    }, () => { reload(); });
+  });
+
+  card.querySelector('#two-factor-regenerate')?.addEventListener('click', () => {
+    askForCode(card, {
+      title:   t('settings.twoFactorNewCodes'),
+      lead:    t('settings.twoFactorNewCodesLead'),
+      confirm: t('settings.twoFactorNewCodes'),
+    }, async (code) => {
+      const { data } = await auth.regenerateRecoveryCodes(code);
+      renderRecoveryCodes(card, data.recovery_codes, () => { reload(); });
+    }, () => { reload(); });
+  });
+}
+
+/**
+ * Das Formular des Einrichtungsschritts.
+ * @param {HTMLElement} card
+ * @param {() => Promise<void>} reload
+ */
+function bindSetupForm(card, reload) {
+  const form  = card.querySelector('#two-factor-enable-form');
+  const input = card.querySelector('#two-factor-code');
+  const error = card.querySelector('#two-factor-error');
+
+  card.querySelector('#two-factor-cancel')?.addEventListener('click', () => { reload(); });
+
+  form?.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    clearError(error);
+    const code = input.value.trim();
+    if (!code) {
+      showError(error, t('settings.twoFactorCodeMissing'));
+      return;
+    }
+    const button = form.querySelector('button[type="submit"]');
+    button.disabled = true;
+    try {
+      const { data } = await auth.enableTwoFactor(code);
+      renderRecoveryCodes(card, data.recovery_codes, () => { reload(); });
+    } catch (err) {
+      button.disabled = false;
+      showError(error, twoFactorErrorText(err));
+      input.select();
+    }
+  });
+}
+
+function renderPage(container, user, refreshFailed, accessNotice, oidcState, oidcNotice, twoFactorState) {
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
     ${accessNotice ? `
@@ -260,6 +554,8 @@ function renderPage(container, user, refreshFailed, accessNotice, oidcState, oid
           <button type="submit" class="btn btn--primary">${t('settings.savePassword')}</button>
         </form>
       </div>
+
+      ${twoFactorCardHtml(twoFactorState)}
 
       ${oidcCardHtml(oidcState, oidcNotice)}
     </section>
@@ -450,11 +746,20 @@ export async function render(container, { user }) {
     oidcState = null;
   }
 
+  // Dasselbe fuer den zweiten Faktor (#672).
+  let twoFactorState = null;
   try {
-    renderPage(container, currentUser, refreshFailed, accessNotice, oidcState, oidcNotice);
+    twoFactorState = (await auth.getTwoFactor())?.data ?? null;
+  } catch {
+    twoFactorState = null;
+  }
+
+  try {
+    renderPage(container, currentUser, refreshFailed, accessNotice, oidcState, oidcNotice, twoFactorState);
     bindEvents(container, currentUser, {
       avatarData: currentUser?.avatar_data ?? null,
     });
+    bindTwoFactorEvents(container, () => render(container, { user: currentUser }));
     container.querySelector('#account-retry')?.addEventListener('click', () => {
       render(container, { user: currentUser });
     });

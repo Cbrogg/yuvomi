@@ -104,6 +104,17 @@ export async function render(container) {
     </main>
   `);
 
+  // Der SSO-Weg landet mit `?two_factor=1` hier: der Provider hat den Browser
+  // umgeleitet, es gibt noch keine Sitzung, aber einen Wartezustand auf dem
+  // Server (#672). Ohne diesen Zweig staende der Nutzer vor einem leeren
+  // Anmeldeformular und wuesste nicht, dass ihm nur noch der Code fehlt.
+  if (new URLSearchParams(location.search).has('two_factor')) {
+    // Die Marke aus der Adresszeile nehmen, damit ein Neuladen sie nicht wiederholt.
+    history.replaceState(null, '', location.pathname);
+    renderSecondFactor(container, { recoveryAvailable: true });
+    return;
+  }
+
   const form = container.querySelector('#auth-form');
   const errorEl = container.querySelector('#form-error');
   const submitBtn = container.querySelector('#auth-btn');
@@ -221,6 +232,13 @@ export async function render(container) {
 
     try {
       const result = await auth.login(username, password);
+      // Zweiter Faktor (#672): der Server hat noch keine Sitzung angelegt und
+      // schickt statt des Nutzers nur diese Marke. Das Formular tritt zurueck
+      // und macht der Code-Eingabe Platz.
+      if (result?.twoFactorRequired) {
+        renderSecondFactor(container, { recoveryAvailable: result.recoveryAvailable === true });
+        return;
+      }
       window.yuvomi.navigate('/', result.user);
     } catch (err) {
       // Fehler-Ehrlichkeit: nur 401 heißt „falsche Zugangsdaten". 429 ist die
@@ -262,6 +280,109 @@ export async function render(container) {
   form.querySelector('#password').addEventListener('input', (e) => {
     e.currentTarget.closest('.form-group').classList.remove('form-group--error');
     e.currentTarget.removeAttribute('aria-invalid');
+  });
+}
+
+/**
+ * Zweiter Schritt der Anmeldung: die Code-Eingabe.
+ *
+ * Bewusst eine eigene Ansicht statt eines eingeblendeten Feldes im selben
+ * Formular. Benutzername und Passwort sind an dieser Stelle bereits angenommen;
+ * blieben sie sichtbar und aenderbar, waere unklar, worauf ein erneutes
+ * Absenden sich bezieht - und der Passwortmanager wuerde ein zweites Mal
+ * anbieten, dieselben Zugangsdaten zu speichern.
+ *
+ * @param {HTMLElement} container
+ * @param {{ recoveryAvailable: boolean }} options
+ */
+function renderSecondFactor(container, { recoveryAvailable }) {
+  const card = container.querySelector('.auth-card');
+  if (!card) return;
+
+  card.replaceChildren();
+  card.insertAdjacentHTML('beforeend', `
+    <form class="auth-form" id="two-factor-form" novalidate>
+      <p class="auth-form__lead">${esc(t('login.twoFactorLead'))}</p>
+      <div class="form-group">
+        <label class="label" for="two-factor-code">${esc(t('login.twoFactorCodeLabel'))}</label>
+        <input
+          class="input auth-form__code"
+          type="text"
+          id="two-factor-code"
+          name="code"
+          inputmode="numeric"
+          autocomplete="one-time-code"
+          autocapitalize="characters"
+          spellcheck="false"
+          maxlength="24"
+          required
+          aria-describedby="two-factor-hint"
+        >
+        <p class="form-hint" id="two-factor-hint">${esc(t(recoveryAvailable ? 'login.twoFactorHintRecovery' : 'login.twoFactorHint'))}</p>
+      </div>
+      <div class="form-error" id="two-factor-error" role="alert" tabindex="-1" hidden></div>
+      <button type="submit" class="btn btn--primary auth-form__submit" id="two-factor-btn">
+        <span class="auth-btn__label">${esc(t('login.twoFactorSubmit'))}</span>
+      </button>
+      <p class="auth-form__forgot">
+        <a href="/login" data-link>${esc(t('login.twoFactorCancel'))}</a>
+      </p>
+    </form>
+  `);
+
+  const form   = card.querySelector('#two-factor-form');
+  const input  = card.querySelector('#two-factor-code');
+  const error  = card.querySelector('#two-factor-error');
+  const button = card.querySelector('#two-factor-btn');
+  const label  = button.querySelector('.auth-btn__label');
+
+  input.focus();
+  input.addEventListener('input', () => {
+    error.hidden = true;
+    input.removeAttribute('aria-invalid');
+  });
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+    error.hidden = true;
+
+    const code = input.value.trim();
+    if (!code) {
+      showError(error, t('login.twoFactorMissing'));
+      input.setAttribute('aria-invalid', 'true');
+      input.focus();
+      return;
+    }
+
+    button.disabled = true;
+    input.disabled = true;
+    label.textContent = t('login.twoFactorChecking');
+    const spinner = document.createElement('span');
+    spinner.className = 'auth-spinner';
+    spinner.setAttribute('aria-hidden', 'true');
+    button.insertBefore(spinner, label);
+
+    try {
+      const result = await auth.verifyTwoFactor(code);
+      window.yuvomi.navigate('/', result.user);
+    } catch (err) {
+      // 401 heisst hier zweierlei: falscher Code oder abgelaufener Wartezustand.
+      // Der Unterschied zaehlt, weil das zweite nur durch einen neuen Anlauf
+      // von vorn zu beheben ist.
+      let message;
+      if (err.status === 429) message = t('login.tooManyAttempts');
+      else if (err.status === 401 && /pending/i.test(err.message || '')) message = t('login.twoFactorExpired');
+      else if (err.status === 401) message = t('login.twoFactorInvalid');
+      else message = t('login.networkError');
+      showError(error, message);
+      input.setAttribute('aria-invalid', 'true');
+      error.focus();
+    } finally {
+      button.disabled = false;
+      input.disabled = false;
+      label.textContent = t('login.twoFactorSubmit');
+      spinner.remove();
+    }
   });
 }
 

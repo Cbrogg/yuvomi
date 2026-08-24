@@ -832,6 +832,33 @@ Editing preserves everything the server holds that Yuvomi does not — attendees
 and exceptions of a recurring series stay untouched. Events that were already synced before the
 upgrade to v1.52.0 need one sync run before edits and deletions can reach them.
 
+### Two-Factor Authentication (Optional)
+
+Nothing to configure — there is no environment variable, and Yuvomi never reaches the network for
+this. Each member turns it on for themselves under **Settings → Personal → Account**: scan the QR
+code with any authenticator app (or type the secret by hand), enter the six-digit code once, and
+store the ten recovery codes that appear. They are shown exactly once; afterwards the server only
+holds their hashes.
+
+Signing in then asks for the code after the password. A recovery code works in its place — each one
+once — for the case where the device is gone.
+
+**Turning it off asks for a code, not the password.** Against a hijacked session only the second
+factor helps, and accounts that sign in via SSO have no password to prove anything with.
+
+**Household-wide requirement.** Under **Settings → Administration → Family**, an admin sees who has
+already set it up and can make it mandatory. The requirement blocks *turning off* and puts a notice
+on every account page without a second factor — it deliberately does not reject sessions that
+already exist, because in a household where nobody has set it up yet that would lock everyone out,
+including the admin.
+
+**Single sign-on does not skip it.** If you have a second factor set up, Yuvomi asks for the code
+after the OIDC provider sends you back — otherwise the household-wide requirement would only bind
+those who sign in with a password.
+
+Time matters: TOTP codes are derived from the clock, and Yuvomi accepts a deviation of ±30 seconds.
+If codes are rejected on a device whose clock drifts, sync the clock rather than the app.
+
 ### SSO / OpenID Connect (Optional)
 
 Enable single sign-on via any OpenID Connect provider (Authentik, Keycloak, Google, Microsoft Entra, etc.).

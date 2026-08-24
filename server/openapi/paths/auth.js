@@ -17,6 +17,111 @@ export function authPaths() {
         },
       }),
     },
+    '/api/v1/auth/2fa/verify': {
+      post: op({
+        summary: 'Complete sign-in with a second factor',
+        tag: 'Auth',
+        auth: false,
+        stateChanging: true,
+        description: 'Second step after POST /auth/login answered with `twoFactorRequired`. '
+          + 'Accepts either the six-digit TOTP code or one of the recovery codes; '
+          + 'the response says which one was used. The pending sign-in expires after five minutes.',
+        responses: {
+          200: {
+            description: 'Authenticated user and CSRF token',
+            content: { 'application/json': { schema: { $ref: '#/components/schemas/LoginResponse' } } },
+          },
+          401: { description: 'Invalid code, or no pending sign-in' },
+          429: { description: 'Too many attempts' },
+        },
+      }),
+    },
+    '/api/v1/auth/2fa': {
+      get: op({
+        summary: 'Two-factor state of the current user',
+        tag: 'Auth',
+        description: 'Returns `{ enabled, pending, recovery_remaining, required }`.',
+      }),
+    },
+    '/api/v1/auth/2fa/setup': {
+      post: op({
+        summary: 'Begin two-factor setup',
+        tag: 'Auth',
+        stateChanging: true,
+        description: 'Creates a TOTP secret and returns it as an otpauth URI plus an SVG QR code (data URL). '
+          + 'Not active until confirmed via /auth/2fa/enable. Fails with 409 if two-factor is already enabled.',
+        responses: {
+          200: { description: 'Secret, otpauth URI and QR code' },
+          409: { description: 'Two-factor authentication is already enabled' },
+        },
+      }),
+    },
+    '/api/v1/auth/2fa/enable': {
+      post: op({
+        summary: 'Confirm and activate two-factor authentication',
+        tag: 'Auth',
+        stateChanging: true,
+        description: 'Confirms the pending setup with a code from the authenticator app and returns the '
+          + 'recovery codes in plain text - the only time they are readable. All other sessions of this user are ended.',
+        responses: {
+          200: { description: 'Recovery codes' },
+          400: { description: 'Invalid code' },
+          409: { description: 'No pending setup, or already enabled' },
+        },
+      }),
+    },
+    '/api/v1/auth/2fa/disable': {
+      post: op({
+        summary: 'Turn off two-factor authentication',
+        tag: 'Auth',
+        stateChanging: true,
+        description: 'Requires a valid second factor (TOTP or recovery code), not the password: '
+          + 'OIDC accounts have none, and against a hijacked session only the factor itself helps. '
+          + 'Blocked with 403 while the household requires two-factor authentication.',
+        responses: {
+          200: { description: 'New two-factor state' },
+          400: { description: 'Invalid code' },
+          403: { description: 'The household requires two-factor authentication' },
+          409: { description: 'Two-factor authentication is not enabled' },
+        },
+      }),
+    },
+    '/api/v1/auth/2fa/recovery-codes': {
+      post: op({
+        summary: 'Replace the recovery codes',
+        tag: 'Auth',
+        stateChanging: true,
+        description: 'Discards every existing recovery code, used or not, and returns a fresh set. '
+          + 'Requires a valid second factor.',
+        responses: {
+          200: { description: 'New recovery codes' },
+          400: { description: 'Invalid code' },
+          409: { description: 'Two-factor authentication is not enabled' },
+        },
+      }),
+    },
+    '/api/v1/auth/2fa/require': {
+      put: op({
+        summary: 'Require two-factor authentication household-wide (admin)',
+        tag: 'Auth',
+        admin: true,
+        stateChanging: true,
+        description: 'Blocks turning two-factor authentication off and shows a notice on every account '
+          + 'page without one. Deliberately does not reject existing sessions: in a household where '
+          + 'nobody has set it up yet, that would lock everyone out, including the admin. '
+          + 'A separate route rather than a field on PUT /preferences, so the admin gate is middleware '
+          + 'rather than a branch inside the handler.',
+      }),
+    },
+    '/api/v1/auth/2fa/overview': {
+      get: op({
+        summary: 'Who in the household has two-factor authentication (admin)',
+        tag: 'Auth',
+        admin: true,
+        description: 'Per member the plain yes/no state, plus whether the household requires it. '
+          + 'Deliberately a separate endpoint from /auth/users, which every member may read.',
+      }),
+    },
     '/api/v1/auth/logout': {
       post: op({ summary: 'Logout current session', tag: 'Auth', stateChanging: true }),
     },

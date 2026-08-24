@@ -39,6 +39,12 @@ function showError(element, message) {
   element.hidden = false;
 }
 
+function clearError(element) {
+  if (!element) return;
+  element.textContent = '';
+  element.hidden = true;
+}
+
 function avatarHtml(user, className = 'settings-avatar') {
   const safeName = esc(user?.display_name || '');
   const fallback = esc(initials(user?.display_name || ''));
@@ -155,6 +161,18 @@ function renderPage(container) {
       <div class="settings-card" id="members-card">
         <ul class="settings-members" id="members-list"></ul>
         <button class="btn btn--primary settings-add-btn" id="add-member-btn" hidden>${t('settings.addMember')}</button>
+      </div>
+
+      <div class="settings-card" id="two-factor-household-card">
+        <h3 class="settings-card__title">${t('settings.twoFactorTitle')}</h3>
+        <p class="form-hint">${t('settings.twoFactorHouseholdHint')}</p>
+        ${toggleRowHtml({
+          label: t('settings.twoFactorRequireLabel'),
+          attrs: { id: 'two-factor-require' },
+          disabled: true,
+        })}
+        <ul class="settings-2fa__members" id="two-factor-members"></ul>
+        <div id="two-factor-household-error" class="form-error" role="alert" hidden></div>
       </div>
 
       <div class="settings-card settings-card--hidden" id="add-member-form-card">
@@ -783,9 +801,68 @@ async function loadMembers(container, currentUser) {
   window.lucide?.createIcons({ el: container });
 }
 
+/**
+ * Wer hat den zweiten Faktor, und verlangt der Haushalt ihn (#672)?
+ *
+ * Die Liste steht neben dem Schalter, weil beides zusammen erst eine
+ * Entscheidung ergibt: eine Pflicht einzuschalten, ohne zu sehen, wen sie
+ * trifft, ist ein Blindflug. Sie sperrt niemanden aus - sie verbietet das
+ * Abschalten und stellt allen anderen einen Hinweis auf ihre Kontoseite.
+ *
+ * @param {HTMLElement} container
+ */
+async function loadTwoFactorHousehold(container) {
+  const card   = container.querySelector('#two-factor-household-card');
+  const toggle = container.querySelector('#two-factor-require');
+  const list   = container.querySelector('#two-factor-members');
+  const error  = container.querySelector('#two-factor-household-error');
+  if (!card || !toggle || !list) return;
+
+  let overview;
+  try {
+    overview = await api.get('/auth/2fa/overview');
+  } catch (err) {
+    // Kein Admin (403) heisst: die Karte geht diesen Nutzer nichts an.
+    card.remove();
+    if (err?.status !== 403) showError(error, err?.message || t('settings.loadError'));
+    return;
+  }
+
+  toggle.checked  = overview.required === true;
+  toggle.disabled = false;
+
+  list.replaceChildren();
+  list.insertAdjacentHTML('beforeend', overview.data.map((member) => `
+    <li class="settings-2fa__member">
+      <i data-lucide="${member.enabled ? 'shield-check' : 'shield-off'}" aria-hidden="true"
+         class="settings-2fa__member-icon settings-2fa__member-icon--${member.enabled ? 'on' : 'off'}"></i>
+      <span class="settings-2fa__member-name">${esc(member.display_name)}</span>
+      <span class="settings-2fa__member-state">${member.enabled
+        ? t('settings.twoFactorMemberOn')
+        : t('settings.twoFactorMemberOff')}</span>
+    </li>
+  `).join(''));
+  window.lucide?.createIcons({ el: list });
+
+  toggle.addEventListener('change', async () => {
+    const next = toggle.checked;
+    toggle.disabled = true;
+    clearError(error);
+    try {
+      await api.put('/auth/2fa/require', { required: next });
+    } catch (err) {
+      toggle.checked = !next;
+      showError(error, err?.message || t('settings.loadError'));
+    } finally {
+      toggle.disabled = false;
+    }
+  });
+}
+
 export async function render(container, { user } = {}) {
   renderPage(container);
   await loadMembers(container, user || {});
+  await loadTwoFactorHousehold(container);
   await loadInvites(container);
   window.lucide?.createIcons({ el: container });
 }

@@ -25,6 +25,55 @@ Every table: `id INTEGER PRIMARY KEY`, `created_at TEXT`, `updated_at TEXT` (ISO
 | calendar_feed_token | TEXT | Secret token authenticating the user's read-only ICS export feed, nullable. Partial UNIQUE index on `calendar_feed_token` WHERE NOT NULL. |
 | calendar_feed_show_assignees | INTEGER | Opt-in flag (0/1, default 0): when set, the read-only ICS export feed appends the assigned members to each event's `SUMMARY`, e.g. `Pool party (Mom, Dad)`. |
 
+### Two-Factor Authentication (migration v159, #672)
+
+Optional TOTP as a second factor, opt-in per user. Two tables instead of columns on `users`, because
+both are lists that come and go together with the feature and neither is a property of the account.
+
+`user_totp` — one row per user, therefore `user_id` is the primary key.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| user_id | INTEGER | PK, FK → Users, ON DELETE CASCADE |
+| secret | TEXT | NOT NULL. Base32, 160 bit. Stored as-is: TOTP verification needs the secret itself, so a hash is not an option — it is protected by `DB_ENCRYPTION_KEY`, like every other secret in this database |
+| confirmed_at | TEXT | NULL while setup is in progress. A secret nobody has proven with a code protects nothing, so the half-finished state can safely sit in the database — which is why the setup survives a page reload |
+| last_step | INTEGER | The TOTP time step last redeemed. RFC 6238 §5.2 requires this: without it an intercepted code stays valid for the full ±1 tolerance window and can be replayed |
+| created_at | TEXT | |
+
+`user_recovery_codes` — ten per user, regenerated as a set.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| user_id | INTEGER | FK → Users, ON DELETE CASCADE, indexed |
+| code_hash | TEXT | NOT NULL. SHA-256, deliberately not bcrypt: the code is not a password but a ~49-bit random value from Yuvomi's own generator. Key stretching protects weak secrets; here there is nothing weak to protect, while ten bcrypt runs per sign-in attempt would make the sign-in itself the target |
+| used_at | TEXT | Set instead of deleting the row, so the UI can say "7 of 10 left" without counting |
+| created_at | TEXT | |
+
+**Sign-in flow.** `POST /auth/login` with a correct password answers `{ twoFactorRequired: true }` and
+creates **no session**. The waiting state lives in `req.session.pendingTwoFactor` — deliberately a
+different key from `userId`, so `requireAuth` is blind to it — and expires after five minutes.
+`POST /auth/2fa/verify` accepts the TOTP code or a recovery code and builds the session through
+`setupAuthSession`, which regenerates it (session fixation).
+
+**Turning it off requires a second factor, not the password.** Against a hijacked session only the
+factor itself helps, and OIDC accounts have no password to prove anything with. Whoever lost their
+device uses a recovery code.
+
+**SSO is not a way around it.** `/auth/oidc/callback` runs the same check before creating a
+session. One could argue the provider already authenticated, possibly with its own second factor —
+but a promise that depends on how you signed in is not a promise, and more importantly the
+household-wide requirement would otherwise be a request to whoever takes the password route rather
+than a rule. A guard in `test-two-factor.js` asserts the rule rather than the one call site: every
+`setupAuthSession` that establishes a fresh sign-in sits behind an `isEnabled` check, except where
+no second factor can exist by construction (first-run setup, invite redemption, the verify route
+itself).
+
+**Household-wide requirement** (`sync_config.require_two_factor`, set through `PUT /auth/2fa/require`
+with `requireAdmin` as middleware rather than a field on `PUT /preferences`) blocks *turning off*
+and puts a notice on every account page without one. It deliberately does not reject existing
+sessions: in a household with no devices set up yet, that would lock everyone out, including the
+admin.
+
 ### Invites (v1.75.0)
 
 One pending invitation per row. The `users` row is only created when the invitation is accepted, so no half-finished accounts exist.

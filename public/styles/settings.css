@@ -3157,3 +3157,140 @@
    Dasselbe Muster steht in budget.css:86, calendar.css:596 und
    documents.css:140 - dort jeweils punktuell. */
 .settings-page [hidden] { display: none !important; }
+
+/* --------------------------------------------------------
+   Zwei-Faktor-Anmeldung (#672)
+
+   Der QR-Code steht auf einer eigenen weissen Flaeche, nicht auf der
+   Kartenfarbe: ein Scanner braucht den Kontrast, und im dunklen Erscheinungs-
+   bild waere die Karte selbst dunkel. Das Bild bleibt deshalb in jedem
+   Farbschema auf Weiss.
+   -------------------------------------------------------- */
+.settings-2fa__steps {
+  /* Der Reset nimmt Listen ihre Marker. Hier gehoeren sie zurueck: die beiden
+     Schritte haben eine Reihenfolge, und ohne Ziffern stehen sie als zwei
+     lose Zeilen da, die man auch andersherum lesen koennte. */
+  list-style: decimal;
+  margin: var(--space-2) 0 var(--space-4);
+  padding-left: var(--space-5);
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+  line-height: 1.6;
+}
+
+.settings-2fa__qr {
+  display: flex;
+  justify-content: center;
+  padding: var(--space-4);
+  margin-bottom: var(--space-4);
+  background: #ffffff;
+  border: var(--space-px) solid var(--color-border);
+  border-radius: var(--radius-lg);
+}
+
+.settings-2fa__qr img {
+  display: block;
+  width: 222px;
+  height: 222px;
+}
+
+.settings-2fa__secret {
+  margin: var(--space-1) 0 var(--space-4);
+}
+
+.settings-2fa__secret code {
+  display: inline-block;
+  padding: var(--space-2) var(--space-3);
+  background: var(--color-fill-well);
+  border-radius: var(--radius-sm);
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  /* Das Geheimnis wird abgetippt - Zeilenumbruch statt waagerechtem Scrollen. */
+  overflow-wrap: anywhere;
+}
+
+/* Der Code ist eine kurze Ziffernfolge; ein Feld ueber die volle Breite
+   suggeriert einen Satz. */
+.settings-2fa__code {
+  max-width: 12ch;
+  font-family: var(--font-mono);
+  letter-spacing: var(--tracking-label);
+}
+
+.settings-2fa__status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+}
+
+.settings-2fa__status--on {
+  color: var(--color-success-ink);
+  font-weight: var(--font-weight-medium);
+}
+
+.settings-2fa__status svg {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+/* Die Wiederherstellungscodes stehen zweispaltig, damit zehn Zeilen nicht die
+   halbe Seite fuellen und der Blick sie als EINEN Block erfasst. */
+.settings-2fa__codes {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(11ch, 1fr));
+  gap: var(--space-2);
+  margin: var(--space-3) 0 var(--space-4);
+  padding: var(--space-4);
+  list-style: none;
+  background: var(--color-fill-well);
+  border-radius: var(--radius-md);
+}
+
+.settings-2fa__codes code {
+  font-family: var(--font-mono);
+  font-size: var(--text-sm);
+  user-select: all;
+}
+
+/* Uebersicht: wer im Haushalt hat den zweiten Faktor (#672). */
+.settings-2fa__members {
+  margin: var(--space-3) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.settings-2fa__member {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-2) 0;
+  border-top: var(--space-px) solid var(--color-border-subtle);
+}
+
+.settings-2fa__member:first-child {
+  border-top: none;
+}
+
+.settings-2fa__member-icon {
+  width: 18px;
+  height: 18px;
+  flex-shrink: 0;
+}
+
+.settings-2fa__member-icon--on  { color: var(--color-success); }
+.settings-2fa__member-icon--off { color: var(--color-text-tertiary); }
+
+.settings-2fa__member-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.settings-2fa__member-state {
+  flex-shrink: 0;
+  color: var(--color-text-secondary);
+  font-size: var(--text-sm);
+}
