@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "A sessão de início expirou. Inicia sessão novamente.",
         "twoFactorMissing": "Introduz o código.",
         "twoFactorCancel": "Cancelar",
-        "ssoOnlyHint": "O acesso a este agregado familiar é feito exclusivamente através de SSO."
+        "ssoOnlyHint": "O acesso a este agregado familiar é feito exclusivamente através de SSO.",
+        "guestPasswordLogin": "Início de sessão de convidado com senha",
+        "accountCannotSignIn": "Esta conta não pode iniciar sessão. Contacte o administrador do seu agregado familiar."
     },
     "setup": {
         "title": "Bem-vindo ao Yuvomi",

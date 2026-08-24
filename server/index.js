@@ -581,7 +581,8 @@ app.listen(PORT, () => {
   // Zustaende melden sich, auch der erwartete einer frischen Installation.
   let linkedSso = true;
   try {
-    linkedSso = !!db.get().prepare('SELECT 1 FROM users WHERE oidc_sub IS NOT NULL LIMIT 1').get();
+    linkedSso = !!db.get()
+      .prepare("SELECT 1 FROM users WHERE oidc_sub IS NOT NULL AND role = 'admin' LIMIT 1").get();
   } catch { /* ohne Antwort lieber keine falsche Entwarnung */ }
   const loginWarning = passwordLoginWarning({ hasLinkedSsoAccount: linkedSso });
   if (loginWarning) logYuvomi.warn(loginWarning);

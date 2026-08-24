@@ -806,7 +806,7 @@ export function linkOidcAccount(database, userId, { sub, iss }) {
  * OIDC käme dort niemand mehr hinein. Erst ein gesetztes Passwort macht das
  * Lösen gefahrlos.
  *
- * @returns {{ ok: true } | { ok: false, reason: 'user_gone'|'not_linked'|'no_password' }}
+ * @returns {{ ok: true } | { ok: false, reason: 'user_gone'|'not_linked'|'no_password'|'last_sso_admin' }}
  */
 export function unlinkOidcAccount(database, userId) {
   const user = database
@@ -814,6 +814,28 @@ export function unlinkOidcAccount(database, userId) {
   if (!user) return { ok: false, reason: 'user_gone' };
   if (!user.oidc_sub) return { ok: false, reason: 'not_linked' };
   if (isSsoOnlyAccount(user.password_hash)) return { ok: false, reason: 'no_password' };
+
+  // Mit SSO als einzigem Weg hinein haengt der Zustand des ganzen Haushalts an
+  // den verknuepften Administratoren (#847): faellt der letzte weg, sieht die
+  // Regel null verknuepfte Admins, faellt fail-open und macht Anmeldeformular,
+  // Anmelderoute und Passwort-Reset wieder auf. Das darf kein einzelnes
+  // Mitglied an seinem eigenen Konto ausloesen - und es geschaehe still, ohne
+  // Aenderung an der Umgebung und ohne Neustart.
+  //
+  // Der eigene Zugang ist dabei NICHT das Argument: dieses Konto traegt ein
+  // Passwort (die Zeile darueber), es sperrt sich also nicht selbst aus. Es
+  // ginge um die Einstellung des Betreibers.
+  if (!passwordLoginAllowedByEnv() && isOidcEnabled()) {
+    const otherAdmin = database.prepare(`
+      SELECT 1 FROM users
+      WHERE oidc_sub IS NOT NULL AND role = 'admin' AND id != ?
+      LIMIT 1
+    `).get(userId);
+    if (!otherAdmin) {
+      const self = database.prepare("SELECT role FROM users WHERE id = ?").get(userId);
+      if (self?.role === 'admin') return { ok: false, reason: 'last_sso_admin' };
+    }
+  }
 
   database.prepare('UPDATE users SET oidc_sub = NULL, oidc_provider = NULL WHERE id = ?').run(userId);
   return { ok: true };
@@ -847,8 +869,15 @@ export function isPasswordLoginEnabled(database = null) {
   let hasLinkedSsoAccount = true;
   try {
     const db_ = database || db.get();
+    // Ein verknuepfter ADMINISTRATOR, nicht irgendein verknuepftes Konto.
+    // Meldet sich in einem bestehenden Haushalt als Erstes ein gewoehnliches
+    // Mitglied per SSO an, waere der Riegel sonst sofort zu - und der Admin,
+    // dessen Konto mangels eindeutiger verifizierter Adresse nie verknuepft
+    // wurde, kaeme nach Ablauf seiner Sitzung nicht mehr an seine eigene
+    // Verwaltung. Der Weg hinein muss fuer den offen bleiben, der ihn wieder
+    // aufmachen koennte.
     hasLinkedSsoAccount = !!db_
-      .prepare('SELECT 1 FROM users WHERE oidc_sub IS NOT NULL LIMIT 1').get();
+      .prepare("SELECT 1 FROM users WHERE oidc_sub IS NOT NULL AND role = 'admin' LIMIT 1").get();
   } catch (err) {
     // Eine Datenbank, die gerade nicht antwortet, darf niemanden aussperren.
     log.warn('SSO-Verknuepfungspruefung fehlgeschlagen:', err?.message || err);
@@ -1492,6 +1521,11 @@ router.delete('/oidc/link', requireAuth, csrfMiddleware, (req, res) => {
 
   if (result.reason === 'user_gone')   return res.status(404).json({ error: 'User not found.', code: 404 });
   if (result.reason === 'not_linked')  return res.status(409).json({ error: 'Account is not linked.', code: 409 });
+  if (result.reason === 'last_sso_admin') return res.status(409).json({
+    error: 'This is the last administrator linked to SSO. Unlinking it would switch password login '
+      + 'back on for the whole household. Link another administrator first.',
+    code: 409,
+  });
   return res.status(409).json({
     error: 'Set a password before unlinking - it is currently the only way into this account.',
     code:  409,

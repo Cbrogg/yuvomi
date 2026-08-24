@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "A bejelentkezés lejárt. Jelentkezz be újra.",
         "twoFactorMissing": "Add meg a kódot.",
         "twoFactorCancel": "Mégse",
-        "ssoOnlyHint": "Az ebbe a háztartásba való belépés kizárólag SSO-val történik."
+        "ssoOnlyHint": "Az ebbe a háztartásba való belépés kizárólag SSO-val történik.",
+        "guestPasswordLogin": "Vendég bejelentkezés jelszóval",
+        "accountCannotSignIn": "Ez a fiók nem tud bejelentkezni. Kérjük, forduljon a háztartás rendszergazdájához."
     },
     "setup": {
         "title": "Üdvözöljük a Yuvomi-ban",

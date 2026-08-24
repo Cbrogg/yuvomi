@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "ログインの有効期限が切れました。もう一度ログインしてください。",
         "twoFactorMissing": "コードを入力してください。",
         "twoFactorCancel": "キャンセル",
-        "ssoOnlyHint": "この世帯へのサインインは SSO のみです。"
+        "ssoOnlyHint": "この世帯へのサインインは SSO のみです。",
+        "guestPasswordLogin": "ゲストとしてパスワードでサインイン",
+        "accountCannotSignIn": "このアカウントはサインインできません。世帯の管理者にお問い合わせください。"
     },
     "setup": {
         "title": "Yuvomi へようこそ",

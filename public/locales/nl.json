@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "Het aanmelden is verlopen. Meld je opnieuw aan.",
         "twoFactorMissing": "Voer de code in.",
         "twoFactorCancel": "Annuleren",
-        "ssoOnlyHint": "Aanmelden bij dit huishouden gaat uitsluitend via SSO."
+        "ssoOnlyHint": "Aanmelden bij dit huishouden gaat uitsluitend via SSO.",
+        "guestPasswordLogin": "Gastaanmelding met wachtwoord",
+        "accountCannotSignIn": "Dit account kan zich niet aanmelden. Neem contact op met de beheerder van je huishouden."
     },
     "setup": {
         "title": "Welkom bij Yuvomi",

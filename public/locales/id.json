@@ -2492,7 +2492,9 @@
         "twoFactorExpired": "Masa masuk sudah berakhir. Silakan masuk lagi.",
         "twoFactorMissing": "Silakan masukkan kode.",
         "twoFactorCancel": "Batal",
-        "ssoOnlyHint": "Masuk ke rumah tangga ini hanya melalui SSO."
+        "ssoOnlyHint": "Masuk ke rumah tangga ini hanya melalui SSO.",
+        "guestPasswordLogin": "Masuk tamu dengan kata sandi",
+        "accountCannotSignIn": "Akun ini tidak dapat masuk. Silakan hubungi administrator rumah tangga Anda."
     },
     "setup": {
         "title": "Selamat datang di Yuvomi",

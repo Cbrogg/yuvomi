@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "登录已过期，请重新登录。",
         "twoFactorMissing": "请输入验证码。",
         "twoFactorCancel": "取消",
-        "ssoOnlyHint": "登录此家庭仅通过 SSO 进行。"
+        "ssoOnlyHint": "登录此家庭仅通过 SSO 进行。",
+        "guestPasswordLogin": "以访客身份用密码登录",
+        "accountCannotSignIn": "此账户无法登录，请联系您家庭的管理员。"
     },
     "setup": {
         "title": "欢迎使用 Yuvomi",

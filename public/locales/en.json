@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "The sign-in has expired. Please sign in again.",
         "twoFactorMissing": "Please enter the code.",
         "twoFactorCancel": "Cancel",
-        "ssoOnlyHint": "Signing in to this household works exclusively through single sign-on."
+        "ssoOnlyHint": "Signing in to this household works exclusively through single sign-on.",
+        "guestPasswordLogin": "Guest sign-in with password",
+        "accountCannotSignIn": "This account cannot sign in. Please contact your household's administrator."
     },
     "setup": {
         "title": "Welcome to Yuvomi",

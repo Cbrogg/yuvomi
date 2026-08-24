@@ -2492,7 +2492,9 @@
         "twoFactorExpired": "Nag-expire na ang pag-sign in. Mag-sign in ulit.",
         "twoFactorMissing": "Pakilagay ang code.",
         "twoFactorCancel": "Kanselahin",
-        "ssoOnlyHint": "Ang pag-sign in sa sambahayang ito ay eksklusibong sa pamamagitan ng SSO."
+        "ssoOnlyHint": "Ang pag-sign in sa sambahayang ito ay eksklusibong sa pamamagitan ng SSO.",
+        "guestPasswordLogin": "Pag-sign in ng bisita gamit ang password",
+        "accountCannotSignIn": "Hindi makakapag-sign in ang account na ito. Makipag-ugnayan sa administrador ng iyong sambahayan."
     },
     "setup": {
         "title": "Maligayang pagdating sa Yuvomi",

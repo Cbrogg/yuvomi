@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "El inicio de sesión ha caducado. Vuelve a iniciar sesión.",
         "twoFactorMissing": "Introduce el código.",
         "twoFactorCancel": "Cancelar",
-        "ssoOnlyHint": "El acceso a este hogar se realiza exclusivamente mediante SSO."
+        "ssoOnlyHint": "El acceso a este hogar se realiza exclusivamente mediante SSO.",
+        "guestPasswordLogin": "Acceso de invitado con contraseña",
+        "accountCannotSignIn": "Esta cuenta no puede iniciar sesión. Ponte en contacto con la administración de tu hogar."
     },
     "setup": {
         "title": "Bienvenido a Yuvomi",

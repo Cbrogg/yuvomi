@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "Oturum açma süresi doldu. Lütfen tekrar giriş yap.",
         "twoFactorMissing": "Lütfen kodu gir.",
         "twoFactorCancel": "İptal",
-        "ssoOnlyHint": "Bu haneye giriş yalnızca SSO ile yapılır."
+        "ssoOnlyHint": "Bu haneye giriş yalnızca SSO ile yapılır.",
+        "guestPasswordLogin": "Şifreyle misafir girişi",
+        "accountCannotSignIn": "Bu hesap giriş yapamaz. Lütfen hane yöneticinizle iletişime geçin."
     },
     "setup": {
         "title": "Yuvomi’a hoş geldiniz",

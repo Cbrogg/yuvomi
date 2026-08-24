@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
         "twoFactorMissing": "Vui lòng nhập mã.",
         "twoFactorCancel": "Hủy",
-        "ssoOnlyHint": "Việc đăng nhập vào hộ gia đình này chỉ diễn ra qua SSO."
+        "ssoOnlyHint": "Việc đăng nhập vào hộ gia đình này chỉ diễn ra qua SSO.",
+        "guestPasswordLogin": "Đăng nhập khách bằng mật khẩu",
+        "accountCannotSignIn": "Tài khoản này không thể đăng nhập. Vui lòng liên hệ quản trị viên hộ gia đình của bạn."
     },
     "setup": {
         "title": "Chào mừng đến với Yuvomi",

@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "L'accesso è scaduto. Accedi di nuovo.",
         "twoFactorMissing": "Inserisci il codice.",
         "twoFactorCancel": "Annulla",
-        "ssoOnlyHint": "L'accesso a questa famiglia avviene esclusivamente tramite SSO."
+        "ssoOnlyHint": "L'accesso a questa famiglia avviene esclusivamente tramite SSO.",
+        "guestPasswordLogin": "Accesso ospite con password",
+        "accountCannotSignIn": "Questo account non può accedere. Contatta l'amministratore della tua famiglia."
     },
     "setup": {
         "title": "Benvenuto in Yuvomi",

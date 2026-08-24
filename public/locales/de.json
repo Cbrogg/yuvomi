@@ -2492,7 +2492,9 @@
         "twoFactorExpired": "Die Anmeldung ist abgelaufen. Bitte melde dich erneut an.",
         "twoFactorMissing": "Bitte gib den Code ein.",
         "twoFactorCancel": "Abbrechen",
-        "ssoOnlyHint": "Die Anmeldung an diesem Haushalt läuft ausschließlich über Single Sign-On."
+        "ssoOnlyHint": "Die Anmeldung an diesem Haushalt läuft ausschließlich über Single Sign-On.",
+        "guestPasswordLogin": "Als Gast mit Passwort anmelden",
+        "accountCannotSignIn": "Dieses Konto kann sich nicht anmelden. Wende dich an die Administration deines Haushalts."
     },
     "setup": {
         "title": "Willkommen bei Yuvomi",

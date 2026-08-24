@@ -2492,7 +2492,9 @@
         "twoFactorExpired": "로그인이 만료되었습니다. 다시 로그인하세요.",
         "twoFactorMissing": "코드를 입력하세요.",
         "twoFactorCancel": "취소",
-        "ssoOnlyHint": "이 가정의 로그인은 SSO로만 이루어집니다."
+        "ssoOnlyHint": "이 가정의 로그인은 SSO로만 이루어집니다.",
+        "guestPasswordLogin": "비밀번호로 게스트 로그인",
+        "accountCannotSignIn": "이 계정은 로그인할 수 없습니다. 가정의 관리자에게 문의해 주세요."
     },
     "setup": {
         "title": "Yuvomi에 오신 것을 환영합니다",

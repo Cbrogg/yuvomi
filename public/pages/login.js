@@ -60,13 +60,15 @@ export async function render(container) {
       </div>
       <div class="auth-card card card--padded">
         ${!passwordLoginEnabled ? `
-        <div class="auth-form">
+        <div class="auth-form" id="sso-only-block">
           <p class="auth-form__sso-only">${esc(t('login.ssoOnlyHint'))}</p>
-          <div class="form-error" id="form-error" role="alert" tabindex="-1" hidden></div>
           <a href="/api/v1/auth/oidc/start" class="btn btn--primary auth-form__submit">${esc(t('login.loginWithSso'))}</a>
+          <p class="auth-form__forgot">
+            <button type="button" class="auth-linkish" id="show-password-form">${esc(t('login.guestPasswordLogin'))}</button>
+          </p>
         </div>
-        ` : `
-        <form class="auth-form" id="auth-form" novalidate>
+        ` : ''}
+        <form class="auth-form" id="auth-form" novalidate ${!passwordLoginEnabled ? 'hidden' : ''}>
           <div class="form-group">
             <label class="label" for="username">${esc(t('login.usernameLabel'))}</label>
             <input
@@ -102,7 +104,7 @@ export async function render(container) {
           <button type="submit" class="btn btn--primary auth-form__submit" id="auth-btn">
             <span class="auth-btn__label">${esc(t('login.loginButton'))}</span>
           </button>
-          ${ssoEnabled ? `
+          ${ssoEnabled && passwordLoginEnabled ? `
           <div class="auth-divider">${esc(t('login.orDivider'))}</div>
           <a href="/api/v1/auth/oidc/start" class="btn btn--secondary auth-form__submit">${esc(t('login.loginWithSso'))}</a>
           ` : ''}
@@ -110,7 +112,6 @@ export async function render(container) {
             <a href="/forgot-password" data-link>${esc(t('login.forgotPassword'))}</a>
           </p>
         </form>
-        `}
       </div>
       <p class="auth-version" id="auth-version"></p>
     </main>
@@ -147,14 +148,17 @@ export async function render(container) {
       : t('login.ssoError'));
   }
 
-  // Ohne eingebaute Anmeldung gibt es kein Formular - und damit nichts, was die
-  // Feststelltaste, den Sichtbarkeits-Umschalter oder ein Absenden braeuchte
-  // (#847). Der Rest dieser Funktion setzt genau das voraus.
-  if (!passwordLoginEnabled) {
-    setAppBranding(storedAppName);
-    hydrateFromVersion(container, storedAppName);
-    return;
-  }
+  // Mit SSO als Hauptweg tritt das Formular zurueck, verschwindet aber NICHT
+  // (#847): der Schalter gilt dem Haushalt, und die Gaeste aus den geteilten
+  // Ausgaben sind keine - der Server laesst sie ausdruecklich weiter herein,
+  // also braucht die Oberflaeche einen Weg fuer sie. Ein zweiter Klick ist der
+  // Preis dafuer, dass der Haushalt SSO als DEN Weg sieht.
+  container.querySelector('#show-password-form')?.addEventListener('click', (e) => {
+    const form = container.querySelector('#auth-form');
+    if (form) form.hidden = false;
+    e.currentTarget.closest('p')?.remove();
+    form?.querySelector('#username')?.focus();
+  });
 
   // K3: Passwort-Sichtbarkeits-Toggle
   const passwordInput = form.querySelector('#password');
@@ -262,7 +266,11 @@ export async function render(container) {
       // richtige Fassung. Keine Schleife - das passiert nur auf ein Absenden
       // hin, und der zweite Versuch fragt eine Adresse, die gerade geantwortet
       // hat.
-      if (err.status === 403) {
+      // NUR dieser eine Grund. `POST /login` antwortet auch mit 403, wenn ein
+      // Konto der Haushaltshilfe gehoert - das ist eine dauerhafte Absage, und
+      // ein Neuzeichnen wuerde sie verschlucken und den Nutzer vor dasselbe
+      // Formular stellen, ohne ihm je zu sagen, warum es nicht geht.
+      if (err.status === 403 && /password login is disabled/i.test(err.message || '')) {
         return render(container);
       }
 
@@ -272,6 +280,9 @@ export async function render(container) {
       let message;
       if (err.status === 429) message = t('login.tooManyAttempts');
       else if (err.status === 401) message = t('login.invalidCredentials');
+      // Eine Absage ist kein Verbindungsproblem: wer „Verbindung fehlgeschlagen"
+      // liest, versucht es weiter, statt sich an seine Verwaltung zu wenden.
+      else if (err.status === 403) message = t('login.accountCannotSignIn');
       else message = t('login.networkError');
       showError(errorEl, message);
 

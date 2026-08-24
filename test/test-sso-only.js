@@ -177,7 +177,7 @@ function makeDb() {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(`
     CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL DEFAULT 'x', oidc_sub TEXT);
+      password_hash TEXT NOT NULL DEFAULT 'x', oidc_sub TEXT, role TEXT NOT NULL DEFAULT 'member');
     CREATE TABLE password_resets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -192,11 +192,12 @@ function makeDb() {
   // alice hat ein echtes Passwort, sso hat nur den Platzhalter - beide mit
   // hinterlegter Adresse, damit der Reset an ihnen nicht schon daran scheitert.
   db.prepare("INSERT INTO users (id, username, password_hash) VALUES (1,'alice','$2b$12$fakehash')").run();
-  // MIT `oidc_sub`: erst eine bestehende Verknuepfung macht den Schalter
-  // wirksam. Ohne sie faellt er absichtlich offen, weil niemand hineinkaeme -
-  // und die Tests darunter pruefen genau seine WIRKUNG.
-  db.prepare('INSERT INTO users (id, username, password_hash, oidc_sub) VALUES (2,?,?,?)')
-    .run('sso', OIDC_PASSWORD_SENTINEL, 'sub-linked-847');
+  // MIT `oidc_sub` UND als ADMIN: erst ein verknuepfter Administrator macht den
+  // Schalter wirksam. Fehlt eines von beidem, faellt er absichtlich offen, weil
+  // sonst niemand mehr an die Verwaltung kaeme - und die Tests darunter pruefen
+  // genau seine WIRKUNG.
+  db.prepare('INSERT INTO users (id, username, password_hash, oidc_sub, role) VALUES (2,?,?,?,?)')
+    .run('sso', OIDC_PASSWORD_SENTINEL, 'sub-linked-847', 'admin');
   db.prepare("INSERT INTO contacts (family_user_id, email) VALUES (1, 'alice@test')").run();
   db.prepare("INSERT INTO contacts (family_user_id, email) VALUES (2, 'sso@test')").run();
   // Ein Gast aus den geteilten Ausgaben: externes Konto mit echtem Passwort,
@@ -356,6 +357,37 @@ test('auch der zweite Fail-open-Zustand meldet sich beim Start', () => {
   });
 });
 
+test('erst ein verknuepfter ADMINISTRATOR schliesst den Passwort-Weg', () => {
+  // Meldet sich in einem bestehenden Haushalt zuerst ein gewoehnliches Mitglied
+  // per SSO an, waere der Riegel sonst sofort zu - und der Admin, dessen Konto
+  // mangels eindeutiger verifizierter Adresse nie verknuepft wurde, kaeme nach
+  // Ablauf seiner Sitzung nicht mehr an seine eigene Verwaltung (Review zu
+  // #849). Der Weg hinein muss fuer den offen bleiben, der ihn wieder
+  // aufmachen koennte.
+  //
+  // Verankert an der FUNKTION, nicht an der Datei: dieselbe Bedingung steht
+  // auch in `unlinkOidcAccount`, und die erste Fassung dieses Guards fand sie
+  // dort und blieb gruen, waehrend die Regel hier zurueckgedreht war. Zweiter
+  // blinder Guard in diesem Zweig - die Gegenprobe fand beide.
+  const start = authSrc.indexOf('function isPasswordLoginEnabled(database');
+  assert.ok(start > 0, 'die Funktion ist nicht mehr auffindbar');
+  const body = authSrc.slice(start, authSrc.indexOf('\n}', start));
+  assert.match(body, /oidc_sub IS NOT NULL AND role = 'admin'/,
+    'die Bedingung fragt nach irgendeinem verknuepften Konto statt nach einem Admin');
+});
+
+test('der letzte SSO-Administrator kann seine Verknuepfung nicht loesen', () => {
+  // Sonst kippt ein einzelnes Mitglied an seinem eigenen Konto den Zustand des
+  // ganzen Haushalts zurueck: null verknuepfte Admins, fail-open, und
+  // Anmeldeformular, Anmelderoute und Reset stehen wieder offen - still, ohne
+  // Aenderung an der Umgebung und ohne Neustart.
+  const start = authSrc.indexOf('export function unlinkOidcAccount');
+  const body = authSrc.slice(start, authSrc.indexOf('\n}', start));
+  assert.match(body, /last_sso_admin/);
+  assert.match(body, /role = 'admin' AND id != \?/,
+    'geprueft werden muss, ob ein ANDERER verknuepfter Admin bleibt');
+});
+
 // ─── Die Regeln an ihren Quellen ─────────────────────────────────────────────
 //
 // Diese drei pruefen den Code selbst. Die Routen dahinter haengen an Session
@@ -486,6 +518,35 @@ test('der Reset wird nicht beworben, wenn es kein Passwort mehr gibt', () => {
     'die Reset-Faehigkeit haengt nicht davon ab, ob es ueberhaupt ein Passwort gibt');
   assert.match(index, /password_hash != \?/,
     '/version prueft nicht, ob ueberhaupt ein Konto ein Passwort hat');
+});
+
+test('die Anmeldeseite behaelt einen Weg fuer Gastkonten', () => {
+  // Der Server laesst Gaeste der geteilten Ausgaben ausdruecklich weiter herein.
+  // Eine Oberflaeche ohne Formular haette diesen Zugang trotzdem unbrauchbar
+  // gemacht - der eigene Fix ohne seine Folge (Review zu #849).
+  const login = readFileSync(new URL('../public/pages/login.js', import.meta.url), 'utf8');
+  assert.match(login, /show-password-form/,
+    'es gibt keinen Weg, das Formular hervorzuholen');
+  assert.match(login, /guestPasswordLogin/);
+  // Das Formular wird versteckt, nicht weggelassen: sonst haette der Umschalter
+  // nichts einzublenden.
+  assert.match(login, /id="auth-form" novalidate \$\{!passwordLoginEnabled \? 'hidden' : ''\}/);
+});
+
+test('nur die Absage wegen abgeschalteter Anmeldung zeichnet neu', () => {
+  // POST /login antwortet auch fuer Konten der Haushaltshilfe mit 403. Ein
+  // pauschales Neuzeichnen verschluckte diese dauerhafte Absage und stellte den
+  // Nutzer vor dasselbe Formular, ohne ihm je den Grund zu nennen.
+  const login = readFileSync(new URL('../public/pages/login.js', import.meta.url), 'utf8');
+  assert.match(login, /err\.status === 403 && \/password login is disabled\/i\.test/);
+  assert.match(login, /accountCannotSignIn/,
+    'die andere 403-Absage braucht eine eigene Meldung, kein "Verbindungsproblem"');
+});
+
+test('der neue Schalter erreicht auch ein Unraid-Deployment', () => {
+  const xml = readFileSync(new URL('../templates/yuvomi.xml', import.meta.url), 'utf8');
+  assert.match(xml, /Name="AUTH_ALLOW_PASSWORD_LOGIN"/,
+    'ohne Eintrag ist die Variable dort aus der Oberflaeche nicht erreichbar');
 });
 
 test('die Anmeldeseite fragt beide Wege in EINEM Aufruf ab', () => {

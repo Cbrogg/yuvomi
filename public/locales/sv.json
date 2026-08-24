@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "Inloggningen har gått ut. Logga in igen.",
         "twoFactorMissing": "Ange koden.",
         "twoFactorCancel": "Avbryt",
-        "ssoOnlyHint": "Inloggning till det här hushållet sker uteslutande via SSO."
+        "ssoOnlyHint": "Inloggning till det här hushållet sker uteslutande via SSO.",
+        "guestPasswordLogin": "Gästinloggning med lösenord",
+        "accountCannotSignIn": "Det här kontot kan inte logga in. Kontakta administratören för ditt hushåll."
     },
     "setup": {
         "title": "Välkommen till Yuvomi",

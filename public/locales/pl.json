@@ -2492,7 +2492,9 @@
         "twoFactorExpired": "Logowanie wygasło. Zaloguj się ponownie.",
         "twoFactorMissing": "Wpisz kod.",
         "twoFactorCancel": "Anuluj",
-        "ssoOnlyHint": "Logowanie do tego gospodarstwa domowego odbywa się wyłącznie przez SSO."
+        "ssoOnlyHint": "Logowanie do tego gospodarstwa domowego odbywa się wyłącznie przez SSO.",
+        "guestPasswordLogin": "Logowanie gościa hasłem",
+        "accountCannotSignIn": "To konto nie może się zalogować. Skontaktuj się z administratorem swojego gospodarstwa domowego."
     },
     "setup": {
         "title": "Witamy w Yuvomi",

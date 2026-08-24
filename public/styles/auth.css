@@ -184,6 +184,19 @@
   text-align: center;
 }
 
+/* Der Zweitweg unter dem SSO-Block (#847): eine Schaltflaeche, die aussieht wie
+ * der „Passwort vergessen"-Link darueber, weil sie dasselbe Gewicht hat - ein
+ * Nebenweg fuer Gastkonten, nicht die zweite Hauptaktion. */
+.auth-linkish {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 /* „oder"-Trenner zwischen Passwort- und SSO-Anmeldung */
 .auth-divider {
   display: flex;

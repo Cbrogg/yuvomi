@@ -2480,7 +2480,9 @@
         "twoFactorExpired": "Přihlášení vypršelo. Přihlas se znovu.",
         "twoFactorMissing": "Zadej kód.",
         "twoFactorCancel": "Zrušit",
-        "ssoOnlyHint": "Přihlášení do této domácnosti probíhá výhradně přes SSO."
+        "ssoOnlyHint": "Přihlášení do této domácnosti probíhá výhradně přes SSO.",
+        "guestPasswordLogin": "Přihlášení hosta heslem",
+        "accountCannotSignIn": "Tento účet se nemůže přihlásit. Obraťte se na správce vaší domácnosti."
     },
     "setup": {
         "title": "Vítejte v Yuvomi",
