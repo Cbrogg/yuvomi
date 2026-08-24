@@ -158,7 +158,7 @@
     "sectionPrivateNetwork": "Zugriff auf dein Heimnetz",
     "privateNetworkHint": "Yuvomi lehnt Verbindungen zu Adressen im eigenen Netz standardmäßig ab - das schützt davor, dass der Server dazu gebracht wird, interne Dienste zu erreichen. Gib frei, was du zu Hause wirklich betreibst.",
     "authPasswordLogin": "Anmeldung mit Benutzername und Passwort beibehalten",
-    "authPasswordLoginHint": "Ausschalten macht SSO zum einzigen Weg hinein: Anmeldeformular und Passwort-Reset verschwinden. Ist der Anbieter nicht erreichbar, führt der Weg zurück über die .env-Datei und einen Neustart."
+    "authPasswordLoginHint": "Ausschalten macht SSO zum einzigen Weg hinein: Anmeldeformular und Passwort-Reset verschwinden. Wirksam wird es, sobald mindestens ein Konto mit dem Anbieter verknüpft ist - eine frische Installation kann ihren ersten Administrator also noch anlegen. Ist der Anbieter nicht erreichbar, führt der Weg zurück über die .env-Datei und einen Neustart."
   },
   "review": {
     "title": "Überprüfung",

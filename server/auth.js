@@ -17,7 +17,7 @@ import * as oidcClient from 'openid-client';
 import {
   isOidcEnabled,
   isOidcSignupAllowed,
-  isPasswordLoginEnabled,
+  isPasswordLoginEnabled as passwordLoginAllowedByEnv,
   isSsoOnlyAccount,
   OIDC_PASSWORD_SENTINEL,
   getConfig as getOidcConfig,
@@ -826,6 +826,38 @@ export function unlinkOidcAccount(database, userId) {
 const avatarColors = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55'];
 
 /**
+ * Darf man sich hier mit Passwort anmelden? (#847)
+ *
+ * Legt die Datenbank-Bedingung unter den Env-Schalter: solange KEIN Konto mit
+ * dem Anbieter verknuepft ist, bleibt die eingebaute Anmeldung offen, weil es
+ * sonst gar keinen Weg hinein gaebe. Betrifft vor allem die frische
+ * Installation, deren erster Administrator ueber `/setup` mit einem Passwort
+ * entsteht - und jede Einladung, die vor dem ersten SSO-Login eingeloest wird.
+ *
+ * Die Abfrage ist billig: `idx_users_oidc_sub` deckt sie, und ein `EXISTS`
+ * haelt bei der ersten Zeile an.
+ *
+ * @param {object} [database]  fuer Tests; sonst die laufende Instanz
+ * @returns {boolean}
+ */
+export function isPasswordLoginEnabled(database = null) {
+  // Nur fragen, wenn der Schalter ueberhaupt greifen koennte - sonst kostet
+  // jeder Anmeldeversuch eine Abfrage, die das Ergebnis nicht aendert.
+  if (passwordLoginAllowedByEnv()) return true;
+  let hasLinkedSsoAccount = true;
+  try {
+    const db_ = database || db.get();
+    hasLinkedSsoAccount = !!db_
+      .prepare('SELECT 1 FROM users WHERE oidc_sub IS NOT NULL LIMIT 1').get();
+  } catch (err) {
+    // Eine Datenbank, die gerade nicht antwortet, darf niemanden aussperren.
+    log.warn('SSO-Verknuepfungspruefung fehlgeschlagen:', err?.message || err);
+    return true;
+  }
+  return passwordLoginAllowedByEnv({ hasLinkedSsoAccount });
+}
+
+/**
  * POST /api/v1/auth/login
  * Body: { username: string, password: string }
  * Response: { user: { id, username, display_name, avatar_color, role, family_role } }
@@ -965,7 +997,7 @@ export function buildResetRoutes(targetRouter, {
       // gehen auch die beiden neuen Gruende (#847) durch dieselbe Antwort -
       // ein eigener Statuscode fuer "dieses Konto hat kein Passwort" wuerde
       // verraten, welche Konten per SSO gefuehrt werden.
-      if (userId && isPasswordLoginEnabled() && hasResettablePassword(userId)
+      if (userId && isPasswordLoginEnabled(getDb()) && hasResettablePassword(userId)
           && emailService.isConfigured()) {
         const to = emailFor(userId);
         // Reset links MUST use an explicitly configured, trusted origin.
@@ -1013,7 +1045,7 @@ export function buildResetRoutes(targetRouter, {
       // haben (#847). Ein noch gueltiger Token darf diese Entscheidung nicht
       // ueberholen. Bewusst dieselbe Meldung wie ein ungueltiger Token: der
       // Unterschied ginge sonst an jemanden, der das Konto nicht besitzt.
-      if (!isPasswordLoginEnabled() || !hasResettablePassword(userId)) {
+      if (!isPasswordLoginEnabled(getDb()) || !hasResettablePassword(userId)) {
         resetService.consumeToken(token);
         return res.status(400).json({ error: 'Invalid or expired token.', code: 400 });
       }
@@ -1169,7 +1201,16 @@ export function buildInviteRoutes(targetRouter, {
       const invite = inviteService.verifyToken(String(req.query.token || ''));
       if (!invite) return res.json({ data: { valid: false } });
       res.json({
-        data: { valid: true, display_name: invite.display_name, username: invite.username },
+        // `password_required` sagt der /join-Seite, ob sie ueberhaupt nach einem
+        // Passwort fragen soll (#847). Ohne die Angabe zeigte sie zwei
+        // Pflichtfelder, deren Inhalt der Server verwirft - und der Eingeladene
+        // haette sich ein Passwort ausgedacht, mit dem er sich nie anmeldet.
+        data: {
+          valid: true,
+          display_name: invite.display_name,
+          username: invite.username,
+          password_required: isPasswordLoginEnabled(getDb()),
+        },
       });
     } catch (err) {
       log.error('Invite preview error:', err.message);
@@ -1180,15 +1221,41 @@ export function buildInviteRoutes(targetRouter, {
   targetRouter.post('/invites/accept', limiter, async (req, res) => {
     try {
       const { token, password } = req.body || {};
-      if (!token || !password) {
+      if (!token) {
         return res.status(400).json({ error: 'Token and password are required.', code: 400 });
       }
-      if (normalizePassword(password).length < 8) {
-        return res.status(400).json({ error: 'Password must be at least 8 characters long.', code: 400 });
-      }
+      // Der Token wird VOR dem Passwort geprueft, seit nicht mehr jede
+      // Einladung eines verlangt: er ist ohnehin das Geheimnis, und erst er
+      // sagt, welche E-Mail-Adresse dieser Einladung anhaengt.
       const invite = inviteService.verifyToken(token);
       if (!invite) {
         return res.status(400).json({ error: 'Invalid or expired token.', code: 400 });
+      }
+
+      // Mit abgeschalteter Passwort-Anmeldung entstuende hier sonst ein Konto,
+      // das seinen Zugang im selben Moment verliert (#847): der Eingeladene
+      // vergibt ein Passwort, die Einladung ist verbraucht, und die Anmeldung
+      // weist ihn ab. Stattdessen entsteht ein Konto ohne Passwort - die
+      // Adresse der Einladung ist genau der Weg, auf dem die erste
+      // SSO-Anmeldung es findet.
+      const ssoOnly = !isPasswordLoginEnabled(getDb());
+      if (ssoOnly) {
+        if (!invite.email) {
+          // Ohne Adresse kann die Verknuepfung nicht greifen. Lieber die
+          // Einladung stehen lassen, als sie in ein unerreichbares Konto zu
+          // verbrauchen - ein Admin kann sie mit Adresse neu ausstellen.
+          return res.status(400).json({
+            error: 'This invitation has no email address, which SSO needs to link the account. Ask for a new invitation.',
+            code: 400,
+          });
+        }
+      } else {
+        if (!password) {
+          return res.status(400).json({ error: 'Token and password are required.', code: 400 });
+        }
+        if (normalizePassword(password).length < 8) {
+          return res.status(400).json({ error: 'Password must be at least 8 characters long.', code: 400 });
+        }
       }
 
       // Benutzer- und Anzeigename darf der Eingeladene selbst setzen, solange die
@@ -1205,7 +1272,7 @@ export function buildInviteRoutes(targetRouter, {
         return res.status(400).json({ error: 'Display name may be at most 128 characters long.', code: 400 });
       }
 
-      const hash = await hashPassword(password);
+      const hash = ssoOnly ? OIDC_PASSWORD_SENTINEL : await hashPassword(password);
       const avatarColor = avatarColors[crypto.randomInt(avatarColors.length)];
 
       const ACCEPT_LOST = Symbol('accept_lost');
@@ -1882,7 +1949,13 @@ router.get('/users', requireAuth, (req, res) => {
     // siehe den Kommentar in publicUser (#847). Der Platzhalter wird gebunden
     // und nicht in die Query geschrieben, damit hier keine zusammengesetzte SQL
     // steht, der man erst ansehen muss, dass ihre Bestandteile konstant sind.
-    const isAdmin = req.session?.role === 'admin';
+    //
+    // `req.authRole` und NICHT `req.session.role`: `requireAuth` bedient beide
+    // Anmeldearten und legt die geltende Rolle dort ab. Ein Admin-API-Token hat
+    // gar keine Session und verloere das Feld; ein Mitglieds-Token neben einem
+    // Admin-Cookie bekaeme es umgekehrt zu Unrecht. Jede andere Rollenpruefung
+    // in dieser Datei fragt aus genau diesem Grund `authRole`.
+    const isAdmin = req.authRole === 'admin';
     const users = isAdmin
       ? db.get().prepare(`
           SELECT ${USER_PUBLIC_COLUMNS},
@@ -2061,13 +2134,36 @@ function adminUserRow(userId) {
  * @param {string|undefined} password
  * @returns {string|null} Fehlermeldung oder null
  */
-function assertSsoOnlyAllowed(ssoOnly, password) {
+function assertSsoOnlyAllowed(ssoOnly, password, { linked = false, email = null, excludeUserId = null } = {}) {
   if (!ssoOnly) return null;
   if (!isOidcEnabled()) {
     return 'An account without a password requires OIDC to be configured.';
   }
   if (password) {
     return 'An account without a password cannot be given a password at the same time.';
+  }
+  // Ein Konto ohne Passwort muss auf einem Weg ERREICHBAR bleiben, und es gibt
+  // genau zwei: es ist bereits mit dem Anbieter verknuepft, oder die erste
+  // SSO-Anmeldung findet es. Letzteres laeuft ausschliesslich ueber eine
+  // verifizierte E-Mail-Adresse - ein gleicher Benutzername verknuepft aus
+  // gutem Grund NICHT (sonst naehme sich jeder, der sich im IdP "admin" nennt,
+  // das lokale Admin-Konto). Ohne beides entstuende ein Konto, in das niemand
+  // hineinkommt: mit OIDC_ALLOW_SIGNUP=false wird die Person abgewiesen, mit
+  // Signup bekommt sie ein ZWEITES Konto und dieses bleibt leer zurueck.
+  if (linked) return null;
+  const address = String(email || '').trim();
+  if (!address) {
+    return 'An account without a password needs an email address, so the first SSO sign-in can link it.';
+  }
+  // Und sie muss dieses eine Konto meinen: `findOrCreateOidcUser` verknuepft
+  // nur bei GENAU einem Treffer und laesst zwei Kandidaten unangetastet.
+  const clash = db.get().prepare(`
+    SELECT 1 FROM contacts
+    WHERE email = ? AND family_user_id IS NOT NULL AND family_user_id IS NOT ?
+    LIMIT 1
+  `).get(address, excludeUserId);
+  if (clash) {
+    return 'This email address already belongs to another member, so SSO could not tell the accounts apart.';
   }
   return null;
 }
@@ -2099,9 +2195,6 @@ router.post('/users', requireAuth, requireAdmin, csrfMiddleware, async (req, res
     const role = system_admin === true || system_admin === 'true' ? 'admin' : 'member';
     const ssoOnly = sso_only === true || sso_only === 'true';
 
-    const ssoOnlyError = assertSsoOnlyAllowed(ssoOnly, password);
-    if (ssoOnlyError) return res.status(400).json({ error: ssoOnlyError, code: 400 });
-
     if (!username || !display_name || (!ssoOnly && !password)) {
       return res.status(400).json({ error: 'Username, display name, and password are required.', code: 400 });
     }
@@ -2130,6 +2223,11 @@ router.post('/users', requireAuth, requireAdmin, csrfMiddleware, async (req, res
     if (memberFields.errors.length) {
       return res.status(400).json({ error: memberFields.errors.join(' '), code: 400 });
     }
+
+    // Erst hier, weil die Pruefung die E-Mail braucht: ein neues Konto ist noch
+    // mit nichts verknuepft, also ist die Adresse sein einziger Weg hinein.
+    const ssoOnlyError = assertSsoOnlyAllowed(ssoOnly, password, { email: memberFields.values.email });
+    if (ssoOnlyError) return res.status(400).json({ error: ssoOnlyError, code: 400 });
 
     const hash = ssoOnly ? OIDC_PASSWORD_SENTINEL : await hashPassword(password);
 
@@ -2225,7 +2323,17 @@ router.patch('/users/:id', requireAuth, requireAdmin, csrfMiddleware, async (req
     const ssoOnly = req.body.sso_only !== undefined
       ? (req.body.sso_only === true || req.body.sso_only === 'true')
       : null;
-    const ssoOnlyError = assertSsoOnlyAllowed(ssoOnly === true, newPassword);
+    // Ein bereits verknuepftes Konto braucht keine E-Mail mehr - sein `sub`
+    // findet es. Sonst zaehlt die Adresse, die nach diesem Aufruf gilt.
+    const linkedRow = db.get().prepare('SELECT oidc_sub FROM users WHERE id = ?').get(userId);
+    const effectiveEmail = memberFields.values.email !== undefined
+      ? memberFields.values.email
+      : existing.email;
+    const ssoOnlyError = assertSsoOnlyAllowed(ssoOnly === true, newPassword, {
+      linked: !!linkedRow?.oidc_sub,
+      email: effectiveEmail,
+      excludeUserId: userId,
+    });
     if (ssoOnlyError) return res.status(400).json({ error: ssoOnlyError, code: 400 });
 
     // Zurueck zu "hat ein Passwort" geht nur MIT einem Passwort: sonst bliebe
@@ -2239,7 +2347,14 @@ router.patch('/users/:id', requireAuth, requireAdmin, csrfMiddleware, async (req
     const adminError = assertAdminWouldRemain(userId, nextRole);
     if (adminError) return res.status(400).json({ error: adminError, code: 400 });
 
-    const newPasswordHash = ssoOnly === true
+    // Nur ein echter UEBERGANG schreibt und meldet ab. Die Verwaltung schickt
+    // den Umschalter bei JEDER Speicherung mit, also auch beim Aendern des
+    // Namens oder der Farbe eines laengst SSO-gefuehrten Kontos - der Zweig
+    // haette den Platzhalter dann erneut geschrieben und `invalidateUserSessions`
+    // ausgeloest. Das Mitglied waere auf allen Geraeten abgemeldet worden, ohne
+    // dass sich an seinem Zugang das Geringste geaendert hat.
+    const alreadySsoOnly = isSsoOnlyAccount(existingHash);
+    const newPasswordHash = (ssoOnly === true && !alreadySsoOnly)
       ? OIDC_PASSWORD_SENTINEL
       : (newPassword ? await hashPassword(newPassword) : null);
 

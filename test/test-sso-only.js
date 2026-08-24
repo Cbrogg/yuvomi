@@ -133,6 +133,26 @@ test('wo der Schalter greift oder gar nicht gesetzt ist, warnt nichts', () => {
   });
 });
 
+test('ohne ein verknuepftes SSO-Konto bleibt die Anmeldung offen', () => {
+  // Der Fall, den das Review fand (#849): eine frische Installation legt ihren
+  // ersten Administrator ueber /setup MIT Passwort an. Griffe der Schalter
+  // schon davor, waere dieses Konto im selben Moment tot, /setup danach zu und
+  // niemand mehr administrativ drin. Konfiguriertes SSO heisst eben noch nicht,
+  // dass jemand hindurchkommt.
+  withOidc({ AUTH_ALLOW_PASSWORD_LOGIN: 'false' }, () => {
+    assert.equal(isPasswordLoginEnabled({ hasLinkedSsoAccount: false }), true);
+    assert.equal(isPasswordLoginEnabled({ hasLinkedSsoAccount: true }), false);
+  });
+});
+
+test('der Default nimmt eine Verknuepfung an, laesst den Schalter also greifen', () => {
+  // Ein vergessener Parameter darf kein stiller Fail-open sein: wer die Frage
+  // nicht stellt, bekommt die strengere Antwort.
+  withOidc({ AUTH_ALLOW_PASSWORD_LOGIN: 'false' }, () => {
+    assert.equal(isPasswordLoginEnabled(), false);
+  });
+});
+
 // ─── Der Platzhalter ─────────────────────────────────────────────────────────
 
 test('der Platzhalter erkennt genau sich selbst', () => {
@@ -157,7 +177,7 @@ function makeDb() {
   db.exec('PRAGMA foreign_keys = ON;');
   db.exec(`
     CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, username TEXT UNIQUE NOT NULL,
-      password_hash TEXT NOT NULL DEFAULT 'x');
+      password_hash TEXT NOT NULL DEFAULT 'x', oidc_sub TEXT);
     CREATE TABLE password_resets (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -171,8 +191,11 @@ function makeDb() {
   // alice hat ein echtes Passwort, sso hat nur den Platzhalter - beide mit
   // hinterlegter Adresse, damit der Reset an ihnen nicht schon daran scheitert.
   db.prepare("INSERT INTO users (id, username, password_hash) VALUES (1,'alice','$2b$12$fakehash')").run();
-  db.prepare('INSERT INTO users (id, username, password_hash) VALUES (2,?,?)')
-    .run('sso', OIDC_PASSWORD_SENTINEL);
+  // MIT `oidc_sub`: erst eine bestehende Verknuepfung macht den Schalter
+  // wirksam. Ohne sie faellt er absichtlich offen, weil niemand hineinkaeme -
+  // und die Tests darunter pruefen genau seine WIRKUNG.
+  db.prepare('INSERT INTO users (id, username, password_hash, oidc_sub) VALUES (2,?,?,?)')
+    .run('sso', OIDC_PASSWORD_SENTINEL, 'sub-linked-847');
   db.prepare("INSERT INTO contacts (family_user_id, email) VALUES (1, 'alice@test')").run();
   db.prepare("INSERT INTO contacts (family_user_id, email) VALUES (2, 'sso@test')").run();
   return db;
@@ -344,6 +367,48 @@ test('was Anlegen und Aendern zurueckgeben, traegt sso_only mit', () => {
   }
   assert.match(authSrc, /function adminUserRow[\s\S]{0,400}sso_only/,
     'adminUserRow selektiert das Flag nicht mit');
+});
+
+test('kein Weg legt ein Konto an, das seinen Zugang sofort verliert', () => {
+  // Drei Wege erzeugten ein Passwort-Konto, waehrend die Passwort-Anmeldung aus
+  // ist - alle drei aus dem Review zu #849. Setup und Einladung sind ueber die
+  // Fail-open-Regel bzw. den sso_only-Zweig abgedeckt, das Umstellen ueber die
+  // Erreichbarkeitspruefung.
+  assert.match(authSrc, /const ssoOnly = !isPasswordLoginEnabled\(getDb\(\)\)/,
+    'die Einladungsannahme fragt den Schalter nicht');
+  assert.match(authSrc, /This invitation has no email address/,
+    'eine Einladung ohne Adresse muss stehen bleiben statt in ein totes Konto zu laufen');
+  assert.match(authSrc, /password_required: isPasswordLoginEnabled/,
+    'die Vorschau sagt der /join-Seite nicht, ob sie nach einem Passwort fragen soll');
+});
+
+test('ein Konto ohne Passwort muss erreichbar bleiben', () => {
+  // Ohne `oidc_sub` und ohne E-Mail findet die erste SSO-Anmeldung dieses Konto
+  // nie: ein gleicher Benutzername verknuepft bewusst NICHT. Mit
+  // OIDC_ALLOW_SIGNUP=false wird die Person abgewiesen, mit Signup bekommt sie
+  // ein zweites Konto - und dieses bliebe leer und unerreichbar zurueck.
+  assert.match(authSrc, /needs an email address, so the first SSO sign-in can link it/);
+  assert.match(authSrc, /already belongs to another member/,
+    'zwei Konten mit derselben Adresse verknuepft der Server bewusst gar nicht');
+});
+
+test('nur ein echter Wechsel schreibt den Platzhalter und meldet ab', () => {
+  // Die Verwaltung schickt den Umschalter bei JEDER Speicherung mit. Ohne diese
+  // Bedingung meldete das Aendern eines Namens ein laengst SSO-gefuehrtes
+  // Mitglied auf allen Geraeten ab.
+  assert.match(authSrc, /const alreadySsoOnly = isSsoOnlyAccount\(existingHash\)/);
+  assert.match(authSrc, /ssoOnly === true && !alreadySsoOnly/);
+});
+
+test('die Sichtbarkeit von sso_only haengt am geltenden Zugang, nicht an der Session', () => {
+  // `requireAuth` bedient Session UND API-Token und legt die geltende Rolle in
+  // `req.authRole` ab. Ein Admin-Token hat gar keine Session und verloere das
+  // Feld; ein Mitglieds-Token neben einem Admin-Cookie bekaeme es zu Unrecht.
+  const users = authSrc.slice(authSrc.indexOf("router.get('/users'"));
+  const body = users.slice(0, users.indexOf("router.get('/api-tokens'"));
+  assert.match(body, /const isAdmin = req\.authRole === 'admin'/);
+  assert.doesNotMatch(body, /req\.session\?\.role/,
+    'die Session ist hier die falsche Quelle');
 });
 
 test('die Anmeldeseite fragt beide Wege in EINEM Aufruf ab', () => {

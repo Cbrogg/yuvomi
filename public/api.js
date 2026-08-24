@@ -258,6 +258,24 @@ const auth = {
       return true;
     }
   },
+  /**
+   * Gibt es auf diesem Server ueberhaupt Passwoerter? (#847)
+   *
+   * Bewusst eine ANDERE Frage als `passwordResetAvailable`: dort geht es um die
+   * Zustellbarkeit einer Mail, hier um die Existenz des Anmeldewegs. Wer einen
+   * bereits verschickten Token einloest, braucht keine Mail mehr - eine
+   * zwischenzeitlich abgeschaltete SMTP darf ihn deshalb nicht aussperren.
+   *
+   * Ein Fehlschlag gilt wieder als "ja": der Server prueft ohnehin selbst.
+   * @returns {Promise<boolean>}
+   */
+  passwordLoginEnabled: async () => {
+    try {
+      return (await api.get('/auth/oidc/config'))?.password_login_enabled !== false;
+    } catch {
+      return true;
+    }
+  },
   // Einladungen: die ersten drei sind Admin-Routen, die letzten beiden öffentlich
   // (die /join-Seite ruft sie ohne Session auf).
   createInvite: (data) => api.post('/auth/invites', data),

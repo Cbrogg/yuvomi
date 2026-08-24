@@ -774,6 +774,11 @@ function syncSsoOnlyField(container) {
     field.required = !on;
     if (on) field.value = '';
   }
+  // Ohne Passwort ist die E-Mail der einzige Weg, auf dem die erste
+  // SSO-Anmeldung dieses Konto findet - ein gleicher Benutzername verknuepft
+  // bewusst nicht. Der Server weist es sonst ab; das hier sagt es vorher.
+  const email = container.querySelector('#new-member-email');
+  if (email) email.required = on;
 }
 
 function bindEvents(container, currentUser, users) {

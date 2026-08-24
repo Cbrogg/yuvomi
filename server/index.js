@@ -12,7 +12,7 @@ import path from 'path';
 import { readFileSync } from 'node:fs';
 import { createLogger } from './logger.js';
 import * as db from './db.js';
-import { router as authRouter, sessionMiddleware, requireAuth, requireAdmin } from './auth.js';
+import { router as authRouter, sessionMiddleware, requireAuth, requireAdmin, isPasswordLoginEnabled } from './auth.js';
 import { csrfMiddleware } from './middleware/csrf.js';
 import idempotencyMiddleware from './middleware/idempotency.js';
 import { buildOpenApiSpec } from './openapi.js';
@@ -32,7 +32,7 @@ import { startScheduler as startPushScheduler } from './services/push-scheduler.
 import { startScheduler as startMedicationScheduler } from './services/medication-scheduler.js';
 import { startScheduler as startRecipeProviderScheduler } from './services/recipe-provider-sync.js';
 import { emailService } from './services/email.js';
-import { isPasswordLoginEnabled, passwordLoginWarning } from './services/oidc.js';
+import { passwordLoginWarning } from './services/oidc.js';
 import dashboardRouter from './routes/dashboard.js';
 import tasksRouter from './routes/tasks.js';
 import shoppingRouter from './routes/shopping.js';

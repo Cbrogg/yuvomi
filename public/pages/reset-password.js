@@ -32,18 +32,17 @@ function renderUnavailable(container) {
 }
 
 export async function render(container) {
-  // Ein Reset, den dieser Server nicht durchfuehren kann, ist eine Sackgasse -
-  // ohne SMTP/BASE_URL ebenso wie mit SSO als einzigem Anmeldeweg (#847). Die
-  // Anmeldeseite blendet den Link dann schon aus; wer die Adresse direkt
-  // aufruft, bekommt hier den Grund statt eines Formulars, dessen Absenden
-  // folgenlos bliebe.
+  // Hier zaehlt NICHT die Zustellbarkeit einer Mail, sondern ob es ueberhaupt
+  // Passwoerter gibt (#847). Der Unterschied ist der eigentliche Zweck dieser
+  // Seite: wer sie aufruft, hat seine Mail bereits bekommen. Haetten wir wie
+  // die Vorgaengerseite auf `password_reset_enabled` geprueft, sperrte eine
+  // zwischenzeitlich abgeschaltete oder kurz nicht erreichbare SMTP einen
+  // gueltigen Token aus, den der Server bereitwillig eingeloest haette.
   //
   // Bewusst eine Auskunft und kein `navigate('/login')`: der Router verwirft
   // eine Navigation, die aus einem laufenden `render()` heraus startet
-  // (`isNavigating`), und zurueck bliebe eine leere Seite. Ein Weiterschicken
-  // ohne Begruendung waere hier ohnehin das schlechtere Verhalten - wer auf
-  // "Passwort vergessen" geklickt hat, will wissen, warum das nicht geht.
-  if (!(await auth.passwordResetAvailable())) {
+  // (`isNavigating`), und zurueck bliebe eine leere Seite.
+  if (!(await auth.passwordLoginEnabled())) {
     renderUnavailable(container);
     return;
   }

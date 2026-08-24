@@ -91,10 +91,19 @@ export function isSsoOnlyAccount(passwordHash) {
  * Gelesen wird pro Aufruf, nicht beim Import - siehe `isOidcSignupAllowed`.
  * @returns {boolean}
  */
-export function isPasswordLoginEnabled() {
+export function isPasswordLoginEnabled({ hasLinkedSsoAccount = true } = {}) {
   if (process.env.AUTH_ALLOW_PASSWORD_LOGIN !== 'false') return true;
-  // Fail-open: ohne SSO gaebe es keinen Weg hinein.
-  return !isOidcEnabled();
+  // Fail-open 1: ohne SSO gaebe es keinen Weg hinein.
+  if (!isOidcEnabled()) return true;
+  // Fail-open 2: konfiguriertes SSO heisst noch nicht, dass jemand hindurch
+  // kommt. Eine frische Installation legt ihren ersten Administrator ueber
+  // `/setup` mit einem Passwort an - griffe der Schalter schon davor, waere
+  // dieses Konto im selben Moment tot, `/setup` danach zu und niemand mehr
+  // administrativ drin. Erst wenn mindestens ein Konto tatsaechlich mit dem
+  // Anbieter verknuepft ist, gibt es einen zweiten Weg, den man zumachen kann.
+  // Der Aufrufer reicht die Antwort herein; der Default haelt diese Datei frei
+  // von der Datenbank und laesst den Schalter im Zweifel GREIFEN.
+  return !hasLinkedSsoAccount;
 }
 
 /**

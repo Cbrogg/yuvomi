@@ -251,6 +251,21 @@ export async function render(container) {
       }
       window.yuvomi.navigate('/', result.user);
     } catch (err) {
+      // Die Seite hat sich fuer das Formular entschieden, der Server lehnt es
+      // ab: dann lagen ihr die Anmeldewege beim Zeichnen nicht vor (#847). Das
+      // passiert, wenn `/auth/oidc/config` in ihr Zeitfenster nicht geantwortet
+      // hat - sie faellt dann bewusst auf das Formular zurueck, was ohne SSO
+      // richtig ist und mit SSO-only einen Weg zeigt, den es nicht gibt.
+      //
+      // Statt das im Voraus zu erraten, heilt die Antwort des Servers die
+      // Anzeige: neu zeichnen holt die Konfiguration erneut und baut die
+      // richtige Fassung. Keine Schleife - das passiert nur auf ein Absenden
+      // hin, und der zweite Versuch fragt eine Adresse, die gerade geantwortet
+      // hat.
+      if (err.status === 403) {
+        return render(container);
+      }
+
       // Fehler-Ehrlichkeit: nur 401 heißt „falsche Zugangsdaten". 429 ist die
       // Sperre; alles andere (Status 0 = offline, 5xx = Serverfehler) ist ein
       // Verbindungsproblem – der Nutzer darf nicht fälschlich an sich zweifeln.
