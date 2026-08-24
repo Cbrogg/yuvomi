@@ -4831,6 +4831,26 @@ textarea::placeholder {
   animation: list-item-in var(--duration-xl) var(--ease-out) var(--duration-xl) both;
 }
 
+/* Zwei Wege aus demselben Zustand (Dokumente: „Suche löschen" neben „Filter
+ * zurücksetzen"). Sie stehen in einer Reihe, weil zwei Blöcke untereinander
+ * gleich stark läsen und damit die Rangfolge verlören - die Tonwerte tragen
+ * sie, nicht die Position. Auf schmalen Schirmen bricht die Reihe um.
+ * Die Regel ersetzt .documents-empty-state__actions, das dasselbe für ein
+ * einzelnes Modul tat. */
+.empty-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-2);
+  margin-top: var(--space-4);
+}
+
+/* Der Eigenabstand der Buttons entfällt in der Reihe: ihn trägt dort der
+ * gemeinsame margin-top oben. */
+.empty-state__actions > .empty-state__cta {
+  margin-top: 0;
+}
+
 /* Technische Fehlerdetails: zugeklappt unauffällig, aufgeklappt lesbar und
  * kopierbar. Der Stack darf nicht die Seite horizontal schieben - er scrollt
  * in seinem eigenen Kasten. */
