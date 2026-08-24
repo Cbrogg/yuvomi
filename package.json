@@ -267,21 +267,21 @@
     "libphonenumber-js": "^1.13.11",
     "node-cron": "^4.6.0",
     "nodemailer": "^9.0.5",
-    "openid-client": "^6.8.5",
+    "openid-client": "^6.8.7",
     "web-push": "^3.6.7"
   },
   "optionalDependencies": {
-    "googleapis": "^174.0.1",
+    "googleapis": "^176.0.0",
     "tsdav": "^2.3.1"
   },
   "license": "MIT",
   "devDependencies": {
-    "puppeteer": "^25.7.0",
+    "puppeteer": "^25.8.0",
     "sharp": "^0.35.3"
   },
   "allowScripts": {
     "better-sqlite3-multiple-ciphers@13.0.3": true,
     "bcrypt@6.0.0": true,
-    "puppeteer@25.7.0": true
+    "puppeteer@25.8.0": true
   }
 }
