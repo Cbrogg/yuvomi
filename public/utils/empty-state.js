@@ -107,7 +107,12 @@ export function emptyStateEl({
   // keine. Titellos ist ausschliesslich die kompakte Form (`emptyHintEl`) - der
   // Guard haelt das an den Aufrufstellen fest.
   if (title) parts.push(`<h2 class="empty-state__title">${esc(title)}</h2>`);
-  if (description) parts.push(`<div class="empty-state__description">${esc(description)}</div>`);
+  // <p>, nicht <div>: die Beschreibung ist ein Satz Fliesstext, und der Hinweis
+  // darunter ist es laengst. Ein UA-Margin entsteht dadurch nicht - reset.css
+  // nullt ihn fuer alles. (Die kompakte Form fuehrte ihre Beschreibung schon
+  // immer als <p>; bis sie hierher delegierte, war das der einzige Unterschied
+  // zwischen den beiden Fassungen.)
+  if (description) parts.push(`<p class="empty-state__description">${esc(description)}</p>`);
   if (hint) parts.push(`<p class="empty-state__hint">${esc(hint)}</p>`);
   box.insertAdjacentHTML('beforeend', parts.join(''));
 
