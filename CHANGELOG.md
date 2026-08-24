@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.39.0] - 2026-08-24
+
+### Added
+
+- **SSO sign-ins no longer have to create accounts** (#654). Pointing Yuvomi at an identity provider
+  that serves more than this household meant sharing the whole directory: anyone who could sign in
+  there got a Yuvomi account, unasked, on their first click of "Sign in with SSO". A directory is a
+  list of people, not a list of household members. `OIDC_ALLOW_SIGNUP=false` removes exactly one
+  step, the provisioning. Matching a known `sub` and linking an account by verified email both stay,
+  which is what makes the switch usable: an admin creates the account and the member's first SSO
+  sign-in binds the two together. Had linking gone as well, the switch would have locked out the
+  very person just entered.
+
+  The default stays `true`, so an existing installation behaves exactly as before after the update -
+  a security switch that flips during an update is not a switch, it is a lockout. Only the literal
+  value `false` disables provisioning; anything else leaves it on, so a typo cannot lock a household
+  out of its own app.
+
+  A turned-away sign-in now carries its own reason. The login page previously funnelled every
+  `oidc_` error into one message ("SSO sign-in failed"), and here that is simply wrong - the sign-in
+  at the provider worked, the account is missing. Whoever reads it goes looking at their password
+  instead of at their admin. The new wording ships in all 24 languages, and the switch is available
+  wherever the other five OIDC variables are: schema, `.env.example`, Portainer compose, the Unraid
+  template and the installer (in all 24 installer languages).
+
+### Fixed
+
+- **Reordering task categories now changes their order on the tasks page** (#845). Dragging a
+  category to the top of **Manage categories** saved a `sort_order` the tasks page never read: it
+  sorted the groups with `localeCompare(b, 'de')` instead, so "Household" pulled to the top still
+  appeared behind "CA Rental" and "Finance". Three things were wrong in that one line - the saved
+  order was ignored, what got compared was the internal **key** rather than the visible label
+  (`misc` sorts under M while the page shows "Sonstiges"), and the language was hard-wired to
+  German, so a French interface got German collation. The position in the category list, which the
+  server already returns ordered, is now the single source of truth for the order; a category that
+  is no longer in that list falls to the end.
+
 ## [2.38.0] - 2026-08-24
 
 ### Added

@@ -1,10 +1,8 @@
-<!-- version: 2.38.0 -->
-When something goes wrong on the server, Yuvomi no longer tells you your data is gone. Until now a failed load looked exactly like an empty page: the tasks list said "No tasks - all done?" and offered to create one, the budget said there were no entries this month, and the calendar showed an empty grid. In each case the information was still safely there, and the only button on screen was one that would have written something new. All three now say plainly that loading failed, show the error code, and offer to try again.
+<!-- version: 2.39.0 -->
+Dragging your task categories into the order you want now actually changes the order you see. Until this release the tasks page ignored it and sorted the groups alphabetically instead, so a category you had pulled to the top stayed wherever the alphabet put it. The order you set in "Manage categories" is now the order the groups appear in, in every language.
 
-Four other screens had the opposite problem: they reported an error but gave you nothing to do about it, so the only way forward was to reload the browser. Subscriptions, Housekeeping, Rewards and the shared expenses inside Budget now all offer a retry, and the housekeeping page no longer shows an untranslated technical message in place of an explanation.
+If you sign in to Yuvomi through your own identity provider, you can now decide whether it may create accounts. Until now anyone who could sign in at your provider got a Yuvomi account on their first attempt, which is fine when you run that provider for this household alone and rather less so when you do not. Setting OIDC_ALLOW_SIGNUP to false turns that off: people who already have an account still sign in as before, and an account you created by hand is still matched up on their first sign-in, but an unfamiliar login is turned away with a message saying so instead of quietly becoming a new member of your household.
 
-Every empty view in the app now looks and behaves the same way, whichever module you are in: the same layout, the same wording for "nothing here yet" versus "nothing matched your search", and the same kind of button to move on. Screen readers benefit most from this: search results that found nothing are now announced instead of passing silently, errors are announced as errors, and the heading on an otherwise empty page is a real heading again.
+Nothing needs configuring and nothing changes about your data. The new setting only takes effect if you set it yourself, so an existing installation behaves exactly as it did before.
 
-Nothing needs configuring and nothing changes about your data.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.38.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.39.0
