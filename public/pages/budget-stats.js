@@ -6,6 +6,7 @@ import { api } from '/api.js';
 import { t, formatDate, getLocale } from '/i18n.js';
 import { wireTablist } from '/utils/tablist.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import { mountEmptyState, mountLoadError } from '/utils/empty-state.js';
 import { CHART, chartX, chartY, chartGridMarkup, chartXLabelsMarkup } from '/utils/chart.js';
 import { formatMoneyAxis } from '/utils/money.js';
 
@@ -52,7 +53,9 @@ async function loadStats() {
   } catch (err) {
     console.error('[Budget] stats load error:', err);
     view.data = null;
-    view.error = true;
+    // Das Fehlerobjekt selbst, nicht nur `true`: `mountLoadError` liest daraus
+    // den Statuscode - die einzige Angabe, die dem Selbsthoster hier weiterhilft.
+    view.error = err;
   }
   renderBodyContent(body);
 }
@@ -105,28 +108,23 @@ function renderBodyContent(body) {
   // darf der Familie nicht vortäuschen, ihre Finanzhistorie sei leer.
   if (view.error) {
     body.replaceChildren();
-    body.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <i data-lucide="cloud-off" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('budget.statsError')}</div>
-        <div class="empty-state__description">${t('budget.statsErrorDescription')}</div>
-        <button class="btn btn--primary empty-state__cta" id="budget-stats-retry">
-          <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
-          ${t('budget.statsRetry')}
-        </button>
-      </div>`);
-    if (window.lucide) lucide.createIcons({ el: body });
-    body.querySelector('#budget-stats-retry')?.addEventListener('click', () => loadStats());
+    mountLoadError(body, {
+      title: t('budget.statsError'),
+      description: t('budget.statsErrorDescription'),
+      error: view.error,
+      retryLabel: t('budget.statsRetry'),
+      onRetry: () => loadStats(),
+    });
     return;
   }
   const d = view.data;
   if (!d || (d.totals.income === 0 && d.totals.expenses === 0 && !d.series.some((s) => s.income || s.expenses))) {
     body.replaceChildren();
-    body.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <div class="empty-state__title">${t('budget.statsEmptyTitle')}</div>
-        <div class="empty-state__description">${t('budget.statsEmptyDescription')}</div>
-      </div>`);
+    mountEmptyState(body, {
+      icon: 'chart-column',
+      title: t('budget.statsEmptyTitle'),
+      description: t('budget.statsEmptyDescription'),
+    });
     return;
   }
   body.replaceChildren();

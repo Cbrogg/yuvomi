@@ -517,14 +517,6 @@
   min-height: calc(var(--target-lg) * 4);
 }
 
-.documents-empty-state__actions {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: var(--space-2);
-  margin-top: var(--space-4);
-}
-
 /* minmax so gewählt, dass jede Karte die schlanke Aktionszeile
  * (Ansehen · Download · Kebab) ohne Umbruch trägt. */
 .documents-list--grid {
@@ -1014,7 +1006,9 @@
     justify-content: flex-end;
   }
 
-  .documents-empty-state__actions {
+  /* Ab hier ist Platz fuer beide Wege nebeneinander; die Basisregel steht als
+     .empty-state__actions in layout.css. */
+  .documents-empty-state .empty-state__actions {
     align-items: center;
     flex-direction: row;
     flex-wrap: nowrap;
@@ -1031,11 +1025,13 @@
     height: var(--target-lg);
   }
 
-  .documents-empty-state__actions {
+  /* Auf die Dokumente gescoped: die Aktionsreihe selbst ist geteilt
+     (.empty-state__actions, layout.css), diese Verdichtung ist es nicht. */
+  .documents-empty-state .empty-state__actions {
     margin-top: var(--space-2);
   }
 
-  .documents-empty-state__actions .btn {
+  .documents-empty-state .empty-state__actions .btn {
     min-height: var(--target-base);
     padding-inline: var(--space-2);
     font-size: var(--text-sm);

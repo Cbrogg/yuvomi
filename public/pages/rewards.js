@@ -14,6 +14,7 @@ import { openModal, closeModal, confirmModal, confirmOverModal } from '/componen
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import { wireTablist } from '/utils/tablist.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import { emptyStateHTML, mountLoadError } from '/utils/empty-state.js';
 
 const TABS = ['overview', 'catalog', 'ledger'];
 
@@ -98,14 +99,14 @@ function avatar(member, size = 40) {
   return `<span class="rw-avatar rw-avatar--initials" style="${dim};--rw-avatar-bg:${esc(color)};color:${getReadableTextColor(color)}">${esc(initials(name))}</span>`;
 }
 
-function emptyState(icon, title, body, action = '') {
-  return `
-    <div class="empty-state">
-      <i data-lucide="${esc(icon)}" class="empty-state__icon" aria-hidden="true"></i>
-      <div class="empty-state__title">${esc(title)}</div>
-      <div class="empty-state__description">${esc(body)}</div>
-      ${action}
-    </div>`;
+/**
+ * Leerzustand der Belohnungen. `action` ist hier ein Objekt der geteilten
+ * Grammatik ({ label, icon, className }), kein fertiges Button-Markup mehr:
+ * frei mitgegebenes HTML war die Luecke, durch die der CTA an der Reihenfolge
+ * und am Tonwert des Renderers vorbeikam.
+ */
+function emptyState(icon, title, body, action = null) {
+  return emptyStateHTML({ icon, title, description: body, action: action ?? undefined });
 }
 
 function icons(scope) {
@@ -219,9 +220,16 @@ async function renderCurrentTab(container) {
     else if (state.tab === 'catalog') { await Promise.all([loadCatalog(), loadOverview()]); renderCatalog(el); }
     else { await Promise.all([loadLedger(), loadOverview()]); renderLedger(el); }
   } catch (err) {
-    el.replaceChildren();
-    el.insertAdjacentHTML('beforeend', emptyState('alert-triangle', t('common.error'), t('rewards.loadError')));
-    icons(el);
+    // War ein Leerzustand ohne Rolle und ohne Ausweg - der gefangene Fehler
+    // wurde nicht einmal gelesen. Jetzt traegt er den Statuscode und einen
+    // Wiederholen-CTA auf denselben Tab.
+    mountLoadError(el, {
+      title: t('rewards.loadError'),
+      description: t('common.loadErrorDescription'),
+      error: err,
+      retryLabel: t('common.retry'),
+      onRetry: () => renderCurrentTab(container),
+    });
   }
   updateRewardsFab();
 }
@@ -378,8 +386,8 @@ function renderOverview(el) {
   const list = balances();
   if (!list.length) {
     const action = isAdmin()
-      ? `<button class="btn btn--primary empty-state__cta rw-manage-participants" type="button"><i data-lucide="user-plus" aria-hidden="true"></i>${esc(t('rewards.manageParticipants'))}</button>`
-      : '';
+      ? { label: t('rewards.manageParticipants'), icon: 'user-plus', className: 'rw-manage-participants' }
+      : null;
     el.insertAdjacentHTML('beforeend',
       `<div class="rewards-content__inner">${emptyState('trophy', t('rewards.emptyOverviewTitle'), isAdmin() ? t('rewards.emptyOverviewAdmin') : t('rewards.emptyOverviewMember'), action)}</div>`);
     wireOverview(el);
@@ -474,8 +482,8 @@ function renderCatalog(el) {
     </div>` : '';
   if (!items.length) {
     const action = isAdmin()
-      ? `<button class="btn btn--primary empty-state__cta rw-add-reward" type="button"><i data-lucide="plus" aria-hidden="true"></i>${esc(t('rewards.addReward'))}</button>`
-      : '';
+      ? { label: t('rewards.addReward'), icon: 'plus', className: 'rw-add-reward' }
+      : null;
     el.insertAdjacentHTML('beforeend',
       `<div class="rewards-content__inner">${emptyState('gift', t('rewards.emptyCatalogTitle'), isAdmin() ? t('rewards.emptyCatalogAdmin') : t('rewards.emptyCatalogMember'), action)}</div>`);
   } else {

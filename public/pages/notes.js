@@ -12,6 +12,7 @@ import { esc, renderMarkdownLight } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { findPageFab } from '/utils/fab.js';
+import { emptyStateHTML } from '/utils/empty-state.js';
 import { AVATAR_FALLBACK_COLOR } from '/utils/color.js';
 
 // --------------------------------------------------------
@@ -190,27 +191,23 @@ function renderGrid() {
   if (!visible.length) {
     const isFiltered = q.length > 0 || !!state.filterCreator;
     grid.replaceChildren();
-    grid.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-          <polyline points="14 2 14 8 20 8"/>
-          <line x1="16" y1="13" x2="8" y2="13"/>
-          <line x1="16" y1="17" x2="8" y2="17"/>
-          <polyline points="10 9 9 9 8 9"/>
-        </svg>
-        <div class="empty-state__title">${isFiltered ? t('notes.noResultsTitle') : t('notes.emptyTitle')}</div>
-        <div class="empty-state__description">${!isFiltered
-          ? t('notes.emptyDescription')
-          : (q ? t('notes.noResultsDescription', { query: state.filterQuery })
-               : t('notes.noResultsCreatorDescription', { name: state.filterCreator }))}</div>
-        ${!isFiltered ? `<p class="empty-state__hint">${t('emptyHint.notes')}</p>
-        <button class="btn btn--primary empty-state__cta" id="empty-cta-notes">
-          <i data-lucide="plus" aria-hidden="true" class="icon-md"></i>
-          ${t('notes.emptyAction')}
-        </button>` : ''}
-      </div>
-    `);
+    // Gefiltert ohne Treffer ist ein anderer Zustand als „noch keine Notiz":
+    // er wird als `role="status"` angesagt und traegt keinen Anlegen-CTA.
+    grid.insertAdjacentHTML('beforeend', isFiltered
+      ? emptyStateHTML({
+        variant: 'no-results',
+        title: t('notes.noResultsTitle'),
+        description: q
+          ? t('notes.noResultsDescription', { query: state.filterQuery })
+          : t('notes.noResultsCreatorDescription', { name: state.filterCreator }),
+      })
+      : emptyStateHTML({
+        icon: 'file-text',
+        title: t('notes.emptyTitle'),
+        description: t('notes.emptyDescription'),
+        hint: t('emptyHint.notes'),
+        action: { label: t('notes.emptyAction'), icon: 'plus', attrs: { id: 'empty-cta-notes' } },
+      }));
     if (window.lucide) lucide.createIcons({ el: grid });
     grid.querySelector('#empty-cta-notes')?.addEventListener('click', () => {
       document.querySelector('.page-fab')?.click();

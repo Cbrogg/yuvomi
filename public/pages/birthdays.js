@@ -8,6 +8,10 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { todayKey } from '/utils/date.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { findPageFab } from '/utils/fab.js';
+// Alias: dieses Modul fuehrt selbst eine `emptyStateHtml()`, die den Renderer
+// mit den Geburtstags-Texten fuellt. Zwei Namen, die sich nur in der
+// Gross-Schreibung unterscheiden, waeren im Modul nicht auseinanderzuhalten.
+import { emptyStateHTML as sharedEmptyStateHTML, emptyHintHTML } from '/utils/empty-state.js';
 import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
 
 let state = {
@@ -204,21 +208,23 @@ function birthdayItemHtml(birthday) {
 }
 
 function emptyStateHtml() {
+  // `cake` ist dasselbe Zeichen wie CAKE_SVG - das Inline-SVG oben ist die
+  // Lucide-Torte, von Hand kopiert, damit sie neben einem Namen stehen kann.
+  // Im Leerzustand nimmt der Renderer den Lucide-Namen direkt.
   if (state.query.trim()) {
-    return `<div class="empty-state empty-state--compact">
-      ${CAKE_SVG.replace('birthday-cake', 'empty-state__icon')}
-      <div class="empty-state__title">${t('search.noResults')}</div>
-    </div>`;
+    return sharedEmptyStateHTML({
+      variant: 'no-results',
+      icon: 'cake',
+      title: t('search.noResults'),
+    });
   }
-  return `<div class="empty-state">
-    ${CAKE_SVG.replace('birthday-cake', 'empty-state__icon')}
-    <div class="empty-state__title">${t('birthdays.emptyTitle')}</div>
-    <div class="empty-state__description">${t('birthdays.emptyDescription')}</div>
-    <p class="empty-state__hint">${t('emptyHint.birthdays')}</p>
-    <button class="btn btn--primary empty-state__cta" type="button" id="birthdays-empty-cta">
-      ${t('birthdays.addButton')}
-    </button>
-  </div>`;
+  return sharedEmptyStateHTML({
+    icon: 'cake',
+    title: t('birthdays.emptyTitle'),
+    description: t('birthdays.emptyDescription'),
+    hint: t('emptyHint.birthdays'),
+    action: { label: t('birthdays.addButton'), attrs: { id: 'birthdays-empty-cta' } },
+  });
 }
 
 function renderList() {
@@ -530,7 +536,7 @@ async function openImportModal() {
 
   const listHtml = hasCandidates
     ? `<div class="bd-import__list">${withBirthday.map(importCandidateRowHtml).join('')}</div>`
-    : `<div class="empty-state empty-state--compact"><p class="empty-state__description">${t('birthdays.importEmpty')}</p></div>`;
+    : emptyHintHTML(t('birthdays.importEmpty'));
 
   const withoutHtml = withoutBirthday.length
     ? `<details class="bd-import__without">

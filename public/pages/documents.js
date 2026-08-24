@@ -19,6 +19,7 @@ import { findPageFab } from '/utils/fab.js';
 // ein zweites Mitglied dazu, steht es wieder da.
 import { isSoloHousehold } from '/utils/household.js';
 import { maxUploadBytes, maxUploadMb } from '/utils/upload-limit.js';
+import { mountEmptyState } from '/utils/empty-state.js';
 
 const CATEGORIES = ['medical', 'school', 'identity', 'insurance', 'finance', 'home', 'vehicle', 'legal', 'travel', 'pets', 'warranty', 'taxes', 'work', 'other'];
 
@@ -461,6 +462,7 @@ function hasActiveFilter() {
 function emptyStateFor() {
   if (state.query) {
     return {
+      variant: 'no-results',
       icon: 'search-x',
       title: t('documents.emptySearchTitle'),
       description: t('documents.emptySearchDescription', { query: state.query }),
@@ -474,6 +476,7 @@ function emptyStateFor() {
   }
   if (hasActiveFilter()) {
     return {
+      variant: 'no-results',
       icon: 'filter-x',
       title: t('documents.emptyFilterTitle'),
       description: t('documents.emptyFilterDescription'),
@@ -485,6 +488,7 @@ function emptyStateFor() {
   }
   if (state.status === 'archived') {
     return {
+      variant: 'empty',
       icon: 'archive',
       title: t('documents.emptyArchivedTitle'),
       description: t('documents.emptyArchivedDescription'),
@@ -494,6 +498,7 @@ function emptyStateFor() {
     };
   }
   return {
+    variant: 'empty',
     icon: 'folder-open',
     title: t('documents.emptyTitle'),
     description: t('documents.emptyDescription'),
@@ -506,22 +511,22 @@ function emptyStateFor() {
 
 function renderEmptyState(list) {
   const empty = emptyStateFor();
-  list.replaceChildren();
-  list.insertAdjacentHTML('beforeend', `
-    <div class="empty-state documents-empty-state">
-      <i data-lucide="${esc(empty.icon)}" class="empty-state__icon" aria-hidden="true"></i>
-      <div class="empty-state__title">${esc(empty.title)}</div>
-      <div class="empty-state__description">${esc(empty.description)}</div>
-      <div class="documents-empty-state__actions">
-        ${empty.actions.map((action) => `
-        <button class="btn btn--${action.variant}" type="button" id="${esc(action.id)}">
-          <i data-lucide="${esc(action.icon)}" class="icon-md" aria-hidden="true"></i>
-          ${esc(action.label)}
-        </button>`).join('')}
-      </div>
-    </div>
-  `);
-  if (window.lucide) lucide.createIcons({ el: list });
+  // Suche und Filter sind Reaktionen auf eine Eingabe und werden als
+  // `no-results` angesagt; „noch nichts hochgeladen" ist gewoehnlicher
+  // Seiteninhalt. Der Unterschied stand bisher nur im Text.
+  mountEmptyState(list, {
+    variant: empty.variant,
+    className: 'documents-empty-state',
+    icon: empty.icon,
+    title: empty.title,
+    description: empty.description,
+    actions: empty.actions.map((action) => ({
+      label: action.label,
+      icon: action.icon,
+      tone: action.variant,
+      attrs: { id: action.id },
+    })),
+  });
   list.querySelector('#documents-empty-upload')?.addEventListener('click', () => openDocumentModal());
   list.querySelector('#documents-empty-folder')?.addEventListener('click', () => openFolderModal());
   list.querySelector('#documents-empty-clear-search')?.addEventListener('click', () => clearSearch());

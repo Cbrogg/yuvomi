@@ -10,7 +10,7 @@ import { clearApiCache } from '/sw-register.js';
 import { forgetLayoutHint } from '/utils/dashboard-layout-hint.js';
 import { initI18n, getLocale, t, formatDate, formatTime } from '/i18n.js';
 import { esc } from '/utils/html.js';
-import { emptyHintEl } from '/utils/empty-state.js';
+import { emptyHintEl, emptyStateEl } from '/utils/empty-state.js';
 import { wireScrollFade, wireCollapsingHeader, wireSwipeToDismiss } from '/utils/ux.js';
 import { TOAST_SURFACES, toastSurface } from '/utils/toast-surface.js';
 import { BULK_PILL_LAYER, clearBulkPill } from '/utils/bulk-pill.js';
@@ -3684,40 +3684,32 @@ function updateNav(path) {
 }
 
 function renderError(container, err) {
-  const state = document.createElement('div');
-  state.className = 'empty-state';
-  state.tabIndex = -1;
-  state.setAttribute('role', 'alert');
-  const title = document.createElement('div');
-  title.className = 'empty-state__title';
-  title.textContent = t('common.errorOccurred');
-  const desc = document.createElement('div');
-  desc.className = 'empty-state__description';
-  desc.textContent = friendlyError(err);
-  const btn = document.createElement('button');
-  btn.className = 'btn btn--primary';
-  btn.id = 'error-reload-btn';
-  btn.textContent = t('common.reload');
-  btn.addEventListener('click', () => location.reload());
-  state.append(title, desc, btn);
-
+  // Der globale Fehlerbildschirm laeuft ueber dieselbe Grammatik wie jeder
+  // Leerzustand im Modul. Er hatte `role="alert"` und einen Ausweg schon
+  // richtig, aber seinen Titel als <div> - auf einem Bildschirm, der nichts
+  // sonst enthaelt, war damit auch die Ueberschrift weg.
+  //
   // „Ein unerwarteter Fehler ist aufgetreten" sagt niemandem, was kaputt ist -
-  // die einzige verwertbare Information (Name, Meldung, Stack) lag bisher nur in
-  // der Browserkonsole. Zugeklappt beigelegt stört sie das Layout nicht, ist
-  // aber ohne DevTools erreichbar und kopierbar.
-  const detailText = errorDetails(err);
-  if (detailText) {
-    const details = document.createElement('details');
-    details.className = 'empty-state__details';
-    const summary = document.createElement('summary');
-    summary.textContent = t('common.errorDetails');
-    const pre = document.createElement('pre');
-    pre.textContent = detailText;
-    details.append(summary, pre);
-    state.append(details);
-  }
+  // die einzige verwertbare Information (Name, Meldung, Stack) lag frueher nur
+  // in der Browserkonsole. Zugeklappt beigelegt stoert sie das Layout nicht,
+  // ist aber ohne DevTools erreichbar und kopierbar.
+  const state = emptyStateEl({
+    variant: 'error',
+    title: t('common.errorOccurred'),
+    description: friendlyError(err),
+    details: { summary: t('common.errorDetails'), text: errorDetails(err) },
+    action: {
+      label: t('common.reload'),
+      attrs: { id: 'error-reload-btn' },
+      onClick: () => location.reload(),
+    },
+  });
+  // Fokusziel: nach einem Absturz soll die Ansage beim Screenreader ankommen
+  // und die Tastatur nicht im abgeraeumten Baum haengen.
+  state.tabIndex = -1;
 
   container.replaceChildren(state);
+  if (window.lucide) window.lucide.createIcons({ el: state });
   state.focus({ preventScroll: true });
 }
 

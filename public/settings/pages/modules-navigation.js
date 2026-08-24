@@ -20,6 +20,7 @@ import {
 } from '/settings/module-order.js';
 import { MODULE_ICON, moduleIconHTML } from '/nav-icons.js';
 import { moduleAccentVar } from '/utils/module-accent.js';
+import { emptyStateHTML } from '/utils/empty-state.js';
 
 // Baut die geordnete Liste der Navigations-Rows: gesperrte, gewöhnliche, Kitchen
 // (als ein expandierbarer Eintrag) und Drittanbieter-Module — sortiert nach der
@@ -358,12 +359,11 @@ function renderPage(container, rows, mobileOrder) {
   container.replaceChildren();
   const desktopGroups = rows.length
     ? `<div class="settings-navigation-groups" id="module-toggles">${NAV_SECTIONS.map((section) => desktopGroupHtml(section, rows)).join('')}</div>`
-    : `
-      <div class="empty-state empty-state--compact">
-        <div class="empty-state__title">${t('settings.thirdPartyModulesEmptyTitle')}</div>
-        <div class="empty-state__description">${t('settings.thirdPartyModulesEmptyHint')}</div>
-      </div>
-    `;
+    : emptyStateHTML({
+      compact: true,
+      title: t('settings.thirdPartyModulesEmptyTitle'),
+      description: t('settings.thirdPartyModulesEmptyHint'),
+    });
   const mobileRows = mobileCandidateRows(rows);
 
   container.insertAdjacentHTML('beforeend', `

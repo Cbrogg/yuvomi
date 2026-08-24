@@ -8,6 +8,7 @@ import { api } from '/api.js';
 import { t, formatDate, formatTime, getLocale, getNumberFormat } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import { emptyStateHTML, mountLoadError } from '/utils/empty-state.js';
 import { openModal, closeModal, confirmModal } from '/components/modal.js';
 import { createPageFab, setPageFabAction } from '/utils/fab.js';
 import { wireTablist } from '/utils/tablist.js';
@@ -232,17 +233,16 @@ async function toggleSession(container, workerId) {
 
 function renderWorkerSummary() {
   if (!state.workers.length) {
-    return `
-      <section class="empty-state">
-        <i data-lucide="user-plus" class="empty-state__icon" aria-hidden="true"></i>
-        <h2 class="empty-state__title">${esc(t('housekeeping.noWorkerTitle'))}</h2>
-        <p class="empty-state__description">${esc(t('housekeeping.noWorkerHint'))}</p>
-        <button class="btn btn--primary empty-state__cta" type="button" id="housekeeping-create-profile">
-          <i data-lucide="plus" aria-hidden="true"></i>
-          <span>${esc(t('housekeeping.setupProfileAction'))}</span>
-        </button>
-      </section>
-    `;
+    return emptyStateHTML({
+      icon: 'user-plus',
+      title: t('housekeeping.noWorkerTitle'),
+      description: t('housekeeping.noWorkerHint'),
+      action: {
+        label: t('housekeeping.setupProfileAction'),
+        icon: 'plus',
+        attrs: { id: 'housekeeping-create-profile' },
+      },
+    });
   }
   const rows = state.workers.map((worker) => {
     const checkedIn = !!worker.today_session;
@@ -455,12 +455,7 @@ function renderTasks(content) {
       </form>
     </section>
     <section class="housekeeping-task-list row-carrier">
-      ${taskRows || `
-        <div class="empty-state">
-          <i class="empty-state__icon" data-lucide="list-checks" aria-hidden="true"></i>
-          <h2 class="empty-state__title">${esc(t('housekeeping.noTasks'))}</h2>
-        </div>
-      `}
+      ${taskRows || emptyStateHTML({ icon: 'list-checks', title: t('housekeeping.noTasks') })}
     </section>
   `);
   if (window.lucide) window.lucide.createIcons({ el: content });
@@ -1248,14 +1243,20 @@ export async function render(container) {
       }
     }
   } catch (err) {
+    // Vorher: Leerzustands-Markup ohne Rolle, ohne Ausweg - und als Erklaerung
+    // der rohe `err.message`. Der ist bei allen Routen das unlokalisierte
+    // englische „Internal server error." und hatte in einer uebersetzten
+    // Oberflaeche nichts zu suchen. `mountLoadError` zeigt stattdessen den
+    // sprachneutralen Statuscode und erzwingt den Wiederholen-CTA.
     container.replaceChildren();
-    container.insertAdjacentHTML('beforeend', `
-      <section class="housekeeping-page page-measure--narrow">
-        <div class="empty-state">
-          <div class="empty-state__title">${esc(t('common.errorOccurred'))}</div>
-          <div class="empty-state__description">${esc(err.message)}</div>
-        </div>
-      </section>
-    `);
+    container.insertAdjacentHTML('beforeend',
+      '<section class="housekeeping-page page-measure--narrow"></section>');
+    mountLoadError(container.querySelector('.housekeeping-page'), {
+      title: t('housekeeping.loadError'),
+      description: t('common.loadErrorDescription'),
+      error: err,
+      retryLabel: t('common.retry'),
+      onRetry: () => render(container),
+    });
   }
 }

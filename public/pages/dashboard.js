@@ -30,6 +30,7 @@ import { whoMark } from '/utils/seal-pair.js';
 import { MODULE_ICON, moduleIconHTML } from '/nav-icons.js';
 import { exitWallMode, isWallActive, syncWallMode } from '/utils/wall-mode.js';
 import { rememberLayoutHint, layoutHintSizes, layoutHintQuery } from '/utils/dashboard-layout-hint.js';
+import { emptyHintHTML } from '/utils/empty-state.js';
 
 // Hält den AbortController des aktuellen FAB-Listeners - wird bei jedem render() erneuert.
 let _fabController = null;
@@ -2382,12 +2383,8 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
 
   // Alle Widgets ausgeblendet: kein toter Screen, sondern ein Hinweis zurück
   // in die Anpassung (das Cockpit oben bleibt als Orientierung erhalten).
-  const gridInner = tiles || `
-    <div class="empty-state empty-state--compact">
-      <i data-lucide="layout-dashboard" class="empty-state__icon" aria-hidden="true"></i>
-      <p class="empty-state__description">${t('dashboard.allWidgetsHidden')}</p>
-    </div>
-  `;
+  const gridInner = tiles
+    || emptyHintHTML(t('dashboard.allWidgetsHidden'), { icon: 'layout-dashboard' });
   // Beim Bearbeiten und bei bewusst umsortierten Layouts die Quellordnung bewahren
   // (kein dense-Umpacken); der Autor-Default darf dicht packen.
   const preserveOrder = (editing || isUserOrderedConfig(cfg)) ? ' dashboard__grid--preserve-order' : '';

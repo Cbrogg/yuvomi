@@ -17,6 +17,7 @@ import { parseVCards } from '/utils/vcard.js';
 import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
 import { composeDisplayName, contactSortKey, splitDisplayName } from '/utils/contact-name.js';
 import { getPhoneFormatter, createAsYouType, countryFromRegion } from '/utils/phone.js';
+import { emptyStateHTML } from '/utils/empty-state.js';
 import '/components/category-manager.js';
 import { findPageFab } from '/utils/fab.js';
 
@@ -432,38 +433,29 @@ function renderList({ animate = false } = {}) {
     const filtered = Boolean(state.searchQuery || state.activeCategory);
     container.replaceChildren();
     if (filtered) {
-      container.insertAdjacentHTML('beforeend', `
-        <div class="empty-state">
-          <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <circle cx="11" cy="11" r="7"/>
-            <path d="M21 21l-4.35-4.35"/>
-          </svg>
-          <div class="empty-state__title">${t('contacts.noResultsTitle')}</div>
-          <div class="empty-state__description">${t('contacts.noResultsDescription')}</div>
-          <button class="btn btn--secondary empty-state__cta" data-action="reset-filters">
-            <i data-lucide="x" aria-hidden="true" class="icon-md"></i>
-            ${t('contacts.resetSearch')}
-          </button>
-        </div>
-      `);
+      container.insertAdjacentHTML('beforeend', emptyStateHTML({
+        variant: 'no-results',
+        icon: 'search',
+        title: t('contacts.noResultsTitle'),
+        description: t('contacts.noResultsDescription'),
+        action: {
+          label: t('contacts.resetSearch'),
+          icon: 'x',
+          attrs: { 'data-action': 'reset-filters' },
+        },
+      }));
     } else {
-      container.insertAdjacentHTML('beforeend', `
-        <div class="empty-state">
-          <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-            <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-            <circle cx="9" cy="7" r="4"/>
-            <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-            <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-          </svg>
-          <div class="empty-state__title">${t('contacts.emptyTitle')}</div>
-          <div class="empty-state__description">${t('contacts.emptyDescription')}</div>
-          <p class="empty-state__hint">${t('emptyHint.contacts')}</p>
-          <button class="btn btn--primary empty-state__cta" data-action="empty-cta">
-            <i data-lucide="plus" aria-hidden="true" class="icon-md"></i>
-            ${t('contacts.emptyAction')}
-          </button>
-        </div>
-      `);
+      container.insertAdjacentHTML('beforeend', emptyStateHTML({
+        icon: 'users',
+        title: t('contacts.emptyTitle'),
+        description: t('contacts.emptyDescription'),
+        hint: t('emptyHint.contacts'),
+        action: {
+          label: t('contacts.emptyAction'),
+          icon: 'plus',
+          attrs: { 'data-action': 'empty-cta' },
+        },
+      }));
     }
     if (window.lucide) lucide.createIcons({ el: container });
     return;

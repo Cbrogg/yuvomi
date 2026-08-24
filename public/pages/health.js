@@ -42,8 +42,36 @@ import {
   predictCycle, cycleStats, buildCycleCalendar, cycleRing,
 } from '/utils/health-cycle.js';
 import { HEALTH_ROUTES, renderHealthTabsBar } from '/utils/health-tabs.js';
+import { emptyStateHTML, emptyHintHTML, mountLoadError } from '/utils/empty-state.js';
 
 let _container = null;
+
+/**
+ * Ladefehler eines Gesundheits-Bereichs.
+ *
+ * Die sechs Bereiche (Werte, Medikamente, Labor, Aktivitaet, Uebersicht,
+ * Zyklus) trugen denselben Block sechsmal als Kopie - und alle sechs waren
+ * dieselbe halbe Sache: ein `.empty-state` ohne `role="alert"`, also fuer einen
+ * Screenreader stumm, und ohne die technische Zeile, obwohl der gefangene
+ * Fehler danebenstand. Sechs Kopien heisst auch: eine Korrektur haette sechsmal
+ * gemacht werden muessen.
+ *
+ * Die Textschluessel folgen dem Bereichsnamen (`health.<area>.loadError`,
+ * `.loadErrorDesc`, `.retry`); das war schon vorher so und traegt den Helfer.
+ *
+ * @param {{root: HTMLElement, error: unknown}} area   Bereichs-State.
+ * @param {string}   name    Schluessel-Praefix, z. B. 'vitals'.
+ * @param {Function} onRetry Der Mount des Bereichs.
+ */
+function mountAreaLoadError(area, name, onRetry) {
+  mountLoadError(area.root, {
+    title: t(`health.${name}.loadError`),
+    description: t(`health.${name}.loadErrorDesc`),
+    error: area.error,
+    retryLabel: t(`health.${name}.retry`),
+    onRetry,
+  });
+}
 
 // Sichtbarkeit des Zyklus-Tabs. Zwei Schalter greifen ineinander: der Haushalt
 // erlaubt ihn (Settings → Module → Gesundheit, Admin), und jede Person kann ihn
@@ -217,12 +245,11 @@ function panelMarkup(panel, activeRoute) {
     ? '<div class="health-labs" data-labs-root></div>'
     : panel.route === '/health/activity'
     ? '<div class="health-activity" data-activity-root></div>'
-    : `
-      <div class="empty-state">
-        <i data-lucide="${esc(panel.icon)}" class="empty-state__icon" aria-hidden="true"></i>
-        <h2 class="empty-state__title">${esc(t(panel.emptyTitleKey))}</h2>
-        <div class="empty-state__description">${esc(t(panel.emptyDescKey))}</div>
-      </div>`;
+    : emptyStateHTML({
+      icon: panel.icon,
+      title: t(panel.emptyTitleKey),
+      description: t(panel.emptyDescKey),
+    });
 
   // Eigenes data-health-panel-Attribut statt des (per Frontend-Audit gesperrten)
   // Legacy-„data-panel". Über dieses Attribut reicht health-tabs.js die Panels an
@@ -388,7 +415,7 @@ async function mountVitals() {
     vitals.error = false;
   } catch (err) {
     console.error('[Health] vitals mount error:', err);
-    vitals.error = true;
+    vitals.error = err;
   }
   vitals.loaded = true;
   renderVitalsShell();
@@ -405,19 +432,7 @@ function renderVitalsShell() {
   vitals.root.replaceChildren();
 
   if (vitals.error) {
-    vitals.root.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <i data-lucide="cloud-off" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${esc(t('health.vitals.loadError'))}</div>
-        <div class="empty-state__description">${esc(t('health.vitals.loadErrorDesc'))}</div>
-        <button class="btn btn--primary empty-state__cta" data-action="vitals-retry">
-          <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
-          ${esc(t('health.vitals.retry'))}
-        </button>
-      </div>`);
-    if (window.lucide) window.lucide.createIcons({ el: vitals.root });
-    vitals.root.querySelector('[data-action="vitals-retry"]')
-      ?.addEventListener('click', () => mountVitals());
+    mountAreaLoadError(vitals, 'vitals', mountVitals);
     return;
   }
 
@@ -598,7 +613,7 @@ async function switchPerson() {
     vitals.error = false;
   } catch (err) {
     console.error('[Health] vitals load error:', err);
-    vitals.error = true;
+    vitals.error = err;
   }
   renderVitalsShell();
 }
@@ -732,10 +747,9 @@ function renderDetail() {
           <button class="btn btn--icon" data-step="1" aria-label="${esc(t('health.vitals.nextPeriod'))}"><i data-lucide="chevron-right" aria-hidden="true"></i></button>
         </div>
       </div>
-      ${series.hasData ? chartMarkup(metric, series) : `
-        <div class="empty-state health-chart-empty">
-          <div class="empty-state__title">${esc(t('health.vitals.noData'))}</div>
-        </div>`}
+      ${series.hasData
+    ? chartMarkup(metric, series)
+    : emptyHintHTML(t('health.vitals.noData'), { className: 'health-chart-empty' })}
     </div>
     ${recentMeasurementsMarkup(metric)}`);
   if (window.lucide) window.lucide.createIcons({ el: host });
@@ -810,7 +824,7 @@ function chartMarkup(metric, series) {
     .map((key, idx) => ({ key, idx }))
     .filter(({ key }) => pts.some((p) => p[key] !== null));
   if (!channels.length) {
-    return `<div class="empty-state health-chart-empty"><div class="empty-state__title">${esc(t('health.vitals.noData'))}</div></div>`;
+    return emptyHintHTML(t('health.vitals.noData'), { className: 'health-chart-empty' });
   }
 
   // Buckets mit mindestens einem Messwert. Weniger als zwei ergeben keine Kurve —
@@ -820,7 +834,7 @@ function chartMarkup(metric, series) {
     .filter(({ p }) => channels.some(({ key }) => p[key] !== null))
     .map(({ i }) => i);
   if (dataIdx.length < 2) {
-    return `<div class="empty-state health-chart-empty"><div class="empty-state__title">${esc(t('health.vitals.sparse'))}</div></div>`;
+    return emptyHintHTML(t('health.vitals.sparse'), { className: 'health-chart-empty' });
   }
 
   const allValues = channels.flatMap(({ key }) => pts.map((p) => p[key]).filter((v) => v !== null));
@@ -1152,7 +1166,7 @@ async function reloadAfterSave(savedType) {
     vitals.error = false;
   } catch (err) {
     console.error('[Health] vitals reload error:', err);
-    vitals.error = true;
+    vitals.error = err;
   }
   renderVitalsShell();
 }
@@ -1274,7 +1288,7 @@ async function mountMeds() {
     meds.error = false;
   } catch (err) {
     console.error('[Health] meds mount error:', err);
-    meds.error = true;
+    meds.error = err;
   }
   meds.loaded = true;
   renderMedsShell();
@@ -1351,18 +1365,7 @@ function renderMedsShell() {
   meds.root.replaceChildren();
 
   if (meds.error) {
-    meds.root.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <i data-lucide="cloud-off" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${esc(t('health.meds.loadError'))}</div>
-        <div class="empty-state__description">${esc(t('health.meds.loadErrorDesc'))}</div>
-        <button class="btn btn--primary empty-state__cta" data-action="meds-retry">
-          <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
-          ${esc(t('health.meds.retry'))}
-        </button>
-      </div>`);
-    if (window.lucide) window.lucide.createIcons({ el: meds.root });
-    meds.root.querySelector('[data-action="meds-retry"]')?.addEventListener('click', () => mountMeds());
+    mountAreaLoadError(meds, 'meds', mountMeds);
     return;
   }
 
@@ -1395,7 +1398,7 @@ function dueTodayMarkup() {
   const today = todayKey();
   const due = computeDueDoses(allSchedules(), { from: today, to: today });
   if (!due.length) {
-    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.dueToday.empty'))}</p></div>`;
+    return emptyHintHTML(t('health.meds.dueToday.empty'));
   }
   const rows = due.map((dose) => {
     const med = meds.list.find((m) => m.id === dose.medicationId);
@@ -1962,7 +1965,7 @@ async function deleteMedLog(entry) {
 
 function medListMarkup() {
   if (!meds.list.length) {
-    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.noMeds'))}</p></div>`;
+    return emptyHintHTML(t('health.meds.noMeds'));
   }
   return meds.list.map(medCardMarkup).join('');
 }
@@ -2038,7 +2041,7 @@ async function switchMedsPerson() {
     meds.error = false;
   } catch (err) {
     console.error('[Health] meds load error:', err);
-    meds.error = true;
+    meds.error = err;
   }
   renderMedsShell();
 }
@@ -2049,7 +2052,7 @@ async function reloadMeds() {
     meds.error = false;
   } catch (err) {
     console.error('[Health] meds reload error:', err);
-    meds.error = true;
+    meds.error = err;
   }
   renderMedsShell();
 }
@@ -2449,7 +2452,7 @@ async function mountLabs() {
     labs.error = false;
   } catch (err) {
     console.error('[Health] labs mount error:', err);
-    labs.error = true;
+    labs.error = err;
   }
   labs.loaded = true;
   renderLabsShell();
@@ -2479,7 +2482,7 @@ async function switchLabsPerson() {
     labs.error = false;
   } catch (err) {
     console.error('[Health] labs load error:', err);
-    labs.error = true;
+    labs.error = err;
   }
   renderLabsShell();
 }
@@ -2490,7 +2493,7 @@ async function reloadLabs() {
     labs.error = false;
   } catch (err) {
     console.error('[Health] labs reload error:', err);
-    labs.error = true;
+    labs.error = err;
   }
   renderLabsShell();
 }
@@ -2500,18 +2503,7 @@ function renderLabsShell() {
   labs.root.replaceChildren();
 
   if (labs.error) {
-    labs.root.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <i data-lucide="cloud-off" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${esc(t('health.labs.loadError'))}</div>
-        <div class="empty-state__description">${esc(t('health.labs.loadErrorDesc'))}</div>
-        <button class="btn btn--primary empty-state__cta" data-action="labs-retry">
-          <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
-          ${esc(t('health.labs.retry'))}
-        </button>
-      </div>`);
-    if (window.lucide) window.lucide.createIcons({ el: labs.root });
-    labs.root.querySelector('[data-action="labs-retry"]')?.addEventListener('click', () => mountLabs());
+    mountAreaLoadError(labs, 'labs', mountLabs);
     return;
   }
 
@@ -2533,7 +2525,7 @@ function renderLabsShell() {
 
 function labReportListMarkup() {
   if (!labs.reports.length) {
-    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.noReports'))}</p></div>`;
+    return emptyHintHTML(t('health.labs.noReports'));
   }
   return labs.reports.map(labReportCardMarkup).join('');
 }
@@ -2564,7 +2556,7 @@ function labReportCardMarkup(report) {
 function labDetailMarkup() {
   const report = selectedReport();
   if (!report) {
-    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.selectHint'))}</p></div>`;
+    return emptyHintHTML(t('health.labs.selectHint'));
   }
 
   const own = canEditFor(labs.personId, labs.meId);
@@ -2586,7 +2578,7 @@ function labDetailMarkup() {
           <tbody>${results.map(resultRowMarkup).join('')}</tbody>
         </table>
       </div>`
-    : `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.noAnalytes'))}</p></div>`;
+    : emptyHintHTML(t('health.labs.noAnalytes'));
 
   return `
     <div class="health-lab-detail">
@@ -2653,7 +2645,7 @@ function labTrendMarkup() {
 
   const body = points.length >= 2
     ? labTrendChart(points, selected)
-    : `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.labs.trend.tooFew'))}</p></div>`;
+    : emptyHintHTML(t('health.labs.trend.tooFew'));
 
   return `
     <div class="health-lab-trend">
@@ -3124,7 +3116,7 @@ async function mountActivity() {
     activity.error = false;
   } catch (err) {
     console.error('[Health] activity mount error:', err);
-    activity.error = true;
+    activity.error = err;
   }
   activity.loaded = true;
   renderActivityShell();
@@ -3143,7 +3135,7 @@ async function switchActivityPerson() {
     activity.error = false;
   } catch (err) {
     console.error('[Health] activity load error:', err);
-    activity.error = true;
+    activity.error = err;
   }
   renderActivityShell();
 }
@@ -3154,7 +3146,7 @@ async function reloadActivity() {
     activity.error = false;
   } catch (err) {
     console.error('[Health] activity reload error:', err);
-    activity.error = true;
+    activity.error = err;
   }
   renderActivityShell();
 }
@@ -3183,18 +3175,7 @@ function renderActivityShell() {
   activity.root.replaceChildren();
 
   if (activity.error) {
-    activity.root.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <i data-lucide="cloud-off" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${esc(t('health.activity.loadError'))}</div>
-        <div class="empty-state__description">${esc(t('health.activity.loadErrorDesc'))}</div>
-        <button class="btn btn--primary empty-state__cta" data-action="activity-retry">
-          <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
-          ${esc(t('health.activity.retry'))}
-        </button>
-      </div>`);
-    if (window.lucide) window.lucide.createIcons({ el: activity.root });
-    activity.root.querySelector('[data-action="activity-retry"]')?.addEventListener('click', () => mountActivity());
+    mountAreaLoadError(activity, 'activity', mountActivity);
     return;
   }
 
@@ -3248,7 +3229,7 @@ function activityChartMarkup(summary) {
   const buckets = summary.buckets;
   const max = Math.max(...buckets.map((b) => b.durationMin), 0);
   if (max <= 0) {
-    return `<div class="empty-state health-chart-empty"><div class="empty-state__title">${esc(t('health.activity.noData'))}</div></div>`;
+    return emptyHintHTML(t('health.activity.noData'), { className: 'health-chart-empty' });
   }
 
   const { W, H } = CHART;
@@ -3293,7 +3274,7 @@ function activityChartMarkup(summary) {
 
 function activityLogMarkup(rows) {
   if (!rows.length) {
-    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.activity.noEntries'))}</p></div>`;
+    return emptyHintHTML(t('health.activity.noEntries'));
   }
   const own = canEditFor(activity.personId, activity.meId);
   return `
@@ -3604,7 +3585,7 @@ async function mountOverview() {
     overview.error = false;
   } catch (err) {
     console.error('[Health] overview mount error:', err);
-    overview.error = true;
+    overview.error = err;
   }
   overview.loaded = true;
   renderOverviewShell();
@@ -3663,7 +3644,7 @@ async function switchOverviewPerson() {
     overview.error = false;
   } catch (err) {
     console.error('[Health] overview load error:', err);
-    overview.error = true;
+    overview.error = err;
   }
   renderOverviewShell();
 }
@@ -3674,7 +3655,7 @@ async function reloadOverview() {
     overview.error = false;
   } catch (err) {
     console.error('[Health] overview reload error:', err);
-    overview.error = true;
+    overview.error = err;
   }
   renderOverviewShell();
 }
@@ -3684,18 +3665,7 @@ function renderOverviewShell() {
   overview.root.replaceChildren();
 
   if (overview.error) {
-    overview.root.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <i data-lucide="cloud-off" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${esc(t('health.overview.loadError'))}</div>
-        <div class="empty-state__description">${esc(t('health.overview.loadErrorDesc'))}</div>
-        <button class="btn btn--primary empty-state__cta" data-action="overview-retry">
-          <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
-          ${esc(t('health.overview.retry'))}
-        </button>
-      </div>`);
-    if (window.lucide) window.lucide.createIcons({ el: overview.root });
-    overview.root.querySelector('[data-action="overview-retry"]')?.addEventListener('click', () => mountOverview());
+    mountAreaLoadError(overview, 'overview', mountOverview);
     return;
   }
 
@@ -3736,7 +3706,7 @@ function overviewDueMarkup() {
   const today = todayKey();
   const due = computeDueDoses(overviewAllSchedules(), { from: today, to: today });
   if (!due.length) {
-    return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('health.meds.dueToday.empty'))}</p></div>`;
+    return emptyHintHTML(t('health.meds.dueToday.empty'));
   }
   const own = canEditFor(overview.personId, overview.meId);
   const rows = due.map((dose) => {
@@ -4118,7 +4088,7 @@ async function mountCycle() {
     cycle.error = false;
   } catch (err) {
     console.error('[Health] cycle mount error:', err);
-    cycle.error = true;
+    cycle.error = err;
   }
   cycle.loaded = true;
   renderCycleShell();
@@ -4153,13 +4123,13 @@ function cycleSettings() {
 async function switchCyclePerson() {
   cycle.anchor = todayKey();
   try { await loadCycle(); cycle.error = false; }
-  catch (err) { console.error('[Health] cycle load error:', err); cycle.error = true; }
+  catch (err) { console.error('[Health] cycle load error:', err); cycle.error = err; }
   renderCycleShell();
 }
 
 async function reloadCycle() {
   try { await loadCycle(); cycle.error = false; }
-  catch (err) { console.error('[Health] cycle reload error:', err); cycle.error = true; }
+  catch (err) { console.error('[Health] cycle reload error:', err); cycle.error = err; }
   renderCycleShell();
 }
 
@@ -4174,18 +4144,7 @@ function renderCycleShell() {
   cycle.root.replaceChildren();
 
   if (cycle.error) {
-    cycle.root.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <i data-lucide="cloud-off" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${esc(t('health.cycle.loadError'))}</div>
-        <div class="empty-state__description">${esc(t('health.cycle.loadErrorDesc'))}</div>
-        <button class="btn btn--primary empty-state__cta" data-action="cycle-retry">
-          <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
-          ${esc(t('health.cycle.retry'))}
-        </button>
-      </div>`);
-    if (window.lucide) window.lucide.createIcons({ el: cycle.root });
-    cycle.root.querySelector('[data-action="cycle-retry"]')?.addEventListener('click', () => mountCycle());
+    mountAreaLoadError(cycle, 'cycle', mountCycle);
     return;
   }
 
@@ -4219,13 +4178,16 @@ function renderCycleShell() {
   if (!prediction.hasData) {
     cycle.root.insertAdjacentHTML('beforeend', `
       ${persons}
-      <div class="empty-state">
-        <i data-lucide="droplet" class="empty-state__icon" aria-hidden="true"></i>
-        <h2 class="empty-state__title">${esc(t('health.cycle.emptyTitle'))}</h2>
-        <div class="empty-state__description">${esc(t('health.cycle.emptyDesc'))}</div>
-        ${own ? `<button class="btn btn--primary empty-state__cta" data-action="cycle-first">
-          <i data-lucide="plus" class="icon-md" aria-hidden="true"></i>${esc(t('health.cycle.emptyCta'))}</button>` : ''}
-      </div>`);
+      ${emptyStateHTML({
+    icon: 'droplet',
+    title: t('health.cycle.emptyTitle'),
+    description: t('health.cycle.emptyDesc'),
+    // Ohne eigenen Zyklus gibt es hier nichts einzutragen: der CTA entfaellt,
+    // die Aussage bleibt.
+    action: own
+      ? { label: t('health.cycle.emptyCta'), icon: 'plus', attrs: { 'data-action': 'cycle-first' } }
+      : undefined,
+  })}`);
     if (window.lucide) window.lucide.createIcons({ el: cycle.root });
     wireCycle();
     refreshHealthFab();

@@ -27,6 +27,7 @@ import { intervalUnitLabel } from '/rrule-ui.js';
 import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
 import { findPageFab } from '/utils/fab.js';
+import { emptyStateHTML, mountLoadError } from '/utils/empty-state.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -669,10 +670,22 @@ function renderBody() {
   if (state.activeTab === 'split-expenses') {
     setHtml(body, '<div class="budget-tab-panel page-scrollport budget-tab-panel--split-expenses" id="budget-split-expenses-panel"></div>');
     const panel = body.querySelector('#budget-split-expenses-panel');
-    renderSplitExpenses(panel, { embedded: true, user: _user }).catch((err) => {
-      console.error('[Budget] split expenses render error:', err);
-      setHtml(panel, `<div class="empty-state"><div class="empty-state__title">${t('splitExpenses.title')}</div><div class="empty-state__description">${t('budget.loadError')}</div></div>`);
-    });
+    // Der Titel war bisher der Modulname („Geteilte Ausgaben") und die
+    // Fehlermeldung stand darunter als Beschreibung - ein Leerzustand, der
+    // aussieht, als sei nichts angelegt. Titel ist jetzt der Fehler selbst,
+    // und es gibt einen Weg zurueck.
+    const loadSplitExpenses = () => renderSplitExpenses(panel, { embedded: true, user: _user })
+      .catch((err) => {
+        console.error('[Budget] split expenses render error:', err);
+        mountLoadError(panel, {
+          title: t('splitExpenses.loadError'),
+          description: t('common.loadErrorDescription'),
+          error: err,
+          retryLabel: t('common.retry'),
+          onRetry: loadSplitExpenses,
+        });
+      });
+    loadSplitExpenses();
     return;
   }
 
@@ -950,19 +963,13 @@ function renderCategoryBars(byCategory) {
 
 function renderEntries() {
   if (!state.entries.length) {
-    return `<div class="empty-state">
-      <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-        <line x1="12" y1="1" x2="12" y2="23"/>
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
-      </svg>
-      <div class="empty-state__title">${t('budget.emptyTitle')}</div>
-      <div class="empty-state__description">${t('budget.emptyDescription')}</div>
-      <p class="empty-state__hint">${t('emptyHint.budget')}</p>
-      <button class="btn btn--primary empty-state__cta" id="empty-cta-budget">
-        <i data-lucide="plus" aria-hidden="true" class="icon-md"></i>
-        ${t('budget.emptyAction')}
-      </button>
-    </div>`;
+    return emptyStateHTML({
+      icon: 'dollar-sign',
+      title: t('budget.emptyTitle'),
+      description: t('budget.emptyDescription'),
+      hint: t('emptyHint.budget'),
+      action: { label: t('budget.emptyAction'), icon: 'plus', attrs: { id: 'empty-cta-budget' } },
+    });
   }
 
   return state.entries.map((e) => {
@@ -1115,14 +1122,12 @@ function renderAccountsPage() {
     return `
       <div class="budget-tab-panel page-scrollport budget-tab-panel--accounts">
         ${header}
-        <div class="empty-state">
-          <i data-lucide="wallet" class="empty-state__icon" aria-hidden="true"></i>
-          <div class="empty-state__title">${t('budget.accountsEmptyTitle')}</div>
-          <div class="empty-state__description">${t('budget.accountsEmptyDescription')}</div>
-          <button class="btn btn--primary empty-state__cta" id="budget-add-account-empty" type="button">
-            <i data-lucide="plus" aria-hidden="true" class="icon-md"></i>${t('budget.addAccount')}
-          </button>
-        </div>
+        ${emptyStateHTML({
+    icon: 'wallet',
+    title: t('budget.accountsEmptyTitle'),
+    description: t('budget.accountsEmptyDescription'),
+    action: { label: t('budget.addAccount'), icon: 'plus', attrs: { id: 'budget-add-account-empty' } },
+  })}
       </div>`;
   }
 
@@ -1554,15 +1559,12 @@ function renderLoansPage() {
   const loans = state.loans?.loans ?? [];
   if (!loans.length) {
     return `<div class="budget-tab-panel page-scrollport budget-tab-panel--loans">
-      <div class="empty-state">
-        <i data-lucide="hand-coins" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('budget.loansEmpty')}</div>
-        <div class="empty-state__description">${t('budget.loansEmptyDescription')}</div>
-        <button class="btn btn--primary empty-state__cta" id="budget-empty-loan">
-          <i data-lucide="plus" aria-hidden="true" class="icon-md"></i>
-          ${t('budget.newLoan')}
-        </button>
-      </div>
+      ${emptyStateHTML({
+    icon: 'hand-coins',
+    title: t('budget.loansEmpty'),
+    description: t('budget.loansEmptyDescription'),
+    action: { label: t('budget.newLoan'), icon: 'plus', attrs: { id: 'budget-empty-loan' } },
+  })}
     </div>`;
   }
 

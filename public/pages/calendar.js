@@ -26,6 +26,7 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { findPageFab } from '/utils/fab.js';
 import { nowFields, todayKey, zonedDateKey, zonedTimeKey } from '/utils/timezone.js';
 import { maxUploadBytes, maxUploadMb } from '/utils/upload-limit.js';
+import { emptyStateHTML, emptyHintHTML } from '/utils/empty-state.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -268,7 +269,7 @@ function renderIconPickerResults(selectedIcon, query = '') {
       .flatMap((c) => c.icons)
       .filter((icon) => icon.label.toLowerCase().includes(q) || icon.value.includes(q));
     if (filtered.length === 0) {
-      return `<div class="empty-state empty-state--compact"><p class="empty-state__description">${esc(t('calendar.iconSearchEmpty'))}</p></div>`;
+      return emptyHintHTML(t('calendar.iconSearchEmpty'));
     }
     return `
       <div class="event-icon-picker__category-icons">
@@ -2098,11 +2099,11 @@ function renderAgendaView(container) {
   container.insertAdjacentHTML('beforeend', `
     <div class="agenda-view page-scrollport" id="agenda-view">
       ${groups.length === 0
-        ? `<div class="empty-state">
-             <i data-lucide="calendar-plus" class="empty-state__icon" aria-hidden="true"></i>
-             <div class="empty-state__title">${t('calendar.agendaEmpty')}</div>
-             <button class="btn btn--primary empty-state__cta" id="agenda-empty-cta">${t('calendar.newEvent')}</button>
-           </div>`
+        ? emptyStateHTML({
+          icon: 'calendar-plus',
+          title: t('calendar.agendaEmpty'),
+          action: { label: t('calendar.newEvent'), attrs: { id: 'agenda-empty-cta' } },
+        })
         : groups.map(({ date, events, tasks, holidays }) => `
           <div class="agenda-day">
             <!-- Tageskopf als echte Ueberschrift (Critique 2026-08-10):

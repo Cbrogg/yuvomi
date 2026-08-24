@@ -19,6 +19,7 @@ import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { isPreviewable } from '/utils/document-preview.js';
 import { renderDocumentAttachField, bindDocumentAttachField } from '/components/document-attach.js';
 import { splitMentions, applyMention } from '/utils/mentions.js';
+import { emptyStateHTML } from '/utils/empty-state.js';
 import '/components/category-manager.js';
 import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
@@ -607,21 +608,23 @@ function renderTaskGroups(tasks, groupMode) {
     // Leere Suche ≠ leeres Modul: bei aktiver Suche wäre „Noch keine Aufgaben"
     // schlicht falsch und der Anlegen-CTA die falsche Antwort (Notizen-Muster).
     const isFiltered = state.searchQuery.trim().length > 0;
-    return `<div class="empty-state">
-      <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-        <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-        <polyline points="22 4 12 14.01 9 11.01"/>
-      </svg>
-      <div class="empty-state__title">${isFiltered ? t('tasks.noResultsTitle') : t('tasks.emptyTitle')}</div>
-      <div class="empty-state__description">${isFiltered
-        ? t('tasks.noResultsDescription', { query: esc(state.searchQuery) })
-        : t('tasks.emptyDescription')}</div>
-      ${isFiltered ? '' : `<p class="empty-state__hint">${t('emptyHint.tasks')}</p>
-      <button class="btn btn--primary empty-state__cta" id="empty-cta-tasks">
-        <i data-lucide="plus" aria-hidden="true" class="icon-md"></i>
-        ${t('tasks.emptyAction')}
-      </button>`}
-    </div>`;
+    // Der Suchbegriff geht ROH in den Renderer: der escapt selbst. Vorher stand
+    // hier ein `esc()` vor der Uebergabe, weil das Ergebnis in ein
+    // Template-Literal floss - ueber den Renderer waere daraus eine zweite
+    // Maskierung geworden und „a&b" haette als „a&amp;b" auf dem Schirm gestanden.
+    return isFiltered
+      ? emptyStateHTML({
+        variant: 'no-results',
+        title: t('tasks.noResultsTitle'),
+        description: t('tasks.noResultsDescription', { query: state.searchQuery }),
+      })
+      : emptyStateHTML({
+        icon: 'circle-check-big',
+        title: t('tasks.emptyTitle'),
+        description: t('tasks.emptyDescription'),
+        hint: t('emptyHint.tasks'),
+        action: { label: t('tasks.emptyAction'), icon: 'plus', attrs: { id: 'empty-cta-tasks' } },
+      });
   }
 
   const now = new Date();
@@ -2676,19 +2679,16 @@ function renderKanban(container) {
   const totalVisible = cols.reduce((n, c) => n + grouped[c.status].length, 0);
   if (isFiltered && totalVisible === 0) {
     listEl.replaceChildren();
-    listEl.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <svg class="empty-state__icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true">
-          <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
-          <polyline points="22 4 12 14.01 9 11.01"/>
-        </svg>
-        <div class="empty-state__title">${t('tasks.noResultsTitle')}</div>
-        <div class="empty-state__description">${t('tasks.noResultsDescription', { query: esc(state.searchQuery) })}</div>
-        <button class="btn btn--secondary empty-state__cta" id="kanban-reset-search">
-          <i data-lucide="x" aria-hidden="true" class="icon-md"></i>
-          ${t('common.searchClear')}
-        </button>
-      </div>`);
+    listEl.insertAdjacentHTML('beforeend', emptyStateHTML({
+      variant: 'no-results',
+      title: t('tasks.noResultsTitle'),
+      description: t('tasks.noResultsDescription', { query: state.searchQuery }),
+      action: {
+        label: t('common.searchClear'),
+        icon: 'x',
+        attrs: { id: 'kanban-reset-search' },
+      },
+    }));
     if (window.lucide) window.lucide.createIcons({ el: listEl });
     listEl.querySelector('#kanban-reset-search')?.addEventListener('click', () => {
       state.searchQuery = '';

@@ -9,6 +9,7 @@ import { t } from '/i18n.js';
 import { openModal, closeModal, reportFieldError } from '/components/modal.js';
 import { vibrate } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import { emptyStateHTML, mountLoadError } from '/utils/empty-state.js';
 import { amountPlaceholder, amountStep, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 
 const view = { month: '', data: null, error: false, ctx: null, root: null };
@@ -37,7 +38,9 @@ async function load() {
   } catch (err) {
     console.error('[Budget] plans load error:', err);
     view.data = null;
-    view.error = true;
+    // Das Fehlerobjekt selbst, nicht nur `true`: `mountLoadError` liest daraus
+    // den Statuscode - die einzige Angabe, die dem Selbsthoster hier weiterhilft.
+    view.error = err;
   }
   renderBody(body);
 }
@@ -61,18 +64,13 @@ function toneForRatio(ratio, over) {
 function renderBody(body) {
   if (view.error) {
     body.replaceChildren();
-    body.insertAdjacentHTML('beforeend', `
-      <div class="empty-state">
-        <i data-lucide="cloud-off" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('budget.statsError')}</div>
-        <div class="empty-state__description">${t('budget.statsErrorDescription')}</div>
-        <button class="btn btn--primary empty-state__cta" id="budget-plan-retry">
-          <i data-lucide="refresh-cw" class="icon-md" aria-hidden="true"></i>
-          ${t('budget.statsRetry')}
-        </button>
-      </div>`);
-    if (window.lucide) lucide.createIcons({ el: body });
-    body.querySelector('#budget-plan-retry')?.addEventListener('click', () => load());
+    mountLoadError(body, {
+      title: t('budget.statsError'),
+      description: t('budget.statsErrorDescription'),
+      error: view.error,
+      retryLabel: t('budget.statsRetry'),
+      onRetry: () => load(),
+    });
     return;
   }
 
@@ -148,12 +146,12 @@ function renderSavingsCard(savings) {
 
 function renderRows(plans) {
   if (!plans.length) {
-    return `
-      <div class="empty-state budget-plan__empty">
-        <i data-lucide="target" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('budget.planEmptyTitle')}</div>
-        <div class="empty-state__description">${t('budget.planEmptyDesc')}</div>
-      </div>`;
+    return emptyStateHTML({
+      className: 'budget-plan__empty',
+      icon: 'target',
+      title: t('budget.planEmptyTitle'),
+      description: t('budget.planEmptyDesc'),
+    });
   }
   return plans.map((p) => {
     const tone = toneForRatio(p.ratio, p.over);

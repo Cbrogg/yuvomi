@@ -13,6 +13,7 @@ import { renderSkeletonList } from '/utils/skeleton.js';
 import { formatMoney, amountPlaceholder, toDecimalString, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
 import { wireTablist } from '/utils/tablist.js';
 import { findPageFab } from '/utils/fab.js';
+import { emptyStateHTML } from '/utils/empty-state.js';
 
 let state = {
   meta: null,
@@ -268,18 +269,18 @@ function renderSummary() {
 function renderGroups() {
   const el = _container.querySelector('#split-groups');
   if (!state.groups.length) {
-    setHtml(el, isArchivedView() ? `
-      <div class="empty-state split-empty-inline">
-        <i data-lucide="archive" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('splitExpenses.emptyArchivedTitle')}</div>
-      </div>
-    ` : `
-      <div class="empty-state split-empty-inline">
-        <i data-lucide="receipt-text" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('splitExpenses.emptyGroupsTitle')}</div>
-        <div class="empty-state__description">${t('splitExpenses.emptyGroupsText')}</div>
-      </div>
-    `);
+    setHtml(el, isArchivedView()
+      ? emptyStateHTML({
+        className: 'split-empty-inline',
+        icon: 'archive',
+        title: t('splitExpenses.emptyArchivedTitle'),
+      })
+      : emptyStateHTML({
+        className: 'split-empty-inline',
+        icon: 'receipt-text',
+        title: t('splitExpenses.emptyGroupsTitle'),
+        description: t('splitExpenses.emptyGroupsText'),
+      }));
     return;
   }
   setHtml(el, state.groups.map((group) => `
@@ -298,18 +299,18 @@ function renderMain() {
   main.removeAttribute('aria-busy');
   const group = state.groups.find((g) => g.id === state.activeGroupId);
   if (!group) {
-    setHtml(main, isArchivedView() ? `
-      <div class="empty-state split-main-empty">
-        <i data-lucide="archive" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('splitExpenses.emptyArchivedTitle')}</div>
-      </div>
-    ` : `
-      <div class="empty-state split-main-empty">
-        <i data-lucide="users-round" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('splitExpenses.emptyGroupsTitle')}</div>
-        <div class="empty-state__description">${t('splitExpenses.emptyGroupsText')}</div>
-      </div>
-    `);
+    setHtml(main, isArchivedView()
+      ? emptyStateHTML({
+        className: 'split-main-empty',
+        icon: 'archive',
+        title: t('splitExpenses.emptyArchivedTitle'),
+      })
+      : emptyStateHTML({
+        className: 'split-main-empty',
+        icon: 'users-round',
+        title: t('splitExpenses.emptyGroupsTitle'),
+        description: t('splitExpenses.emptyGroupsText'),
+      }));
     return;
   }
   // Archiv-Ansicht: Salden, Ausgaben und Verlauf bleiben lesbar, alle

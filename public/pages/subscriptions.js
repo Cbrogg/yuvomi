@@ -14,6 +14,7 @@ import {
 } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import { emptyStateHTML, mountLoadError } from '/utils/empty-state.js';
 import { todayKey } from '/utils/date.js';
 import { CURRENCY_CODES } from '/utils/currency-codes.js';
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
@@ -210,12 +211,16 @@ export async function render(target, { user } = {}) {
     bindToolbar();
   } catch (err) {
     console.error('[Subscriptions] load error:', err);
-    setHtml(container.querySelector('#subscriptions-content'), `
-      <div class="empty-state">
-        <i data-lucide="circle-alert" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('subscriptions.loadError')}</div>
-      </div>
-    `);
+    // Vorher stand hier ein Leerzustands-Markup ohne Rolle und ohne CTA: der
+    // Fehler war fuer Screenreader stumm und die Seite eine Sackgasse - neu
+    // laden ging nur ueber den Browser. `mountLoadError` erzwingt beides.
+    mountLoadError(container.querySelector('#subscriptions-content'), {
+      title: t('subscriptions.loadError'),
+      description: t('common.loadErrorDescription'),
+      error: err,
+      retryLabel: t('common.retry'),
+      onRetry: () => render(container, { user: state.user }),
+    });
   } finally {
     container.querySelector('.subscriptions-page')?.setAttribute('aria-busy', 'false');
     if (window.lucide) window.lucide.createIcons({ el: container });
@@ -680,26 +685,24 @@ function subscriptionFor(row) {
 
 function renderEmpty() {
   // „Keine Abos" und „nichts passt zum Filter" sind verschiedene Zustände: der
-  // erste braucht eine Anlegen-Aktion, der zweite einen Weg zurück.
+  // erste braucht eine Anlegen-Aktion, der zweite einen Weg zurück. Die
+  // Variante traegt den Unterschied jetzt mit: `no-results` wird als
+  // `role="status"` angesagt und fuehrt einen sekundaeren CTA.
   if (hasActiveFilters()) {
-    return `
-      <div class="empty-state">
-        <i data-lucide="filter-x" class="empty-state__icon" aria-hidden="true"></i>
-        <div class="empty-state__title">${t('subscriptions.noMatchesTitle')}</div>
-        <div class="empty-state__description">${t('subscriptions.noMatchesDescription')}</div>
-        <button class="btn btn--primary empty-state__cta" id="subscriptions-empty-reset" type="button">
-          ${t('subscriptions.resetFilters')}
-        </button>
-      </div>`;
+    return emptyStateHTML({
+      variant: 'no-results',
+      icon: 'filter-x',
+      title: t('subscriptions.noMatchesTitle'),
+      description: t('subscriptions.noMatchesDescription'),
+      action: { label: t('subscriptions.resetFilters'), attrs: { id: 'subscriptions-empty-reset' } },
+    });
   }
-  return `
-    <div class="empty-state">
-      <i data-lucide="repeat-2" class="empty-state__icon" aria-hidden="true"></i>
-      <div class="empty-state__title">${t('subscriptions.emptyTitle')}</div>
-      <div class="empty-state__description">${t('subscriptions.emptyDescription')}</div>
-      <button class="btn btn--primary empty-state__cta" id="subscriptions-empty-add">${t('subscriptions.add')}</button>
-    </div>
-  `;
+  return emptyStateHTML({
+    icon: 'repeat-2',
+    title: t('subscriptions.emptyTitle'),
+    description: t('subscriptions.emptyDescription'),
+    action: { label: t('subscriptions.add'), attrs: { id: 'subscriptions-empty-add' } },
+  });
 }
 
 function bindContent() {
