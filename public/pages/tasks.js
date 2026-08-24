@@ -86,10 +86,28 @@ const FALLBACK_CATEGORY = 'misc';
 // Label einer Kategorie auflösen: Seed-Kategorien tragen label_key (i18n),
 // benutzerdefinierte tragen name. Unbekannte Keys (z. B. Due-Gruppen-Strings)
 // werden unverändert zurückgegeben.
-function catLabel(key) {
-  const c = state.categories.find((x) => x.key === key);
+function catLabel(key, categories = state.categories) {
+  const c = categories.find((x) => x.key === key);
   if (!c) return key;
   return c.label_key ? t(c.label_key) : (c.name || c.key);
+}
+
+// DIE REIHENFOLGE DER KATEGORIEN STEHT IN DEN DATEN, NICHT IM ALPHABET (#845).
+//
+// Hier sortierte die Gruppierung `a.localeCompare(b, 'de')` - über den KEY, und
+// über eine fest verdrahtete Sprache. Das war gleich dreifach falsch: die im
+// Kategorie-Verwalter gezogene Reihenfolge (`sort_order`, seit #494 per
+// PATCH /tasks/categories/reorder gespeichert) blieb wirkungslos, sortiert
+// wurde der interne Schlüssel statt des sichtbaren Labels (`misc` steht unter
+// M, angezeigt wird „Sonstiges"), und eine französische Oberfläche bekam
+// deutsche Sortierregeln.
+//
+// `state.categories` kommt vom Server bereits nach `sort_order` sortiert -
+// die Position IN dieser Liste ist damit die einzige Wahrheit über die
+// Reihenfolge. Dieselbe Regel führt contacts.js seit #357.
+function catSortIndex(key, categories = state.categories) {
+  const i = categories.findIndex((c) => c.key === key);
+  return i === -1 ? Number.MAX_SAFE_INTEGER : i;
 }
 
 const PRIORITY_LABELS = () => Object.fromEntries(PRIORITIES().map((p) => [p.value, p.label]));
@@ -238,7 +256,7 @@ function loadCollapsedGroups() {
   }
 }
 
-function groupBy(tasks, mode) {
+function groupBy(tasks, mode, categories = state.categories) {
   const groups = {};
 
   if (mode === 'category') {
@@ -247,8 +265,12 @@ function groupBy(tasks, mode) {
       (groups[key] = groups[key] || []).push(t);
     }
     return Object.entries(groups)
-      .sort(([a], [b]) => a.localeCompare(b, 'de'))
-      .map(([key, list]) => ({ id: key, label: catLabel(key), tasks: list }));
+      // Unbekannte Keys landen alle auf demselben Index - erst dahinter darf
+      // das Alphabet entscheiden, und dann über das Label in der aktiven
+      // Sprache statt über den Schlüssel.
+      .sort(([a], [b]) => catSortIndex(a, categories) - catSortIndex(b, categories)
+        || catLabel(a, categories).localeCompare(catLabel(b, categories), getLocale()))
+      .map(([key, list]) => ({ id: key, label: catLabel(key, categories), tasks: list }));
   }
 
   // mode === 'due'

@@ -69,6 +69,62 @@ test('die Fälligkeits-Gruppen tragen feste ids', () => {
   }
 });
 
+// Wie /tasks/categories sie liefert: nach `sort_order`, Seed-Zeilen mit
+// label_key und name = NULL. Die Reihenfolge hier ist BEWUSST nicht
+// alphabetisch - weder nach Key noch nach Label -, sonst kann der Test die
+// beiden Sortierungen nicht auseinanderhalten.
+const CATEGORIES = [
+  { key: 'household', name: null,     label_key: 'tasks.categoryHousehold', sort_order: 0 },
+  { key: 'ca-rental', name: 'CA Rental', label_key: null,                   sort_order: 1 },
+  { key: 'misc',      name: null,     label_key: 'tasks.categoryMisc',      sort_order: 2 },
+  { key: 'finance',   name: 'Finance',   label_key: null,                   sort_order: 3 },
+];
+
+test('die Kategorie-Gruppen folgen der verwalteten Reihenfolge, nicht dem Alphabet', () => {
+  // Genau der Fall aus #845: „Household" wurde im Verwalter nach oben gezogen,
+  // stand auf der Aufgabenseite aber weiter hinter „CA Rental" und „Finance".
+  const groups = tasks.groupBy([
+    task({ id: 1, category: 'finance' }),
+    task({ id: 2, category: 'household' }),
+    task({ id: 3, category: 'ca-rental' }),
+  ], 'category', CATEGORIES);
+
+  assert.deepEqual(groups.map((g) => g.id), ['household', 'ca-rental', 'finance'],
+    'die Reihenfolge kommt aus sort_order - alphabetisch stuende CA Rental zuerst');
+});
+
+test('eine Kategorie ohne Eintrag in der Liste steht hinten, nicht vorne', () => {
+  // Eine gerade geloeschte oder noch nicht nachgeladene Kategorie darf die
+  // verwaltete Reihenfolge nicht aufmischen: MAX_SAFE_INTEGER, nicht -1.
+  const groups = tasks.groupBy([
+    task({ id: 1, category: 'ghost' }),
+    task({ id: 2, category: 'misc' }),
+  ], 'category', CATEGORIES);
+
+  assert.deepEqual(groups.map((g) => g.id), ['misc', 'ghost'],
+    'ein unbekannter Key faellt ans Ende');
+});
+
+test('die Kategorie-Sortierung liest weder den rohen Key noch eine feste Sprache', () => {
+  // Regel ueber die Quelle statt ueber ein Ergebnis: die Fassung vor #845
+  // sortierte `a.localeCompare(b, 'de')` - also den internen Schluessel, in
+  // fest verdrahtetem Deutsch. Beides bleibt gruen, solange die Testdaten
+  // zufaellig passend heissen, deshalb hier die Regel selbst.
+  const source = readFileSync(new URL('../public/pages/tasks.js', import.meta.url), 'utf8');
+  const groupBySource = source
+    .slice(source.indexOf('function groupBy(tasks, mode'), source.indexOf('// Render-Bausteine'))
+    .split('\n').filter((line) => !line.trim().startsWith('//')).join('\n');
+
+  assert.ok(
+    !/localeCompare\([^)]*'de'/.test(groupBySource),
+    'die Gruppierung sortiert in fest verdrahtetem Deutsch statt in der aktiven Sprache',
+  );
+  assert.ok(
+    groupBySource.includes('catSortIndex('),
+    'die Gruppierung fragt nicht catSortIndex() - damit ignoriert sie sort_order (#845)',
+  );
+});
+
 test('der Speicher-Schlüssel trennt die beiden Gruppierungen', () => {
   // Eine Kategorie darf „heute" heißen, ohne die Fälligkeits-Gruppe mitzuklappen.
   assert.notEqual(tasks.groupKey('category', 'today'), tasks.groupKey('due', 'today'));
@@ -87,7 +143,7 @@ test('die Faelligkeits-Rechnung vergleicht Kalendertage, keine Zeitpunkte', () =
   // lokale. Wer die beiden voneinander abzieht, rechnet den Zonen-Offset mit.
   const source = readFileSync(new URL('../public/pages/tasks.js', import.meta.url), 'utf8');
   const groupBySource = source
-    .slice(source.indexOf('function groupBy(tasks, mode)'), source.indexOf('// Render-Bausteine'))
+    .slice(source.indexOf('function groupBy(tasks, mode'), source.indexOf('// Render-Bausteine'))
     // Ohne die Kommentare: der Kommentar an der Fundstelle ZITIERT die alte
     // Rechnung, um zu erklaeren, was daran falsch war. Ein Guard, der Prosa
     // liest, meldet dann genau die Stelle, die ihn befolgt.
