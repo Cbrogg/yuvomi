@@ -2462,6 +2462,7 @@
         "loginWithSso": "Entrar com SSO",
         "orDivider": "ou",
         "ssoError": "O login SSO falhou. Por favor, tente novamente.",
+        "ssoNoAccount": "Ainda não existe uma conta aqui para este login SSO. Contacte o administrador do seu agregado familiar.",
         "forgotPassword": "Esqueceste-te da palavra-passe?",
         "networkError": "Falha na ligação. Verifica se o servidor está a funcionar e tenta novamente.",
         "capsLockWarning": "O Caps Lock está ativado.",

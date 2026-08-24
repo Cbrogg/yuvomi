@@ -148,6 +148,8 @@
     "recipeProviderPrivateNetworkHint": "Potřeba pro instanci Mealie nebo Tandoor v síti. Ruší ochranu SSRF pro zrcadla poskytovatelů receptů.",
     "oidcTrustEmail": "Důvěřovat e-mailu bez claimu verified",
     "oidcTrustEmailHint": "Zapněte jen tehdy, pokud váš poskytovatel neposílá email_verified a důvěřujete mu.",
+    "oidcAllowSignup": "Povolit přihlášením přes SSO zakládat nové účty",
+    "oidcAllowSignupHint": "Vypněte, pokud váš poskytovatel slouží více lidem než této domácnosti. Stávající účty se dál přihlašují a dál se propojují.",
     "baseUrlLabel": "Veřejná adresa",
     "baseUrlHint": "Adresa, na které tvoje rodina otevírá Yuvomi - ne hostitel a port kontejneru. Používá se pro odkazy na obnovu hesla a pozvánky.",
     "syncIntervalLabel": "Interval synchronizace kalendáře (minuty)",

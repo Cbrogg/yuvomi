@@ -2462,6 +2462,7 @@
         "loginWithSso": "Bejelentkezés SSO-val",
         "orDivider": "vagy",
         "ssoError": "SSO bejelentkezés sikertelen. Kérjük, próbálja újra.",
+        "ssoNoAccount": "Ehhez az SSO bejelentkezéshez itt még nincs fiók. Kérjük, forduljon a háztartás rendszergazdájához.",
         "forgotPassword": "Elfelejtett jelszó?",
         "networkError": "A kapcsolat sikertelen. Ellenőrizd, hogy fut-e a szerver, majd próbáld újra.",
         "capsLockWarning": "A Caps Lock be van kapcsolva.",

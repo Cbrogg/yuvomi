@@ -2462,6 +2462,7 @@
         "loginWithSso": "Iniciar sesión con SSO",
         "orDivider": "o",
         "ssoError": "Error al iniciar sesión con SSO. Inténtalo de nuevo.",
+        "ssoNoAccount": "Todavía no hay ninguna cuenta aquí para este inicio de sesión con SSO. Ponte en contacto con la administración de tu hogar.",
         "forgotPassword": "¿Olvidaste la contraseña?",
         "networkError": "Error de conexión. Comprueba que el servidor esté funcionando e inténtalo de nuevo.",
         "capsLockWarning": "El bloqueo de mayúsculas está activado.",

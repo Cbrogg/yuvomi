@@ -241,6 +241,8 @@
     "recipeProviderPrivateNetworkHint": "自宅ネットワークの Mealie または Tandoor インスタンスに必要です。レシピプロバイダーミラーの SSRF 保護を解除します。",
     "oidcTrustEmail": "verified クレームなしでメールアドレスを信頼する",
     "oidcTrustEmailHint": "プロバイダーが email_verified を送らず、かつ信頼できる場合のみ有効にしてください。",
+    "oidcAllowSignup": "SSOサインインによる新規アカウント作成を許可する",
+    "oidcAllowSignupHint": "プロバイダーがこの世帯より多くの人を扱う場合はオフにします。既存のアカウントは引き続きサインインでき、引き続き連携されます。",
     "baseUrlLabel": "公開アドレス",
     "baseUrlHint": "家族が Yuvomi を開くアドレスです。コンテナのホストとポートではありません。パスワード再設定と招待のリンクに使われます。",
     "syncIntervalLabel": "カレンダー同期の間隔（分）",

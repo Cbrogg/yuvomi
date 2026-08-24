@@ -2462,6 +2462,7 @@
         "loginWithSso": "Se connecter avec SSO",
         "orDivider": "ou",
         "ssoError": "La connexion SSO a échoué. Veuillez réessayer.",
+        "ssoNoAccount": "Aucun compte n'existe encore ici pour cette connexion SSO. Contactez l'administrateur de votre foyer.",
         "forgotPassword": "Mot de passe oublié ?",
         "networkError": "Échec de la connexion. Vérifiez que le serveur fonctionne, puis réessayez.",
         "capsLockWarning": "La touche Verr. Maj est activée.",

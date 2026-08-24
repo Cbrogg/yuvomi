@@ -14,7 +14,7 @@ import { collectErrors, date as validateDate, str, MAX_SHORT, MAX_TITLE } from '
 import { createLogger } from './logger.js';
 import { deleteBirthdayArtifacts, syncBirthdayArtifacts } from './services/birthdays.js';
 import * as oidcClient from 'openid-client';
-import { isOidcEnabled, getConfig as getOidcConfig } from './services/oidc.js';
+import { isOidcEnabled, isOidcSignupAllowed, getConfig as getOidcConfig } from './services/oidc.js';
 import { emailService as defaultEmailService } from './services/email.js';
 import { passwordResetService as defaultResetService } from './services/password-reset.js';
 import { inviteService as defaultInviteService } from './services/invites.js';
@@ -679,9 +679,15 @@ const OIDC_PASSWORD_SENTINEL = '$oidc$';
  * Authentik-Deployments). Nur setzen, wenn der IdP vollständig unter eigener
  * Kontrolle steht und keine unverifizierten E-Mails zulässt.
  *
+ * Mit `OIDC_ALLOW_SIGNUP=false` entfällt ausschließlich der letzte Schritt, das
+ * Anlegen (#654); die Rückgabe ist dann `null`. Erkennen und Verknüpfen laufen
+ * unverändert, sonst käme auch niemand mehr hinein, den der Admin von Hand
+ * angelegt hat.
+ *
  * @param {import('better-sqlite3-multiple-ciphers').Database} database
  * @param {{ sub: string, iss?: string, email?: string, email_verified?: boolean, name?: string, preferred_username?: string, username?: string }} claims
- * @returns {{ id: number, role: string, [key: string]: any }}
+ * @returns {{ id: number, role: string, [key: string]: any }|null} `null`, wenn
+ *   das Konto neu wäre und die automatische Kontoerstellung abgeschaltet ist.
  */
 export function findOrCreateOidcUser(database, claims) {
   const { sub, iss, email, email_verified, name, preferred_username, username: usernameClaim } = claims;
@@ -719,7 +725,14 @@ export function findOrCreateOidcUser(database, claims) {
     }
   }
 
-  // 3. Eindeutigen username ableiten (Kollision mit bestehenden Usernamen vermeiden).
+  // 3. Ab hier waere das Konto NEU - und genau hier endet der Weg, wenn die
+  //    automatische Kontoerstellung abgeschaltet ist (#654). Das Gate steht
+  //    bewusst hinter der Verknuepfung und nicht vor Schritt 1: ein bereits
+  //    verknuepftes oder von Hand angelegtes Konto ist eine Entscheidung, die
+  //    jemand getroffen hat, und die soll der Schalter nicht zuruecknehmen.
+  if (!isOidcSignupAllowed()) return null;
+
+  // 4. Eindeutigen username ableiten (Kollision mit bestehenden Usernamen vermeiden).
   //    Reihenfolge: preferred_username (Standard-Claim) → username (non-standard,
   //    u. a. Synology DSM SSO) → sub. Die E-Mail ist bewusst KEIN Kandidat (#653):
   //    sie ist bei geteilten Familien-Adressen nicht eindeutig, vermischt Kontaktdaten
@@ -1405,6 +1418,16 @@ router.get('/oidc/callback', async (req, res) => {
       // non-standard, u. a. Synology DSM SSO: der reine Kontoname ohne Directory-Teil
       username:           userinfo.username ?? claims.username,
     });
+
+    // Kein Konto, und keins anlegen duerfen (#654). Der Grund steht im
+    // Redirect, weil die Anmeldeseite sonst „SSO-Anmeldung fehlgeschlagen"
+    // zeigt - und das ist hier schlicht falsch: die Anmeldung am IdP hat
+    // funktioniert, es fehlt das Konto. Wer das liest, sucht den Fehler bei
+    // seinem Passwort statt bei seinem Admin.
+    if (!user) {
+      log.warn(`OIDC signup blocked (OIDC_ALLOW_SIGNUP=false): sub=${claims.sub}`);
+      return res.redirect('/login?error=oidc_signup_disabled');
+    }
 
     // Der zweite Faktor gilt AUCH auf diesem Weg (#672).
     //

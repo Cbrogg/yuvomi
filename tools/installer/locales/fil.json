@@ -148,6 +148,8 @@
     "recipeProviderPrivateNetworkHint": "Kailangan para sa isang Mealie o Tandoor instance sa sarili mong network. Inaalis nito ang proteksyong SSRF para sa mga mirror ng mga recipe provider.",
     "oidcTrustEmail": "Pagkatiwalaan ang email nang walang na-verify na claim",
     "oidcTrustEmailHint": "I-enable lamang ito kung hindi nagpapadala ng email_verified ang iyong provider at pinagkakatiwalaan mo ito.",
+    "oidcAllowSignup": "Payagan ang mga pag-sign in gamit ang SSO na gumawa ng bagong account",
+    "oidcAllowSignupHint": "I-off ito kung ang provider mo ay naglilingkod sa mas maraming tao kaysa sa sambahayang ito. Patuloy pa ring makakapag-sign in at maiuugnay ang mga umiiral na account.",
     "baseUrlLabel": "Pampublikong address",
     "baseUrlHint": "Ang address na binubuksan ng pamilya mo para sa Yuvomi - hindi ang host at port ng container. Ginagamit para sa mga link ng pag-reset ng password at imbitasyon.",
     "syncIntervalLabel": "Agwat ng pag-sync ng kalendaryo (minuto)",

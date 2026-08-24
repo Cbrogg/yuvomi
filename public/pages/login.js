@@ -125,8 +125,15 @@ export async function render(container) {
 
   // OIDC-Fehlermeldung aus URL-Parameter anzeigen (z.B. ?error=oidc_failed nach gescheitertem Callback)
   const urlParams = new URLSearchParams(window.location.search);
-  if (urlParams.get('error')?.startsWith('oidc_')) {
-    showError(errorEl, t('login.ssoError'));
+  const ssoError = urlParams.get('error');
+  if (ssoError?.startsWith('oidc_')) {
+    // Ein abgewiesenes Anlegen ist KEIN Fehlschlag der Anmeldung (#654): beim
+    // Anbieter hat alles funktioniert, hier fehlt nur das Konto. Die
+    // Sammelmeldung schickt den Nutzer sonst zu seinem Passwort, statt zu dem,
+    // der ihm ein Konto anlegen kann.
+    showError(errorEl, ssoError === 'oidc_signup_disabled'
+      ? t('login.ssoNoAccount')
+      : t('login.ssoError'));
   }
 
   // K3: Passwort-Sichtbarkeits-Toggle

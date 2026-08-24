@@ -22,6 +22,29 @@ export function isOidcEnabled() {
 }
 
 /**
+ * Darf eine SSO-Anmeldung ein noch unbekanntes Konto ANLEGEN? (#654)
+ *
+ * Wer Yuvomi an einen IdP haengt, den er nicht nur fuer diesen Haushalt
+ * betreibt, teilt damit sein ganzes Verzeichnis: bisher bekam jeder, der sich
+ * dort anmelden konnte, beim ersten Klick auf „Mit SSO anmelden" ungefragt ein
+ * Konto im Familienplaner. Ein Verzeichnis ist aber eine Liste von Menschen,
+ * keine Liste von Haushaltsmitgliedern.
+ *
+ * Der Default bleibt `true`: jede bestehende Installation verhaelt sich nach
+ * dem Update unveraendert. Ausgeschaltet wird ausdruecklich, und dann bleibt
+ * die ZUORDNUNG zu bereits angelegten Konten erhalten - der Admin legt das
+ * Konto an, die erste SSO-Anmeldung verknuepft es. Nur das Anlegen faellt weg.
+ *
+ * Gelesen wird bewusst pro Aufruf und nicht beim Import: derselbe Prozess
+ * bedient in den Tests beide Zustaende, und ein gecachter Schalter waere ein
+ * Sicherheitsschalter, der vom Zeitpunkt des ersten Imports abhaengt.
+ * @returns {boolean}
+ */
+export function isOidcSignupAllowed() {
+  return process.env.OIDC_ALLOW_SIGNUP !== 'false';
+}
+
+/**
  * Gibt die initialisierte OIDC-Configuration zurück (Discovery bei erstem Aufruf).
  * Gibt null zurück wenn OIDC nicht konfiguriert ist.
  * @returns {Promise<import('openid-client').Configuration|null>}

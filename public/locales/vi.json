@@ -2462,6 +2462,7 @@
         "loginWithSso": "Đăng nhập với SSO",
         "orDivider": "hoặc",
         "ssoError": "Đăng nhập SSO thất bại. Vui lòng thử lại.",
+        "ssoNoAccount": "Chưa có tài khoản nào ở đây cho lần đăng nhập SSO này. Vui lòng liên hệ quản trị viên hộ gia đình của bạn.",
         "forgotPassword": "Quên mật khẩu?",
         "networkError": "Kết nối thất bại. Kiểm tra xem máy chủ có đang chạy không rồi thử lại.",
         "capsLockWarning": "Caps Lock đang bật.",

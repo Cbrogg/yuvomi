@@ -241,6 +241,8 @@
     "recipeProviderPrivateNetworkHint": "Kendi ağınızdaki bir Mealie veya Tandoor örneği için gerekli. Tarif sağlayıcı aynalamaları için SSRF korumasını kaldırır.",
     "oidcTrustEmail": "verified claim olmadan e-postaya güven",
     "oidcTrustEmailHint": "Yalnızca sağlayıcınız email_verified göndermiyorsa ve ona güveniyorsanız etkinleştirin.",
+    "oidcAllowSignup": "SSO girişlerinin yeni hesap oluşturmasına izin ver",
+    "oidcAllowSignupHint": "Sağlayıcınız bu haneden daha fazla kişiye hizmet veriyorsa bunu kapatın. Mevcut hesaplar giriş yapmaya ve eşleşmeye devam eder.",
     "baseUrlLabel": "Herkese açık adres",
     "baseUrlHint": "Ailenin Yuvomi'yi açtığı adres - kapsayıcının konağı ve bağlantı noktası değil. Parola sıfırlama ve davet bağlantıları için kullanılır.",
     "syncIntervalLabel": "Takvim eşitleme aralığı (dakika)",

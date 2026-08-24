@@ -112,6 +112,10 @@ services:
       # Some IdPs (Authentik in its default setup among them) send no
       # email_verified claim; without this switch they refuse to link accounts.
       - OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM=${OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM:-false}
+      # Set to false when the IdP serves more people than this household: an
+      # SSO sign-in then never creates a new account, it only signs in and
+      # links accounts that already exist.
+      - OIDC_ALLOW_SIGNUP=${OIDC_ALLOW_SIGNUP:-true}
       # Scheduled local backups into the /backups volume above.
       - BACKUP_ENABLED=${BACKUP_ENABLED:-true}
       - "BACKUP_SCHEDULE=${BACKUP_SCHEDULE:-0 2 * * *}"

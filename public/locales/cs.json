@@ -2462,6 +2462,7 @@
         "loginWithSso": "Přihlásit se přes SSO",
         "orDivider": "nebo",
         "ssoError": "Přihlášení přes SSO selhalo. Zkuste to prosím znovu.",
+        "ssoNoAccount": "Pro toto přihlášení přes SSO zde zatím není žádný účet. Obraťte se na správce vaší domácnosti.",
         "forgotPassword": "Zapomenuté heslo?",
         "networkError": "Připojení selhalo. Zkontrolujte, zda server běží, a zkuste to znovu.",
         "capsLockWarning": "Caps Lock je zapnutý.",

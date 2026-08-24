@@ -151,7 +151,7 @@ export function authPaths() {
         summary: 'Handle OIDC callback',
         tag: 'Auth',
         auth: false,
-        description: 'Consumes the OIDC callback, validates state/nonce/PKCE, creates or finds the linked user, establishes a session, and redirects back to the app.',
+        description: 'Consumes the OIDC callback, validates state/nonce/PKCE, creates or finds the linked user, establishes a session, and redirects back to the app. With OIDC_ALLOW_SIGNUP=false an identity that matches no existing account is redirected to /login?error=oidc_signup_disabled instead of being provisioned.',
         responses: {
           302: { description: 'Redirect to app or login error page' },
         },

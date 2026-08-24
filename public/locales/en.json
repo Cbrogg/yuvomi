@@ -2462,6 +2462,7 @@
         "loginWithSso": "Sign in with SSO",
         "orDivider": "or",
         "ssoError": "SSO sign-in failed. Please try again.",
+        "ssoNoAccount": "There is no account here yet for this SSO sign-in. Please contact your household's administrator.",
         "forgotPassword": "Forgot password?",
         "networkError": "Connection failed. Check that the server is running and try again.",
         "capsLockWarning": "Caps Lock is on.",

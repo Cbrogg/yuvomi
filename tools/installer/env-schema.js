@@ -84,6 +84,11 @@ export const ENV_SCHEMA = [
   // email_verified. Ohne diesen Schalter verweigert die Anmeldung dort die
   // Kontoverknüpfung, ohne dass irgendwo stünde, warum.
   { key: 'OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM', type: 'default', label: 'Trust Email Without Verified Claim', default: 'false', required: false, group: 'oidc', writeToEnv: true },
+  // Wer den IdP nicht nur fuer diesen Haushalt betreibt, teilt sonst sein
+  // ganzes Verzeichnis: bisher bekam jeder, der sich dort anmelden konnte,
+  // beim ersten SSO-Klick ungefragt ein Konto (#654). Default 'true' - jede
+  // bestehende Installation bleibt nach dem Update, wie sie war.
+  { key: 'OIDC_ALLOW_SIGNUP',           type: 'default', label: 'Allow SSO Account Creation', default: 'true', required: false, group: 'oidc', writeToEnv: true },
   // Automatische Backups.
   { key: 'BACKUP_ENABLED',              type: 'default', label: 'Backups Enabled',          default: 'true', group: 'backup',  writeToEnv: true },
   { key: 'BACKUP_SCHEDULE',             type: 'default', label: 'Backup Schedule (cron)',   default: '0 2 * * *', group: 'backup', writeToEnv: true },

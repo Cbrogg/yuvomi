@@ -2462,6 +2462,7 @@
         "loginWithSso": "Accedi con SSO",
         "orDivider": "o",
         "ssoError": "Accesso SSO non riuscito. Riprova.",
+        "ssoNoAccount": "Non esiste ancora un account qui per questo accesso SSO. Contatta l'amministratore della tua famiglia.",
         "forgotPassword": "Password dimenticata?",
         "networkError": "Connessione non riuscita. Verifica che il server sia in esecuzione e riprova.",
         "capsLockWarning": "Il tasto Bloc Maiusc è attivo.",

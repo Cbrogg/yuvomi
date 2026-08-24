@@ -241,6 +241,8 @@
     "recipeProviderPrivateNetworkHint": "连接自有网络中的 Mealie 或 Tandoor 实例时需要。会解除食谱提供者镜像的 SSRF 保护。",
     "oidcTrustEmail": "在没有 verified 声明时信任邮箱",
     "oidcTrustEmailHint": "仅当你的提供方不发送 email_verified 且你信任它时才启用。",
+    "oidcAllowSignup": "允许 SSO 登录创建新账户",
+    "oidcAllowSignupHint": "如果您的提供方服务的人多于这个家庭，请关闭此项。已有账户仍可登录，仍会被关联。",
     "baseUrlLabel": "公开地址",
     "baseUrlHint": "家人打开 Yuvomi 时使用的地址，而不是容器的主机和端口。用于密码重置和邀请链接。",
     "syncIntervalLabel": "日历同步间隔（分钟）",

@@ -2462,6 +2462,7 @@
         "loginWithSso": "SSOでサインイン",
         "orDivider": "または",
         "ssoError": "SSOサインインに失敗しました。もう一度お試しください。",
+        "ssoNoAccount": "このSSOサインインに対応するアカウントはまだ存在しません。世帯の管理者にお問い合わせください。",
         "forgotPassword": "パスワードをお忘れですか？",
         "networkError": "接続に失敗しました。サーバーが起動しているか確認して、もう一度お試しください。",
         "capsLockWarning": "Caps Lock がオンになっています。",

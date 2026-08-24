@@ -2462,6 +2462,7 @@
         "loginWithSso": "Aanmelden met SSO",
         "orDivider": "of",
         "ssoError": "SSO-aanmelding mislukt. Probeer het opnieuw.",
+        "ssoNoAccount": "Er is hier nog geen account voor deze SSO-aanmelding. Neem contact op met de beheerder van je huishouden.",
         "forgotPassword": "Wachtwoord vergeten?",
         "networkError": "Verbinding mislukt. Controleer of de server draait en probeer het opnieuw.",
         "capsLockWarning": "Caps Lock staat aan.",

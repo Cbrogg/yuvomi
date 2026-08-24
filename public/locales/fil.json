@@ -2474,6 +2474,7 @@
         "loginWithSso": "Mag-sign in gamit ang SSO",
         "orDivider": "o",
         "ssoError": "Nabigo ang pag-sign in gamit ang SSO. Pakisubukang muli.",
+        "ssoNoAccount": "Wala pang account dito para sa pag-sign in na ito gamit ang SSO. Makipag-ugnayan sa administrador ng iyong sambahayan.",
         "forgotPassword": "Nakalimutan ang password?",
         "networkError": "Nabigo ang koneksyon. Tiyaking tumatakbo ang server at subukan ulit.",
         "capsLockWarning": "Naka-on ang Caps Lock.",

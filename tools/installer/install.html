@@ -1202,6 +1202,10 @@
               <label><input type="checkbox" id="adv-oidc-trust-email"> <span data-i18n="advanced.oidcTrustEmail">Trust email without a verified claim</span></label>
               <div class="hint" data-i18n="advanced.oidcTrustEmailHint">Only enable this if your provider does not send email_verified and you trust it.</div>
             </div>
+            <div class="field">
+              <label><input type="checkbox" id="adv-oidc-allow-signup" checked> <span data-i18n="advanced.oidcAllowSignup">Let SSO sign-ins create new accounts</span></label>
+              <div class="hint" data-i18n="advanced.oidcAllowSignupHint">Turn this off when your provider serves more people than this household. Existing accounts still sign in and still get linked.</div>
+            </div>
           </div>
         </div>
 
@@ -1650,7 +1654,7 @@ const S = {
   EMAIL_SMTP_USER: '', EMAIL_SMTP_PASS: '', EMAIL_FROM_ADDRESS: '', EMAIL_FROM_NAME: '',
   SESSION_SECURE: '', TRUST_PROXY: '',
   OIDC_ISSUER: '', OIDC_CLIENT_ID: '', OIDC_CLIENT_SECRET: '', OIDC_REDIRECT_URI: '',
-  OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM: '',
+  OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM: '', OIDC_ALLOW_SIGNUP: '',
   BACKUP_ENABLED: '', BACKUP_SCHEDULE: '', BACKUP_KEEP: '',
   WEBDAV_BACKUP_ENABLED: '', WEBDAV_BACKUP_URL: '', WEBDAV_BACKUP_USERNAME: '',
   WEBDAV_BACKUP_PASSWORD: '', WEBDAV_BACKUP_PATH: '', WEBDAV_BACKUP_KEEP: '',
@@ -1774,6 +1778,7 @@ function buildEnv() {
     OIDC_ISSUER: S.OIDC_ISSUER, OIDC_CLIENT_ID: S.OIDC_CLIENT_ID,
     OIDC_CLIENT_SECRET: S.OIDC_CLIENT_SECRET, OIDC_REDIRECT_URI: S.OIDC_REDIRECT_URI,
     OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM: S.OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM,
+    OIDC_ALLOW_SIGNUP: S.OIDC_ALLOW_SIGNUP,
     BACKUP_ENABLED: S.BACKUP_ENABLED, BACKUP_SCHEDULE: S.BACKUP_SCHEDULE, BACKUP_KEEP: S.BACKUP_KEEP,
     WEBDAV_BACKUP_ENABLED: S.WEBDAV_BACKUP_ENABLED, WEBDAV_BACKUP_URL: S.WEBDAV_BACKUP_URL,
     WEBDAV_BACKUP_USERNAME: S.WEBDAV_BACKUP_USERNAME, WEBDAV_BACKUP_PASSWORD: S.WEBDAV_BACKUP_PASSWORD,
@@ -2537,9 +2542,14 @@ $('adv-next').addEventListener('click', () => {
     // Nur schreiben, wenn ausdrücklich gesetzt: der Schalter senkt die Sicherheit
     // und der Server-Default (verlangt email_verified) ist der richtige.
     S.OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM = $('adv-oidc-trust-email').checked ? 'true' : '';
+    // Andersherum als beim Schalter darueber: hier ist der ABGEWAEHLTE Zustand
+    // der, der in die .env muss. Der Server-Default legt Konten an, das Haekchen
+    // ist also nur die Bestaetigung des Defaults und braucht keine Zeile.
+    S.OIDC_ALLOW_SIGNUP = $('adv-oidc-allow-signup').checked ? '' : 'false';
   } else {
     S.OIDC_ISSUER = ''; S.OIDC_CLIENT_ID = ''; S.OIDC_CLIENT_SECRET = ''; S.OIDC_REDIRECT_URI = '';
     S.OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM = '';
+    S.OIDC_ALLOW_SIGNUP = '';
   }
   showErr('adv-err', '');
 

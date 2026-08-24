@@ -2462,6 +2462,7 @@
         "loginWithSso": "通过SSO登录",
         "orDivider": "或",
         "ssoError": "SSO登录失败，请重试。",
+        "ssoNoAccount": "此SSO登录尚无对应账户，请联系您家庭的管理员。",
         "forgotPassword": "忘记密码？",
         "networkError": "连接失败。请检查服务器是否正在运行，然后重试。",
         "capsLockWarning": "大写锁定已开启。",

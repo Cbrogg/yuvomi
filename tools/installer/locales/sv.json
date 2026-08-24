@@ -241,6 +241,8 @@
     "recipeProviderPrivateNetworkHint": "Krävs för en Mealie- eller Tandoor-instans i ditt eget nätverk. Upphäver SSRF-skyddet för receptförmedlare.",
     "oidcTrustEmail": "Lita på e-post utan verified-claim",
     "oidcTrustEmailHint": "Aktivera bara om din leverantör inte skickar email_verified och du litar på den.",
+    "oidcAllowSignup": "Låt SSO-inloggningar skapa nya konton",
+    "oidcAllowSignupHint": "Stäng av det om din leverantör betjänar fler personer än det här hushållet. Befintliga konton loggar fortfarande in och länkas fortfarande.",
     "baseUrlLabel": "Publik adress",
     "baseUrlHint": "Adressen där din familj öppnar Yuvomi - inte containerns värd och port. Används för länkar till lösenordsåterställning och inbjudningar.",
     "syncIntervalLabel": "Synkroniseringsintervall för kalender (minuter)",

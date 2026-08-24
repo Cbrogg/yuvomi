@@ -148,6 +148,8 @@
     "recipeProviderPrivateNetworkHint": "Nötig für eine Mealie- oder Tandoor-Instanz im eigenen Netz. Hebt den SSRF-Schutz für Rezept-Provider-Spiegel auf.",
     "oidcTrustEmail": "E-Mail ohne verified-Claim vertrauen",
     "oidcTrustEmailHint": "Nur aktivieren, wenn dein Anbieter kein email_verified sendet und du ihm vertraust.",
+    "oidcAllowSignup": "SSO-Anmeldungen dürfen neue Konten anlegen",
+    "oidcAllowSignupHint": "Ausschalten, wenn der Anbieter mehr Menschen bedient als diesen Haushalt. Bestehende Konten melden sich weiter an und werden weiter verknüpft.",
     "baseUrlLabel": "Öffentliche Adresse",
     "baseUrlHint": "Die Adresse, unter der deine Familie Yuvomi aufruft - nicht Host und Port des Containers. Wird für Passwort-Reset- und Einladungslinks verwendet.",
     "syncIntervalLabel": "Kalender-Sync-Intervall (Minuten)",

@@ -241,6 +241,8 @@
     "recipeProviderPrivateNetworkHint": "Necesario para una instancia de Mealie o Tandoor en tu propia red. Levanta la protección SSRF para espejos de proveedores de recetas.",
     "oidcTrustEmail": "Confiar en el correo sin el claim verified",
     "oidcTrustEmailHint": "Actívalo solo si tu proveedor no envía email_verified y confías en él.",
+    "oidcAllowSignup": "Permitir que los inicios de sesión con SSO creen cuentas nuevas",
+    "oidcAllowSignupHint": "Desactívalo si tu proveedor atiende a más personas que este hogar. Las cuentas existentes siguen iniciando sesión y siguen vinculándose.",
     "baseUrlLabel": "Dirección pública",
     "baseUrlHint": "La dirección con la que tu familia abre Yuvomi, no el host y el puerto del contenedor. Se usa para enlaces de restablecimiento de contraseña e invitaciones.",
     "syncIntervalLabel": "Intervalo de sincronización del calendario (minutos)",

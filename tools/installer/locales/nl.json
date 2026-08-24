@@ -148,6 +148,8 @@
     "recipeProviderPrivateNetworkHint": "Nodig voor een Mealie- of Tandoor-exemplaar in je eigen netwerk. Heft de SSRF-bescherming voor recipe provider-spiegels op.",
     "oidcTrustEmail": "E-mail zonder verified-claim vertrouwen",
     "oidcTrustEmailHint": "Schakel dit alleen in als je provider geen email_verified stuurt en je die vertrouwt.",
+    "oidcAllowSignup": "SSO-aanmeldingen mogen nieuwe accounts aanmaken",
+    "oidcAllowSignupHint": "Zet dit uit als je provider meer mensen bedient dan dit huishouden. Bestaande accounts melden zich nog steeds aan en worden nog steeds gekoppeld.",
     "baseUrlLabel": "Openbaar adres",
     "baseUrlHint": "Het adres waarop je gezin Yuvomi opent - niet de host en poort van de container. Wordt gebruikt voor links om wachtwoorden te herstellen en voor uitnodigingen.",
     "syncIntervalLabel": "Synchronisatie-interval agenda (minuten)",

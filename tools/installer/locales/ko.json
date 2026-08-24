@@ -148,6 +148,8 @@
     "recipeProviderPrivateNetworkHint": "자체 네트워크의 Mealie 또는 Tandoor 인스턴스에 필요합니다. 레시피 공급자 미러에 대한 SSRF 보호를 해제합니다.",
     "oidcTrustEmail": "verified 클레임 없이 이메일 신뢰",
     "oidcTrustEmailHint": "제공자가 email_verified를 보내지 않고 이를 신뢰하는 경우에만 사용하세요.",
+    "oidcAllowSignup": "SSO 로그인으로 새 계정 생성 허용",
+    "oidcAllowSignupHint": "제공자가 이 가정보다 많은 사람을 담당한다면 끄세요. 기존 계정은 계속 로그인되고 계속 연결됩니다.",
     "baseUrlLabel": "공개 주소",
     "baseUrlHint": "가족이 Yuvomi를 여는 주소입니다. 컨테이너의 호스트와 포트가 아닙니다. 비밀번호 재설정 및 초대 링크에 사용됩니다.",
     "syncIntervalLabel": "캘린더 동기화 간격(분)",

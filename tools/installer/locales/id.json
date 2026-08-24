@@ -148,6 +148,8 @@
     "recipeProviderPrivateNetworkHint": "Diperlukan untuk contoh Mealie atau Tandoor di jaringan Anda. Melepas perlindungan SSRF untuk salinan penyedia resep.",
     "oidcTrustEmail": "Percayai email tanpa klaim verified",
     "oidcTrustEmailHint": "Aktifkan hanya jika penyedia Anda tidak mengirim email_verified dan Anda memercayainya.",
+    "oidcAllowSignup": "Izinkan masuk SSO membuat akun baru",
+    "oidcAllowSignupHint": "Matikan jika penyedia Anda melayani lebih banyak orang daripada rumah tangga ini. Akun yang sudah ada tetap bisa masuk dan tetap ditautkan.",
     "baseUrlLabel": "Alamat publik",
     "baseUrlHint": "Alamat yang dipakai keluargamu untuk membuka Yuvomi - bukan host dan port kontainer. Dipakai untuk tautan atur ulang kata sandi dan undangan.",
     "syncIntervalLabel": "Interval sinkronisasi kalender (menit)",

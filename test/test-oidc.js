@@ -514,6 +514,94 @@ test('setzt beim Linking ebenfalls den iss-Claim', () => {
   assert(user.oidc_provider === 'https://real-idp.example.com/', `Falscher oidc_provider: ${user.oidc_provider}`);
 });
 
+// ─── Automatische Kontoerstellung abschaltbar (#654) ─────────────────────────
+//
+// Wer den IdP nicht nur fuer diesen Haushalt betreibt, gab bisher jedem in
+// seinem Verzeichnis beim ersten SSO-Klick ein Konto im Familienplaner.
+// `OIDC_ALLOW_SIGNUP=false` nimmt AUSSCHLIESSLICH das Anlegen weg: Erkennen und
+// Verknuepfen muessen bleiben, sonst kaeme auch der nicht mehr hinein, den der
+// Admin gerade von Hand angelegt hat - und der Schalter waere unbenutzbar.
+
+console.log('\n[OIDC-Test] OIDC_ALLOW_SIGNUP\n');
+
+/** Fuehrt fn mit gesetztem Schalter aus und raeumt ihn danach wieder weg. */
+function withSignup(value, fn) {
+  const before = process.env.OIDC_ALLOW_SIGNUP;
+  if (value === undefined) delete process.env.OIDC_ALLOW_SIGNUP;
+  else process.env.OIDC_ALLOW_SIGNUP = value;
+  try { return fn(); }
+  finally {
+    if (before === undefined) delete process.env.OIDC_ALLOW_SIGNUP;
+    else process.env.OIDC_ALLOW_SIGNUP = before;
+  }
+}
+
+test('ohne Schalter legt eine unbekannte Identitaet weiterhin ein Konto an', () => {
+  // Der Default entscheidet ueber jede bestehende Installation: waere er
+  // umgekehrt, spaerrte ein Update jeden SSO-Nutzer aus, der noch kein Konto hat.
+  const db = buildOidcTestDb();
+  const user = withSignup(undefined, () => findOrCreateOidcUser(db, { sub: 'default-on', preferred_username: 'dana' }));
+  assert(user !== null, 'Der Default muss anlegen, sonst ist das Update ein Ausschluss');
+  assert(user.oidc_sub === 'default-on', 'Und zwar mit dem validierten sub');
+});
+
+test('OIDC_ALLOW_SIGNUP=false legt kein Konto fuer eine unbekannte Identitaet an', () => {
+  const db = buildOidcTestDb();
+  const user = withSignup('false', () => findOrCreateOidcUser(db, { sub: 'unknown-sub', preferred_username: 'eve' }));
+  assert(user === null, 'Rueckgabe muss null sein, damit der Callback den Grund kennt');
+  const { n } = db.prepare('SELECT count(*) AS n FROM users').get();
+  assert(n === 0, `Es darf kein Konto entstehen, es waren ${n}`);
+});
+
+test('OIDC_ALLOW_SIGNUP=false meldet ein bereits verknuepftes Konto weiterhin an', () => {
+  const db = buildOidcTestDb();
+  db.exec(`INSERT INTO users (username, display_name, password_hash, oidc_sub, oidc_provider)
+           VALUES ('frank', 'Frank', '$oidc$', 'known-sub', 'oidc')`);
+  const user = withSignup('false', () => findOrCreateOidcUser(db, { sub: 'known-sub' }));
+  assert(user !== null && user.username === 'frank', 'Der sub-Treffer ist von dem Schalter nicht betroffen');
+});
+
+test('OIDC_ALLOW_SIGNUP=false verknuepft ein von Hand angelegtes Konto weiterhin', () => {
+  // Das ist der Weg, den der Schalter offen laesst - und der ganze Grund, warum
+  // er hinter der Verknuepfung steht und nicht davor: Admin legt an, der Nutzer
+  // meldet sich per SSO an, beides findet zusammen.
+  const db = buildOidcTestDb();
+  const localId = addLocalUserWithEmail(db, 'grace', 'grace@example.com');
+  const user = withSignup('false', () => findOrCreateOidcUser(db, {
+    sub: 'link-sub-654', email: 'grace@example.com', email_verified: true,
+  }));
+  assert(user !== null, 'Die Verknuepfung darf der Schalter nicht mitnehmen');
+  assert(user.id === localId, `Falsches Konto verknuepft: ${user.id} statt ${localId}`);
+  const linked = db.prepare('SELECT oidc_sub FROM users WHERE id = ?').get(localId);
+  assert(linked.oidc_sub === 'link-sub-654', 'Der sub muss am Konto haengen');
+  const { n } = db.prepare('SELECT count(*) AS n FROM users').get();
+  assert(n === 1, `Es darf kein zweites Konto entstehen, es waren ${n}`);
+});
+
+test('nur der ausdrueckliche Wert "false" schaltet ab', () => {
+  // Ein Sicherheitsschalter, der auf jeden gesetzten Wert reagiert, macht aus
+  // einem Tippfehler eine Aussperrung.
+  const db = buildOidcTestDb();
+  for (const value of ['true', '1', 'no', '']) {
+    const user = withSignup(value, () => findOrCreateOidcUser(db, { sub: `sub-${value || 'empty'}` }));
+    assert(user !== null, `OIDC_ALLOW_SIGNUP="${value}" darf nicht abschalten`);
+  }
+});
+
+test('der abgewiesene Fall bekommt einen eigenen Grund, keine Sammelmeldung', () => {
+  // Regel ueber die Quelle: die Anmeldeseite warf bis #654 JEDEN oidc_-Fehler in
+  // dieselbe Meldung ("SSO-Anmeldung fehlgeschlagen"). Fuer diesen Fall ist die
+  // falsch - beim Anbieter hat alles funktioniert, hier fehlt das Konto - und
+  // wer sie liest, sucht den Fehler bei seinem Passwort statt bei seinem Admin.
+  const auth  = readFileSync(new URL('../server/auth.js', import.meta.url), 'utf8');
+  const login = readFileSync(new URL('../public/pages/login.js', import.meta.url), 'utf8');
+
+  assert(auth.includes("'/login?error=oidc_signup_disabled'"),
+    'der Callback nennt den Grund nicht - dann kann die Anmeldeseite ihn nicht unterscheiden');
+  assert(login.includes('oidc_signup_disabled') && login.includes('ssoNoAccount'),
+    'die Anmeldeseite kennt den Grund nicht und zeigt weiter die Sammelmeldung');
+});
+
 // ─── Verknuepfen und Loesen (#832) ────────────────────────────────────────────
 //
 // Ein gleicher Benutzername verknuepft bewusst NICHT - sonst naehme sich jeder,

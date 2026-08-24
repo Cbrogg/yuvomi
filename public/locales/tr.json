@@ -2462,6 +2462,7 @@
         "loginWithSso": "SSO ile giriş yap",
         "orDivider": "veya",
         "ssoError": "SSO girişi başarısız oldu. Lütfen tekrar deneyin.",
+        "ssoNoAccount": "Bu SSO girişi için burada henüz bir hesap yok. Lütfen hane yöneticinizle iletişime geçin.",
         "forgotPassword": "Parolanı mı unuttun?",
         "networkError": "Bağlantı başarısız oldu. Sunucunun çalıştığını kontrol edip tekrar deneyin.",
         "capsLockWarning": "Caps Lock açık.",

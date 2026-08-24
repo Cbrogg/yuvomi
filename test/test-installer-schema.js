@@ -77,10 +77,16 @@ const COMPLETENESS_KEYS = [
 // Upload - Dokumente, Termin-Anhaenge, Belege der Haushaltshilfe.
 const UPLOAD_KEYS = ['MAX_UPLOAD_MB'];
 
+// Der Schalter gegen automatische Kontoerstellung per SSO (#654). Eigene Liste
+// statt Anhaengen an P5_KEYS: das ist eine AUSBAUSTUFE und keine Sachgruppe -
+// wer sie nachtraeglich fuellt, macht aus einer Datumsangabe eine Sammelkiste.
+const OIDC_SIGNUP_KEYS = ['OIDC_ALLOW_SIGNUP'];
+
 const TOTAL_KEYS = ORIGINAL_KEYS.length + GOOGLE_DRIVE_KEYS.length + OUTLOOK_KEYS.length + 2 + P5_KEYS.length
   + DOCUMENT_STORAGE_KEYS.length + DOCUMENT_STORAGE_LOCAL_KEYS.length
   + SUBSCRIPTION_KEYS.length + EMAIL_KEYS.length + WEBDAV_BACKUP_KEYS.length
-  + WIZARD_EXTRA_KEYS.length + COMPLETENESS_KEYS.length + UPLOAD_KEYS.length; // + TZ + OIKOS_HTTP_PORT
+  + WIZARD_EXTRA_KEYS.length + COMPLETENESS_KEYS.length + UPLOAD_KEYS.length
+  + OIDC_SIGNUP_KEYS.length; // + TZ + OIKOS_HTTP_PORT
 
 // ── Regel-Guard: .env.example ⇄ ENV_SCHEMA ⇄ gesendetes env-Objekt ───────────
 //

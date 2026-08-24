@@ -241,6 +241,8 @@
     "recipeProviderPrivateNetworkHint": "Cần cho phiên bản Mealie hoặc Tandoor trong mạng của bạn. Gỡ bảo vệ SSRF cho gương nhà cung cấp công thức.",
     "oidcTrustEmail": "Tin cậy email khi không có claim verified",
     "oidcTrustEmailHint": "Chỉ bật nếu nhà cung cấp không gửi email_verified và bạn tin tưởng họ.",
+    "oidcAllowSignup": "Cho phép đăng nhập SSO tạo tài khoản mới",
+    "oidcAllowSignupHint": "Tắt tùy chọn này nếu nhà cung cấp của bạn phục vụ nhiều người hơn hộ gia đình này. Các tài khoản hiện có vẫn đăng nhập và vẫn được liên kết.",
     "baseUrlLabel": "Địa chỉ công khai",
     "baseUrlHint": "Địa chỉ mà gia đình bạn mở Yuvomi - không phải host và cổng của container. Dùng cho liên kết đặt lại mật khẩu và lời mời.",
     "syncIntervalLabel": "Khoảng thời gian đồng bộ lịch (phút)",

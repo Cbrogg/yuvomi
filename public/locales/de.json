@@ -2474,6 +2474,7 @@
         "loginWithSso": "Mit SSO anmelden",
         "orDivider": "oder",
         "ssoError": "SSO-Anmeldung fehlgeschlagen. Bitte erneut versuchen.",
+        "ssoNoAccount": "Für diese SSO-Anmeldung gibt es hier noch kein Konto. Wende dich an die Administration deines Haushalts.",
         "forgotPassword": "Passwort vergessen?",
         "networkError": "Verbindung fehlgeschlagen. Prüfe, ob der Server läuft, und versuche es erneut.",
         "capsLockWarning": "Feststelltaste (Caps Lock) ist aktiv.",
