@@ -3031,7 +3031,8 @@
         "minutesWorked": "Gewerkte minuten",
         "hoursWorked": "Gewerkte uren",
         "computedAmount": "Berekend bedrag",
-        "setupProfileAction": "Profiel aanmaken"
+        "setupProfileAction": "Profiel aanmaken",
+        "loadError": "Huishouden kon niet worden geladen."
     },
     "userMultiSelect": {
         "moreUsers": "meer",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} bon bijgevoegd",
         "proofLabel": "Betaalbewijs",
         "proofHint": "Eén bewijs, bijvoorbeeld een screenshot van de overboeking.",
-        "proofDocumentName": "Betaalbewijs {{group}}: {{name}}"
+        "proofDocumentName": "Betaalbewijs {{group}}: {{name}}",
+        "loadError": "Gedeelde uitgaven konden niet worden geladen."
     },
     "wmo": {
         "0": "Heldere lucht",

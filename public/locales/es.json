@@ -3031,7 +3031,8 @@
         "minutesWorked": "Minutos trabajados",
         "hoursWorked": "Horas trabajadas",
         "computedAmount": "Importe calculado",
-        "setupProfileAction": "Crear perfil"
+        "setupProfileAction": "Crear perfil",
+        "loadError": "No se pudo cargar la limpieza."
     },
     "userMultiSelect": {
         "moreUsers": "más",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} comprobante adjunto",
         "proofLabel": "Justificante de pago",
         "proofHint": "Un justificante, por ejemplo la captura de la transferencia.",
-        "proofDocumentName": "Justificante de pago {{group}}: {{name}}"
+        "proofDocumentName": "Justificante de pago {{group}}: {{name}}",
+        "loadError": "No se pudieron cargar los gastos compartidos."
     },
     "wmo": {
         "0": "Cielo despejado",

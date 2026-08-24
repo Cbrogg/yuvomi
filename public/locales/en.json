@@ -3031,7 +3031,8 @@
         "minutesWorked": "Minutes worked",
         "hoursWorked": "Hours worked",
         "computedAmount": "Computed amount",
-        "setupProfileAction": "Create profile"
+        "setupProfileAction": "Create profile",
+        "loadError": "Housekeeping could not be loaded."
     },
     "userMultiSelect": {
         "moreUsers": "more",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} receipt attached",
         "proofLabel": "Payment proof",
         "proofHint": "One proof, for example a screenshot of the transfer.",
-        "proofDocumentName": "Payment proof {{group}}: {{name}}"
+        "proofDocumentName": "Payment proof {{group}}: {{name}}",
+        "loadError": "Shared expenses could not be loaded."
     },
     "wmo": {
         "0": "Clear sky",

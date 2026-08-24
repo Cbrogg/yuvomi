@@ -3031,7 +3031,8 @@
         "minutesWorked": "Çalışılan dakika",
         "hoursWorked": "Çalışılan saat",
         "computedAmount": "Hesaplanan tutar",
-        "setupProfileAction": "Profil oluştur"
+        "setupProfileAction": "Profil oluştur",
+        "loadError": "Ev işleri yüklenemedi."
     },
     "userMultiSelect": {
         "moreUsers": "daha",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} fiş eklendi",
         "proofLabel": "Ödeme belgesi",
         "proofHint": "Tek bir belge, örneğin havalenin ekran görüntüsü.",
-        "proofDocumentName": "Ödeme belgesi {{group}}: {{name}}"
+        "proofDocumentName": "Ödeme belgesi {{group}}: {{name}}",
+        "loadError": "Paylaşılan giderler yüklenemedi."
     },
     "wmo": {
         "0": "Açık",

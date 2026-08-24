@@ -3035,7 +3035,8 @@
         "minutesWorked": "Waktu kerja (mnt)",
         "hoursWorked": "Waktu kerja",
         "computedAmount": "Jumlah terhitung",
-        "setupProfileAction": "Buat profil"
+        "setupProfileAction": "Buat profil",
+        "loadError": "Asisten rumah tangga tidak dapat dimuat."
     },
     "splitExpenses": {
         "title": "Pengeluaran Bersama",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} bukti terlampir",
         "proofLabel": "Bukti pembayaran",
         "proofHint": "Satu bukti, misalnya tangkapan layar transfer.",
-        "proofDocumentName": "Bukti pembayaran {{group}}: {{name}}"
+        "proofDocumentName": "Bukti pembayaran {{group}}: {{name}}",
+        "loadError": "Pengeluaran bersama tidak dapat dimuat."
     },
     "wmo": {
         "0": "Langit cerah",

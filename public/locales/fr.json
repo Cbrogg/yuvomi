@@ -3031,7 +3031,8 @@
         "minutesWorked": "Minutes travaillées",
         "hoursWorked": "Heures travaillées",
         "computedAmount": "Montant calculé",
-        "setupProfileAction": "Créer le profil"
+        "setupProfileAction": "Créer le profil",
+        "loadError": "Impossible de charger le ménage."
     },
     "userMultiSelect": {
         "moreUsers": "autres",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} justificatif joint",
         "proofLabel": "Preuve de paiement",
         "proofHint": "Une preuve, par exemple la capture du virement.",
-        "proofDocumentName": "Preuve de paiement {{group}} : {{name}}"
+        "proofDocumentName": "Preuve de paiement {{group}} : {{name}}",
+        "loadError": "Impossible de charger les dépenses partagées."
     },
     "wmo": {
         "0": "Ciel dégagé",

@@ -3035,7 +3035,8 @@
         "minutesWorked": "Arbeitszeit (Min.)",
         "hoursWorked": "Arbeitszeit",
         "computedAmount": "Berechneter Betrag",
-        "setupProfileAction": "Profil anlegen"
+        "setupProfileAction": "Profil anlegen",
+        "loadError": "Haushaltshilfe konnte nicht geladen werden."
     },
     "splitExpenses": {
         "title": "Gemeinsame Ausgaben",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} Beleg angehängt",
         "proofLabel": "Zahlungsnachweis",
         "proofHint": "Ein Nachweis, etwa der Screenshot der Überweisung.",
-        "proofDocumentName": "Zahlungsnachweis {{group}}: {{name}}"
+        "proofDocumentName": "Zahlungsnachweis {{group}}: {{name}}",
+        "loadError": "Gemeinsame Ausgaben konnten nicht geladen werden."
     },
     "wmo": {
         "0": "Klarer Himmel",

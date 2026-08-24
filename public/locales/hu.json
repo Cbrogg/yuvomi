@@ -3031,7 +3031,8 @@
         "minutesWorked": "Ledolgozott percek",
         "hoursWorked": "Ledolgozott órák",
         "computedAmount": "Számított összeg",
-        "setupProfileAction": "Profil létrehozása"
+        "setupProfileAction": "Profil létrehozása",
+        "loadError": "A háztartás betöltése sikertelen."
     },
     "userMultiSelect": {
         "moreUsers": "továbbiak",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} csatolt bizonylat",
         "proofLabel": "Fizetési igazolás",
         "proofHint": "Egy igazolás, például az utalás képernyőképe.",
-        "proofDocumentName": "Fizetési igazolás {{group}}: {{name}}"
+        "proofDocumentName": "Fizetési igazolás {{group}}: {{name}}",
+        "loadError": "A megosztott költségek betöltése sikertelen."
     },
     "wmo": {
         "0": "Tiszta égbolt",

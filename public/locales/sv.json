@@ -3031,7 +3031,8 @@
         "minutesWorked": "Arbetade minuter",
         "hoursWorked": "Arbetade timmar",
         "computedAmount": "Beräknat belopp",
-        "setupProfileAction": "Skapa profil"
+        "setupProfileAction": "Skapa profil",
+        "loadError": "Städning kunde inte laddas."
     },
     "userMultiSelect": {
         "moreUsers": "mer",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} kvitto bifogat",
         "proofLabel": "Betalningsbevis",
         "proofHint": "Ett bevis, till exempel en skärmbild av överföringen.",
-        "proofDocumentName": "Betalningsbevis {{group}}: {{name}}"
+        "proofDocumentName": "Betalningsbevis {{group}}: {{name}}",
+        "loadError": "Delade utgifter kunde inte laddas."
     },
     "wmo": {
         "0": "Klart",

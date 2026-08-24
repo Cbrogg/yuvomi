@@ -3031,7 +3031,8 @@
         "minutesWorked": "Отработанные минуты",
         "hoursWorked": "Отработанные часы",
         "computedAmount": "Рассчитанная сумма",
-        "setupProfileAction": "Создать профиль"
+        "setupProfileAction": "Создать профиль",
+        "loadError": "Не удалось загрузить уборку."
     },
     "userMultiSelect": {
         "moreUsers": "ещё",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "Прикреплён чек: {{count}}",
         "proofLabel": "Подтверждение оплаты",
         "proofHint": "Одно подтверждение, например скриншот перевода.",
-        "proofDocumentName": "Подтверждение оплаты {{group}}: {{name}}"
+        "proofDocumentName": "Подтверждение оплаты {{group}}: {{name}}",
+        "loadError": "Не удалось загрузить общие расходы."
     },
     "wmo": {
         "0": "Ясное небо",

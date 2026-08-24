@@ -3031,7 +3031,8 @@
         "minutesWorked": "工作分钟数",
         "hoursWorked": "工作小时数",
         "computedAmount": "计算金额",
-        "setupProfileAction": "创建档案"
+        "setupProfileAction": "创建档案",
+        "loadError": "无法加载家务。"
     },
     "userMultiSelect": {
         "moreUsers": "更多",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "已附加 {{count}} 张凭证",
         "proofLabel": "付款凭据",
         "proofHint": "一份凭据，例如转账截图。",
-        "proofDocumentName": "付款凭据 {{group}}：{{name}}"
+        "proofDocumentName": "付款凭据 {{group}}：{{name}}",
+        "loadError": "无法加载共享支出。"
     },
     "wmo": {
         "0": "晴天",

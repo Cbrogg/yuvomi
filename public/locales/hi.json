@@ -3031,7 +3031,8 @@
         "minutesWorked": "काम के मिनट",
         "hoursWorked": "काम के घंटे",
         "computedAmount": "गणना की गई राशि",
-        "setupProfileAction": "प्रोफ़ाइल बनाएँ"
+        "setupProfileAction": "प्रोफ़ाइल बनाएँ",
+        "loadError": "गृहकार्य लोड नहीं हो सका।"
     },
     "userMultiSelect": {
         "moreUsers": "और",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} रसीद संलग्न",
         "proofLabel": "भुगतान प्रमाण",
         "proofHint": "एक प्रमाण, जैसे ट्रांसफ़र का स्क्रीनशॉट।",
-        "proofDocumentName": "भुगतान प्रमाण {{group}}: {{name}}"
+        "proofDocumentName": "भुगतान प्रमाण {{group}}: {{name}}",
+        "loadError": "साझा खर्च लोड नहीं हो सके।"
     },
     "wmo": {
         "0": "साफ आकाश",

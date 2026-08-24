@@ -3035,7 +3035,8 @@
         "minutesWorked": "Minutong napagtrabahuhan",
         "hoursWorked": "Oras na napagtrabahuhan",
         "computedAmount": "Kinalkulang halaga",
-        "setupProfileAction": "Gumawa ng profile"
+        "setupProfileAction": "Gumawa ng profile",
+        "loadError": "Hindi ma-load ang gawaing-bahay."
     },
     "splitExpenses": {
         "title": "Mga hinating gastos",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} resibo ang nakalakip",
         "proofLabel": "Patunay ng bayad",
         "proofHint": "Isang patunay, halimbawa ay screenshot ng paglilipat.",
-        "proofDocumentName": "Patunay ng bayad {{group}}: {{name}}"
+        "proofDocumentName": "Patunay ng bayad {{group}}: {{name}}",
+        "loadError": "Hindi ma-load ang mga hinating gastos."
     },
     "wmo": {
         "0": "Maaliwalas na langit",

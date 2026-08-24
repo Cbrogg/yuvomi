@@ -3035,7 +3035,8 @@
         "minutesWorked": "Przepracowane minuty",
         "hoursWorked": "Przepracowane godziny",
         "computedAmount": "Obliczona kwota",
-        "setupProfileAction": "Utwórz profil"
+        "setupProfileAction": "Utwórz profil",
+        "loadError": "Nie udało się załadować sprzątania."
     },
     "splitExpenses": {
         "title": "Wspólne wydatki",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "Załączone dowody: {{count}}",
         "proofLabel": "Potwierdzenie płatności",
         "proofHint": "Jedno potwierdzenie, na przykład zrzut ekranu przelewu.",
-        "proofDocumentName": "Potwierdzenie płatności {{group}}: {{name}}"
+        "proofDocumentName": "Potwierdzenie płatności {{group}}: {{name}}",
+        "loadError": "Nie udało się załadować wspólnych wydatków."
     },
     "wmo": {
         "0": "Bezchmurnie",

@@ -3035,7 +3035,8 @@
         "minutesWorked": "زمان کار (دقیقه)",
         "hoursWorked": "زمان کار",
         "computedAmount": "مبلغ محاسبه‌شده",
-        "setupProfileAction": "ایجاد نمایه"
+        "setupProfileAction": "ایجاد نمایه",
+        "loadError": "خدمتکار خانه بارگذاری نشد."
     },
     "splitExpenses": {
         "title": "هزینه‌های مشترک",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "رسیدهای پیوست‌شده: {{count}}",
         "proofLabel": "سند پرداخت",
         "proofHint": "یک سند، برای نمونه تصویر انتقال وجه.",
-        "proofDocumentName": "سند پرداخت {{group}}: {{name}}"
+        "proofDocumentName": "سند پرداخت {{group}}: {{name}}",
+        "loadError": "هزینه‌های مشترک بارگذاری نشدند."
     },
     "wmo": {
         "0": "آسمان صاف",

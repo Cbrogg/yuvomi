@@ -3031,7 +3031,8 @@
         "minutesWorked": "دقائق العمل",
         "hoursWorked": "ساعات العمل",
         "computedAmount": "المبلغ المحسوب",
-        "setupProfileAction": "إنشاء ملف شخصي"
+        "setupProfileAction": "إنشاء ملف شخصي",
+        "loadError": "تعذر تحميل التدبير المنزلي."
     },
     "userMultiSelect": {
         "moreUsers": "آخرون",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "إيصال واحد مرفق",
         "proofLabel": "إثبات الدفع",
         "proofHint": "إثبات واحد، مثل لقطة شاشة للتحويل.",
-        "proofDocumentName": "إثبات الدفع {{group}}: {{name}}"
+        "proofDocumentName": "إثبات الدفع {{group}}: {{name}}",
+        "loadError": "تعذر تحميل المصاريف المشتركة."
     },
     "wmo": {
         "0": "سماء صافية",

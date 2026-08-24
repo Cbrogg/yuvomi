@@ -3031,7 +3031,8 @@
         "minutesWorked": "Minutos trabalhados",
         "hoursWorked": "Horas trabalhadas",
         "computedAmount": "Valor calculado",
-        "setupProfileAction": "Criar perfil"
+        "setupProfileAction": "Criar perfil",
+        "loadError": "Não foi possível carregar a faxina."
     },
     "userMultiSelect": {
         "moreUsers": "mais",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} comprovativo anexado",
         "proofLabel": "Comprovativo de pagamento",
         "proofHint": "Um comprovativo, por exemplo a captura da transferência.",
-        "proofDocumentName": "Comprovativo de pagamento {{group}}: {{name}}"
+        "proofDocumentName": "Comprovativo de pagamento {{group}}: {{name}}",
+        "loadError": "Não foi possível carregar as despesas compartilhadas."
     },
     "wmo": {
         "0": "Céu limpo",

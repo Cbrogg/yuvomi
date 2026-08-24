@@ -3031,7 +3031,8 @@
         "minutesWorked": "Minuti lavorati",
         "hoursWorked": "Ore lavorate",
         "computedAmount": "Importo calcolato",
-        "setupProfileAction": "Crea profilo"
+        "setupProfileAction": "Crea profilo",
+        "loadError": "Impossibile caricare le pulizie."
     },
     "userMultiSelect": {
         "moreUsers": "altri",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} ricevuta allegata",
         "proofLabel": "Prova di pagamento",
         "proofHint": "Una prova, ad esempio lo screenshot del bonifico.",
-        "proofDocumentName": "Prova di pagamento {{group}}: {{name}}"
+        "proofDocumentName": "Prova di pagamento {{group}}: {{name}}",
+        "loadError": "Impossibile caricare le spese condivise."
     },
     "wmo": {
         "0": "Cielo sereno",

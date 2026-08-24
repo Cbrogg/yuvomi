@@ -2733,7 +2733,8 @@
         "minutesWorked": "Pracovní minuty",
         "hoursWorked": "Pracovní hodiny",
         "computedAmount": "Vypočtená částka",
-        "setupProfileAction": "Vytvořit profil"
+        "setupProfileAction": "Vytvořit profil",
+        "loadError": "Domácí práce se nepodařilo načíst."
     },
     "splitExpenses": {
         "title": "Společné výdaje",
@@ -2871,7 +2872,8 @@
         "receiptsAttachedLabel_one": "Připojený doklad: {{count}}",
         "proofLabel": "Doklad o platbě",
         "proofHint": "Jeden doklad, například snímek převodu.",
-        "proofDocumentName": "Doklad o platbě {{group}}: {{name}}"
+        "proofDocumentName": "Doklad o platbě {{group}}: {{name}}",
+        "loadError": "Společné výdaje se nepodařilo načíst."
     },
     "documents": {
         "title": "Dokumenty",

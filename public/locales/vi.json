@@ -3031,7 +3031,8 @@
         "minutesWorked": "Số phút làm việc",
         "hoursWorked": "Số giờ làm việc",
         "computedAmount": "Số tiền được tính",
-        "setupProfileAction": "Tạo hồ sơ"
+        "setupProfileAction": "Tạo hồ sơ",
+        "loadError": "Không thể tải dọn dẹp."
     },
     "userMultiSelect": {
         "moreUsers": "thêm",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "Đã đính kèm {{count}} chứng từ",
         "proofLabel": "Bằng chứng thanh toán",
         "proofHint": "Một bằng chứng, ví dụ ảnh chụp màn hình chuyển khoản.",
-        "proofDocumentName": "Bằng chứng thanh toán {{group}}: {{name}}"
+        "proofDocumentName": "Bằng chứng thanh toán {{group}}: {{name}}",
+        "loadError": "Không thể tải chi phí chung."
     },
     "wmo": {
         "0": "Trời quang",

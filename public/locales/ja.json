@@ -3031,7 +3031,8 @@
         "minutesWorked": "作業時間（分）",
         "hoursWorked": "作業時間",
         "computedAmount": "計算金額",
-        "setupProfileAction": "プロフィールを作成"
+        "setupProfileAction": "プロフィールを作成",
+        "loadError": "家事の読み込みに失敗しました。"
     },
     "userMultiSelect": {
         "moreUsers": "他",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "領収書 {{count}} 件を添付",
         "proofLabel": "支払いの証明",
         "proofHint": "証明を1件、たとえば振込のスクリーンショット。",
-        "proofDocumentName": "支払いの証明 {{group}}: {{name}}"
+        "proofDocumentName": "支払いの証明 {{group}}: {{name}}",
+        "loadError": "共有費用の読み込みに失敗しました。"
     },
     "wmo": {
         "0": "快晴",

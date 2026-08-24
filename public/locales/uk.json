@@ -3031,7 +3031,8 @@
         "minutesWorked": "Відпрацьовані хвилини",
         "hoursWorked": "Відпрацьовані години",
         "computedAmount": "Розрахована сума",
-        "setupProfileAction": "Створити профіль"
+        "setupProfileAction": "Створити профіль",
+        "loadError": "Не вдалося завантажити прибирання."
     },
     "userMultiSelect": {
         "moreUsers": "інші",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "Прикріплено чек: {{count}}",
         "proofLabel": "Підтвердження оплати",
         "proofHint": "Одне підтвердження, наприклад знімок переказу.",
-        "proofDocumentName": "Підтвердження оплати {{group}}: {{name}}"
+        "proofDocumentName": "Підтвердження оплати {{group}}: {{name}}",
+        "loadError": "Не вдалося завантажити спільні витрати."
     },
     "wmo": {
         "0": "Ясне небо",

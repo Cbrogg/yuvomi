@@ -3031,7 +3031,8 @@
         "minutesWorked": "Λεπτά εργασίας",
         "hoursWorked": "Ώρες εργασίας",
         "computedAmount": "Υπολογισμένο ποσό",
-        "setupProfileAction": "Δημιουργία προφίλ"
+        "setupProfileAction": "Δημιουργία προφίλ",
+        "loadError": "Δεν ήταν δυνατή η φόρτωση του νοικοκυριού."
     },
     "userMultiSelect": {
         "moreUsers": "ακόμη",
@@ -3173,7 +3174,8 @@
         "receiptsAttachedLabel_one": "{{count}} συνημμένη απόδειξη",
         "proofLabel": "Αποδεικτικό πληρωμής",
         "proofHint": "Ένα αποδεικτικό, π.χ. στιγμιότυπο του εμβάσματος.",
-        "proofDocumentName": "Αποδεικτικό πληρωμής {{group}}: {{name}}"
+        "proofDocumentName": "Αποδεικτικό πληρωμής {{group}}: {{name}}",
+        "loadError": "Δεν ήταν δυνατή η φόρτωση των κοινών εξόδων."
     },
     "wmo": {
         "0": "Αίθριος καιρός",
