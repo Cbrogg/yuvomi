@@ -19,6 +19,7 @@
  */
 
 import { reminderDateBefore, reminderIsInThePast } from '../utils/reminder-schedule.js';
+import { resolvePermissions } from '../permissions.js';
 import { createLogger } from '../logger.js';
 
 const log = createLogger('PantryReminders');
@@ -74,12 +75,14 @@ export const EXPIRY_REMINDER_OFFSET_DAYS = 7;
  * @param {Date} [now]
  */
 export function syncPantryExpiryReminder(database, item, now = new Date()) {
-  database.prepare(`
+  const drop = () => database.prepare(`
     DELETE FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?
   `).run(item.id);
 
-  if (!item.expires_on || !item.created_by) return;
-  if (Number(item.quantity) <= 0) return;
+  if (!item.expires_on || !item.created_by || Number(item.quantity) <= 0) {
+    drop();
+    return;
+  }
 
   // EIN KAPUTTES DATUM DARF DEN SPEICHERVORGANG NICHT SPRENGEN. `expires_on`
   // wird beim Schreiben kalendarisch geprüft, aber Bestandszeilen aus der Zeit
@@ -93,14 +96,63 @@ export function syncPantryExpiryReminder(database, item, now = new Date()) {
     remindAt = reminderDateBefore(item.expires_on, EXPIRY_REMINDER_OFFSET_DAYS);
   } catch {
     log.warn(`Pantry item ${item.id} has an unusable best-before date (${item.expires_on}) - no reminder.`);
+    drop();
     return;
   }
+
+  // NUR ERSETZEN, WENN SICH DER TERMIN WIRKLICH ÄNDERT. Bedingungsloses
+  // Löschen-und-neu-Anlegen sah nach der einfacheren Regel aus und war die
+  // teurere: der ±-Stepper ist der häufigste Schreibweg dieses Moduls, und ein
+  // Tap auf "einen weniger" hätte eine bereits zugestellte, noch offene Meldung
+  // entfernt - endgültig, denn der Vorlauf ist dann verstrichen und niemand
+  // legt sie wieder an. Wer eine Menge korrigiert oder einen Namen tippt,
+  // ändert nichts an der Frage, wann dieses Glas abläuft.
+  const existing = database.prepare(`
+    SELECT id, remind_at FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?
+  `).get(item.id);
+  if (existing?.remind_at === remindAt) return;
+
+  drop();
+  // Ein verstrichener Termin wird nicht angelegt: sonst meldete der nächste
+  // Lauf sofort, was gerade erst eingetragen wurde.
   if (reminderIsInThePast(remindAt, now)) return;
 
   database.prepare(`
     INSERT INTO reminders (entity_type, entity_id, remind_at, created_by)
     VALUES ('pantry_item', ?, ?, ?)
   `).run(item.id, remindAt, item.created_by);
+}
+
+/**
+ * Ist der Vorrat haushaltweit abgeschaltet? Gleiche Lesart wie
+ * server/services/countdowns.js#disabledModules - defensiv gegen fehlenden,
+ * kaputten oder nicht-Array-Wert: "nichts abgeschaltet" ist die einzige sichere
+ * Auslegung, die andere Richtung liesse ein Modul stumm verstummen.
+ */
+function pantryDisabled(database) {
+  const row = database.prepare("SELECT value FROM sync_config WHERE key = 'disabled_modules'").get();
+  if (!row?.value) return false;
+  try {
+    const parsed = JSON.parse(row.value);
+    return Array.isArray(parsed) && parsed.includes('pantry');
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Empfänger, denen der Vorrat entzogen ist (`access_permissions`, #467) - die
+ * zweite Achse neben der haushaltweiten Abschaltung, dieselbe Trennung wie in
+ * getCountdowns(). Einmal je Lauf aufgelöst statt einmal je Artikel: ein
+ * Haushalt hat eine Handvoll Mitglieder und womöglich hunderte Gläser.
+ */
+function usersWithoutPantry(database) {
+  const users = database.prepare('SELECT id, role, family_role FROM users').all();
+  const denied = new Set();
+  for (const user of users) {
+    if (resolvePermissions(database, user).modules.pantry === 'none') denied.add(user.id);
+  }
+  return denied;
 }
 
 /**
@@ -125,6 +177,19 @@ export function syncPantryExpiryReminder(database, item, now = new Date()) {
  * @param {Date} [now]
  */
 export function syncAllPantryExpiryReminders(database, now = new Date()) {
+  // ZWEI ACHSEN, EINE ANTWORT (#467, gleiche Trennung wie getCountdowns).
+  // `disabled_modules` schaltet den Vorrat für den GANZEN Haushalt ab,
+  // `access_permissions` entzieht ihn einem einzelnen Mitglied. Der Router
+  // braucht die Prüfung nicht - wer nicht speichern darf, löst keinen Sync aus.
+  // Dieser Lauf umgeht den Pfad-Guard und muss sie deshalb selbst stellen,
+  // sonst bekäme ein Haushalt Push-Meldungen für ein Modul, das es dort nicht
+  // gibt. Eine Rechteregel darf nicht in einer Middleware WOHNEN.
+  if (pantryDisabled(database)) {
+    database.prepare("DELETE FROM reminders WHERE entity_type = 'pantry_item'").run();
+    return;
+  }
+  const denied = usersWithoutPantry(database);
+
   // `date(x) = x` ist die kalendarische Prüfung in SQL: SQLite normalisiert ein
   // '2027-02-30' zu '2027-03-02' und liefert für '2026-13-01' NULL, beides
   // ungleich der Eingabe. Bestandszeilen mit unmöglichem Datum fallen so hier
@@ -147,13 +212,25 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
 
   // Fehlende ergänzen. Artikel mit bestehender Zeile stehen gar nicht erst in
   // der Ergebnismenge.
+  //
+  // UND NUR SOLCHE, DEREN VORLAUF NOCH BEVORSTEHT. Ein Glas, dessen Frist
+  // verstrichen ist, erfüllt QUALIFIES für immer und lief sonst in JEDEM Lauf
+  // erneut durch Löschen und Datumsrechnung, nur um am Vergangenheits-Riegel zu
+  // scheitern - bei hundert Artikeln rund 144.000 sinnlose Statements am Tag.
+  // Der Grobschnitt steht in SQL, der genaue Riegel (09:00 UTC) bleibt in JS:
+  // der Vorlauf wird als Parameter gebunden, damit die Zahl nicht ein drittes
+  // Mal im Baum steht.
   const missing = database.prepare(`
     SELECT id, quantity, expires_on, created_by FROM pantry_items
     WHERE ${QUALIFIES}
+      AND date(expires_on, ?) >= date(?)
       AND id NOT IN (SELECT entity_id FROM reminders WHERE entity_type = 'pantry_item')
-  `).all();
+  `).all(`-${EXPIRY_REMINDER_OFFSET_DAYS} days`, iso(now).slice(0, 10));
 
-  for (const item of missing) syncPantryExpiryReminder(database, item, now);
+  for (const item of missing) {
+    if (denied.has(item.created_by)) continue;
+    syncPantryExpiryReminder(database, item, now);
+  }
 
   // UND EINEN VERALTETEN TERMIN GERADEZIEHEN, aber nur einen, der noch nichts
   // getan hat. Ein Wiederherstellen aus dem Backup oder ein Eingriff von Hand
@@ -191,4 +268,9 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
     if (reminderIsInThePast(target, now)) continue;
     retime.run(target, row.id);
   }
+}
+
+/** ISO-Zeitstempel, gleiche Form wie in server/services/notifications.js. */
+function iso(date) {
+  return new Date(date).toISOString();
 }

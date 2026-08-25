@@ -31,6 +31,9 @@ const VALID_ENTITY_TYPES = ['task', 'event', 'subscription', 'inventory_item', '
  */
 const DERIVED_ENTITY_TYPES = ['subscription', 'inventory_item', 'inventory_tracked_date', 'pantry_item'];
 
+/** Herkünfte, die ein Schreibweg annehmen darf: alle ausser den abgeleiteten. */
+const SETTABLE_ENTITY_TYPES = VALID_ENTITY_TYPES.filter((t) => !DERIVED_ENTITY_TYPES.includes(t));
+
 /** Fehlertext, wenn ein Schreibweg eine abgeleitete Herkunft von Hand setzen will. */
 function derivedTypeError(entityType) {
   return `Reminders for ${entityType} are derived from the item itself and cannot be set here.`;
@@ -150,15 +153,18 @@ router.post('/', (req, res) => {
     const { entity_type, entity_id, remind_at } = req.body;
 
     const errors = v.collectErrors([
-      v.oneOf(entity_type,     VALID_ENTITY_TYPES, 'entity_type'),
       v.id(entity_id,          'entity_id'),
       v.datetime(remind_at,    'remind_at', true),
     ]);
 
-    if (!entity_type || !VALID_ENTITY_TYPES.includes(entity_type)) {
-      errors.push(`entity_type must be one of: ${VALID_ENTITY_TYPES.join(', ')}.`);
-    } else if (DERIVED_ENTITY_TYPES.includes(entity_type)) {
-      errors.push(derivedTypeError(entity_type));
+    // Der `v.oneOf` gegen VALID_ENTITY_TYPES stand hier zusätzlich und sagte
+    // dasselbe ein zweites Mal - seit die abgeleiteten Herkünfte abgewiesen
+    // werden, sagte er sogar etwas anderes: eine Liste, aus der vier Einträge
+    // im nächsten Zweig doch scheitern. Ein Check, eine Antwort.
+    if (!entity_type || !SETTABLE_ENTITY_TYPES.includes(entity_type)) {
+      errors.push(DERIVED_ENTITY_TYPES.includes(entity_type)
+        ? derivedTypeError(entity_type)
+        : `entity_type must be one of: ${SETTABLE_ENTITY_TYPES.join(', ')}.`);
     }
 
     if (errors.length) {

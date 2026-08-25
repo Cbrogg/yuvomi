@@ -31,7 +31,7 @@ import express from 'express';
 const dbmod = await import('../server/db.js');
 const { default: pantryRouter } = await import('../server/routes/pantry.js');
 const { default: remindersRouter } = await import('../server/routes/reminders.js');
-const { syncAllPantryExpiryReminders } = await import('../server/services/pantry-reminders.js');
+const { syncAllPantryExpiryReminders, syncPantryExpiryReminder } = await import('../server/services/pantry-reminders.js');
 const db = dbmod.get();
 
 /**
@@ -468,4 +468,66 @@ test('der Voll-Sync setzt einen Termin nie auf einen verstrichenen Zeitpunkt', (
   // eine solche Zeile gar nicht erst an, und dieselbe Regel gilt hier.
   assert.equal(reminderFor(id).remind_at, before.remind_at);
   assert.ok(!reminderIsPast(reminderFor(id).remind_at));
+});
+
+// --------------------------------------------------------------------------
+// RECHTE GELTEN AUCH FUER EINEN LAUF, DER KEINEN REQUEST HAT
+//
+// Der Router braucht die Pruefung nicht: wer den Vorrat nicht speichern darf,
+// loest keinen Sync aus. Dieser Lauf umgeht den Pfad-Guard und muss sie selbst
+// stellen - sonst bekommt ein Haushalt Push-Meldungen fuer ein Modul, das es
+// dort nicht gibt.
+// --------------------------------------------------------------------------
+test('ein haushaltweit abgeschalteter Vorrat meldet nichts', () => {
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Kokosmilch', 1, 'can', 'Sonstiges', ?, ?)"
+  ).run(FUTURE_EXPIRY, A).lastInsertRowid;
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 1);
+
+  db.prepare("INSERT INTO sync_config (key, value) VALUES ('disabled_modules', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run(JSON.stringify(['pantry']));
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 0, 'ein abgeschaltetes Modul darf nicht per Push zurueckkommen');
+
+  db.prepare("DELETE FROM sync_config WHERE key = 'disabled_modules'").run();
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 1, 'und beim Wiedereinschalten kommt sie zurueck');
+});
+
+test('einem Mitglied ohne Vorrats-Zugriff legt der Lauf nichts an', () => {
+  const noAccess = db.prepare(
+    "INSERT INTO users (username, display_name, password_hash, role, family_role) VALUES ('gast','Gast','x','member','child')"
+  ).run().lastInsertRowid;
+  // `subject_id` ist TEXT, und loadSubjectRows() bindet `String(subjectId)`:
+  // eine als Zahl geschriebene ID findet die Abfrage nicht (SQLite vergleicht
+  // Typen). Genau so schreibt es replaceSubjectPermissions().
+  db.prepare("INSERT INTO access_permissions (subject_type, subject_id, resource_type, resource_key, access) VALUES ('user', ?, 'module', 'pantry', 'none')")
+    .run(String(noAccess));
+
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Reiswaffeln', 1, 'pkg', 'Sonstiges', ?, ?)"
+  ).run(FUTURE_EXPIRY, noAccess).lastInsertRowid;
+
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 0,
+    'access_permissions ist die zweite Achse - eine Meldung ist eine Auskunft ueber einen Bestand');
+});
+
+test('ein Schreibvorgang ohne Terminwirkung laesst eine offene Meldung stehen', () => {
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Passata', 3, 'jar', 'Sonstiges', ?, ?)"
+  ).run(FUTURE_EXPIRY, A).lastInsertRowid;
+  syncAllPantryExpiryReminders(db);
+  const before = reminderFor(id);
+  db.prepare("UPDATE reminders SET pushed_at = '2026-08-01T09:00:00Z' WHERE id = ?").run(before.id);
+
+  // Der haeufigste Schreibweg dieses Moduls: ein Tap auf "einen weniger".
+  db.prepare('UPDATE pantry_items SET quantity = 2 WHERE id = ?').run(id);
+  syncPantryExpiryReminder(db, db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id));
+
+  const after = reminderFor(id);
+  assert.ok(after, 'bedingungsloses Ersetzen loeschte hier eine zugestellte, noch offene Meldung');
+  assert.equal(after.id, before.id);
+  assert.equal(after.pushed_at, '2026-08-01T09:00:00Z');
 });

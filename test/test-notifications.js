@@ -21,7 +21,22 @@ function makeDb({ withNotificationTables = true } = {}) {
     CREATE TABLE users (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       username TEXT UNIQUE NOT NULL,
-      role TEXT NOT NULL DEFAULT 'member'
+      role TEXT NOT NULL DEFAULT 'member',
+      -- resolvePermissions() liest das Rollen-Profil ueber family_role.
+      family_role TEXT
+    );
+    -- Der Vorrats-Voll-Sync fragt beide Rechte-Achsen (#467): sync_config fuer
+    -- die haushaltweite Abschaltung, access_permissions je Empfaenger. Fehlt
+    -- eine der Tabellen, scheitert er still im try/catch von
+    -- processDueNotifications - genau deshalb prueft der Test die WIRKUNG.
+    CREATE TABLE IF NOT EXISTS sync_config (key TEXT PRIMARY KEY, value TEXT);
+    CREATE TABLE IF NOT EXISTS access_permissions (
+      subject_type  TEXT NOT NULL,
+      subject_id    TEXT NOT NULL,
+      resource_type TEXT NOT NULL,
+      resource_key  TEXT NOT NULL,
+      access        TEXT NOT NULL,
+      PRIMARY KEY (subject_type, subject_id, resource_type, resource_key)
     );
     CREATE TABLE tasks (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -471,7 +486,8 @@ test('a notification names its origin in the title, in the household language', 
   const store = createNotificationChannelStore({ db });
   store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
   // Die Datensprache des Haushalts, wie sie auch der Geburtstags-Titel liest.
-  db.exec('CREATE TABLE sync_config (key TEXT PRIMARY KEY, value TEXT);');
+  // `sync_config` legt inzwischen makeDb() an - der Vorrats-Voll-Sync liest
+  // dort die haushaltweite Modul-Abschaltung.
   db.prepare("INSERT INTO sync_config (key, value) VALUES ('language', 'de')").run();
   db.prepare("INSERT INTO tasks (id, title, created_by) VALUES (1, 'Müll rausbringen', 1)").run();
   db.prepare("INSERT INTO calendar_events (id, title) VALUES (2, 'Zahnarzt')").run();

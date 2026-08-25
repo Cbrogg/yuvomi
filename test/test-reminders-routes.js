@@ -230,7 +230,10 @@ test('POST / lehnt ungültigen entity_type ab (400)', async () => {
   // von Hand zu fuehren: sie stand hier schon einmal veraltet da, waehrend die
   // Route laengst mehr Typen kannte. Deshalb prueft der Test die Form und die
   // Enden, nicht den ausgeschriebenen Satz.
-  assert.match(res.body.error, /^entity_type must be one of: task, event, .*pantry_item\.$/m);
+  assert.match(res.body.error, /^entity_type must be one of: task, event\.$/m);
+  // Die vier abgeleiteten Herkuenfte stehen bewusst NICHT im Text: derselbe
+  // Endpunkt weist sie im naechsten Zweig ab.
+  assert.doesNotMatch(res.body.error, /subscription|inventory_item|pantry_item/);
 });
 
 test('POST / lehnt fehlenden entity_type ab (400)', async () => {

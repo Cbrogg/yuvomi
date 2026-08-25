@@ -1317,6 +1317,8 @@ Per-user reminders attached to tasks, calendar events, subscriptions, or invento
 | Column | Type | Constraint |
 |--------|------|-----------|
 | entity_type | TEXT | `task`, `event`, `subscription`, `inventory_item`, `inventory_tracked_date`, or `pantry_item`, NOT NULL |
+
+Nur `task` und `event` werden über `POST`/`PUT /api/v1/reminders` gesetzt. Die vier übrigen sind **abgeleitet**: ihr Modul stellt die Erinnerung bei jedem Schreibvorgang neu her (Abo-Termin, Garantieende, Inventar-Frist, Mindesthaltbarkeit), beim Vorrat zusätzlich in jedem Benachrichtigungslauf. Ein von Hand gesetzter Termin überlebt das nicht, deshalb antworten beide Schreibwege dafür mit 400. Lesen und Verwerfen bleiben für alle sechs möglich - der Erinnerungs-Toast muss auch eine abgeleitete Meldung anzeigen und wegwischen können.
 | entity_id | INTEGER | Entity identifier, NOT NULL |
 | remind_at | TEXT | ISO 8601 datetime, NOT NULL |
 | dismissed | INTEGER | 0/1, default 0 |
