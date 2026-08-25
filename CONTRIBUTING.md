@@ -288,12 +288,18 @@ reviewed", not "every run reviewed it".
 
 User-facing changes should be reflected in [`CHANGELOG.md`](CHANGELOG.md). If your PR adds a feature, fixes a bug, or changes behavior, add an entry under `[Unreleased]` in the appropriate category (`Added`, `Changed`, `Fixed`, `Removed`, `Security`).
 
-Format: imperative mood, one line per change, user-oriented language. Use `-` rather than `—` or `–`: an entry does not stay in this file, it ships as the GitHub release notes and feeds the app store listings.
+**Every entry opens with a bolded sentence naming the change.** Prose about the reasoning is welcome underneath it - this file says *why* things were decided the way they were, and that is not written down anywhere else. But somebody who just updated wants to know what changed without reading three paragraphs to find out. The first line answers that; everything after it is for whoever wants the story.
 
 ```markdown
 ### Added
-- Add CSV import for budget entries
+- **Budget entries can be imported from CSV.** The importer maps columns by
+  header name rather than by position, because an export from a bank rarely
+  puts them in the same order twice ...
 ```
+
+`npm run test:changelog` enforces the bolded lead-in for `[Unreleased]` and every version from 2.41.0 on. Earlier entries are left as they are: a published changelog does not get rewritten.
+
+Otherwise: user-oriented language, and `-` rather than `—` or `–`. An entry does not stay in this file - it ships as the GitHub release notes and feeds the app store listings.
 
 ---
 
