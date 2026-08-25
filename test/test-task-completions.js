@@ -187,6 +187,58 @@ test('Ein Riss in der Kette trennt die Serie, ohne die alten Eintraege zu verlie
   const still = db.prepare('SELECT series_id FROM task_completions WHERE task_id = ?').get(b);
   assert.equal(still.series_id, a);
   assert.equal(db.prepare('SELECT recurrence_origin_id FROM tasks WHERE id = ?').get(b).recurrence_origin_id, null);
+
+  // UND DIE ANSICHT MUSS IHN NOCH FINDEN. Die Zeile oben prueft nur die
+  // Spalte - eine erste Fassung tat genau das, blieb gruen, und die
+  // Serienansicht antwortete trotzdem "noch nie erledigt": sie berechnete die
+  // Wurzel beim LESEN neu, kam nach dem Riss auf b statt auf a und fragte nach
+  // einer series_id, die in keiner Zeile steht. Eine Zusicherung ueber ein
+  // Feld ist keine Zusicherung ueber die Antwort.
+  assert.equal(seriesHistory(db, { me: mom, taskId: b }).length, 1,
+    'die eigene Erledigung bleibt auffindbar, auch wenn die Wurzel weg ist');
+});
+
+test('Nach einem Riss findet die Serienansicht auch die Instanzen DAVOR', () => {
+  // Drei Instanzen, das mittlere Glied wird geloescht. Die Kette von c reicht
+  // danach nur bis c selbst - a haengt aber ueber die geerbte series_id noch
+  // an derselben Serie, und genau dafuer wird sie beim Schreiben festgehalten.
+  const a = makeTask({ title: 'Heizung entlueften', recurring: 1 });
+  const b = makeTask({ title: 'Heizung entlueften', recurring: 1, origin: a });
+  const c = makeTask({ title: 'Heizung entlueften', recurring: 1, origin: b });
+  syncTaskCompletion(db, a, 'open', 'done', mom);
+  stampCompletion(a, '2026-07-01T09:00:00Z');
+  syncTaskCompletion(db, b, 'open', 'done', kid);
+  stampCompletion(b, '2026-07-08T09:00:00Z');
+  syncTaskCompletion(db, c, 'open', 'done', mom);
+  stampCompletion(c, '2026-07-15T09:00:00Z');
+
+  assert.equal(seriesHistory(db, { me: mom, taskId: c }).length, 3);
+
+  db.prepare('DELETE FROM tasks WHERE id = ?').run(b);
+  const after = seriesHistory(db, { me: mom, taskId: c });
+  assert.equal(after.length, 2, 'die Erledigung von a bleibt in der Serie');
+  assert.deepEqual(after.map((e) => e.task_id), [c, a]);
+});
+
+test('Eine lange Kette erbt ihre Serie, statt sie neu zu erlaufen', () => {
+  // Der Deckel der rekursiven Abfrage liegt bei 1000 Gliedern. Eine taegliche
+  // Aufgabe erreicht ihn nach gut zweieinhalb Jahren, und ohne das Erben vom
+  // direkten Vorgaenger bekaeme sie ab da eine ANDERE series_id - die Serie
+  // zerfiele still in zwei Haelften, und "zuletzt erledigt" zeigte nur die
+  // neuere. Geprueft an einer kuerzeren Kette mit demselben Mechanismus.
+  const root = makeTask({ title: 'Muell', recurring: 1 });
+  let prev = root;
+  const ids = [root];
+  for (let i = 0; i < 20; i++) {
+    prev = makeTask({ title: 'Muell', recurring: 1, origin: prev });
+    ids.push(prev);
+  }
+  for (const id of ids) syncTaskCompletion(db, id, 'open', 'done', mom);
+
+  const series = db.prepare('SELECT DISTINCT series_id FROM task_completions WHERE task_id IN (' + ids.join(',') + ')').all();
+  assert.equal(series.length, 1, 'eine Serie, nicht zwei');
+  assert.equal(series[0].series_id, root);
+  assert.equal(seriesHistory(db, { me: mom, taskId: prev, limit: 100 }).length, ids.length);
 });
 
 // --------------------------------------------------------
@@ -439,6 +491,33 @@ test('Das Abhaken über PATCH /:id/status schreibt den Verlauf, das Zurücknehme
   assert.equal(await patch('open', kid), 200);
   rows = db.prepare('SELECT * FROM task_completions WHERE task_id = ?').all(id);
   assert.equal(rows.length, 0);
+});
+
+test('Auch das Status-Feld im Bearbeiten-Formular schreibt den Verlauf', async () => {
+  // Der ZWEITE Schreibweg (PUT /:id), den der Service-Kommentar ausdruecklich
+  // nennt. Ohne diesen Test blieben alle uebrigen gruen, wenn jemand die eine
+  // Zeile aus der PUT-Transaktion entfernt - genau die Luecke, gegen die die
+  // Gegenproben fuer PATCH gefahren wurden.
+  db.prepare('DELETE FROM task_completions').run();
+  const id = makeTask({ title: 'Ueber PUT' });
+  actor = kid;
+  const put = async (status) => {
+    const res = await fetch(`${base}/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Ueber PUT', status }),
+    });
+    return res.status;
+  };
+
+  assert.equal(await put('done'), 200);
+  let rows = db.prepare('SELECT * FROM task_completions WHERE task_id = ?').all(id);
+  assert.equal(rows.length, 1, 'das Formular hakt genauso ab wie die Checkbox');
+  assert.equal(rows[0].user_id, kid);
+
+  assert.equal(await put('open'), 200);
+  rows = db.prepare('SELECT * FROM task_completions WHERE task_id = ?').all(id);
+  assert.equal(rows.length, 0, 'und nimmt es genauso zurueck');
 });
 
 test('Ablegen ist kein Abhaken und schreibt nichts', async () => {

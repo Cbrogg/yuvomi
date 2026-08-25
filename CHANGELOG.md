@@ -47,6 +47,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   question for the display timezone - a server taking a `from` day would have to keep a second clock
   for it.
 
+  One boundary is stated rather than inherited: the inbound CalDAV sync writes the status straight
+  into the row, so ticking a mirrored task off in Apple Reminders does not reach the history. That
+  run has no acting person - it uses the household's credentials, not a member's - which is the same
+  reason the reward ledger has the same gap.
+
 
 ## [2.43.0] - 2026-08-25
 

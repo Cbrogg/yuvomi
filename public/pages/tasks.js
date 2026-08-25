@@ -25,8 +25,8 @@ import '/components/category-manager.js';
 import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
 import { isSoloHousehold } from '/utils/household.js';
-import { todayKey, parseLocalDateKey } from '/utils/date.js';
-import { nowFields, zonedDateKey, zonedTimeKey } from '/utils/timezone.js';
+import { todayKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
+import { nowFields, zonedDateKey, zonedUTCProxy } from '/utils/timezone.js';
 import { isNavModuleReadOnly } from '/permissions.js';
 
 // --------------------------------------------------------
@@ -1199,7 +1199,7 @@ let state = {
   // Der Verlauf (#791) hat einen eigenen Bestand, weil er etwas anderes zeigt
   // als `tasks`: nicht Aufgaben, sondern Vorgänge. Er wird geblättert statt
   // gefiltert - deshalb ein Cursor und kein Seitenindex.
-  history:         { entries: [], hasMore: false, cursor: null, userId: null, loading: false, error: null },
+  history:         { entries: [], hasMore: false, cursor: null, userId: null, loading: null, error: null },
   showFuture:      false,
   subtasksExpandedByDefault: false,
   // Persönliche Standard-Erinnerungsliste für neue Aufgaben (#695), leer = nur
@@ -3004,15 +3004,34 @@ function wireKanbanTouch(container) {
 // Aufgaben abhakt, schlicht gelogen.
 // --------------------------------------------------------
 
-/** Die Tages-Überschrift zu einem Datums-Key der Anzeigezone. */
+/**
+ * Die Tages-Überschrift zu einem Datums-Key der Anzeigezone.
+ *
+ * DREI FALLEN AUF ENGEM RAUM, jede davon hier einmal eingebaut gewesen:
+ *
+ * 1. „Gestern" kommt aus `addLocalDays(today, -1)`, also aus Arithmetik auf dem
+ *    KEY. Ein `Date` minus 86400000 ms trifft an der Sommerzeitgrenze den
+ *    vorletzten Tag - und sobald die Anzeigezone von der des Browsers abweicht,
+ *    liegt es ohnehin daneben, weil `parseLocalDateKey` seine Mitternacht in
+ *    der Browserzone baut.
+ * 2. Der Key geht ROH an `formatDate`. Ein Umweg über ein `Date` macht aus dem
+ *    zonenlosen Kalendertag einen Zeitpunkt, den die Anzeigezone anschließend
+ *    wieder umrechnet - und die Überschrift kann auf dem Nachbartag landen,
+ *    während die Zeilen darunter alle vom richtigen stammen.
+ * 3. `formatDate` nimmt genau EIN Argument (public/i18n.js). Ein
+ *    Optionsobjekt daneben wird stillschweigend verworfen, und die als
+ *    „Montag, 24. August" gedachte Zeile stand als „24.08.2026" da. Der
+ *    Wochentag kommt deshalb über den `zonedUTCProxy`-Weg, wie im Dashboard.
+ */
 function historyDayLabel(dayKey) {
   const today = todayKey();
   if (dayKey === today) return t('common.today');
-  // Gestern über den Key rechnen, nicht über 24 Stunden: zwei aufeinander
-  // folgende Kalendertage liegen an der Sommerzeitgrenze nicht 24h auseinander.
-  const yesterday = new Date(parseLocalDateKey(today).getTime() - 86400000);
-  if (dayKey === zonedDateKey(yesterday)) return t('common.yesterday');
-  return formatDate(parseLocalDateKey(dayKey), { weekday: 'long', day: 'numeric', month: 'long' });
+  if (dayKey === addLocalDays(today, -1)) return t('common.yesterday');
+  const proxy = zonedUTCProxy(`${dayKey}T12:00:00`);
+  if (!proxy) return formatDate(dayKey);
+  return new Intl.DateTimeFormat(getLocale(), {
+    weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC',
+  }).format(proxy);
 }
 
 /**
@@ -3066,7 +3085,7 @@ function renderHistoryEntry(entry) {
             ? ` <i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i>` : ''}
         </span>
       </span>
-      <time class="history-row__time" datetime="${esc(entry.completed_at)}">${esc(zonedTimeKey(entry.completed_at))}</time>
+      <time class="history-row__time" datetime="${esc(entry.completed_at)}">${esc(formatTime(entry.completed_at))}</time>
     </button>`;
 }
 
@@ -3082,7 +3101,7 @@ function renderHistoryPeople() {
   // Nur wer wirklich etwas beisteuern kann: die Housekeeping-Konten sind aus
   // /meta/options schon heraus, und ein Haushalt aus einer Person braucht die
   // Auswahl gar nicht.
-  if (isSoloHousehold(state.users)) return '';
+  if (isSoloHousehold()) return '';
   return `
     <div class="group-toggle history-people" role="group" aria-label="${t('tasks.historyPersonFilter')}">
       ${chip(null, t('common.all'))}
@@ -3090,19 +3109,39 @@ function renderHistoryPeople() {
     </div>`;
 }
 
+/** Die Personen-Chips verdrahten - beide Zweige von renderHistory zeigen sie. */
+function wireHistoryPeople(root, container) {
+  root.querySelectorAll('[data-history-user]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const raw = btn.dataset.historyUser;
+      state.history.userId = raw === '' ? null : Number(raw);
+      loadHistory(container);
+    });
+  });
+}
+
 function renderHistory(container) {
   const listEl = container.querySelector('#task-list');
   if (!listEl) return;
 
   if (state.history.error) {
+    // Die Personenauswahl bleibt STEHEN. Ohne sie war ein Fehler unter einem
+    // aktiven Personenfilter eine Sackgasse: „Erneut versuchen" schickte
+    // dieselbe scheiternde Abfrage los, und es gab kein „Alle", auf das man
+    // haette ausweichen koennen.
     listEl.replaceChildren();
-    mountLoadError(listEl, {
+    listEl.insertAdjacentHTML('beforeend', renderHistoryPeople());
+    const errorBox = document.createElement('div');
+    listEl.appendChild(errorBox);
+    mountLoadError(errorBox, {
       title: t('tasks.historyLoadError'),
       description: t('common.loadErrorDescription'),
       error: state.history.error,
       retryLabel: t('common.retry'),
       onRetry: () => loadHistory(container),
     });
+    wireHistoryPeople(listEl, container);
+    if (window.lucide) window.lucide.createIcons({ el: listEl });
     return;
   }
 
@@ -3141,16 +3180,13 @@ function renderHistory(container) {
   if (window.lucide) window.lucide.createIcons({ el: listEl });
   stagger(listEl.querySelectorAll('.history-row'));
 
-  listEl.querySelectorAll('[data-history-user]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const raw = btn.dataset.historyUser;
-      state.history.userId = raw === '' ? null : Number(raw);
-      loadHistory(container);
-    });
-  });
+  wireHistoryPeople(listEl, container);
   listEl.querySelector('#history-more')?.addEventListener('click', (e) => {
-    const stop = btnLoading(e.currentTarget);
-    loadHistory(container, { append: true }).catch(stop);
+    // Kein Zuruecksetzen noetig und keins moeglich: `loadHistory` faengt seinen
+    // Fehler selbst ab und wirft nie, und danach baut `renderHistory` die
+    // Flaeche samt diesem Knopf neu auf - der Spinner geht mit ihm.
+    btnLoading(e.currentTarget);
+    loadHistory(container, { append: true });
   });
   listEl.querySelectorAll('[data-history-task]').forEach((row) => {
     row.addEventListener('click', () => openTaskFromHistory(row.dataset.historyTask, container));
@@ -3172,8 +3208,17 @@ async function openTaskFromHistory(id, container) {
  * an - ein Personenwechsel darf keine Mischung aus zwei Abfragen stehen lassen.
  */
 async function loadHistory(container, { append = false } = {}) {
-  if (state.history.loading) return;
-  state.history.loading = true;
+  // Ein zweiter Aufruf, waehrend einer laeuft, WARTET auf den ersten und faehrt
+  // dann selbst - er wird nicht verworfen. Ein blosses `return` hier hatte den
+  // Klick auf ein Personen-Chip stillschweigend geschluckt: `userId` war schon
+  // umgestellt, geladen wurde nichts, und ohne ein abschliessendes Zeichnen
+  // blieb die alte Liste unter dem neu markierten Chip stehen.
+  while (state.history.loading) {
+    // eslint-disable-next-line no-await-in-loop
+    await state.history.loading;
+  }
+  let release;
+  state.history.loading = new Promise((r) => { release = r; });
   const params = new URLSearchParams({ limit: '50' });
   if (state.history.userId !== null) params.set('user_id', String(state.history.userId));
   if (append && state.history.cursor) {
@@ -3191,7 +3236,8 @@ async function loadHistory(container, { append = false } = {}) {
     state.history.error = err;
     if (!append) { state.history.entries = []; state.history.hasMore = false; state.history.cursor = null; }
   } finally {
-    state.history.loading = false;
+    state.history.loading = null;
+    release();
     renderHistory(container);
   }
 }
@@ -3229,7 +3275,7 @@ function seriesHistoryNode(task) {
       row.className = 'detail-history__row';
       const when = document.createElement('span');
       when.className = 'detail-history__when';
-      when.textContent = `${historyDayLabel(zonedDateKey(entry.completed_at))}, ${zonedTimeKey(entry.completed_at)}`;
+      when.textContent = `${historyDayLabel(zonedDateKey(entry.completed_at))}, ${formatTime(entry.completed_at)}`;
       const who = document.createElement('span');
       who.className = 'detail-history__who';
       who.textContent = entry.user_name || t('tasks.historyUnknownMember');
@@ -3257,7 +3303,12 @@ function renderTaskList(container) {
   // die Vorgänge zu haben sind - stünde die Weiche danach, zeigte der Verlauf
   // den Fehler einer Abfrage, die er gar nicht braucht.
   if (state.viewMode === 'history') {
-    renderHistory(container);
+    // NEU LADEN, nicht den zwischengespeicherten Bestand neu malen. Jeder
+    // schreibende Weg endet auf `loadTasks() -> renderTaskList()`, und genau
+    // dort aendert sich der Verlauf mit: ein wieder geoeffneter Haken loescht
+    // seinen Eintrag serverseitig. Ohne das Nachladen blieb die zurueckgenommene
+    // Erledigung stehen, bis jemand die Ansicht verliess.
+    loadHistory(container);
     return;
   }
   // VOR der Kanban-Weiche: nach einem Ladefehler ist `state.tasks` ebenfalls
@@ -3852,6 +3903,11 @@ function syncViewChrome(container) {
   if (search) search.hidden = isHistory;
   const filtersRow = container.querySelector('.tasks-filters-row');
   if (filtersRow) filtersRow.hidden = isHistory;
+  // Das aufgeklappte Filter-Panel ist ein GESCHWISTER der Zeile, kein Kind -
+  // die Zeile zu verstecken laesst es stehen, und dann schwebten Status- und
+  // Prioritaets-Chips ueber einer Liste von Vorgaengen.
+  const filterPanel = container.querySelector('#filter-panel');
+  if (filterPanel && isHistory) filterPanel.hidden = true;
   const groupToggle = container.querySelector('#group-mode-toggle');
   if (groupToggle) groupToggle.hidden = !isList;
   const bulkSelectBtn = container.querySelector('#btn-bulk-select');
@@ -3864,6 +3920,11 @@ function syncViewChrome(container) {
       bulkSelectBtn.setAttribute('aria-pressed', 'false');
     }
   }
+  // Die Auswahl zu LEEREN raeumt die Leiste nicht weg: sie haengt an
+  // `bar.hidden`, das nur updateBulkActionsBar setzt. Ohne diesen Aufruf blieb
+  // „Als erledigt markieren / Ablegen / Loeschen" ueber dem Verlauf stehen -
+  // mit leerer Auswahl, also Knoepfe ohne Gegenstand.
+  updateBulkActionsBar(container);
 }
 
 /** Nimmt die Ansicht die volle Content-Spalte ein? */
@@ -4172,12 +4233,10 @@ export async function render(container, { user }) {
   try { state.showFuture = localStorage.getItem(SHOW_FUTURE_KEY) === '1'; } catch {}
 
   const isKanban = state.viewMode === 'kanban';
+  // Was nur die Aufgabenliste betrifft, blendet `syncViewChrome` gleich nach
+  // dem Einhängen aus - hier steht bewusst keine zweite Fassung derselben
+  // Bedingung. `isHistory` traegt nur den Anfangszustand des Umschalters.
   const isHistory = state.viewMode === 'history';
-  // Was nur die Aufgabenliste betrifft, verschwindet im Verlauf: Suche,
-  // Filterleiste, Gruppierung und die Sammelauswahl fragen alle nach Aufgaben,
-  // und der Verlauf zeigt Vorgänge. Ein Statusfilter über einer Liste von
-  // Erledigungen wäre eine Auswahl, die nichts verändern kann.
-  const isTaskList = !isHistory;
 
   // Initiales Skeleton (all values are from i18n keys or hardcoded constants, no user data)
   container.replaceChildren();
@@ -4356,11 +4415,9 @@ export async function render(container, { user }) {
   container.querySelector('#btn-manage-tags')
     ?.addEventListener('click', () => openTagManager(container));
   renderFilters(container);
+  // Im Verlauf holt renderTaskList den Bestand selbst nach - er steckt nicht in
+  // `/tasks`, und sein Ladefehler ist ein eigener.
   renderTaskList(container);
-  // Der Verlauf holt seinen Bestand selbst - er steckt nicht in `/tasks`, und
-  // sein Ladefehler ist ein eigener. Erst nach renderTaskList, damit die Fläche
-  // schon steht, wenn die Antwort kommt.
-  if (state.viewMode === 'history') loadHistory(container);
 
   wirePageSearch(container, {
     id: 'tasks-search',

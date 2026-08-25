@@ -41,17 +41,19 @@ import { visibilityWhere } from './visibility.js';
  * @param {number} taskId
  * @returns {number} ID der Wurzel (= taskId, wenn die Aufgabe allein steht)
  */
+const CHAIN_CTE = `
+  WITH RECURSIVE chain(id, origin, depth) AS (
+    SELECT id, recurrence_origin_id, 0 FROM tasks WHERE id = @task
+    UNION ALL
+    SELECT t.id, t.recurrence_origin_id, c.depth + 1
+      FROM tasks t JOIN chain c ON t.id = c.origin
+     WHERE c.depth < 1000
+  )
+`;
+
 export function seriesRootOf(d, taskId) {
-  const row = d.prepare(`
-    WITH RECURSIVE chain(id, origin, depth) AS (
-      SELECT id, recurrence_origin_id, 0 FROM tasks WHERE id = ?
-      UNION ALL
-      SELECT t.id, t.recurrence_origin_id, c.depth + 1
-        FROM tasks t JOIN chain c ON t.id = c.origin
-       WHERE c.depth < 1000
-    )
-    SELECT id FROM chain ORDER BY depth DESC LIMIT 1
-  `).get(taskId);
+  const row = d.prepare(`${CHAIN_CTE} SELECT id FROM chain ORDER BY depth DESC LIMIT 1`)
+    .get({ task: taskId });
   return row?.id ?? taskId;
 }
 
@@ -65,12 +67,24 @@ export function seriesRootOf(d, taskId) {
  * @param {number|null} actingUserId  wer abgehakt hat
  */
 export function recordCompletion(d, taskId, actingUserId) {
-  const task = d.prepare('SELECT id, parent_task_id FROM tasks WHERE id = ?').get(taskId);
+  const task = d.prepare('SELECT id, parent_task_id, recurrence_origin_id FROM tasks WHERE id = ?').get(taskId);
   if (!task || task.parent_task_id) return;
+
+  // Die Serie wird vom direkten Vorgänger GEERBT, wenn der schon einen Eintrag
+  // hat - ein Index-Zugriff statt eines Kettenlaufs. Das ist der Normalfall
+  // (eine laufende Serie hakt einen Nachfolger nach dem anderen ab), und er
+  // darf nicht mit der Länge der Serie teurer werden: die rekursive Abfrage
+  // deckelt bei 1000 Gliedern, und eine tägliche Aufgabe erreicht das nach gut
+  // zweieinhalb Jahren. Ohne das Erben bekäme sie ab da eine andere series_id
+  // und die Serie zerfiele still in zwei.
+  const inherited = task.recurrence_origin_id
+    ? d.prepare('SELECT series_id FROM task_completions WHERE task_id = ?').get(task.recurrence_origin_id)
+    : null;
+
   d.prepare(`
     INSERT OR IGNORE INTO task_completions (task_id, series_id, user_id)
     VALUES (?, ?, ?)
-  `).run(taskId, seriesRootOf(d, taskId), actingUserId || null);
+  `).run(taskId, inherited?.series_id ?? seriesRootOf(d, taskId), actingUserId || null);
 }
 
 /**
@@ -93,6 +107,17 @@ export function revokeCompletion(d, taskId) {
  * Zahlungsaufgabe der Haushaltshilfe, die routes/housekeeping.js direkt auf
  * 'done' setzt, ist es ebenso wenig - sie spiegelt einen Zahlungsstand, es hakt
  * dort niemand etwas ab.
+ *
+ * BEKANNTE GRENZE, ausdrücklich und nicht geerbt: der eingehende CalDAV-Sync
+ * (services/caldav-reminders-sync.js) schreibt `status` direkt in die Zeile und
+ * kommt hier nicht vorbei. Wer eine gespiegelte Aufgabe in Apple Erinnerungen
+ * abhakt, taucht also nicht im Verlauf auf. Dieselbe Lücke hat der
+ * reward_ledger schon heute, und der Grund ist derselbe: dieser Lauf hat keine
+ * handelnde Person - er läuft mit den Zugangsdaten des Haushalts, nicht denen
+ * eines Mitglieds. Ein Eintrag ohne Person wäre möglich (die Spalte lässt NULL
+ * zu), braucht aber eine eigene Darstellung: "Nicht mehr im Haushalt" wäre für
+ * einen Sync die falsche Auskunft. Das ist eine eigene Entscheidung, keine
+ * Nebenwirkung dieser hier.
  */
 export function syncTaskCompletion(d, taskId, oldStatus, newStatus, actingUserId) {
   const wasDone = oldStatus === 'done';
@@ -175,16 +200,33 @@ export function completionFeed(d, { me, limit = 50, userId = null, beforeAt = nu
  * Die Erledigungen einer Serie, neueste zuerst - "wann war das zuletzt dran"
  * für eine wiederkehrende Aufgabe.
  *
- * Der Einstieg ist irgendeine Instanz der Kette; gefragt wird über ihre Wurzel,
- * damit auch die Instanzen davor mitkommen. Frisch berechnet und nicht aus dem
- * eigenen Eintrag gelesen, weil eine noch offene Aufgabe selbst keinen hat.
+ * GEFRAGT WIRD ÜBER DIE KETTE, NICHT ÜBER EINEN NEU BERECHNETEN WURZELWERT.
+ * Der Unterschied ist der ganze Punkt: `series_id` wird beim SCHREIBEN
+ * eingefroren, eine Neuberechnung beim LESEN wären zwei Wahrheiten. Wird ein
+ * altes Kettenglied gelöscht, verliert sein Nachfolger `recurrence_origin_id`
+ * (SET NULL) - eine frisch berechnete Wurzel wäre ab dann eine andere als die,
+ * die in den bereits geschriebenen Einträgen steht, und die Serienansicht fände
+ * gar nichts mehr. Genau dieser Fall trat auf: zweimal erledigt, erste Instanz
+ * gelöscht, "Zuletzt erledigt" antwortete "noch nie".
+ *
+ * Die Bedingung nimmt deshalb drei Wege auf dieselbe Serie:
+ *   1. Einträge der Kettenglieder selbst (`task_id`),
+ *   2. Einträge, deren Serie auf ein Kettenglied zeigt (`series_id`),
+ *   3. Einträge, die dieselbe Serie tragen wie ein Kettenglied - das holt die
+ *      Instanzen VOR einem Riss zurück, deren eigene Glieder nicht mehr in der
+ *      Kette stehen.
  */
 export function seriesHistory(d, { me, taskId, limit = 20 }) {
   const size = Math.min(Math.max(Number(limit) || 20, 1), 100);
   return d.prepare(`
+    ${CHAIN_CTE}
     ${SELECT_SQL}
-    WHERE c.series_id = @series AND ${VISIBLE_SQL}
+    WHERE (
+      c.task_id   IN (SELECT id FROM chain)
+      OR c.series_id IN (SELECT id FROM chain)
+      OR c.series_id IN (SELECT series_id FROM task_completions WHERE task_id IN (SELECT id FROM chain))
+    ) AND ${VISIBLE_SQL}
     ORDER BY c.completed_at DESC, c.id DESC
     LIMIT @size
-  `).all({ me, series: seriesRootOf(d, taskId), size });
+  `).all({ me, task: taskId, size });
 }

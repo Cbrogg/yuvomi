@@ -257,6 +257,13 @@ Reverting deletes the row rather than posting a counter-entry — the same decis
 `reverseTaskEarnings`, for the same reason: a checkbox toggled three times is noise, not history.
 The UNIQUE index on `task_id` is also the idempotency net if the same transition arrives twice.
 
+**Known boundary:** the inbound CalDAV sync writes `status` straight into the row and does not pass
+through this path, so ticking a mirrored task off in Apple Reminders does not appear in the history.
+The reward ledger has the same gap for the same reason: that run has no acting person - it uses the
+household's credentials, not a member's. An entry without a person is possible (the column allows
+NULL) but needs its own presentation, since "no longer in the household" would be the wrong answer
+for a sync. Stated here as a decision rather than inherited silently.
+
 API: `GET /api/v1/tasks/completions` (household feed, newest first, cursor-paged over
 `(completed_at, id)` because a bulk action puts several completions in the same second), and
 `GET /api/v1/tasks/{id}/completions` (the whole series behind one task). No date range on either:
