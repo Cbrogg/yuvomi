@@ -86,7 +86,7 @@ Turn on what your household needs; the rest stays out of the way.
 | **Housekeeping** | Household staff: schedules, check-in/out, daily or hourly billing, chores and supply requests. |
 | **Rewards** | Points on tasks credit the assigned member, with a parent-approved catalog and an auditable ledger. |
 | **Health** | Per-member vitals, medications, labs, activity and cycle tracking, with trend charts. |
-| **Notes &amp; Contacts** | Colored Markdown sticky notes plus a contact directory with CardDAV sync and vCard import/export. |
+| **Notes &amp; Contacts** | Colored Markdown sticky notes with checklists you tick off by tapping them, plus a contact directory with CardDAV sync and vCard import/export. |
 | **Birthdays** | Birthday tracker with automatic calendar events, age display and reminders. |
 | **Family** | Member profiles with roles, photos and contact details. New members join through an invite link and pick their own password. |
 | **Reminders** | Reminders on tasks and events via in-app badges, opt-in push, and household Gotify, ntfy or webhook channels. |

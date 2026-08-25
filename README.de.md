@@ -86,7 +86,7 @@ Schalte an, was dein Haushalt braucht; der Rest bleibt aus dem Weg.
 | **Hauswirtschaft** | Haushaltshilfen: Dienstpläne, Ein- und Ausstempeln, Tages- oder Stundenabrechnung, Aufgaben und Materialwünsche. |
 | **Belohnungen** | Punkte auf Aufgaben schreiben der zugewiesenen Person gut, mit elterlich freigegebenem Katalog und nachvollziehbarem Konto. |
 | **Gesundheit** | Vitalwerte, Medikamente, Laborwerte, Aktivität und Zyklus je Mitglied, mit Verlaufsdiagrammen. |
-| **Notizen &amp; Kontakte** | Farbige Markdown-Haftnotizen plus ein Kontaktverzeichnis mit CardDAV-Sync und vCard-Import/-Export. |
+| **Notizen &amp; Kontakte** | Farbige Markdown-Haftnotizen mit Checklisten, die man antippt statt zu bearbeiten, plus ein Kontaktverzeichnis mit CardDAV-Sync und vCard-Import/-Export. |
 | **Geburtstage** | Geburtstagsliste mit automatischen Kalendereinträgen, Altersanzeige und Erinnerungen. |
 | **Familie** | Mitgliedsprofile mit Rollen, Fotos und Kontaktdaten. Neue Mitglieder kommen über einen Einladungslink und wählen ihr Passwort selbst. |
 | **Erinnerungen** | Erinnerungen an Aufgaben und Termine per In-App-Kennzeichen, optionalem Push und Gotify-, ntfy- oder Webhook-Kanälen des Haushalts. |

@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.42.0] - 2026-08-25
+
 ### Added
 
 - **Task notes get the formatting toolbar the notes module has always had** (#731). Task notes have
@@ -21,6 +23,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
   Its labels moved with it, from `notes.format*` to `markdown.*`, because they no longer belong to
   one module.
+
+  Both new pieces are ordinary browser libraries under `/utils/`, so a third-party module can import
+  them the same way it imports `/api.js`: `markdown-toolbar.js` for the toolbar and its insertion
+  rules, `markdown-checklist.js` for the one definition of what a checklist line is - the same file
+  the server validates against.
 
 - **A rendered checkbox can be ticked by tapping it** (#704). Notes drew `- [ ]` as a styled box that
   was deliberately inert. To tick something off you opened the note, changed `[ ]` into `[x]` in the
