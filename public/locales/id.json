@@ -882,7 +882,8 @@
         "recurringScopeHintFollowing": "Memengaruhi acara pada {{date}} dan semua berikutnya.",
         "recurringScopeHintSeries": "Memengaruhi seluruh seri.",
         "detailWhen": "Waktu",
-        "detailCalendar": "Kalender"
+        "detailCalendar": "Kalender",
+        "colorCurrent": "Warna saat ini"
     },
     "notes": {
         "title": "Catatan",

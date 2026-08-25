@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "{{date}} की घटना और सभी आगे वाली को प्रभावित करता है।",
         "recurringScopeHintSeries": "पूरी शृंखला को प्रभावित करता है।",
         "detailWhen": "समय",
-        "detailCalendar": "कैलेंडर"
+        "detailCalendar": "कैलेंडर",
+        "colorCurrent": "वर्तमान रंग"
     },
     "notes": {
         "title": "नोट बोर्ड",

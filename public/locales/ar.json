@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "يؤثر على الموعد في {{date}} وكل ما يليه.",
         "recurringScopeHintSeries": "يؤثر على السلسلة بأكملها.",
         "detailWhen": "الوقت",
-        "detailCalendar": "التقويم"
+        "detailCalendar": "التقويم",
+        "colorCurrent": "اللون الحالي"
     },
     "notes": {
         "title": "لوحة الملاحظات",

@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "Påverkar händelsen den {{date}} och alla följande.",
         "recurringScopeHintSeries": "Påverkar hela serien.",
         "detailWhen": "Tid",
-        "detailCalendar": "Kalender"
+        "detailCalendar": "Kalender",
+        "colorCurrent": "Nuvarande färg"
     },
     "notes": {
         "title": "Anteckningar",

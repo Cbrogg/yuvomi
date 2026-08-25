@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "Ảnh hưởng đến sự kiện vào {{date}} và tất cả sau đó.",
         "recurringScopeHintSeries": "Ảnh hưởng đến toàn bộ chuỗi.",
         "detailWhen": "Thời gian",
-        "detailCalendar": "Lịch"
+        "detailCalendar": "Lịch",
+        "colorCurrent": "Màu hiện tại"
     },
     "notes": {
         "title": "Bảng ghi chú",

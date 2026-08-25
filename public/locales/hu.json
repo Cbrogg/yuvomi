@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "A(z) {{date}} eseményt és az összes következőt érinti.",
         "recurringScopeHintSeries": "A teljes sorozatot érinti.",
         "detailWhen": "Időpont",
-        "detailCalendar": "Naptár"
+        "detailCalendar": "Naptár",
+        "colorCurrent": "Jelenlegi szín"
     },
     "notes": {
         "title": "Tábla",

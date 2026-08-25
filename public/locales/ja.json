@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "{{date}} 以降のすべての予定に影響します。",
         "recurringScopeHintSeries": "シリーズ全体に影響します。",
         "detailWhen": "時間",
-        "detailCalendar": "カレンダー"
+        "detailCalendar": "カレンダー",
+        "colorCurrent": "現在の色"
     },
     "notes": {
         "title": "メモボード",

@@ -882,7 +882,8 @@
         "recurringScopeHintFollowing": "رویداد {{date}} و همه‌ی بعدی‌ها را تحت تأثیر قرار می‌دهد.",
         "recurringScopeHintSeries": "کل مجموعه را تحت تأثیر قرار می‌دهد.",
         "detailWhen": "زمان",
-        "detailCalendar": "تقویم"
+        "detailCalendar": "تقویم",
+        "colorCurrent": "رنگ فعلی"
     },
     "notes": {
         "title": "یادداشت‌ها",

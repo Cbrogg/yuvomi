@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "{{date}} tarihindeki etkinliği ve sonraki tümünü etkiler.",
         "recurringScopeHintSeries": "Tüm seriyi etkiler.",
         "detailWhen": "Saat",
-        "detailCalendar": "Takvim"
+        "detailCalendar": "Takvim",
+        "colorCurrent": "Geçerli renk"
     },
     "notes": {
         "title": "Notlar",

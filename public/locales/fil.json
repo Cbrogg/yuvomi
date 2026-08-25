@@ -882,7 +882,8 @@
         "recurringScopeHintFollowing": "Naaapektuhan ang kaganapan noong {{date}} at lahat ng kasunod.",
         "recurringScopeHintSeries": "Naaapektuhan ang buong serye.",
         "detailWhen": "Oras",
-        "detailCalendar": "Kalendaryo"
+        "detailCalendar": "Kalendaryo",
+        "colorCurrent": "Kasalukuyang kulay"
     },
     "notes": {
         "title": "Board",

@@ -829,6 +829,82 @@ test('eine Zuweisung ohne eigene Farbe faellt nicht auf die Kalenderfarbe durch'
 });
 
 // --------------------------------------------------------
+// Der Farbwaehler zeigt, was gilt (#856)
+// --------------------------------------------------------
+
+test('der Farbwaehler zeigt eine Farbe, die nicht aus seiner Palette stammt', () => {
+  // #856: Die Avatar-Palette (iOS-Systemfarben) und EVENT_COLORS (OKLCH) teilen
+  // KEINEN einzigen Wert - das ist der Kern des Bugs, also wird es hier zuerst
+  // festgehalten. Traegt ein Termin eine Avatar-Farbe, eine RFC-7986-Farbe vom
+  // CalDAV-Server oder das alte '#007AFF', stand der Waehler leer da; der
+  // Speicherpfad schrieb daraufhin die erste Palettenfarbe darueber.
+  const { pickerColors, EVENT_COLORS } = calendarHelpers;
+  const AVATAR_COLORS = ['#007AFF', '#34C759', '#FF9500', '#FF3B30', '#AF52DE', '#FF2D55'];
+  const shared = AVATAR_COLORS.filter((a) => EVENT_COLORS.some((e) => e.toLowerCase() === a.toLowerCase()));
+  assert(shared.length === 0,
+    'die beiden Paletten duerfen sich nicht ueberschneiden - sonst prueft dieser Test nichts');
+
+  const own = pickerColors({ color: '#34C759' });
+  assert(own.length === EVENT_COLORS.length + 1, 'die fremde Farbe kommt als zusaetzlicher Swatch dazu');
+  assert(own[0] === '#34C759', 'und steht vorn, damit sie den aktiven Swatch bekommt');
+
+  assert(pickerColors({ color: EVENT_COLORS[3] }).length === EVENT_COLORS.length,
+    'eine Farbe AUS der Palette bekommt keinen zweiten Swatch');
+  assert(pickerColors({ color: EVENT_COLORS[3].toLowerCase() }).length === EVENT_COLORS.length,
+    'auch dann nicht, wenn der Server sie klein schreibt - CalDAV tut das');
+  assert(pickerColors(null).length === EVENT_COLORS.length,
+    'ein neuer Termin zeigt genau die Palette');
+  assert(pickerColors({ color: null }).length === EVENT_COLORS.length,
+    'ohne Farbe ebenso');
+});
+
+test('der Farbwaehler nimmt nur an, was wie eine Farbe aussieht', () => {
+  // Der Wert landet in einem style-Attribut. esc() verhindert das Ausbrechen,
+  // nicht aber eine zweite CSS-Deklaration dahinter - und die Sync-Dienste
+  // schreiben direkt in die Tabelle, an COLOR_RE aus validate.js vorbei.
+  const { pickerColors, EVENT_COLORS } = calendarHelpers;
+  for (const bad of ['red; background-image:url(x)', 'rgb(1,2,3)', '#FFF', '#12345', '#GGGGGG', '', 'javascript:x']) {
+    assert(pickerColors({ color: bad }).length === EVENT_COLORS.length,
+      `'${bad}' darf keinen Swatch bekommen`);
+  }
+  assert(pickerColors({ color: '#abc123' })[0] === '#abc123',
+    'ein gueltiger Hex in Kleinschreibung dagegen schon');
+});
+
+test('ein Speichern, das die Farbe nicht anfasst, veraendert sie nicht', () => {
+  // Die Invariante, um die es in #856 geht. Sie steht hier bewusst NEBEN der
+  // alten Formel: die zeigt, dass der Test etwas misst, und nicht bloss die
+  // Implementierung nachspricht, die gerade danebensteht.
+  const { colorToSave, EVENT_COLORS } = calendarHelpers;
+  const alteFormel = (aktiv) => aktiv || EVENT_COLORS[0];
+
+  // Ein Termin mit der Avatar-Farbe einer Person. Kein Swatch der Palette passt,
+  // also ist beim Oeffnen keiner aktiv - und der Nutzer fasst die Farbe nicht an.
+  const termin = { color: '#34C759' };
+  assert(colorToSave(undefined, termin) === '#34C759',
+    'die Farbe des Termins bleibt stehen');
+  assert(alteFormel(undefined) === EVENT_COLORS[0],
+    'die alte Formel schrieb hier die erste Palettenfarbe darueber - das war der Bug');
+
+  // Wer eine Farbe waehlt, bekommt sie auch.
+  assert(colorToSave('#8156C0', termin) === '#8156C0',
+    'ein aktiver Swatch schlaegt die bisherige Farbe');
+  // Ein neuer Termin hat keine bisherige Farbe.
+  assert(colorToSave(undefined, null) === EVENT_COLORS[0],
+    'ohne Termin und ohne Auswahl bleibt die erste Palettenfarbe');
+  assert(colorToSave(undefined, { color: null }) === EVENT_COLORS[0],
+    'ein Termin ohne Farbe ebenso');
+});
+
+test('sameColor vergleicht Hex-Werte ohne Ruecksicht auf Schreibweise', () => {
+  const { sameColor } = calendarHelpers;
+  assert(sameColor('#587DCE', '#587dce') === true, 'derselbe Wert, andere Schreibweise');
+  assert(sameColor('#587DCE', '#3CA368') === false, 'verschiedene Werte bleiben verschieden');
+  assert(sameColor(null, '#587DCE') === false, 'null ist keine Farbe');
+  assert(sameColor(undefined, undefined) === false, 'undefined auch nicht');
+});
+
+// --------------------------------------------------------
 // Ergebnis
 // --------------------------------------------------------
 console.log(`\n[Calendar-Test] Ergebnis: ${passed} bestanden, ${failed} fehlgeschlagen\n`);

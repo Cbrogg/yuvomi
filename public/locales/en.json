@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "Affects the event on {{date}} and all following.",
         "recurringScopeHintSeries": "Affects the entire series.",
         "detailWhen": "Time",
-        "detailCalendar": "Calendar"
+        "detailCalendar": "Calendar",
+        "colorCurrent": "Current colour"
     },
     "notes": {
         "title": "Board",

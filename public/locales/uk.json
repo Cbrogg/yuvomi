@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "Стосується події {{date}} та всіх наступних.",
         "recurringScopeHintSeries": "Стосується всієї серії.",
         "detailWhen": "Час",
-        "detailCalendar": "Календар"
+        "detailCalendar": "Календар",
+        "colorCurrent": "Поточний колір"
     },
     "notes": {
         "title": "Нотатки",

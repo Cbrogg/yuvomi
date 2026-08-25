@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "Heeft invloed op de afspraak op {{date}} en alle volgende.",
         "recurringScopeHintSeries": "Heeft invloed op de hele reeks.",
         "detailWhen": "Tijd",
-        "detailCalendar": "Agenda"
+        "detailCalendar": "Agenda",
+        "colorCurrent": "Huidige kleur"
     },
     "notes": {
         "title": "Bord",

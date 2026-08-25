@@ -882,7 +882,8 @@
         "recurringScopeHintFollowing": "Dotyczy wydarzenia w dniu {{date}} i wszystkich następnych.",
         "recurringScopeHintSeries": "Dotyczy całej serii.",
         "detailWhen": "Godzina",
-        "detailCalendar": "Kalendarz"
+        "detailCalendar": "Kalendarz",
+        "colorCurrent": "Bieżący kolor"
     },
     "notes": {
         "title": "Notatki",

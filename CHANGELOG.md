@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Editing an event repainted it in a colour nobody picked** (#856). Open an event, change the
+  assignee or just the title, save - and the event came back in the palette's first blue. Nothing had
+  touched the colour. It happened to every event whose colour was not literally one of the ten swatch
+  values: an assignee's avatar colour, an `RFC 7986 COLOR` from a CalDAV server, or the `#007AFF`
+  that events carried before the OKLCH palette arrived.
+
+  The colour picker matched the stored colour against its ten swatches to decide which one to mark
+  active. The two palettes involved share **no value at all** - avatar colours are the old iOS system
+  set (`#007AFF`, `#34C759`, …), event colours the OKLCH set (`#587DCE`, `#3CA368`, …) - so for those
+  events no swatch lit up. The picker looked as though no colour was set. Saving then read the active
+  swatch, found none, and fell back to `EVENT_COLORS[0]`.
+
+  Two things changed. The picker now **shows the colour the event actually has**, as an extra swatch
+  in front of the palette, so it stops claiming nothing is set. And saving follows one rule: a save
+  that did not touch the colour does not change it - without an active swatch the event keeps the
+  colour it already had, and only a genuinely new event falls back to the palette.
+
+  Swatch matching is also no longer case-sensitive. `#587dce` and `#587DCE` are the same colour, and
+  CalDAV servers routinely send the lower-case form.
+
 ## [2.41.0] - 2026-08-25
 
 ### Fixed

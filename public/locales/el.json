@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "Επηρεάζει το συμβάν στις {{date}} και όλα τα επόμενα.",
         "recurringScopeHintSeries": "Επηρεάζει ολόκληρη τη σειρά.",
         "detailWhen": "Ώρα",
-        "detailCalendar": "Ημερολόγιο"
+        "detailCalendar": "Ημερολόγιο",
+        "colorCurrent": "Τρέχον χρώμα"
     },
     "notes": {
         "title": "Σημειώσεις",

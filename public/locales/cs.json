@@ -870,7 +870,8 @@
         "recurringScopeHintFollowing": "Ovlivní událost dne {{date}} a všechny následující.",
         "recurringScopeHintSeries": "Ovlivní celou sérii.",
         "detailWhen": "Čas",
-        "detailCalendar": "Kalendář"
+        "detailCalendar": "Kalendář",
+        "colorCurrent": "Aktuální barva"
     },
     "notes": {
         "title": "Nástěnka",
