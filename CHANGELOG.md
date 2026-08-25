@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.40.0] - 2026-08-25
+
 ### Added
 
 - **SSO can be the only way in** (#847). Even with an identity provider configured, Yuvomi kept a

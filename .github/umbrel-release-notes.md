@@ -1,8 +1,10 @@
-<!-- version: 2.39.0 -->
-Dragging your task categories into the order you want now actually changes the order you see. Until this release the tasks page ignored it and sorted the groups alphabetically instead, so a category you had pulled to the top stayed wherever the alphabet put it. The order you set in "Manage categories" is now the order the groups appear in, in every language.
+<!-- version: 2.40.0 -->
+If your household signs in through your own identity provider, single sign-on can now be the only way in. Until this release Yuvomi always kept a second door open: the login form stayed, password reset stayed, and every account still carried a password. Setting AUTH_ALLOW_PASSWORD_LOGIN to false closes all three together, so the sign-in page shows nothing but the button to your provider. It deliberately does nothing until your provider is fully configured and an administrator has actually signed in through it at least once, because a switch that takes hold any earlier would lock a household out of its own app. Existing passwords are left untouched, so turning it back on restores the old sign-in page unchanged.
 
-If you sign in to Yuvomi through your own identity provider, you can now decide whether it may create accounts. Until now anyone who could sign in at your provider got a Yuvomi account on their first attempt, which is fine when you run that provider for this household alone and rather less so when you do not. Setting OIDC_ALLOW_SIGNUP to false turns that off: people who already have an account still sign in as before, and an account you created by hand is still matched up on their first sign-in, but an unfamiliar login is turned away with a message saying so instead of quietly becoming a new member of your household.
+A family member can also be given an account with no password at all, which is useful when they only ever sign in through your provider. Until now preparing such an account meant inventing a password that nobody would use and that nonetheless kept working. The new option sits next to the password field when you add or edit a member.
 
-Nothing needs configuring and nothing changes about your data. The new setting only takes effect if you set it yourself, so an existing installation behaves exactly as it did before.
+This release also closes a hole in password reset. An account created through single sign-on carries no password, and the reset flow did not know that: it would happily set a real, working one, and anyone who knew the email address stored in Contacts could trigger it. Such accounts are now left alone, whichever way the reset is requested. Nothing needs doing on your side, and the change is invisible to accounts that do have a password.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.39.0
+Nothing needs configuring and nothing changes about your data. Everything new here is optional and off until you turn it on, so an existing installation behaves exactly as it did before.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.40.0
