@@ -52,6 +52,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   run has no acting person - it uses the household's credentials, not a member's - which is the same
   reason the reward ledger has the same gap.
 
+### Fixed
+
+- **The automated pull request review went silent** and left four runs in a row without a finding
+  (#865). It was not blocked and it did not crash: the review plugin works almost entirely through
+  subagents, and those now start **asynchronously**. In an interactive session the notification that
+  an agent finished arrives as a new turn. A CI run has no next turn - the main session says "I'll
+  wait for both background agents" and is done, so it dies together with its agents before any
+  finding exists. Every one of the four result objects carried that same sentence, with turn counts
+  of 5, 56 and 7, which is why re-running never helped: the cause is structural, not flaky.
+
+  The prompt now tells the review to run its agents synchronously. A guard
+  (`test:claude-review-workflow`) holds that instruction, along with the three earlier conditions
+  that each cost several attempts to find - `--comment`, `Skill` and `Task` in the allowed tools, and
+  write permission on pull requests. Each of them is invisible when reading the file and produces the
+  same symptom: a review that runs and says nothing.
+
+  Worth knowing while this is on its way: a pull request that touches the review workflow makes the
+  action skip itself, so this fix cannot be measured in its own pull request. It has to land on
+  `main` first.
 
 ## [2.43.0] - 2026-08-25
 
