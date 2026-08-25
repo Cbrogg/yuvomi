@@ -695,7 +695,6 @@
         "assignedLabel": "分配给",
         "assignedNobody": "- 无人 -",
         "colorLabel": "颜色",
-        "colorOverriddenByAssignee": "颜色被指定用户覆盖",
         "descriptionLabel": "描述",
         "descriptionPlaceholder": "可选…",
         "deleteConfirm": "确定删除 \"{{title}}\"？",
@@ -870,7 +869,8 @@
         "recurringScopeHintFollowing": "影响 {{date}} 及后续的所有事件。",
         "recurringScopeHintSeries": "影响整个系列。",
         "detailWhen": "时间",
-        "detailCalendar": "日历"
+        "detailCalendar": "日历",
+        "colorCurrent": "当前颜色"
     },
     "notes": {
         "title": "便签板",

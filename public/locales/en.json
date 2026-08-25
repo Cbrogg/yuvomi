@@ -695,7 +695,6 @@
         "assignedLabel": "Assigned to",
         "assignedNobody": "- Nobody -",
         "colorLabel": "Color",
-        "colorOverriddenByAssignee": "Color is overridden by assigned user(s)",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Optional…",
         "deleteConfirm": "Really delete \"{{title}}\"?",
@@ -870,7 +869,8 @@
         "recurringScopeHintFollowing": "Affects the event on {{date}} and all following.",
         "recurringScopeHintSeries": "Affects the entire series.",
         "detailWhen": "Time",
-        "detailCalendar": "Calendar"
+        "detailCalendar": "Calendar",
+        "colorCurrent": "Current colour"
     },
     "notes": {
         "title": "Board",

@@ -695,7 +695,6 @@
         "assignedLabel": "Atanan",
         "assignedNobody": "- Kimse -",
         "colorLabel": "Renk",
-        "colorOverriddenByAssignee": "Renk, atanan kullanıcılar tarafından geçersiz kılınır",
         "descriptionLabel": "Açıklama",
         "descriptionPlaceholder": "İsteğe bağlı…",
         "deleteConfirm": "\"{{title}}\" silinsin mi?",
@@ -870,7 +869,8 @@
         "recurringScopeHintFollowing": "{{date}} tarihindeki etkinliği ve sonraki tümünü etkiler.",
         "recurringScopeHintSeries": "Tüm seriyi etkiler.",
         "detailWhen": "Saat",
-        "detailCalendar": "Takvim"
+        "detailCalendar": "Takvim",
+        "colorCurrent": "Geçerli renk"
     },
     "notes": {
         "title": "Notlar",

@@ -695,7 +695,6 @@
         "assignedLabel": "Assegnato a",
         "assignedNobody": "- Nessuno -",
         "colorLabel": "Colore",
-        "colorOverriddenByAssignee": "Il colore viene sostituito dagli utenti assegnati",
         "descriptionLabel": "Descrizione",
         "descriptionPlaceholder": "Opzionale…",
         "deleteConfirm": "Eliminare davvero \"{{title}}\"?",
@@ -870,7 +869,8 @@
         "recurringScopeHintFollowing": "Riguarda l'evento del {{date}} e tutti i successivi.",
         "recurringScopeHintSeries": "Riguarda l'intera serie.",
         "detailWhen": "Ora",
-        "detailCalendar": "Calendario"
+        "detailCalendar": "Calendario",
+        "colorCurrent": "Colore attuale"
     },
     "notes": {
         "title": "Bacheca",

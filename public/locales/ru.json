@@ -695,7 +695,6 @@
         "assignedLabel": "Назначено",
         "assignedNobody": "- Никому -",
         "colorLabel": "Цвет",
-        "colorOverriddenByAssignee": "Цвет переопределяется назначенными пользователями",
         "descriptionLabel": "Описание",
         "descriptionPlaceholder": "Необязательно…",
         "deleteConfirm": "Удалить «{{title}}»?",
@@ -870,7 +869,8 @@
         "recurringScopeHintFollowing": "Затрагивает событие {{date}} и все последующие.",
         "recurringScopeHintSeries": "Затрагивает всю серию.",
         "detailWhen": "Время",
-        "detailCalendar": "Календарь"
+        "detailCalendar": "Календарь",
+        "colorCurrent": "Текущий цвет"
     },
     "notes": {
         "title": "Заметки",

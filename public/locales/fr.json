@@ -695,7 +695,6 @@
         "assignedLabel": "Assigné à",
         "assignedNobody": "- Personne -",
         "colorLabel": "Couleur",
-        "colorOverriddenByAssignee": "La couleur est remplacée par les utilisateurs assignés",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Optionnel…",
         "deleteConfirm": "Supprimer « {{title}} » ?",
@@ -870,7 +869,8 @@
         "recurringScopeHintFollowing": "Affecte l'événement du {{date}} et tous les suivants.",
         "recurringScopeHintSeries": "Affecte toute la série.",
         "detailWhen": "Heure",
-        "detailCalendar": "Calendrier"
+        "detailCalendar": "Calendrier",
+        "colorCurrent": "Couleur actuelle"
     },
     "notes": {
         "title": "Notes",

@@ -707,7 +707,6 @@
         "assignedLabel": "Zugewiesen an",
         "assignedNobody": "- Niemand -",
         "colorLabel": "Farbe",
-        "colorOverriddenByAssignee": "Farbe wird durch zugewiesene Person(en) überschrieben",
         "colorBlue": "Blau",
         "colorGreen": "Grün",
         "colorOrange": "Orange",
@@ -882,7 +881,8 @@
         "recurringScopeHintFollowing": "Betrifft den Termin am {{date}} und alle folgenden.",
         "recurringScopeHintSeries": "Betrifft die gesamte Serie.",
         "detailWhen": "Zeit",
-        "detailCalendar": "Kalender"
+        "detailCalendar": "Kalender",
+        "colorCurrent": "Aktuelle Farbe"
     },
     "notes": {
         "title": "Notizen",

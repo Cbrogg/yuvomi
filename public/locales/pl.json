@@ -707,7 +707,6 @@
         "assignedLabel": "Przypisane do",
         "assignedNobody": "– Nikt –",
         "colorLabel": "Kolor",
-        "colorOverriddenByAssignee": "Kolor jest zastępowany przez przypisanych użytkowników",
         "colorBlue": "Niebieski",
         "colorGreen": "Zielony",
         "colorOrange": "Pomarańczowy",
@@ -882,7 +881,8 @@
         "recurringScopeHintFollowing": "Dotyczy wydarzenia w dniu {{date}} i wszystkich następnych.",
         "recurringScopeHintSeries": "Dotyczy całej serii.",
         "detailWhen": "Godzina",
-        "detailCalendar": "Kalendarz"
+        "detailCalendar": "Kalendarz",
+        "colorCurrent": "Bieżący kolor"
     },
     "notes": {
         "title": "Notatki",

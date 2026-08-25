@@ -856,7 +856,6 @@
         "attachmentDocumentDescription": "Tệp đính kèm đã được tải lên cho sự kiện lịch \"{{title}}\".",
         "agendaEmpty": "Không có sự kiện nào trong phạm vi đã chọn",
         "taskChipAriaLabel": "Nhiệm vụ: {{title}}",
-        "colorOverriddenByAssignee": "Màu sắc bị ghi đè bởi người được giao",
         "toggleHolidays": "Ngày lễ",
         "toggleSchool": "Kỳ nghỉ học",
         "toggleBirthdays": "Sinh nhật",
@@ -870,7 +869,8 @@
         "recurringScopeHintFollowing": "Ảnh hưởng đến sự kiện vào {{date}} và tất cả sau đó.",
         "recurringScopeHintSeries": "Ảnh hưởng đến toàn bộ chuỗi.",
         "detailWhen": "Thời gian",
-        "detailCalendar": "Lịch"
+        "detailCalendar": "Lịch",
+        "colorCurrent": "Màu hiện tại"
     },
     "notes": {
         "title": "Bảng ghi chú",
