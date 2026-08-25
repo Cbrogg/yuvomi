@@ -431,44 +431,78 @@ function formatDateTime(isoString) {
   return `${dateStr}, ${timeStr}${suffix ? ' ' + suffix : ''}`.trim();
 }
 
+/** 'YYYY-MM-DDTHH:mm' als Millisekunden - reine Feldarithmetik, kein Zeitpunkt. */
+function wallStampMs(stamp) {
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})$/.exec(stamp);
+  if (!m) return NaN;
+  return Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]), Number(m[4]), Number(m[5]));
+}
+
+/**
+ * Die Faelligkeit einer Aufgabe als Beschriftung.
+ *
+ * `due_date`/`due_time` sind zonenlose WANDUHRZEIT: wer „21:00" eingetippt hat,
+ * meinte 21:00, in welcher Zone der Haushalt auch steht. Hier stand ein Umweg
+ * ueber `new Date(\`${dateStr}T${timeStr}\`)`, und der machte daraus einen
+ * Zeitpunkt der BROWSER-Zone, den `formatDate`/`formatTime` anschliessend in die
+ * Anzeigezone umrechneten - mit Haushalt auf Honolulu und Browser in Berlin
+ * wurde aus 21:00 ein 9:00. utils/timezone.js fuehrt die Regel dazu: umgerechnet
+ * wird nur, was seine Zone SELBST traegt.
+ *
+ * Dieselbe Uhr entschied ueber „heute"/„morgen". Sie war die des Browsers, nicht
+ * die des Haushalts - die siebte Uhr, die #829 Teil 3 uebersehen hat.
+ */
 function formatDueDate(dateStr, timeStr) {
   if (!dateStr) return null;
 
-  const dueDate = timeStr
-    ? new Date(`${dateStr}T${timeStr}`)
-    : new Date(`${dateStr}T23:59:59`);
+  const dayKey = String(dateStr).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null;
 
-  if (isNaN(dueDate)) return null;
+  const dueTime = timeStr ? String(timeStr).slice(0, 5) : null;
+  if (timeStr && !/^\d{2}:\d{2}$/.test(dueTime)) return null;
+  // Ohne due_time laeuft der Tag bis zu seinem Ende. Das ist die interne
+  // Sortier-Kruecke und wird unten nie als Uhrzeit angezeigt.
+  const dueStamp = `${dayKey}T${dueTime ?? '23:59'}`;
 
-  const now = new Date();
-  const diffMs = dueDate - now;
-  const diffH = diffMs / (1000 * 60 * 60);
+  const now = nowFields();
+  if (!now) return null;
+  const p2 = (n) => String(n).padStart(2, '0');
+  const todayKey = `${now.year}-${p2(now.month)}-${p2(now.day)}`;
+  const nowStamp = `${todayKey}T${p2(now.hour)}:${p2(now.minute)}`;
 
-  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dueDay = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-  const calDayDiff = Math.round((dueDay - today) / (1000 * 60 * 60 * 24));
+  // Beide Seiten sind Wanduhrzeit DERSELBEN Zone und damit als Text vergleichbar.
+  const overdue = dueStamp < nowStamp;
+  const diffH = (wallStampMs(dueStamp) - wallStampMs(nowStamp)) / (1000 * 60 * 60);
 
-  const fullLabel = timeStr
-    ? `${formatDate(dueDate)}, ${formatTime(dueDate)}` // beide aus i18n.js
-    : formatDate(dueDate);
+  // Kalendertage, nicht Millisekunden: ueber eine Sommerzeitgrenze liegen zwei
+  // aufeinanderfolgende Tage nicht 24h auseinander, ihre Keys aber immer genau
+  // einen.
+  const dayMs = (key) => wallStampMs(`${key}T00:00`);
+  const calDayDiff = Math.round((dayMs(dayKey) - dayMs(todayKey)) / (1000 * 60 * 60 * 24));
 
-  if (diffMs < 0) {
+  // Die Stempel gehen als STRING an die Formatierer, nicht als Date: nur so
+  // bleibt die Wanduhrzeit, was sie ist (siehe oben).
+  const fullLabel = dueTime
+    ? `${formatDate(dueStamp)}, ${formatTime(dueStamp)}` // beide aus i18n.js
+    : formatDate(dayKey);
+
+  if (overdue) {
     return { text: `${t('dashboard.overdue')} – ${fullLabel}`, overdue: true };
   }
 
-  if (calDayDiff === 1 && dueDate.getHours() >= 22 && diffH < 24) {
+  if (calDayDiff === 1 && Number(dueTime?.slice(0, 2)) >= 22 && diffH < 24) {
     return { text: `${t('dashboard.dueSoon')} – ${fullLabel}`, overdue: false, soon: true };
   }
 
   if (calDayDiff === 0) {
-    return { text: timeStr ? `${t('dashboard.dueToday')} – ${formatTime(dueDate)}` : t('dashboard.dueToday'), overdue: false, soon: true };
+    return { text: dueTime ? `${t('dashboard.dueToday')} – ${formatTime(dueStamp)}` : t('dashboard.dueToday'), overdue: false, soon: true };
   }
 
   if (calDayDiff === 1) {
     // Nur eine ECHTE Uhrzeit anhängen: ohne due_time ist 23:59:59 die interne
     // Sortier-Krücke - „Morgen fällig – 23:59" behauptete eine Deadline, die
     // niemand gesetzt hat (Critique P1). Der Heute-Zweig darüber macht es vor.
-    return { text: timeStr ? `${t('dashboard.dueTomorrow')} – ${formatTime(dueDate)}` : t('dashboard.dueTomorrow'), overdue: false };
+    return { text: dueTime ? `${t('dashboard.dueTomorrow')} – ${formatTime(dueStamp)}` : t('dashboard.dueTomorrow'), overdue: false };
   }
 
   return { text: fullLabel, overdue: false };

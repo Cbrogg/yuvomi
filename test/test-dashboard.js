@@ -252,6 +252,98 @@ test('formatDueDate: „Morgen fällig" erfindet ohne due_time keine Uhrzeit', a
   nodeAssert.match(withTime.text, /09:30/, 'eine echte Uhrzeit bleibt sichtbar');
 });
 
+/* Die Faelligkeit folgt der ANZEIGEZONE, nicht dem Browser (#829 Teil 3, Nachlese
+ * aus #851).
+ *
+ * `due_date`/`due_time` sind zonenlose Wanduhrzeit. Hier stand ein Umweg ueber
+ * `new Date(`${date}T${time}`)`, und der machte daraus einen Zeitpunkt der
+ * BROWSER-Zone - den formatDate/formatTime anschliessend in die Anzeigezone
+ * umrechneten. Mit Haushalt auf Honolulu und Browser in Berlin wurde aus einer
+ * fuer 21:00 eingetragenen Aufgabe eine fuer 9:00, und dieselbe Uhr entschied
+ * ueber "heute"/"morgen".
+ *
+ * Der Test setzt die Zone ueber DENSELBEN Spezifizierer, den dashboard.js
+ * benutzt (`/utils/timezone.js`) - ueber den Repo-Pfad importiert waere es eine
+ * zweite Modulinstanz mit eigenem Zonen-Cache, und der Test liefe an seinem
+ * eigenen Gegenstand vorbei. */
+test('formatDueDate liest due_date/due_time in der Anzeigezone, nicht im Browser', async () => {
+  const tz = await import('/utils/timezone.js');
+  const { __test } = await import('../public/pages/dashboard.js');
+  const p2 = (n) => String(n).padStart(2, '0');
+  const stamp = (f) => `${f.year}-${p2(f.month)}-${p2(f.day)}`;
+
+  const ZONES = ['Pacific/Honolulu', 'Pacific/Kiritimati'];
+  try {
+    for (const zone of ZONES) {
+      tz.setDisplayTimeZone(zone);
+      const today = stamp(tz.nowFields());
+
+      // Die eingetippte Uhrzeit bleibt die eingetippte Uhrzeit.
+      //
+      // Geprueft wird der STEMPEL, nicht die fertige Schreibweise: `/i18n.js` ist
+      // in diesem Kontext ein Stub, der `String(d)` zurueckgibt und deshalb gar
+      // nicht umrechnet - eine Assertion auf "steht 21:00 drin" waere hier gruen,
+      // egal was uebergeben wird. Die Eigenschaft, an der es haengt, ist, dass
+      // die zonenlose Wanduhrzeit als Stempel weitergereicht wird statt als Date
+      // der Browser-Zone; nur die kann dieser Kontext sehen.
+      const withTime = __test.formatDueDate(today, '21:00:00');
+      nodeAssert.match(withTime.text, /\d{4}-\d{2}-\d{2}T21:00/,
+        `${zone}: die Wanduhrzeit muss als Stempel an den Formatierer gehen, erhalten: ${withTime.text}`);
+      nodeAssert.ok(!/GMT/.test(withTime.text),
+        `${zone}: ein Date-Umweg wuerde die Zeit in der Browser-Zone einfrieren, erhalten: ${withTime.text}`);
+
+      // Und "heute" ist der Tag der Anzeigezone, nicht der des Browsers.
+      nodeAssert.match(withTime.text, /dashboard\.(dueToday|overdue)/,
+        `${zone}: der heutige Tag der Anzeigezone muss als heute gelten, erhalten: ${withTime.text}`);
+
+      const shiftDay = (key, days) => {
+        const [y, m, d] = key.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d) + days * 86400000).toISOString().slice(0, 10);
+      };
+      nodeAssert.match(__test.formatDueDate(shiftDay(today, 1), null).text, /dashboard\.dueTomorrow/,
+        `${zone}: der Folgetag der Anzeigezone ist morgen`);
+
+      // JEDER Ausgabepfad, der eine Uhrzeit zeigt - nicht nur der heutige. Der
+      // ueberfaellige und der Bald-Zweig bauen ihre Beschriftung ueber eine eigene
+      // Zeile (`fullLabel`), und die blieb bei einer ersten Fassung dieses Tests
+      // ungeprueft: sie kommt bei "heute faellig" gar nicht vor.
+      const paths = [
+        [shiftDay(today, -1), '21:00:00', /dashboard\.overdue/, 'gestern 21:00 ist ueberfaellig'],
+        [shiftDay(today, 1), '23:30:00', /dashboard\.(dueSoon|dueTomorrow)/, 'morgen spaet'],
+        [shiftDay(today, 1), '09:30:00', /dashboard\.dueTomorrow/, 'morgen frueh'],
+        [shiftDay(today, 4), '14:00:00', /\d/, 'in vier Tagen'],
+      ];
+      for (const [day, time, expect, what] of paths) {
+        const res = __test.formatDueDate(day, time);
+        nodeAssert.match(res.text, expect, `${zone}: ${what}, erhalten: ${res.text}`);
+        nodeAssert.match(res.text, new RegExp(`${day}T${time.slice(0, 5)}`),
+          `${zone}: ${what} - die Wanduhrzeit muss als Stempel weitergereicht werden, erhalten: ${res.text}`);
+        nodeAssert.ok(!/GMT/.test(res.text),
+          `${zone}: ${what} - ein Date-Umweg friert die Zeit in der Browser-Zone ein, erhalten: ${res.text}`);
+      }
+    }
+  } finally {
+    tz.setDisplayTimeZone(null);
+  }
+});
+
+test('formatDueDate: eine Faelligkeit spaeter am Tag ist nicht schon ueberfaellig', async () => {
+  const tz = await import('/utils/timezone.js');
+  const { __test } = await import('../public/pages/dashboard.js');
+  try {
+    tz.setDisplayTimeZone('Pacific/Honolulu');
+    const now = tz.nowFields();
+    const p2 = (n) => String(n).padStart(2, '0');
+    const today = `${now.year}-${p2(now.month)}-${p2(now.day)}`;
+    // Eine Minute in der Zukunft, in der Zone gerechnet, in der die Anzeige liest.
+    const later = new Date(Date.UTC(now.year, now.month - 1, now.day, now.hour, now.minute) + 60000);
+    const res = __test.formatDueDate(today, `${p2(later.getUTCHours())}:${p2(later.getUTCMinutes())}`);
+    nodeAssert.equal(res.overdue, false, `nicht ueberfaellig, erhalten: ${res.text}`);
+  } finally {
+    tz.setDisplayTimeZone(null);
+  }
+});
+
 test('Tagesprogramm: Ausblick kennt die nächste fällige Aufgabe über heute hinaus', async () => {
   const { __test } = await import('../public/pages/dashboard.js');
   const todayStr = toLocalDateKey(new Date());
