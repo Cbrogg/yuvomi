@@ -7,6 +7,44 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Ein Vorratsartikel meldet sich, bevor sein Mindesthaltbarkeitsdatum erreicht ist** (#811). Der
+  Vorrat kennt das Datum seit #596 und hat es nie angekündigt: Erinnerungen hingen an einer Liste
+  von Herkünften (`task`, `event`, `subscription`, `inventory_item`, `inventory_tracked_date`), und
+  der Vorrat stand nicht darin. Das war die einzige fehlende Zeile - kein neuer Mechanismus, die
+  vierte Anwendung eines bereits dreifach vorhandenen.
+
+  **Das Datum selbst ist der Schalter.** Es gibt nichts abzuwählen: wer bei Salz und Reis kein MHD
+  einträgt, hört nichts, und wer eines einträgt, wird erinnert. Dasselbe Prinzip wie Kaufdatum plus
+  Garantiemonate am Inventar-Gegenstand.
+
+  **Der Vorlauf ist die Schwelle, die die Zeile ohnehin gelb färbt** - sieben Tage, dieselbe Zahl
+  wie der Chip "läuft bald ab". Ein eigener Vorlauf je Artikel wäre die Alternative gewesen und die
+  falsche: eine Frist am Inventar wird einzeln gepflegt, ein Vorrat ist Massenware, und ein Feld,
+  das niemand pro Joghurt pflegt, ist ein halb gefülltes Feld. Zwei Zahlen für dieselbe Frage wären
+  außerdem zwei Wahrheiten - die Meldung käme an einem Tag, an dem in der Liste nichts markiert ist.
+  Ein Guard hält beide Definitionen jetzt zusammen; er deckt auch die Garantiefrist im Inventar,
+  deren Kommentar die Gleichheit seit jeher behauptet, ohne dass sie jemand geprüft hätte.
+
+  **Eine leere Packung meldet nicht.** Der Chip zeigt "läuft bald ab" auch bei Menge 0, und das ist
+  dort richtig - eine Liste ist passiv, man sieht sie, wenn man hinsieht. Eine Meldung unterbricht,
+  und für Verbrauchtes gibt es nichts mehr zu retten. Wer nachkauft, bekommt die Erinnerung
+  zurück: jeder Schreibweg, auch der ±-Stepper und die Übernahme aus der Einkaufsliste, führt durch
+  dieselbe Stelle.
+
+  Ein nachgetragener Artikel, dessen Vorlauf schon verstrichen ist, meldet nichts - sonst käme die
+  Nachricht im nächsten Durchlauf sofort für etwas, das man gerade selbst eingetragen hat.
+
+### Changed
+
+- **Der Vorlauf einer Erinnerung wird nur noch an einer Stelle gerechnet.** Dieselben vier Zeilen
+  ("N Tage vor diesem Datum, morgens, ohne Zeitzonen-Suffix") standen zweimal im Baum - einmal für
+  Abos, einmal für Garantien. Mit dem Vorrat wäre es die dritte Kopie geworden, also gibt es sie
+  jetzt einmal; die beiden Module behalten ihre sprechenden Namen als Fassade. Kein Verhalten
+  ändert sich, die Termine bleiben auf die Sekunde dieselben.
+
+
 ## [2.44.0] - 2026-08-25
 
 ### Added

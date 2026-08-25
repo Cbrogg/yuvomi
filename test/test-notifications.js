@@ -52,9 +52,14 @@ function makeDb({ withNotificationTables = true } = {}) {
       date TEXT NOT NULL,
       reminder_offset_days INTEGER NOT NULL DEFAULT 30
     );
+    CREATE TABLE pantry_items (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      name TEXT NOT NULL,
+      expires_on TEXT
+    );
     CREATE TABLE reminders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      entity_type TEXT NOT NULL CHECK(entity_type IN ('task','event','subscription','inventory_item','inventory_tracked_date')),
+      entity_type TEXT NOT NULL CHECK(entity_type IN ('task','event','subscription','inventory_item','inventory_tracked_date','pantry_item')),
       entity_id INTEGER NOT NULL,
       remind_at TEXT NOT NULL,
       dismissed INTEGER NOT NULL DEFAULT 0,
@@ -577,6 +582,53 @@ test('inventory tracked-date reminders carry item name, label and date as body',
   // Title-Herkunfts-Regel (v2.6.0): der Titel nennt das Modul, nicht mehr
   // pauschal den App-Namen (vgl. task/event/subscription oben).
   assert.equal(payloads[0].title, 'Inventory');
+});
+
+test('pantry reminders carry the item name and its best-before date as body', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  db.prepare("INSERT INTO pantry_items (id, name, expires_on) VALUES (1, 'Joghurt', '2026-09-01')").run();
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'pantry_item', 1, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  // Regression: ohne den pantry_item-Zweig im entity_title-CASE kaeme hier der
+  // Fallback-Body 'Reminder' an - eine Meldung, die nicht sagt, welcher Artikel.
+  assert.equal(payloads[0].body, 'Joghurt - 2026-09-01');
+  // Herkunfts-Regel: der Titel nennt das Modul, und das Ziel fuehrt dorthin -
+  // beides steht in EINEM Eintrag, damit es nicht auseinanderlaufen kann.
+  assert.equal(payloads[0].title, 'Pantry');
+  assert.equal(payloads[0].url, '/pantry');
+});
+
+test('pantry reminders degrade to the bare title when the item is gone', async () => {
+  const { createNotificationChannelStore } = await import('../server/services/notification-channels.js');
+  const { processDueNotifications } = await import('../server/services/notifications.js');
+  const db = makeDb();
+  const store = createNotificationChannelStore({ db });
+  store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
+  // Reminder ohne Artikel: der Router raeumt beim Loeschen auf, aber eine
+  // verwaiste Zeile darf die Zustellung trotzdem nicht sprengen.
+  db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'pantry_item', 99, ?, 1)")
+    .run('2026-06-19T09:59:00.000Z');
+  const payloads = [];
+  const providers = {
+    ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
+  };
+  const pushService = { sendPushToUser: async () => 0 };
+
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  assert.equal(payloads.length, 1);
+  assert.equal(payloads[0].body, 'Reminder');
 });
 
 test('inventory tracked-date reminders degrade to the bare title without a date', async () => {

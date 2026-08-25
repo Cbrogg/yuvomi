@@ -95,6 +95,7 @@ const REMINDER_ORIGINS = {
   subscription:           { titleKey: 'subscriptions.tabLabel', url: '/budget' },
   inventory_item:         { titleKey: 'nav.inventory',          url: '/inventory' },
   inventory_tracked_date: { titleKey: 'nav.inventory',          url: '/inventory' },
+  pantry_item:            { titleKey: 'nav.pantry',             url: '/pantry' },
 };
 
 /**
@@ -123,6 +124,16 @@ function trackedDateBody(reminder) {
   return `${reminder.entity_title} - ${reminder.inv_tracked_date}`;
 }
 
+/**
+ * Body einer Ablauf-Erinnerung: Artikelname und Mindesthaltbarkeitsdatum.
+ * Gleiche Begruendung wie die drei Funktionen darueber - reine Daten, kein
+ * Satzbau, weil der Server die Sprache des Empfaengers nicht kennt.
+ */
+function pantryExpiryBody(reminder) {
+  if (!reminder.pantry_expires_on) return reminder.entity_title;
+  return `${reminder.entity_title} - ${reminder.pantry_expires_on}`;
+}
+
 function reminderPayload(reminder, locale) {
   const title = reminder.entity_title || FALLBACK_BODY;
   const origin = REMINDER_ORIGINS[reminder.entity_type];
@@ -133,6 +144,8 @@ function reminderPayload(reminder, locale) {
     body = warrantyBody(reminder);
   } else if (reminder.entity_type === 'inventory_tracked_date' && reminder.entity_title) {
     body = trackedDateBody(reminder);
+  } else if (reminder.entity_type === 'pantry_item' && reminder.entity_title) {
+    body = pantryExpiryBody(reminder);
   }
   return {
     // Ohne bekannte Herkunft bleibt der App-Name: er ist nichtssagend, aber nie
@@ -286,6 +299,7 @@ export async function processDueNotifications({
           FROM inventory_item_dates d JOIN inventory_items ii ON ii.id = d.item_id
           WHERE d.id = r.entity_id
         )
+        WHEN 'pantry_item' THEN (SELECT name FROM pantry_items WHERE id = r.entity_id)
       END AS entity_title,
       CASE WHEN r.entity_type = 'inventory_item'
         THEN (SELECT purchase_date FROM inventory_items WHERE id = r.entity_id) END AS inv_purchase_date,
@@ -293,6 +307,8 @@ export async function processDueNotifications({
         THEN (SELECT warranty_months FROM inventory_items WHERE id = r.entity_id) END AS inv_warranty_months,
       CASE WHEN r.entity_type = 'inventory_tracked_date'
         THEN (SELECT date FROM inventory_item_dates WHERE id = r.entity_id) END AS inv_tracked_date,
+      CASE WHEN r.entity_type = 'pantry_item'
+        THEN (SELECT expires_on FROM pantry_items WHERE id = r.entity_id) END AS pantry_expires_on,
       CASE WHEN r.entity_type = 'subscription'
         THEN (SELECT amount FROM budget_subscriptions WHERE id = r.entity_id) END AS sub_amount,
       CASE WHEN r.entity_type = 'subscription'

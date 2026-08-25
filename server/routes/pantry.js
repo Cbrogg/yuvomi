@@ -18,6 +18,7 @@ import * as db from '../db.js';
 import { createLogger } from '../logger.js';
 import { str, oneOf, num, date, id as idParam, collectErrors, MAX_TITLE, MAX_TEXT, MAX_SHORT } from '../middleware/validate.js';
 import { normalizePantryUnit, normalizePantryQuantity } from '../../public/utils/pantry-units.js';
+import { reminderDateBefore, reminderIsInThePast } from '../utils/reminder-schedule.js';
 
 const log = createLogger('Pantry');
 const router = express.Router();
@@ -40,6 +41,61 @@ function validCategoryNames() {
 
 function getItem(itemId) {
   return db.get().prepare('SELECT * FROM pantry_items WHERE id = ?').get(itemId);
+}
+
+/**
+ * Vorlauf der Ablauf-Erinnerung in Tagen.
+ *
+ * BEWUSST DIESELBE ZAHL wie `EXPIRY_SOON_DAYS` in public/utils/pantry-status.js,
+ * die den Chip "läuft bald ab" gelb färbt: die Meldung kündigt genau diesen
+ * Zustandswechsel an. Zwei Zahlen dafür wären zwei Wahrheiten - der Haushalt
+ * bekäme die Nachricht an einem anderen Tag, als die Liste den Artikel
+ * markiert, und keiner der beiden Tage wäre erklärbar. Ein Guard in
+ * test/test-frontend-audit.js hält die Definitionen zusammen; dasselbe Muster
+ * wie WARRANTY_ALERT_DAYS im Inventar.
+ */
+const EXPIRY_REMINDER_OFFSET_DAYS = 7;
+
+/**
+ * Erinnerungs-Lebenszyklus, identisches Muster wie
+ * server/routes/inventory/items.js#syncReminder: bei jedem Schreiben erst
+ * löschen, dann - falls die Bedingungen greifen - neu anlegen. Kein Diffing,
+ * keine Sonderfälle für "nur ein Feld hat sich geändert".
+ *
+ * VIER BEDINGUNGEN, und die vierte ist die einzige, die vom Inventar abweicht:
+ *
+ * - kein MHD, keine Meldung. Das Datum IST der Schalter, so wie Kaufdatum plus
+ *   Garantiemonate es am Gegenstand sind. Salz und Reis bleiben still, ohne
+ *   dass jemand dafür etwas abwählen muss.
+ * - kein `created_by` (das Mitglied wurde gelöscht, v109 setzt die Spalte auf
+ *   NULL statt den Bestand mitzureißen): niemand, dem die Meldung gehört.
+ *   `reminders.created_by` ist NOT NULL, es gibt hier also keinen Empfänger.
+ * - der Termin liegt schon hinter uns: ein nachgetragener Artikel, dessen MHD
+ *   in drei Tagen abläuft, würde sonst im nächsten Push-Lauf sofort melden -
+ *   dieselbe Regel wie im Inventar für zurückdatierte Altgeräte.
+ * - MENGE 0: verbraucht. Der Chip zeigt "läuft bald ab" auch bei leerem
+ *   Bestand, und das ist dort richtig, weil eine Liste passiv ist - man sieht
+ *   sie, wenn man hinsieht. Eine Push-Meldung unterbricht. Für eine leere
+ *   Packung gibt es nichts mehr zu retten, also ist sie nur Lärm. Das
+ *   Wiederauffüllen legt die Erinnerung wieder an, weil jeder Schreibpfad
+ *   durch diese Funktion geht.
+ */
+function syncReminder(item) {
+  const database = db.get();
+  database.prepare(`
+    DELETE FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?
+  `).run(item.id);
+
+  if (!item.expires_on || !item.created_by) return;
+  if (Number(item.quantity) <= 0) return;
+
+  const remindAt = reminderDateBefore(item.expires_on, EXPIRY_REMINDER_OFFSET_DAYS);
+  if (reminderIsInThePast(remindAt)) return;
+
+  database.prepare(`
+    INSERT INTO reminders (entity_type, entity_id, remind_at, created_by)
+    VALUES ('pantry_item', ?, ?, ?)
+  `).run(item.id, remindAt, item.created_by);
 }
 
 /**
@@ -346,9 +402,13 @@ router.post('/import-shopping', (req, res) => {
         const match = findMatch.get(source.name, unit, locationId, expiresOn);
         if (match) {
           bump.run(normalizePantryQuantity(Number(match.quantity) + quantity, { fallback: quantity }), match.id);
+          // Eine aufgefüllte Charge kann von Menge 0 zurückkommen - dann ist die
+          // Erinnerung wieder fällig, die das Ausbuchen abgeräumt hat.
+          syncReminder(getItem(match.id));
           merged += 1;
         } else {
-          insert.run(source.name, quantity, unit, locationId, category, expiresOn, userId);
+          const inserted = insert.run(source.name, quantity, unit, locationId, category, expiresOn, userId);
+          syncReminder(getItem(inserted.lastInsertRowid));
           added += 1;
         }
       }
@@ -399,7 +459,9 @@ router.post('/', (req, res) => {
       req.authUserId || req.session.userId
     );
 
-    res.status(201).json({ data: getItem(result.lastInsertRowid) });
+    const created = getItem(result.lastInsertRowid);
+    syncReminder(created);
+    res.status(201).json({ data: created });
   } catch (err) {
     log.error('POST / error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -432,7 +494,9 @@ router.put('/:itemId', (req, res) => {
       values.category, values.expires_on, values.min_quantity, values.notes, item.id
     );
 
-    res.json({ data: getItem(item.id) });
+    const updated = getItem(item.id);
+    syncReminder(updated);
+    res.json({ data: updated });
   } catch (err) {
     log.error('PUT /:itemId error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -465,7 +529,11 @@ router.patch('/:itemId', (req, res) => {
       UPDATE pantry_items SET ${fields.map((f) => `${f} = ?`).join(', ')} WHERE id = ?
     `).run(...fields.map((f) => values[f]), item.id);
 
-    res.json({ data: getItem(item.id) });
+    // Auch der ±-Stepper landet hier: wer den letzten Joghurt ausbucht, soll
+    // nicht in fünf Tagen an sein Ablaufdatum erinnert werden.
+    const updated = getItem(item.id);
+    syncReminder(updated);
+    res.json({ data: updated });
   } catch (err) {
     log.error('PATCH /:itemId error:', err);
     res.status(500).json({ error: 'Internal server error.', code: 500 });
@@ -483,6 +551,11 @@ router.delete('/:itemId', (req, res) => {
 
     const result = db.get().prepare('DELETE FROM pantry_items WHERE id = ?').run(vId.value);
     if (result.changes === 0) return res.status(404).json({ error: 'Item not found.', code: 404 });
+
+    // `reminders` hat keinen Fremdschlüssel auf die Entität - entity_id ist über
+    // sechs Tabellen hinweg polymorph, ein FK könnte nur auf eine davon zeigen.
+    // Aufräumen ist deshalb Sache des Routers, wie im Inventar auch.
+    db.get().prepare("DELETE FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?").run(vId.value);
 
     res.status(204).end();
   } catch (err) {

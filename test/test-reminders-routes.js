@@ -226,7 +226,11 @@ test('POST / lehnt ungültigen entity_type ab (400)', async () => {
   currentUid = owner;
   const res = await call('POST', '', { entity_type: 'bogus', entity_id: makeTask(owner), remind_at: at(9, 0) });
   assert.equal(res.status, 400);
-  assert.match(res.body.error, /task, event, subscription, inventory_item, or inventory_tracked_date/);
+  // Die Meldung zaehlt VALID_ENTITY_TYPES auf, statt die Liste ein zweites Mal
+  // von Hand zu fuehren: sie stand hier schon einmal veraltet da, waehrend die
+  // Route laengst mehr Typen kannte. Deshalb prueft der Test die Form und die
+  // Enden, nicht den ausgeschriebenen Satz.
+  assert.match(res.body.error, /^entity_type must be one of: task, event, .*pantry_item\.$/m);
 });
 
 test('POST / lehnt fehlenden entity_type ab (400)', async () => {
