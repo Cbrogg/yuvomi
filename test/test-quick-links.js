@@ -21,6 +21,7 @@ const dbmod = await import('../server/db.js');
 const { default: quickLinksRouter, listQuickLinksFor } = await import('../server/routes/quick-links.js');
 const { normalizeQuickLinkUrl, quickLinkHost, MAX_QUICK_LINK_URL_LENGTH } =
   await import('../public/utils/quick-link-url.js');
+const { MAX_ICON_DATA_LENGTH, MAX_QUICK_LINKS } = await import('../server/routes/quick-links.js');
 const db = dbmod.get();
 
 const ALICE = db.prepare("INSERT INTO users (username, display_name, password_hash, role) VALUES ('alice','Alice','x','member')").run().lastInsertRowid;
@@ -167,6 +168,42 @@ test('ein Bild muss eine Bild-Data-URL sein', async () => {
     icon_data: 'data:image/png;base64,iVBORw0KGgo=',
   });
   assert.equal(good.status, 201);
+});
+
+test('das Kachelbild ist gedeckelt - die Reihe ist keine Ablage', async () => {
+  reset();
+  as(ALICE);
+  // DER WERT STEHT HIER FEST UND WIRD VON HAND NACHGEZOGEN. Ohne diese Zeile
+  // prueft der Test nur relativ zur Konstante und bliebe gruen, wenn jemand sie
+  // auf 50 MB setzt - gemessen, als der Deckel probeweise auf die alten 512 KB
+  // zurueckging. Die 128 KB sind an dem bemessen, was utils/avatar-crop.js
+  // liefert (256x256 JPEG q=0.88, also 20-40 KB als Data-URL); wer sie anhebt,
+  // vergroessert jede Uebersichts-Antwort und soll das hier begruenden.
+  assert.equal(MAX_ICON_DATA_LENGTH, 128 * 1024, 'Deckel geaendert - Begruendung pruefen');
+  // DIESE BILDER REISEN ANDERS ALS EIN AVATAR: sie liegen als Data-URL in der
+  // Zeile und gehen bei JEDEM Aufbau der Uebersicht mit, alle auf einmal. Der
+  // Deckel ist deshalb an dem bemessen, was der Zuschnitt liefert (20-40 KB),
+  // und nicht am Grosszuegigen.
+  const zuGross = 'data:image/png;base64,' + 'A'.repeat(MAX_ICON_DATA_LENGTH);
+  assert.equal((await call('POST', '/', { name: 'X', url: 'a.example', icon_data: zuGross })).status, 400);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM quick_links').get().n, 0);
+});
+
+test('die Anzahl ist gedeckelt, damit die Uebersichts-Antwort es bleibt', async () => {
+  reset();
+  as(ALICE);
+  for (let i = 0; i < MAX_QUICK_LINKS; i++) {
+    const res = await call('POST', '/', { name: `L${i}`, url: `host${i}.example` });
+    assert.equal(res.status, 201, `Kachel ${i} sollte noch durchgehen`);
+  }
+  const zuViel = await call('POST', '/', { name: 'einer zu viel', url: 'x.example' });
+  assert.equal(zuViel.status, 400);
+  assert.equal(db.prepare('SELECT COUNT(*) AS n FROM quick_links').get().n, MAX_QUICK_LINKS);
+
+  // Der Deckel zaehlt den HAUSHALT, nicht die eigenen Kacheln: was die Antwort
+  // gross macht, sind alle zusammen.
+  as(BOB);
+  assert.equal((await call('POST', '/', { name: 'Bobs', url: 'b.example' })).status, 400);
 });
 
 // --------------------------------------------------------

@@ -30,11 +30,12 @@ import { makeSortable } from '/utils/sortable.js';
 const VISIBILITY_VALUES = ['all', 'private'];
 
 /**
- * So groß darf ein Kachelbild werden - der Deckel des Servers
- * (server/routes/quick-links.js). Der Zuschnitt liefert 256px und liegt weit
- * darunter; diese Zahl fängt die Ausreißer ab, bevor sie über die Leitung gehen.
+ * So groß darf ein Kachelbild werden - derselbe Deckel wie im Server
+ * (server/routes/quick-links.js), wo auch die Begründung steht. Der Zuschnitt
+ * liefert 20 bis 40 KB; diese Zahl fängt die Ausreißer ab, bevor sie über die
+ * Leitung gehen.
  */
-const MAX_ICON_DATA_LENGTH = 512 * 1024;
+const MAX_ICON_DATA_LENGTH = 128 * 1024;
 
 const ICON_TYPES = ['image/png', 'image/jpeg', 'image/webp'];
 

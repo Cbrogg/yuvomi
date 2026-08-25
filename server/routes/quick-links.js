@@ -37,13 +37,34 @@ const router = express.Router();
 const VISIBILITY_VALUES = ['all', 'private'];
 
 /**
- * So groß darf ein Kachelbild werden. Der Wert ist derselbe wie beim
- * Mitglieder-Foto (server/auth.js) und aus demselben Grund: eine Data-URL liegt
- * in der Zeile, wird bei jeder Übersichts-Antwort mitgeschickt und darf deshalb
- * nicht die Größe einer Bilddatei haben. Der Browser skaliert vorher auf 128px,
- * das bleibt weit darunter - dieser Deckel ist die Grenze, nicht die Erwartung.
+ * So groß darf ein Kachelbild werden.
+ *
+ * 128 KB, und die Zahl kommt aus einer Messung statt aus Vorsicht: der
+ * Zuschnitt (utils/avatar-crop.js) liefert 256x256 als JPEG bei Qualität 0.88,
+ * also 20 bis 40 KB als Data-URL. Hier stand zuerst der Wert des
+ * Mitglieder-Fotos - 512 KB, das Fünfzehnfache dessen, was je ankommt.
+ *
+ * DER UNTERSCHIED ZAEHLT, WEIL DIESE BILDER ANDERS REISEN ALS EIN AVATAR. Sie
+ * liegen als Data-URL in der Zeile und gehen bei JEDEM Aufbau der Übersicht
+ * mit, alle auf einmal. Ein grosszügiger Deckel mal einer unbegrenzten Anzahl
+ * ergibt eine Startseite, die Megabyte laedt, bevor sie etwas zeigt.
  */
-const MAX_ICON_DATA_LENGTH = 512 * 1024;
+const MAX_ICON_DATA_LENGTH = 128 * 1024;
+
+/**
+ * So viele Schnellzugriffe darf ein Haushalt anlegen.
+ *
+ * EINE REIHE IST KEINE ABLAGE. Zwei Dutzend ist weit mehr, als eine Kachelreihe
+ * je sinnvoll zeigt (auf breitem Desktop stehen etwa zwölf nebeneinander) - der
+ * Deckel ist deshalb keine Einschränkung des Gebrauchs, sondern die Antwort auf
+ * die Frage, wie gross die Übersichts-Antwort im schlimmsten Fall wird. Ohne
+ * ihn wächst sie mit jeder Kachel, und niemand merkt es, bis die Startseite
+ * langsam ist.
+ *
+ * Wer wirklich eine Bibliothek braucht, meint #759 - und die ist bewusst nicht
+ * das hier (siehe Migration v160).
+ */
+const MAX_QUICK_LINKS = 24;
 
 const ICON_DATA_RE = /^data:image\/(?:png|jpeg|webp);base64,[a-z0-9+/=]+$/i;
 
@@ -169,6 +190,13 @@ router.post('/', (req, res) => {
     const visibility = VISIBILITY_VALUES.includes(req.body.visibility) ? req.body.visibility : 'all';
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
+    // Der Deckel zaehlt den ganzen Haushalt und nicht die eigenen Kacheln: was
+    // die Übersichts-Antwort gross macht, sind alle zusammen.
+    const { total } = db.get().prepare('SELECT COUNT(*) AS total FROM quick_links').get();
+    if (total >= MAX_QUICK_LINKS) {
+      return res.status(400).json({ error: `At most ${MAX_QUICK_LINKS} quick links can be created.`, code: 400 });
+    }
+
     // Neue Kacheln hängen sich hinten an - eine neue Kachel soll die gewohnte
     // Reihenfolge nicht verschieben.
     const next = db.get().prepare('SELECT COALESCE(MAX(position), -1) + 1 AS pos FROM quick_links').get().pos;
@@ -288,4 +316,4 @@ router.delete('/:id', (req, res) => {
 });
 
 export default router;
-export { VISIBILITY_VALUES, MAX_ICON_DATA_LENGTH };
+export { VISIBILITY_VALUES, MAX_ICON_DATA_LENGTH, MAX_QUICK_LINKS };

@@ -32,6 +32,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   fetched from the customise tray - on day one it would have nothing to show, and a tile that only
   asks to be set up is not worth putting on every existing dashboard unasked.
 
+  Both the picture and the number of tiles are capped (128 KB, 24), because these images travel
+  differently than an avatar does: they sit in the row as a data URL and go out with *every* build
+  of the overview, all at once. A generous cap times an unbounded count is a home page that loads
+  megabytes before it shows anything.
+
   What lands in the `href` is checked on the server and not only in the form, with the same function
   the browser uses (`/utils/quick-link-url.js`): only `http` and `https` pass. A `javascript:` value
   is recognised as a scheme and refused with that as the reason, rather than being quietly turned
