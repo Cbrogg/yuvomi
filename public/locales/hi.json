@@ -930,7 +930,9 @@
         "groupOthers": "अन्य नोट्स",
         "filterCreatorLabel": "द्वारा बनाया गया",
         "formatToolbarLabel": "टेक्स्ट स्वरूपण",
-        "noResultsCreatorDescription": "{{name}} का कोई नोट नहीं।"
+        "noResultsCreatorDescription": "{{name}} का कोई नोट नहीं।",
+        "checklistToggle": "आइटम पर निशान लगाएं",
+        "checkConflict": "नोट इस बीच बदल गया है। इसे फिर से लोड किया जाएगा।"
     },
     "contacts": {
         "manageCategories": "श्रेणियाँ प्रबंधित करें",

@@ -942,7 +942,9 @@
         "groupOthers": "Iba pang tala",
         "filterCreatorLabel": "Ginawa ni",
         "formatToolbarLabel": "Pag-format ng teksto",
-        "noResultsCreatorDescription": "Walang tala mula kay {{name}}."
+        "noResultsCreatorDescription": "Walang tala mula kay {{name}}.",
+        "checklistToggle": "Markahan ang item",
+        "checkConflict": "Nabago ang tala samantala. Iri-reload ito."
     },
     "contacts": {
         "manageCategories": "Pamahalaan ang mga kategorya",

@@ -930,7 +930,9 @@
         "groupOthers": "Overige notities",
         "filterCreatorLabel": "Gemaakt door",
         "formatToolbarLabel": "Tekstopmaak",
-        "noResultsCreatorDescription": "Geen notities van {{name}}."
+        "noResultsCreatorDescription": "Geen notities van {{name}}.",
+        "checklistToggle": "Item afvinken",
+        "checkConflict": "De notitie is intussen gewijzigd. Deze wordt opnieuw geladen."
     },
     "contacts": {
         "manageCategories": "Categorieën beheren",

@@ -942,7 +942,9 @@
         "groupOthers": "기타 메모",
         "filterCreatorLabel": "작성자",
         "formatToolbarLabel": "텍스트 서식",
-        "noResultsCreatorDescription": "{{name}}의 메모가 없습니다."
+        "noResultsCreatorDescription": "{{name}}의 메모가 없습니다.",
+        "checklistToggle": "항목 체크",
+        "checkConflict": "그 사이에 메모가 변경되었습니다. 다시 불러옵니다."
     },
     "contacts": {
         "manageCategories": "카테고리 관리",

@@ -930,7 +930,9 @@
         "groupOthers": "Άλλες σημειώσεις",
         "filterCreatorLabel": "Δημιουργήθηκε από",
         "formatToolbarLabel": "Μορφοποίηση κειμένου",
-        "noResultsCreatorDescription": "Καμία σημείωση από {{name}}."
+        "noResultsCreatorDescription": "Καμία σημείωση από {{name}}.",
+        "checklistToggle": "Σημείωση στοιχείου",
+        "checkConflict": "Η σημείωση άλλαξε στο μεταξύ. Θα φορτωθεί ξανά."
     },
     "contacts": {
         "manageCategories": "Διαχείριση κατηγοριών",

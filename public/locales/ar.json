@@ -930,7 +930,9 @@
         "groupOthers": "ملاحظات أخرى",
         "filterCreatorLabel": "أنشأها",
         "formatToolbarLabel": "تنسيق النص",
-        "noResultsCreatorDescription": "لا توجد ملاحظات من {{name}}."
+        "noResultsCreatorDescription": "لا توجد ملاحظات من {{name}}.",
+        "checklistToggle": "شطب العنصر",
+        "checkConflict": "تم تغيير الملاحظة في هذه الأثناء. سيتم إعادة تحميلها."
     },
     "contacts": {
         "manageCategories": "إدارة الفئات",

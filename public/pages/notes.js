@@ -9,6 +9,7 @@ import { openModal as openSharedModal, closeModal, btnError, advancedSection, re
 import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { t } from '/i18n.js';
 import { esc, renderMarkdownLight } from '/utils/html.js';
+import { splitKeepingLineEndings } from '/utils/markdown-checklist.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { findPageFab } from '/utils/fab.js';
@@ -48,6 +49,88 @@ const NOTE_COLOR_NAMES = () => ({
 
 let state = { notes: [], user: null, filterQuery: '', filterCreator: '' };
 let _container = null;
+
+// --------------------------------------------------------
+// Antippbare Checklisten (#704)
+// --------------------------------------------------------
+
+// Die Notizen sind die eine Stelle, die einen Haken auch zurueckschreiben kann:
+// sie zeigen den vollstaendigen Text und kennen die Notiz-ID. Das Dashboard
+// bekommt diese Optionen deshalb ausdruecklich nicht - dort steht ein gekuerzter
+// Auszug, dessen Zeilennummern nicht die der Notiz sind.
+const CHECKLIST_OPTS = () => ({
+  checklist: { interactive: true, toggleLabel: t('notes.checklistToggle') },
+});
+
+/**
+ * Zeichnet einen umgeschalteten Haken in jede Ansicht, die ihn gerade zeigt.
+ *
+ * Bewusst kein `renderGrid()`: das baute das ganze Raster neu, mit Einblend-
+ * Staffelung und verlorenem Fokus - fuer einen Haken. Und da `state.notes` nicht
+ * umsortiert wird, springt die Notiz auch nicht unter dem Finger weg; die neue
+ * Reihenfolge greift beim naechsten vollen Laden.
+ */
+function paintCheck(noteId, line, checked) {
+  const roots = [
+    _container?.querySelector(`.note-card[data-id="${noteId}"] .note-card__content`),
+    document.querySelector(`.note-modal[data-note-id="${noteId}"] .note-read__body`),
+  ];
+  for (const root of roots) {
+    const box = root?.querySelector(`.note-md-box[data-md-line="${line}"]`);
+    if (!box) continue;
+    box.setAttribute('aria-checked', String(checked));
+    box.dataset.mdChecked = checked ? '1' : '0';
+    box.closest('.note-md-check')?.classList.toggle('is-checked', checked);
+  }
+}
+
+/**
+ * Haken setzen oder loesen.
+ *
+ * Optimistisch: der Haken erscheint sofort, denn auf dem Wandtablett ist das
+ * die ganze Interaktion, und eine Verzoegerung dort laesst sie kaputt aussehen.
+ * Schlaegt die Anfrage fehl, geht er zurueck - inklusive des Falls, dass
+ * jemand anders den Text inzwischen bearbeitet hat (409). Dann wird neu
+ * geladen, statt einen Haken zu behaupten, den der Server nicht kennt.
+ */
+async function toggleCheck(noteId, box) {
+  const note = state.notes.find((n) => n.id === noteId);
+  if (!note) return;
+
+  const line    = parseInt(box.dataset.mdLine, 10);
+  const checked = box.dataset.mdChecked !== '1';
+  // Die Zeile, die der Nutzer gesehen hat - sie ist die Gegenprobe zum Index.
+  const expect  = splitKeepingLineEndings(note.content)[line * 2];
+
+  // Der eigene Stand kennt die angetippte Zeile gar nicht mehr: dasselbe
+  // Ergebnis wie ein 409, nur ohne den Umweg ueber den Server - und
+  // ausdruecklich nicht stilles Nichtstun, sonst taete ein Tap einfach nichts.
+  if (expect === undefined) {
+    await handleCheckConflict();
+    return;
+  }
+
+  paintCheck(noteId, line, checked);
+  vibrate(10);
+
+  try {
+    const res = await api.patch(`/notes/${noteId}/check`, { line, checked, expect });
+    note.content = res.data.content;
+    note.updated_at = res.data.updated_at;
+  } catch (err) {
+    paintCheck(noteId, line, !checked);
+    if (err.status === 409) {
+      await handleCheckConflict();
+    } else {
+      window.yuvomi?.showToast(err.data?.error ?? t('common.unknownError'), 'danger');
+    }
+  }
+}
+
+async function handleCheckConflict() {
+  window.yuvomi?.showToast(t('notes.checkConflict'), 'danger');
+  await reloadNotes();
+}
 
 // --------------------------------------------------------
 // Entry Point
@@ -94,6 +177,17 @@ export async function render(container, { user }) {
 
     const delBtn = e.target.closest('[data-action="delete"]');
     if (delBtn) { e.stopPropagation(); await deleteNote(parseInt(delBtn.dataset.id, 10)); return; }
+
+    // Ein Haken auf der Karte darf die Notiz nicht oeffnen (#704) - sonst
+    // schluege der Zettel bei jedem Abhaken auf, und genau die drei Schritte
+    // sollten ja wegfallen.
+    const box = e.target.closest('.note-md-box[data-md-line]');
+    if (box) {
+      e.stopPropagation();
+      const owner = box.closest('.note-card[data-id]');
+      if (owner) await toggleCheck(parseInt(owner.dataset.id, 10), box);
+      return;
+    }
 
     // [data-action="open"] fällt bewusst durch auf den Karten-Zweig darunter —
     // der Button liegt in der Karte, ein Treffer reicht.
@@ -256,7 +350,7 @@ function renderNoteCard(note) {
         <i data-lucide="${note.pinned ? 'pin-off' : 'pin'}" class="icon-sm" aria-hidden="true"></i>
       </button>
       ${note.title ? `<div class="note-card__title">${esc(note.title)}</div>` : ''}
-      <div class="note-card__content">${renderMarkdownLight(note.content)}</div>
+      <div class="note-card__content">${renderMarkdownLight(note.content, CHECKLIST_OPTS())}</div>
       <div class="note-card__footer">
         <div class="note-card__creator">
           <span class="note-card__avatar"
@@ -458,9 +552,16 @@ function applyFormat(textarea, format) {
 // Gerenderte Markdown-Leseansicht (Reader-Modus, Discussion #507). Nutzt den
 // gemeinsamen renderMarkdownLight-Renderer. Der Notiztitel trägt der Modal-Header
 // (Recognition), daher hier nur der Inhalt.
-function renderNoteReadHtml(content) {
+/**
+ * @param {string} content Der anzuzeigende Text
+ * @param {{ live?: boolean }} [opts] Sind die Kaestchen bedienbar? Nur wahr,
+ *   wenn der gezeigte Text dem gespeicherten entspricht - der Lesemodus
+ *   spiegelt sonst ungespeicherte Aenderungen, und dann zeigen seine
+ *   Zeilennummern auf einen Text, den der Server noch nicht kennt (#704).
+ */
+function renderNoteReadHtml(content, { live = false } = {}) {
   const body = (content || '').trim()
-    ? renderMarkdownLight(content)
+    ? renderMarkdownLight(content, live ? CHECKLIST_OPTS() : {})
     : `<p class="note-read__empty">${t('notes.readEmpty')}</p>`;
   return `<div class="note-read__body">${body}</div>`;
 }
@@ -477,7 +578,7 @@ function openNoteModal({ mode, note = null }) {
   const initialView = isEdit ? 'read' : 'edit';
 
   const content = `
-    <div class="note-modal" data-view="${initialView}" style="--note-color:${esc(selColor)};">
+    <div class="note-modal" data-view="${initialView}"${isEdit ? ` data-note-id="${note.id}"` : ''} style="--note-color:${esc(selColor)};">
       <div class="note-mode-switch" role="tablist" aria-label="${t('notes.modeSwitchLabel')}">
         <button type="button" id="note-tab-read" class="sub-tab${initialView === 'read' ? ' sub-tab--active' : ''}"
                 role="tab" aria-selected="${initialView === 'read' ? 'true' : 'false'}"
@@ -495,7 +596,7 @@ function openNoteModal({ mode, note = null }) {
 
       <div class="note-read-view" id="note-pane-read" data-pane="read" role="tabpanel"
            aria-labelledby="note-tab-read" tabindex="-1"${initialView === 'read' ? '' : ' hidden'}>
-        ${isEdit ? renderNoteReadHtml(note.content) : ''}
+        ${isEdit ? renderNoteReadHtml(note.content, { live: true }) : ''}
       </div>
 
       <div class="note-edit-view" id="note-pane-edit" data-pane="edit" role="tabpanel"
@@ -606,7 +707,12 @@ function openNoteModal({ mode, note = null }) {
           if (c) noteModal.style.setProperty('--note-color', c);
           syncHeaderTitle();
           readPane.replaceChildren();
-          readPane.insertAdjacentHTML('beforeend', renderNoteReadHtml(viewContent.value));
+          // Bedienbar nur, solange der Lesemodus den gespeicherten Stand zeigt:
+          // sobald im Editor etwas Ungespeichertes steht, zaehlen dessen Zeilen
+          // anders als die der Notiz auf dem Server (#704).
+          readPane.insertAdjacentHTML('beforeend', renderNoteReadHtml(viewContent.value, {
+            live: isEdit && viewContent.value === note.content,
+          }));
           animatePane(readPane);
         } else {
           animatePane(editPane);
@@ -616,6 +722,21 @@ function openNoteModal({ mode, note = null }) {
           if (focusField) setTimeout(() => viewContent.focus(), 30);
         }
       }
+      // Haken im Lesemodus (#704). Der Handler haengt am Pane und nicht an den
+      // Kaestchen: die werden bei jedem Moduswechsel neu gezeichnet, der Pane
+      // bleibt. Nach dem Umschalten traegt der Textarea den neuen Stand mit,
+      // sonst zeigte ein Wechsel in den Editor den Haken nicht mehr.
+      readPane.addEventListener('click', async (e) => {
+        const box = e.target.closest('.note-md-box[data-md-line]');
+        if (!box || !isEdit) return;
+        await toggleCheck(note.id, box);
+        const fresh = state.notes.find((n) => n.id === note.id);
+        if (fresh) {
+          note.content = fresh.content;
+          if (viewContent.value !== fresh.content) viewContent.value = fresh.content;
+        }
+      });
+
       // Initialen Footer-Zustand an die Startansicht angleichen.
       editorOnly.forEach((el) => { el.style.display = initialView === 'read' ? 'none' : ''; });
       viewTitle.addEventListener('input', syncHeaderTitle);
@@ -754,6 +875,23 @@ async function togglePin(id) {
     renderGrid();
   } catch (err) {
     window.yuvomi?.showToast(err.data?.error ?? t('common.unknownError'), 'danger');
+  }
+}
+
+/**
+ * Notizen frisch vom Server holen (#704).
+ *
+ * Der Weg nach einem Konflikt: der eigene Stand ist nachweislich veraltet,
+ * also wird er ersetzt statt geflickt. Die Sortierung kommt vom Server mit,
+ * damit sie nicht ein zweites Mal hier steht.
+ */
+async function reloadNotes() {
+  try {
+    const res = await api.get('/notes');
+    state.notes = res.data;
+    renderGrid();
+  } catch (err) {
+    console.error('[Notes] Neuladen fehlgeschlagen:', err);
   }
 }
 

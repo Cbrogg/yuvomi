@@ -930,7 +930,9 @@
         "groupOthers": "Інші нотатки",
         "filterCreatorLabel": "Автор",
         "formatToolbarLabel": "Форматування тексту",
-        "noResultsCreatorDescription": "Немає нотаток від {{name}}."
+        "noResultsCreatorDescription": "Немає нотаток від {{name}}.",
+        "checklistToggle": "Позначити пункт",
+        "checkConflict": "Нотатку тим часом змінено. Її буде завантажено знову."
     },
     "contacts": {
         "manageCategories": "Керування категоріями",

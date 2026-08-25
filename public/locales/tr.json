@@ -930,7 +930,9 @@
         "groupOthers": "Diğer notlar",
         "filterCreatorLabel": "Oluşturan",
         "formatToolbarLabel": "Metin biçimlendirme",
-        "noResultsCreatorDescription": "{{name}} tarafından not yok."
+        "noResultsCreatorDescription": "{{name}} tarafından not yok.",
+        "checklistToggle": "Öğeyi işaretle",
+        "checkConflict": "Not bu arada değişti. Yeniden yüklenecek."
     },
     "contacts": {
         "manageCategories": "Kategorileri yönet",

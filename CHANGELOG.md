@@ -7,6 +7,28 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A rendered checkbox can be ticked by tapping it** (#704). Notes drew `- [ ]` as a styled box that
+  was deliberately inert. To tick something off you opened the note, changed `[ ]` into `[x]` in the
+  text and saved - three steps for what looks like a one-tap control, and on a wall tablet with a
+  shopping list that is the whole feature. The box is now a real control on the card and in the
+  reader.
+
+  Ticking rewrites exactly one line of the stored text and leaves the rest byte for byte alone,
+  through a route of its own (`PATCH /api/v1/notes/:id/check`) rather than through the full-body
+  save. That is not tidiness: notes are shared, and two members ticking different items in the same
+  minute would otherwise have had the later save drop the earlier tick without a word.
+
+  Which line is meant comes from the source line number the renderer leaves on the box, never from
+  the item's text - two entries reading "Milk" are otherwise indistinguishable. The client sends the
+  line it saw along with the tick, and if somebody has edited the note in between, the tick is
+  refused rather than landing in the wrong row.
+
+  Boxes stay decorative wherever a tick could not be written back honestly: on the dashboard, which
+  shows a truncated excerpt whose line numbers are not the note's, in task notes, and in the reader
+  while the editor holds unsaved text.
+
 ## [2.41.2] - 2026-08-25
 
 ### Fixed

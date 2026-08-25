@@ -930,7 +930,9 @@
         "groupOthers": "További jegyzetek",
         "filterCreatorLabel": "Létrehozta",
         "formatToolbarLabel": "Szövegformázás",
-        "noResultsCreatorDescription": "Nincs jegyzet {{name}} felhasználótól."
+        "noResultsCreatorDescription": "Nincs jegyzet {{name}} felhasználótól.",
+        "checklistToggle": "Elem kipipálása",
+        "checkConflict": "A jegyzet időközben megváltozott. Újratöltjük."
     },
     "contacts": {
         "manageCategories": "Kategóriák kezelése",

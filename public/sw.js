@@ -122,6 +122,7 @@ const APP_SHELL = [
   '/utils/inventory-warranty.js',
   '/utils/kitchen-tabs.js',
   '/utils/kitchen-transfer.js',
+  '/utils/markdown-checklist.js',
   '/utils/mentions.js',
   '/utils/module-accent.js',
   '/utils/metric-card.js',

@@ -930,7 +930,9 @@
         "groupOthers": "Övriga anteckningar",
         "filterCreatorLabel": "Skapad av",
         "formatToolbarLabel": "Textformatering",
-        "noResultsCreatorDescription": "Inga anteckningar från {{name}}."
+        "noResultsCreatorDescription": "Inga anteckningar från {{name}}.",
+        "checklistToggle": "Bocka av post",
+        "checkConflict": "Anteckningen har ändrats under tiden. Den laddas om."
     },
     "contacts": {
         "manageCategories": "Hantera kategorier",

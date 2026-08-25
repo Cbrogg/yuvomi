@@ -930,7 +930,9 @@
         "groupOthers": "Ostatní poznámky",
         "filterCreatorLabel": "Vytvořil(a)",
         "formatToolbarLabel": "Formátování textu",
-        "noResultsCreatorDescription": "Žádné poznámky od {{name}}."
+        "noResultsCreatorDescription": "Žádné poznámky od {{name}}.",
+        "checklistToggle": "Odškrtnout položku",
+        "checkConflict": "Poznámka byla mezitím změněna. Bude znovu načtena."
     },
     "contacts": {
         "manageCategories": "Spravovat kategorie",

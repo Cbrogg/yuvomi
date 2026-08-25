@@ -942,7 +942,9 @@
         "groupOthers": "Pozostałe notatki",
         "filterCreatorLabel": "Utworzone przez",
         "formatToolbarLabel": "Formatowanie tekstu",
-        "noResultsCreatorDescription": "Brak notatek od {{name}}."
+        "noResultsCreatorDescription": "Brak notatek od {{name}}.",
+        "checklistToggle": "Odhacz pozycję",
+        "checkConflict": "Notatka została w międzyczasie zmieniona. Zostanie ponownie wczytana."
     },
     "contacts": {
         "manageCategories": "Zarządzaj kategoriami",

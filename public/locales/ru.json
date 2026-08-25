@@ -930,7 +930,9 @@
         "groupOthers": "Другие заметки",
         "filterCreatorLabel": "Автор",
         "formatToolbarLabel": "Форматирование текста",
-        "noResultsCreatorDescription": "Нет заметок от {{name}}."
+        "noResultsCreatorDescription": "Нет заметок от {{name}}.",
+        "checklistToggle": "Отметить пункт",
+        "checkConflict": "Заметка была изменена. Она будет загружена заново."
     },
     "contacts": {
         "manageCategories": "Управление категориями",

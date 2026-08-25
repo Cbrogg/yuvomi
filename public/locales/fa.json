@@ -942,7 +942,9 @@
         "groupOthers": "یادداشت‌های دیگر",
         "filterCreatorLabel": "ایجادشده توسط",
         "formatToolbarLabel": "قالب‌بندی متن",
-        "noResultsCreatorDescription": "هیچ یادداشتی از {{name}} نیست."
+        "noResultsCreatorDescription": "هیچ یادداشتی از {{name}} نیست.",
+        "checklistToggle": "علامت‌زدن مورد",
+        "checkConflict": "یادداشت در این میان تغییر کرده است. دوباره بارگذاری می‌شود."
     },
     "contacts": {
         "manageCategories": "مدیریت دسته‌ها",

@@ -930,7 +930,9 @@
         "groupOthers": "その他のメモ",
         "filterCreatorLabel": "作成者",
         "formatToolbarLabel": "テキストの書式",
-        "noResultsCreatorDescription": "{{name}} のメモはありません。"
+        "noResultsCreatorDescription": "{{name}} のメモはありません。",
+        "checklistToggle": "項目にチェックを入れる",
+        "checkConflict": "メモはその間に変更されました。再読み込みします。"
     },
     "contacts": {
         "manageCategories": "カテゴリーを管理",

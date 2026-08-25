@@ -930,7 +930,9 @@
         "groupOthers": "Altre note",
         "filterCreatorLabel": "Creato da",
         "formatToolbarLabel": "Formattazione testo",
-        "noResultsCreatorDescription": "Nessuna nota di {{name}}."
+        "noResultsCreatorDescription": "Nessuna nota di {{name}}.",
+        "checklistToggle": "Spunta elemento",
+        "checkConflict": "La nota è stata modificata nel frattempo. Verrà ricaricata."
     },
     "contacts": {
         "manageCategories": "Gestisci categorie",

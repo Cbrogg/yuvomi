@@ -942,7 +942,9 @@
         "groupOthers": "Catatan lainnya",
         "filterCreatorLabel": "Dibuat oleh",
         "formatToolbarLabel": "Format teks",
-        "noResultsCreatorDescription": "Tidak ada catatan dari {{name}}."
+        "noResultsCreatorDescription": "Tidak ada catatan dari {{name}}.",
+        "checklistToggle": "Centang item",
+        "checkConflict": "Catatan telah berubah sementara itu. Catatan akan dimuat ulang."
     },
     "contacts": {
         "manageCategories": "Kelola kategori",

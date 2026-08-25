@@ -930,7 +930,9 @@
         "groupOthers": "Ghi chú khác",
         "filterCreatorLabel": "Người tạo",
         "formatToolbarLabel": "Định dạng văn bản",
-        "noResultsCreatorDescription": "Không có ghi chú từ {{name}}."
+        "noResultsCreatorDescription": "Không có ghi chú từ {{name}}.",
+        "checklistToggle": "Đánh dấu mục",
+        "checkConflict": "Ghi chú đã thay đổi trong lúc này. Ghi chú sẽ được tải lại."
     },
     "contacts": {
         "manageCategories": "Quản lý danh mục",

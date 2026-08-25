@@ -930,7 +930,9 @@
         "groupOthers": "其他便签",
         "filterCreatorLabel": "创建者",
         "formatToolbarLabel": "文本格式",
-        "noResultsCreatorDescription": "没有来自 {{name}} 的便签。"
+        "noResultsCreatorDescription": "没有来自 {{name}} 的便签。",
+        "checklistToggle": "勾选条目",
+        "checkConflict": "便签已被修改，将重新加载。"
     },
     "contacts": {
         "manageCategories": "管理类别",
