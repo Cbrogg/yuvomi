@@ -31,6 +31,11 @@ const VALID_ENTITY_TYPES = ['task', 'event', 'subscription', 'inventory_item', '
  */
 const DERIVED_ENTITY_TYPES = ['subscription', 'inventory_item', 'inventory_tracked_date', 'pantry_item'];
 
+/** Fehlertext, wenn ein Schreibweg eine abgeleitete Herkunft von Hand setzen will. */
+function derivedTypeError(entityType) {
+  return `Reminders for ${entityType} are derived from the item itself and cannot be set here.`;
+}
+
 // Obergrenze für mehrere Erinnerungen je Entität (z. B. Kalender-Termin, #436).
 const MAX_REMINDERS_PER_ENTITY = 5;
 
@@ -153,7 +158,7 @@ router.post('/', (req, res) => {
     if (!entity_type || !VALID_ENTITY_TYPES.includes(entity_type)) {
       errors.push(`entity_type must be one of: ${VALID_ENTITY_TYPES.join(', ')}.`);
     } else if (DERIVED_ENTITY_TYPES.includes(entity_type)) {
-      errors.push(`Reminders for ${entity_type} are derived from the item itself and cannot be set here.`);
+      errors.push(derivedTypeError(entity_type));
     }
 
     if (errors.length) {
@@ -196,6 +201,14 @@ router.put('/', (req, res) => {
 
     if (!VALID_ENTITY_TYPES.includes(entityType) || !entityId) {
       return res.status(400).json({ error: 'entity_type und entity_id sind erforderlich.', code: 400 });
+    }
+    // DERSELBE RIEGEL WIE IN POST. Er fehlte hier zunächst, und das war der
+    // teurere Weg: PUT ersetzt die ganze Menge und darf bis zu fünf Termine
+    // schreiben. Für eine abgeleitete Herkunft zieht der Modul-Sync sie
+    // anschliessend alle auf denselben Zeitpunkt - fünf identische Meldungen
+    // für einen Artikel, statt einer.
+    if (DERIVED_ENTITY_TYPES.includes(entityType)) {
+      return res.status(400).json({ error: derivedTypeError(entityType), code: 400 });
     }
     if (!Array.isArray(remindAts)) {
       return res.status(400).json({ error: 'remind_ats muss ein Array sein.', code: 400 });

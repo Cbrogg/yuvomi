@@ -73,6 +73,11 @@ function reminderFor(itemId) {
   ).get(itemId);
 }
 
+/** Liegt ein naiv-UTC-Termin hinter uns? Gleiche Lesart wie der Service. */
+function reminderIsPast(remindAt) {
+  return new Date(`${remindAt}Z`).getTime() <= Date.now();
+}
+
 function countReminders(itemId) {
   return db.prepare(
     "SELECT COUNT(*) AS c FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?"
@@ -426,4 +431,41 @@ test('eine Bestandszeile mit unmoeglichem Datum kommt gar nicht erst in die Rech
   // 1440 Zeilen am Tag fuer einen Artikel, an dem sich nichts aendert.
   syncAllPantryExpiryReminders(db);
   assert.equal(countReminders(id), 0);
+});
+
+test('PUT /reminders lehnt pantry_item ebenso ab wie POST', async () => {
+  const item = await call('POST', '/pantry', { body: { name: 'Tahini', quantity: 1, expires_on: FUTURE_EXPIRY } });
+  const id = item.body.data.id;
+  assert.equal(countReminders(id), 1);
+
+  const res = await call('PUT', `/reminders?entity_type=pantry_item&entity_id=${id}`, {
+    body: { remind_ats: ['2099-01-01T09:00', '2099-01-02T09:00', '2099-01-03T09:00'] },
+  });
+
+  // PUT ersetzt die GANZE Menge und darf bis zu fuenf Termine schreiben. Ohne
+  // den Riegel loeschte es die abgeleitete Zeile, schriebe drei eigene - und der
+  // naechste Voll-Sync zoege alle drei auf denselben Zeitpunkt: drei identische
+  // Meldungen fuer einen Joghurt.
+  assert.equal(res.status, 400);
+  assert.match(res.body.error, /derived from the item itself/);
+  assert.equal(countReminders(id), 1, 'die abgeleitete Erinnerung bleibt unangetastet');
+});
+
+test('der Voll-Sync setzt einen Termin nie auf einen verstrichenen Zeitpunkt', () => {
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Linsen', 1, 'pkg', 'Sonstiges', ?, ?)"
+  ).run(dateKeyInDays(EXPIRY_SOON_DAYS + 60), A).lastInsertRowid;
+  syncAllPantryExpiryReminders(db);
+  const before = reminderFor(id);
+
+  // MHD am Router vorbei nach vorne gezogen, sodass der Soll-Termin hinter uns
+  // laege - der Restore-Fall, den die Terminkorrektur adressiert.
+  db.prepare('UPDATE pantry_items SET expires_on = ? WHERE id = ?').run(dateKeyInDays(2), id);
+  syncAllPantryExpiryReminders(db);
+
+  // Die due-Abfrage kommt im selben Durchgang direkt danach: ein
+  // zurueckdatierter Termin ginge sofort raus. syncPantryExpiryReminder legt
+  // eine solche Zeile gar nicht erst an, und dieselbe Regel gilt hier.
+  assert.equal(reminderFor(id).remind_at, before.remind_at);
+  assert.ok(!reminderIsPast(reminderFor(id).remind_at));
 });

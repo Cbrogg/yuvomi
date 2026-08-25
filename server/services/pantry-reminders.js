@@ -180,6 +180,15 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
       // beiden Abfragen geändert wurde. Der nächste Lauf räumt sie ab.
       continue;
     }
-    if (target !== row.remind_at) retime.run(target, row.id);
+    if (target === row.remind_at) continue;
+    // NIE AUF EINEN VERSTRICHENEN ZEITPUNKT. Dieselbe Regel, mit der
+    // syncPantryExpiryReminder() eine solche Zeile gar nicht erst anlegt - hier
+    // wiegt sie schwerer: die due-Abfrage kommt im selben Durchgang direkt
+    // danach, die Meldung ginge also sofort raus. Und ein spaeter erhoehter
+    // Vorlauf wuerde beim ersten Lauf nach dem Update JEDE offene
+    // Vorrats-Erinnerung auf einmal ausloesen. Die alte Zeile bleibt dann
+    // stehen; der Router zieht sie gerade, sobald jemand den Artikel anfasst.
+    if (reminderIsInThePast(target, now)) continue;
+    retime.run(target, row.id);
   }
 }
