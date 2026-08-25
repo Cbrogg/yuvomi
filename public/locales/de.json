@@ -1402,7 +1402,8 @@
         "receiptsAttachedLabel": "{{count}} Belege angehängt",
         "receiptsAttachedLabel_one": "{{count}} Beleg angehängt",
         "loanPaidInstallmentsLabel": "Bereits gezahlte Raten",
-        "loanPaidInstallmentsHint": "Für ein Darlehen, das schon läuft. Diese Raten werden nachgetragen, aber nicht ins Budget gebucht."
+        "loanPaidInstallmentsHint": "Für ein Darlehen, das schon läuft. Diese Raten werden nachgetragen, aber nicht ins Budget gebucht.",
+        "loanPaymentTypeLocked": "Einnahme oder Ausgabe folgt der Art des Darlehens und wird dort geändert."
     },
     "settings": {
         "healthCycleEnableLabel": "Zyklus-Tab anzeigen",

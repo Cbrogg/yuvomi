@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "{{count}} comprobantes adjuntos",
         "receiptsAttachedLabel_one": "{{count}} comprobante adjunto",
         "loanPaidInstallmentsLabel": "Cuotas ya pagadas",
-        "loanPaidInstallmentsHint": "Para un préstamo que ya está en curso. Estas cuotas se registran, pero no se contabilizan en el presupuesto."
+        "loanPaidInstallmentsHint": "Para un préstamo que ya está en curso. Estas cuotas se registran, pero no se contabilizan en el presupuesto.",
+        "loanPaymentTypeLocked": "Que sea ingreso o gasto depende del tipo de préstamo y se cambia allí."
     },
     "settings": {
         "healthCycleEnableLabel": "Mostrar la pestaña de ciclo",

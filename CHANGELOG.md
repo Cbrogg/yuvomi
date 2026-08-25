@@ -7,6 +7,36 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **An instalment on a loan the household had taken on could not be corrected** (#859). Tick off an
+  instalment on a borrowed loan, then open that booking in the budget and change the amount: saving
+  failed with "Loan repayment entries must remain income." Nothing the dialog could send was
+  accepted, because the dialog was right and the check was wrong. There was no way around it either
+  - deleting the instalment and booking it again was the only remedy.
+
+  The rule dates from a time when every loan was money lent out, where a repayment coming back
+  really is income. Loan direction arrived in v1.77.0 (#638): an instalment on a loan you took on
+  leaves the household and is booked as an expense, so it is negative by design. The loans routes
+  learned that; the entry route kept the old rule and rejected exactly the sign it had itself
+  written.
+
+  The sign of a repayment booking now belongs to the loan rather than to the request, and it is
+  derived from the same rule everywhere - booking an instalment, re-booking after a change of
+  direction, and editing the booking afterwards. That rule lived inside the loans routes, which is
+  why the entry route could contradict it; it is now shared between them.
+
+  Two things the old check had been hiding come with it. The cap against paying off more than the
+  loan still owes compared a signed amount against a positive remainder, so on a borrowed loan it
+  was always satisfied and never stopped anything. And an amount of zero, previously caught by the
+  income rule as a side effect, is now refused on its own terms rather than reaching a database
+  constraint.
+
+  In the budget dialog, the income/expense switch is now inert on a loan instalment and says so.
+  Which of the two it is follows from the loan, is changed there, and any other answer was going to
+  be silently overruled on save.
+
+
 ## [2.41.1] - 2026-08-25
 
 ### Fixed

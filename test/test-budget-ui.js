@@ -1169,3 +1169,39 @@ test('die Bestätigungspflicht ist eine Eigenschaft der Serie', () => {
   assert.ok(modal.includes('budget.confirmFirstLabel'), 'Beschriftung fehlt');
   assert.ok(budget.includes('recurrence_confirm: confirmFirst'), 'Feld reist nicht zum Server');
 });
+
+// --------------------------------------------------------
+// Rate eines Darlehens im Eintrags-Dialog (#638/#859)
+// --------------------------------------------------------
+
+test('der Typ-Umschalter nimmt bei einer Darlehensrate keine Eingabe entgegen', () => {
+  // Ob eine Rate Einnahme oder Ausgabe ist, entscheidet die Richtung des Darlehens.
+  // Der Server bucht danach und würde eine hier gewählte Umkehr still zurückdrehen -
+  // ein Umschalter, der scheinbar etwas ändert und dann überstimmt wird, ist die
+  // schlechtere Hälfte von beidem.
+  const toggle = budget.slice(budget.indexOf('class="amount-type-toggle'), budget.indexOf('id="bm-title"'));
+  const buttons = [...toggle.matchAll(/id="type-(expense|income)"[^>]*/g)].map((m) => m[0]);
+  assert.equal(buttons.length, 2, 'die beiden Typ-Schalter sind nicht mehr auffindbar');
+  for (const btn of buttons) {
+    assert.match(btn, /isLoanPayment \? 'disabled' : ''/,
+      `${btn.slice(0, 24)} ist bei einer Darlehensrate weiter bedienbar`);
+  }
+  assert.ok(toggle.includes('budget.loanPaymentTypeLocked'), 'die Sperre bleibt unerklärt');
+});
+
+test('jeder Weg ins Bearbeiten-Modal bringt die Darlehens-Kopplung mit', () => {
+  // Über die Eintragsliste kommt sie aus der API (entryWithLoanMeta), über die
+  // Ratenliste aus einem hier gebauten Objekt. Fehlte sie dort, wäre der
+  // Umschalter je nach Einstiegspunkt mal gesperrt und mal nicht - und genau so
+  // eine halb wirksame Sperre lässt sich nicht als Zusicherung lesen.
+  const built = budget.slice(budget.indexOf('function loanPaymentToEntry'), budget.indexOf('function renderLoanPaymentEntry'));
+  assert.ok(built.includes('loan_id: loan.id'), 'das gebaute Eintragsobjekt nennt sein Darlehen nicht');
+  assert.ok(built.includes('loan_payment_id: payment.id'), 'das gebaute Eintragsobjekt nennt seine Rate nicht');
+
+  // Die Erkennung darf sich nicht auf eines der beiden Felder verlassen: die API
+  // liefert beide, ein Drilldown-Eintrag ohne Zahlungs-Join nur loan_id.
+  const detect = budget.match(/const isLoanPayment = [^;]+;/);
+  assert.ok(detect, 'isLoanPayment ist nicht mehr auffindbar');
+  assert.match(detect[0], /entry\.loan_payment_id != null/, 'loan_payment_id wird nicht geprüft');
+  assert.match(detect[0], /entry\.loan_id != null/, 'loan_id wird nicht geprüft');
+});

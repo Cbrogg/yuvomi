@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "{{count}} συνημμένες αποδείξεις",
         "receiptsAttachedLabel_one": "{{count}} συνημμένη απόδειξη",
         "loanPaidInstallmentsLabel": "Ήδη πληρωμένες δόσεις",
-        "loanPaidInstallmentsHint": "Για δάνειο που τρέχει ήδη. Οι δόσεις αυτές καταχωρούνται χωρίς να περάσουν στον προϋπολογισμό."
+        "loanPaidInstallmentsHint": "Για δάνειο που τρέχει ήδη. Οι δόσεις αυτές καταχωρούνται χωρίς να περάσουν στον προϋπολογισμό.",
+        "loanPaymentTypeLocked": "Το έσοδο ή το έξοδο ακολουθεί τον τύπο του δανείου και αλλάζει εκεί."
     },
     "settings": {
         "healthCycleEnableLabel": "Εμφάνιση καρτέλας κύκλου",

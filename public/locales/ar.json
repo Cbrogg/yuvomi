@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "الإيصالات المرفقة: {{count}}",
         "receiptsAttachedLabel_one": "إيصال واحد مرفق",
         "loanPaidInstallmentsLabel": "الأقساط المدفوعة بالفعل",
-        "loanPaidInstallmentsHint": "لقرض قيد السداد بالفعل. تُضاف هذه الأقساط دون تسجيلها في الميزانية."
+        "loanPaidInstallmentsHint": "لقرض قيد السداد بالفعل. تُضاف هذه الأقساط دون تسجيلها في الميزانية.",
+        "loanPaymentTypeLocked": "الدخل أو المصروف يتبع نوع القرض ويُغيَّر هناك."
     },
     "settings": {
         "healthCycleEnableLabel": "إظهار علامة تبويب الدورة",

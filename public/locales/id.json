@@ -1402,7 +1402,8 @@
         "receiptsAttachedLabel": "{{count}} bukti terlampir",
         "receiptsAttachedLabel_one": "{{count}} bukti terlampir",
         "loanPaidInstallmentsLabel": "Cicilan yang sudah dibayar",
-        "loanPaidInstallmentsHint": "Untuk pinjaman yang sudah berjalan. Cicilan ini dicatat, tetapi tidak dibukukan ke anggaran."
+        "loanPaidInstallmentsHint": "Untuk pinjaman yang sudah berjalan. Cicilan ini dicatat, tetapi tidak dibukukan ke anggaran.",
+        "loanPaymentTypeLocked": "Pemasukan atau pengeluaran mengikuti jenis pinjaman dan diubah di sana."
     },
     "settings": {
         "healthCycleEnableLabel": "Tampilkan tab siklus",

@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "{{count}} comprovativos anexados",
         "receiptsAttachedLabel_one": "{{count}} comprovativo anexado",
         "loanPaidInstallmentsLabel": "Parcelas já pagas",
-        "loanPaidInstallmentsHint": "Para um empréstimo que já está em curso. Estas parcelas são registadas, mas não lançadas no orçamento."
+        "loanPaidInstallmentsHint": "Para um empréstimo que já está em curso. Estas parcelas são registadas, mas não lançadas no orçamento.",
+        "loanPaymentTypeLocked": "Receita ou despesa segue o tipo de empréstimo e é alterada lá."
     },
     "settings": {
         "healthCycleEnableLabel": "Mostrar a aba de ciclo",

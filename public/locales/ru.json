@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "Прикреплено чеков: {{count}}",
         "receiptsAttachedLabel_one": "Прикреплён чек: {{count}}",
         "loanPaidInstallmentsLabel": "Уже оплаченные платежи",
-        "loanPaidInstallmentsHint": "Для займа, который уже выплачивается. Эти платежи фиксируются, но не проводятся по бюджету."
+        "loanPaidInstallmentsHint": "Для займа, который уже выплачивается. Эти платежи фиксируются, но не проводятся по бюджету.",
+        "loanPaymentTypeLocked": "Доход или расход следует типу займа и меняется там."
     },
     "settings": {
         "healthCycleEnableLabel": "Показать вкладку цикла",

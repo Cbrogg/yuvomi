@@ -1402,7 +1402,8 @@
         "receiptsAttachedLabel": "Załączone dowody: {{count}}",
         "receiptsAttachedLabel_one": "Załączone dowody: {{count}}",
         "loanPaidInstallmentsLabel": "Już zapłacone raty",
-        "loanPaidInstallmentsHint": "Dla pożyczki, która już trwa. Te raty zostaną uzupełnione, ale nie trafią do budżetu."
+        "loanPaidInstallmentsHint": "Dla pożyczki, która już trwa. Te raty zostaną uzupełnione, ale nie trafią do budżetu.",
+        "loanPaymentTypeLocked": "Przychód lub wydatek wynika z rodzaju pożyczki i tam się go zmienia."
     },
     "settings": {
         "healthCycleEnableLabel": "Pokaż kartę cyklu",

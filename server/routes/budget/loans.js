@@ -12,6 +12,7 @@ import { computeLoanSchedule, MAX_LOAN_MONTHS } from '../../services/loan-amorti
 import {
   budgetFilter, mayEdit, getBudgetMode, loanSummaryRow, loadLoan, refreshLoanStatus, cents,
   budgetCurrency, toBudgetAmount, CURRENCY_RE, validateAccountRef, addMonths,
+  LOAN_DIRECTIONS, bookingFor,
 } from './helpers.js';
 
 const log = createLogger('Budget');
@@ -20,24 +21,6 @@ const router = express.Router();
 // 'variable' = Darlehen ganz ohne Zinsbindung (#569-Nachtrag): rechnet einphasig
 // wie 'fixed', der Satz gilt aber nur als aktueller Wert (Prognose).
 const INTEREST_MODES = ['none', 'fixed', 'variable', 'fixed_then_variable'];
-
-// Richtung (#638): Das Modul war ursprünglich nur für verliehenes Geld gedacht -
-// die Rate wurde deshalb immer als Einnahme gebucht. Ein aufgenommener Kredit
-// zahlt aber raus, seine Rate ist eine Ausgabe.
-const LOAN_DIRECTIONS = ['lent', 'borrowed'];
-
-// Wie eine Rate ins Budget gebucht wird. Vorzeichen UND Kategorie hängen an der
-// Richtung: stats.js liest den Typ am Vorzeichen ab (amount > 0 = Einnahme), die
-// Kategorie muss dazu passen, sonst steht eine Ausgabe unter einer income-Kategorie.
-const REPAYMENT_BOOKING = {
-  lent: { sign: 1, category: 'Geschenke & Transfers', subcategory: '' },
-  borrowed: { sign: -1, category: 'financial_other', subcategory: 'loans_interest' },
-};
-
-/** Buchungsregel eines Darlehens; unbekannte/fehlende Richtung fällt auf 'lent' zurück. */
-function bookingFor(direction) {
-  return REPAYMENT_BOOKING[direction] || REPAYMENT_BOOKING.lent;
-}
 
 /**
  * Richtung aus dem Request (#638).

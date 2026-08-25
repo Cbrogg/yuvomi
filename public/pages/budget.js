@@ -1528,6 +1528,11 @@ function loanPaymentToEntry(loan, payment) {
   if (!payment.budget_entry_id) return null;
   return {
     id: payment.budget_entry_id,
+    // Kopplung mitgeben: das Edit-Modal sperrt daran den Typ-Umschalter. Über die
+    // Eintragsliste kommt sie ohnehin aus der API mit (entryWithLoanMeta) - ohne
+    // sie hier wäre der Umschalter je nach Einstiegspunkt mal gesperrt, mal nicht.
+    loan_id: loan.id,
+    loan_payment_id: payment.id,
     // Fallbacks über t() bzw. leer: der frühere hartkodierte englische Titel und
     // die deutsche Kategorie „Geschenke & Transfers" waren in 22 von 23 Sprachen
     // falsch — und die Kategorie ist längst ein Key, kein Anzeigename.
@@ -1914,6 +1919,11 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
   const defaultDate = defaultDateInPeriod(from, to, today);
 
   const isExpense  = isEdit ? entry.amount < 0 : true;
+  // Rate eines Darlehens (#638/#859): Ob sie Einnahme oder Ausgabe ist, entscheidet
+  // die Richtung des Darlehens, nicht dieser Dialog. Der Umschalter bleibt sichtbar,
+  // damit die Zuordnung ablesbar ist, nimmt hier aber keine Eingabe entgegen - der
+  // Server bucht ohnehin nach der Richtung und würde eine Umkehr still zurückdrehen.
+  const isLoanPayment = isEdit && (entry.loan_payment_id != null || entry.loan_id != null);
   // Bei virtuellen Serien hält amount nur den Monatsanteil; im Formular den eingegebenen Periodenbetrag zeigen.
   const editAmount = isEdit && entry.recurrence_virtual && entry.recurrence_full_amount != null
     ? entry.recurrence_full_amount
@@ -1953,12 +1963,13 @@ function openBudgetModal({ mode, entry = null, initialType = '' }) {
   const content = `
     <div class="amount-type-toggle ${isEdit ? 'amount-type-toggle--entry-only' : ''}">
       <button class="amount-type-btn amount-type-btn--expenses ${isExpense ? 'amount-type-btn--active' : ''}"
-              id="type-expense" type="button">${t('budget.typeExpense')}</button>
+              id="type-expense" type="button" ${isLoanPayment ? 'disabled' : ''}>${t('budget.typeExpense')}</button>
       <button class="amount-type-btn amount-type-btn--income ${!isExpense ? 'amount-type-btn--active' : ''}"
-              id="type-income" type="button">${t('budget.typeIncome')}</button>
+              id="type-income" type="button" ${isLoanPayment ? 'disabled' : ''}>${t('budget.typeIncome')}</button>
       ${!isEdit ? `<button class="amount-type-btn amount-type-btn--loan"
               id="type-loan" type="button">${t('budget.typeLoan')}</button>` : ''}
     </div>
+    ${isLoanPayment ? `<p class="budget-type-locked-hint">${t('budget.loanPaymentTypeLocked')}</p>` : ''}
 
     <div class="form-group js-entry-field">
       <label class="form-label" for="bm-title">${t('budget.titleLabel')}<span class="required-marker" aria-hidden="true"> *</span></label>

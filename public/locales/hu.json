@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "{{count}} csatolt bizonylat",
         "receiptsAttachedLabel_one": "{{count}} csatolt bizonylat",
         "loanPaidInstallmentsLabel": "Már kifizetett részletek",
-        "loanPaidInstallmentsHint": "Már futó kölcsönhöz. Ezek a részletek rögzülnek, de nem kerülnek be a költségvetésbe."
+        "loanPaidInstallmentsHint": "Már futó kölcsönhöz. Ezek a részletek rögzülnek, de nem kerülnek be a költségvetésbe.",
+        "loanPaymentTypeLocked": "A bevétel vagy kiadás a kölcsön típusát követi, és ott módosítható."
     },
     "settings": {
         "healthCycleEnableLabel": "Ciklus fül megjelenítése",
