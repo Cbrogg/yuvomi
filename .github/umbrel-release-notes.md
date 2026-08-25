@@ -1,10 +1,12 @@
-<!-- version: 2.43.0 -->
-The overview can now carry a row of quick links to the other things you run at home. A family that uses Yuvomi as its home page needs the way to Jellyfin, Immich or the router to be right there, not tucked into a note two taps away. Each tile is a name, an address and a picture, and you can keep a link to yourself instead of sharing it with the household. Typing `192.168.1.5:8096` is enough - the `https://` is filled in for you.
+<!-- version: 2.44.0 -->
+The Tasks module now keeps a history of what was completed. Until now a task simply carried the state "done", and nothing recorded when that happened or who did it - so questions like "what did I get through today", "when did we last clean the bathroom" or "who took the bins out" had no answer anywhere. A third view sits beside List and Board: what was ticked off, grouped by day, newest first, with the household member and the time. You can narrow it to one person, and tapping an entry opens the task itself.
 
-The row does not appear on its own. It starts hidden, because on the day you update it would have nothing to show, and your existing dashboard layout is left exactly as it is. To switch it on, open the overview, tap Customize, and pick "Quick links" from the tray at the bottom; from there the first tile is one tap away.
+A repeating task also shows when it was last done, going back through the whole series rather than just the copy currently open. That is the question a weekly chore actually raises, and it is the one the old "done" flag could never answer, because completing a repeating task creates a fresh copy each time.
 
-Pictures are uploaded from your device and never fetched from the linked site. Reaching out for a favicon would mean your home page contacts every service you have linked, every time it loads, and that is not something this app does. A tile without a picture shows the first letter of its name on a colour you choose.
+The history starts empty, and that is expected. Recording begins with this update - what your household ticked off before it was never written down anywhere, so there is nothing to show yet. It fills up from the first task you complete after updating.
+
+The list respects who may see what, exactly as the task list does. A task kept private stays out of everyone else's history, including after the fact: set a task to private later, and it disappears from the history too.
 
 Nothing needs configuring and there is nothing to do after the update - the new table is created automatically on first start.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.43.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.44.0

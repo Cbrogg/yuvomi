@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.44.0] - 2026-08-25
+
 ### Added
 
 - **The tasks module keeps a history of what was completed** (#791). Ticking a task off was a state,
