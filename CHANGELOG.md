@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.41.1] - 2026-08-25
+
 ### Fixed
 
 - **WebDAV backup rotation deleted the newest backup instead of the oldest** (#853). On a Synology -
