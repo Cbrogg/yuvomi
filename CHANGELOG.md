@@ -7,6 +7,33 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **WebDAV backup rotation deleted the newest backup instead of the oldest** (#853). On a Synology -
+  and on anything else running Apache `mod_dav` - the file listing was read back without a single
+  timestamp, and the rotation then removed from the wrong end. Every scheduled run uploaded a fresh
+  backup and deleted it seconds later, while the seven oldest stayed. A household could keep the
+  feature switched on for months and never hold a recent remote backup.
+
+  The namespace prefix in a WebDAV answer is the server's to choose. Nextcloud writes
+  `<d:getlastmodified>`; `mod_dav` publishes live properties under a prefix of its own, as
+  `<lp1:getlastmodified>`. The parser insisted on `D:` or `d:`, found no date, and substituted "now"
+  for **every** file - which did not fail, it tied. A tie sorts to nothing, so what was left was the
+  server's own order: by name, oldest first. `slice(keep)` then cut the newest end off.
+
+  Three things changed, and the first one is the fix: the prefix is now read as whatever the server
+  sent, including none. Second, a missing timestamp stays missing instead of becoming "now" - an
+  invented date is worse than an absent one, because it quietly turns a sort into an equality.
+  Third, ordering leans on the timestamp Yuvomi itself wrote into the filename, which no server
+  quirk can touch, and falls back to `getlastmodified` only for files it did not name.
+
+  On top of that the rotation will no longer delete the file it just uploaded, whatever the sort
+  says. Should a server ever confuse the ordering again, that now costs one surplus old backup
+  rather than the only fresh one.
+
+  Also fixed along the way: a server answering with absolute `href`s (which RFC 4918 allows) had its
+  paths pasted onto the base URL, so those `DELETE`s went nowhere and the folder grew without bound.
+
 ## [2.41.0] - 2026-08-25
 
 ### Fixed
