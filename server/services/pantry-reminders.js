@@ -18,7 +18,10 @@
  * Wiederherstellen aus dem Backup oder ein Eingriff von Hand den Bestand ändert.
  */
 
-import { reminderDateBefore, reminderIsInThePast, REMINDER_TIME_SUFFIX } from '../utils/reminder-schedule.js';
+import {
+  reminderDateBefore, reminderIsInThePast, REMINDER_TIME_SUFFIX, REMINDER_HOUR, REMINDER_MINUTE,
+} from '../utils/reminder-schedule.js';
+import { todayKey } from '../utils/timezone.js';
 import { resolvePermissions } from '../permissions.js';
 import { createLogger } from '../logger.js';
 
@@ -118,6 +121,17 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), acces
     SELECT id, remind_at FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?
   `).get(item.id);
 
+  const today = todayKey(database, now);
+
+  // SCHON ABGELAUFEN: eine Vorwarnung auf etwas, das die Frist bereits gerissen
+  // hat, ist keine Warnung mehr - das sagt der Chip "abgelaufen". Gilt für eine
+  // bestehende Zeile genauso wie für eine neue, und steht deshalb VOR allem
+  // anderen: nichts weiter unten darf eine solche Meldung retten.
+  if (item.expires_on < today) {
+    drop();
+    return;
+  }
+
   /* FRISCHWARE IST HIER DER HAUPTFALL, NICHT DER AUSREISSER.
    *
    * Das Inventar verwirft einen verstrichenen Termin ersatzlos, und dort ist
@@ -132,56 +146,61 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), acces
    * eine Morgenfrage ("was muss heute weg"), kein Sofortalarm - ohne die
    * Klemmung stünde die Meldung eine Minute nach dem Eintippen im Toast.
    *
-   * ABER NUR AUF DIESEM WEG. Der Voll-Sync setzt die Option nicht: er holt
-   * keine verstrichenen Vorläufe nach, weil er nicht weiss, dass gerade jemand
-   * gehandelt hat. Sonst bekäme ein Haushalt am ersten Morgen nach dem Update
-   * jede bald ablaufende Zeile seines Bestands auf einmal - dreissig Meldungen,
-   * für die niemand etwas getan hat. Dieselbe Trennung wie bei "ersetzen vs.
-   * ergänzen": der Router weiss um die Handlung, der Lauf nicht.
-   *
-   * Der SQL-Grobschnitt der missing-Abfrage siebt diese Zeilen ohnehin schon
-   * aus, bevor sie hier ankommen - dieser Zweig ist die Regel, jener ist die
-   * Ersparnis. Beide werden einzeln geprüft, weil ein Test gegen den Voll-Sync
-   * grün bliebe, wenn nur die Regel verschwände. */
-  if (reminderIsInThePast(remindAt, now)) {
-    // Ohne Handlung im Rücken bleibt eine bestehende Zeile, wie sie ist -
-    // ergänzt wird hier nichts. (Ein `drop()` stand hier und war wirkungslos:
-    // es löscht über denselben Schlüssel, mit dem `existing` gelesen wurde.)
-    if (!clampToNextMorning) return;
-    const soonest = nextMorning(now);
+   * ABER NUR AUF DIESEM WEG. Der Voll-Sync holt keine verstrichenen Vorläufe
+   * nach, weil er nicht weiss, dass gerade jemand gehandelt hat - sonst bekäme
+   * ein Haushalt am ersten Morgen nach dem Update jede bald ablaufende Zeile
+   * seines Bestands auf einmal. Dieselbe Trennung wie bei "ersetzen vs.
+   * ergänzen": der Router weiss um die Handlung, der Lauf nicht. */
+  if (clampToNextMorning) {
+    if (reminderIsInThePast(remindAt, now)) {
+      const soonest = nextMorning(now);
 
-    // DER GEKLEMMTE TAG MUSS NOCH VOR DEM ABLAUF LIEGEN. Ein Vergleich gegen
-    // "heute" reichte dafür nicht: `nextMorning()` klemmt auf MORGEN, sobald
-    // die Uhr an 09:00 vorbei ist. Ein Artikel, der heute abläuft und um 11:00
-    // eingetragen wird, hätte seine "Vorwarnung" damit einen Tag NACH dem
-    // Ablauf bekommen - und um 08:00 eingetragen wäre dasselbe MHD korrekt
-    // gemeldet worden. Ein Verhalten, das an der Tageszeit haengt, ist keines.
-    if (soonest.slice(0, 10) > item.expires_on) {
-      drop();
+      /* DIE BESTEHENDE ZEILE ZUERST, DANN ERST DIE ABLAUF-FRAGE.
+       *
+       * Umgekehrt war es ein Loch mit Ansage: ein Artikel, der HEUTE abläuft,
+       * trägt seine Meldung auf heute 09:00. Jeder Schreibvorgang danach - ein
+       * ±-Tap genügt - fand `nextMorning` auf morgen umgeklappt, verglich das
+       * gegen `expires_on` und löschte die fällige, noch nicht zugestellte
+       * Meldung. Gemessen: Zeile vorhanden um 09:00, weg nach einem PATCH um
+       * 09:30, und `/reminders/pending` filtert nicht auf `pushed_at` - der
+       * Toast verschwand ungesehen. Genau der "was muss heute weg"-Fall.
+       *
+       * `<=` statt `===`: die bestehende Zeile ist gut, solange sie nicht
+       * SPÄTER meldet als der frühestmögliche Zeitpunkt. Sie ist genau dann
+       * falsch, wenn ein vorgezogenes MHD sie überholt hat. */
+      if (existing && existing.remind_at <= soonest) return;
+
+      // Eine NEUE Zeile käme dagegen nach dem Ablauf - das wäre keine Warnung.
+      if (soonest.slice(0, 10) > item.expires_on) {
+        drop();
+        return;
+      }
+      remindAt = soonest;
+    } else if (existing?.remind_at === remindAt) {
+      // NICHTS ZU TUN. Der ±-Stepper ist der häufigste Schreibweg dieses
+      // Moduls; bedingungsloses Löschen-und-neu-Anlegen hätte bei jedem Tap
+      // eine bereits zugestellte, noch offene Meldung entfernt. Wer eine Menge
+      // korrigiert oder einen Namen tippt, ändert nichts daran, wann dieses
+      // Glas abläuft.
       return;
     }
-
-    /* GEGEN DEN GEKLEMMTEN WERT VERGLEICHEN, NICHT GEGEN DEN ROHEN.
+  } else {
+    /* DER LAUF SCHNEIDET NACH TAGEN, NICHT NACH DER UHRZEIT - und zwar genau
+     * dort, wo der SQL-Grobschnitt der missing-Abfrage schneidet.
      *
-     * Hier stand der Vergleich `existing?.remind_at === remindAt` weiter oben,
-     * vor der Klemmung - und traf damit bei genau der Ware nie zu, für die die
-     * Klemmung gebaut ist. Gemessen: ein Joghurt mit fünf Tagen MHD bekam bei
-     * JEDEM Stepper-Tap eine neue Zeile, einen Tag später, mit `pushed_at` auf
-     * NULL und `dismissed` auf 0. Dieselbe Meldung jeden Morgen, und ein
-     * Wegwischen hielt bis zum nächsten Tap. Der Riegel, der das verhindern
-     * sollte, hat es verursacht.
+     * Mit `reminderIsInThePast` liefen die beiden auseinander: der Grobschnitt
+     * liess einen Artikel durch, dessen Vorlauf auf HEUTE fällt, und der Riegel
+     * warf ihn ab 09:00 wieder weg. Am nächsten Tag siebte ihn der Grobschnitt
+     * aus. Ergebnis: ein Bestandsartikel, dessen Vorwarntag zufällig der Tag
+     * des ersten Laufs war, bekam nie eine Erinnerung - je nachdem, ob der Lauf
+     * vor oder nach neun Uhr fiel.
      *
-     * `<=` statt `===`: `soonest` wandert täglich weiter, eine bestehende Zeile
-     * soll aber liegenbleiben. Sie ist genau dann falsch, wenn sie SPÄTER
-     * meldet als möglich - etwa, weil das MHD nachträglich vorgezogen wurde. */
-    if (existing && existing.remind_at <= soonest) return;
-    remindAt = soonest;
-  } else if (existing?.remind_at === remindAt) {
-    // NICHTS ZU TUN. Der ±-Stepper ist der häufigste Schreibweg dieses Moduls;
-    // bedingungsloses Löschen-und-neu-Anlegen hätte bei jedem Tap eine bereits
-    // zugestellte, noch offene Meldung entfernt. Wer eine Menge korrigiert oder
-    // einen Namen tippt, ändert nichts daran, wann dieses Glas abläuft.
-    return;
+     * Ein Termin von heute 09:00 wird deshalb angelegt, auch wenn die Stunde
+     * vorbei ist: er geht dann in diesem Durchgang raus, und das ist richtig -
+     * die Aussage "läuft in sieben Tagen ab" gilt heute noch. Was WIRKLICH
+     * zurückliegt (der Frischware-Fall), bleibt draussen. */
+    if (remindAt.slice(0, 10) < today) return;
+    if (existing?.remind_at === remindAt) return;
   }
 
   drop();
@@ -197,7 +216,10 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), acces
  */
 function nextMorning(now) {
   const target = new Date(now);
-  target.setUTCHours(9, 0, 0, 0);
+  // Stunde und Minute kommen aus derselben Konstante wie das angestempelte
+  // Suffix - sonst waeren es zwei Uhrzeiten, und die zweite entstuende erst
+  // beim naechsten Aendern der ersten.
+  target.setUTCHours(REMINDER_HOUR, REMINDER_MINUTE, 0, 0);
   if (target.getTime() <= now.getTime()) target.setUTCDate(target.getUTCDate() + 1);
   return `${target.toISOString().slice(0, 10)}${REMINDER_TIME_SUFFIX}`;
 }
@@ -402,8 +424,11 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
      * zugestellt noch weggewischt, ein Doppel-Push also ausgeschlossen. */
     if (reminderIsInThePast(target, now)) {
       const soonest = nextMorning(now);
-      if (soonest.slice(0, 10) > row.expires_on) { discard.run(row.id); continue; }
+      // BESTEHENDE ZEILE ZUERST, wie im Router: eine Meldung, die schon so
+      // frueh wie moeglich steht, darf dieser Lauf nicht wegen der Ablauffrage
+      // loeschen - sie ist genau die, die heute rausgehen soll.
       if (row.remind_at <= soonest) continue;
+      if (soonest.slice(0, 10) > row.expires_on) { discard.run(row.id); continue; }
       retime.run(soonest, row.id);
       continue;
     }

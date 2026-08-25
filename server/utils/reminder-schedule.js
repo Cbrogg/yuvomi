@@ -27,6 +27,16 @@ const REMINDER_TIME = '09:00';
  */
 export const REMINDER_TIME_SUFFIX = `T${REMINDER_TIME}`;
 
+/**
+ * Und dieselbe Tageszeit als Zahlenpaar, für Aufrufer, die damit RECHNEN müssen
+ * (etwa "der nächste Termin, der noch bevorsteht"). Aus derselben Konstante
+ * abgeleitet: ein hart getipptes `setUTCHours(9, 0)` neben einem angestempelten
+ * `T09:00` sind zwei Uhrzeiten, die beim ersten Ändern auseinanderfallen - und
+ * zwar so, dass ein Termin in der Vergangenheit entsteht und sofort rausgeht.
+ */
+const [REMINDER_HOUR, REMINDER_MINUTE] = REMINDER_TIME.split(':').map(Number);
+export { REMINDER_HOUR, REMINDER_MINUTE };
+
 function dateKey(date) {
   return [
     date.getUTCFullYear(),

@@ -32,7 +32,15 @@ const dbmod = await import('../server/db.js');
 const { default: pantryRouter } = await import('../server/routes/pantry.js');
 const { default: remindersRouter } = await import('../server/routes/reminders.js');
 const { syncAllPantryExpiryReminders, syncPantryExpiryReminder } = await import('../server/services/pantry-reminders.js');
+const { todayKey: householdToday } = await import('../server/utils/timezone.js');
 const db = dbmod.get();
+
+/** `days` Tage nach einem Datumsschluessel, reine Kalenderarithmetik in UTC. */
+function addDays(key, days) {
+  const d = new Date(`${key}T00:00:00Z`);
+  d.setUTCDate(d.getUTCDate() + days);
+  return d.toISOString().slice(0, 10);
+}
 
 /**
  * Der Vorlauf steht hier als Zahl, nicht als Import: public/utils/pantry-status.js
@@ -741,17 +749,97 @@ test('ein nachtraeglich abgelaufenes MHD raeumt die offene Meldung ab', async ()
     'eine Vorwarnung auf etwas, das die Frist gerissen hat, gehoert weg statt stehenzubleiben');
 });
 
-test('ein heute ablaufender Artikel bekommt keine Vorwarnung fuer morgen', async () => {
-  // `nextMorning()` klemmt auf MORGEN, sobald die Uhr an 09:00 vorbei ist. Ohne
-  // die Pruefung gegen `expires_on` bekaeme derselbe Artikel je nach Tageszeit
-  // eine korrekte Meldung (frueh eingetragen) oder eine einen Tag NACH dem
-  // Ablauf (spaet eingetragen) - ein Verhalten, das an der Uhr haengt.
-  const res = await call('POST', '/pantry', { body: { name: 'Tagesware', quantity: 1, expires_on: dateKeyInDays(0) } });
-  assert.equal(res.status, 201);
+// --------------------------------------------------------------------------
+// DER TAG, AN DEM ES ZAEHLT - mit FESTER Uhr geprueft
+//
+// `if (reminder) { ... }` machte diesen Test frueher leer, sobald die Zeile
+// fehlte: er lief je nach Tageszeit in den einen oder anderen Zweig und konnte
+// deshalb genau den Fehler nicht sehen, den er finden sollte. Beide Uhrzeiten
+// stehen jetzt explizit da.
+// --------------------------------------------------------------------------
+test('vor 09:00 eingetragen meldet ein heute ablaufender Artikel noch heute', () => {
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Tagesware', 1, 'pcs', 'Sonstiges', ?, ?)"
+  ).run('2026-08-26', A).lastInsertRowid;
 
-  const reminder = reminderFor(res.body.data.id);
-  if (reminder) {
-    assert.ok(reminder.remind_at.slice(0, 10) <= dateKeyInDays(0),
-      'eine Vorwarnung nach dem Ablauf ist keine Vorwarnung');
-  }
+  syncPantryExpiryReminder(db, db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id),
+    new Date('2026-08-26T07:00:00Z'), null, { clampToNextMorning: true });
+
+  assert.equal(reminderFor(id).remind_at, '2026-08-26T09:00');
+});
+
+test('nach 09:00 eingetragen bekommt derselbe Artikel keine Vorwarnung fuer morgen', () => {
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Tagesware spaet', 1, 'pcs', 'Sonstiges', ?, ?)"
+  ).run('2026-08-26', A).lastInsertRowid;
+
+  syncPantryExpiryReminder(db, db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id),
+    new Date('2026-08-26T11:00:00Z'), null, { clampToNextMorning: true });
+
+  // Der einzige klemmbare Termin waere morgen 09:00 - einen Tag NACH dem
+  // Ablauf. Das ist keine Vorwarnung, also gibt es keine.
+  assert.equal(countReminders(id), 0);
+});
+
+test('ein Tap nach 09:00 loescht die faellige Meldung eines heute ablaufenden Artikels NICHT', () => {
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Heute weg', 3, 'pcs', 'Sonstiges', ?, ?)"
+  ).run('2026-08-26', A).lastInsertRowid;
+  const load = () => db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id);
+
+  syncPantryExpiryReminder(db, load(), new Date('2026-08-26T07:00:00Z'), null, { clampToNextMorning: true });
+  assert.equal(reminderFor(id).remind_at, '2026-08-26T09:00');
+
+  // DER GEMESSENE FEHLER: nach 09:00 klappt `nextMorning` auf morgen um, und
+  // die Ablauffrage stand VOR der Frage nach der bestehenden Zeile. Ein ±-Tap
+  // um 09:30 loeschte damit die faellige, noch nicht zugestellte Meldung -
+  // /reminders/pending filtert nicht auf `pushed_at`, der Toast verschwand
+  // ungesehen. Genau der "was muss heute weg"-Fall.
+  db.prepare('UPDATE pantry_items SET quantity = 2 WHERE id = ?').run(id);
+  syncPantryExpiryReminder(db, load(), new Date('2026-08-26T09:30:00Z'), null, { clampToNextMorning: true });
+
+  assert.equal(reminderFor(id)?.remind_at, '2026-08-26T09:00');
+});
+
+test('der Voll-Sync schneidet nach Tagen, nicht nach der Uhrzeit', () => {
+  // Vorwarntag = heute: der SQL-Grobschnitt laesst die Zeile durch, der
+  // JS-Riegel warf sie ab 09:00 wieder weg, und am naechsten Tag siebte der
+  // Grobschnitt sie aus. Ein Bestandsartikel, dessen Vorwarntag auf den Tag des
+  // ersten Laufs fiel, bekam damit NIE eine Erinnerung.
+  //
+  // FESTE UHR, UND DER BEZUGSTAG KOMMT AUS DERSELBEN QUELLE WIE DER SERVICE:
+  // `todayKey()` folgt der Haushaltszone, `dateKeyInDays()` rechnet in UTC. Wer
+  // beides mischt, misst unter Pacific/Kiritimati einen anderen Tag als der
+  // Code - der Test war dort rot, obwohl der Vergleich im Service genau richtig
+  // ist.
+  const at = new Date('2026-08-26T11:00:00Z');
+  const household = householdToday(db, at);
+  const expires = addDays(household, EXPIRY_SOON_DAYS);
+
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Grenztag', 1, 'pcs', 'Sonstiges', ?, ?)"
+  ).run(expires, A).lastInsertRowid;
+
+  syncAllPantryExpiryReminders(db, at);
+
+  assert.equal(countReminders(id), 1, 'sonst haengt die Erinnerung daran, ob der Lauf vor oder nach neun faellt');
+  assert.equal(reminderFor(id).remind_at, `${household}T09:00`);
+});
+
+test('der Voll-Sync loescht die faellige Meldung eines heute ablaufenden Artikels nicht', () => {
+  // DIESELBE REIHENFOLGE-FALLE wie im Router, nur im stale-Block: der Termin
+  // steht auf heute 09:00, der Soll-Termin (MHD minus sieben Tage) liegt
+  // zurueck, und `nextMorning` ist nach neun Uhr auf morgen umgeklappt. Wer
+  // dann zuerst gegen `expires_on` prueft, wirft genau die Zeile weg, die
+  // dieser Durchgang zustellen soll.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Stale heute', 1, 'pcs', 'Sonstiges', ?, ?)"
+  ).run('2026-08-26', A).lastInsertRowid;
+  db.prepare("INSERT INTO reminders (entity_type, entity_id, remind_at, created_by) VALUES ('pantry_item', ?, '2026-08-26T09:00', ?)")
+    .run(id, A);
+
+  syncAllPantryExpiryReminders(db, new Date('2026-08-26T09:30:00Z'));
+
+  assert.equal(reminderFor(id)?.remind_at, '2026-08-26T09:00',
+    'die faellige Zeile darf der Lauf nicht abraeumen, bevor sie zugestellt ist');
 });
