@@ -12,6 +12,7 @@ import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { t, getLocale, formatDate, formatDayMonth, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc, renderMarkdownLight } from '/utils/html.js';
+import { renderMarkdownToolbar, wireMarkdownToolbar } from '/utils/markdown-toolbar.js';
 import { refresh as refreshReminders } from '/reminders.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
 import { resolveReminderPreset, parseRemindAtAsUtc } from '/utils/reminder-offset.js';
@@ -1039,6 +1040,7 @@ function renderModalContent({ task = null, users = [], reminder = null } = {}) {
            darueber das Gegenteil begruendet. -->
       <div class="form-group">
         <label class="label" for="task-description">${t('tasks.descriptionLabel')}</label>
+        ${renderMarkdownToolbar()}
         <textarea class="input" id="task-description" name="description"
                   rows="6" placeholder="${t('tasks.descriptionPlaceholder')}"
                  >${esc(task?.description)}</textarea>
@@ -1454,6 +1456,12 @@ function wireTaskForm(panel, { task = null, container }) {
   // Tag-Editor (#586)
   renderTagChips(panel);
   wireTagEditor(panel);
+
+  // Formatierungsleiste ueber der Notiz (#731). Die Leseansicht rendert sie
+  // seit v2.7.0 als Markdown, geschrieben werden musste sie aber von Hand -
+  // dieselbe Leiste, die die Notizen seit jeher haben, dieselbe Datei.
+  const description = panel.querySelector('#task-description');
+  if (description) wireMarkdownToolbar(panel, description);
 
   // Verknüpfte Dokumente: hochladen oder ein abgelegtes wählen (#503, #733).
   // Die Vorbelegung steckt bereits im Markup (task.documents aus GET /tasks/:id),

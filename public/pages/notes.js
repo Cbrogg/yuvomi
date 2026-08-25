@@ -10,6 +10,7 @@ import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
 import { t } from '/i18n.js';
 import { esc, renderMarkdownLight } from '/utils/html.js';
 import { splitKeepingLineEndings } from '/utils/markdown-checklist.js';
+import { renderMarkdownToolbar, wireMarkdownToolbar } from '/utils/markdown-toolbar.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { findPageFab } from '/utils/fab.js';
@@ -380,172 +381,6 @@ function renderNoteCard(note) {
 }
 
 // --------------------------------------------------------
-// Formatierungs-Helfer
-// --------------------------------------------------------
-
-// Reihenfolge = Anzeige-Reihenfolge; null trennt zwei Gruppen.
-const FORMAT_ACTIONS = () => [
-  { format: 'bold',          icon: 'bold',          label: t('notes.formatBold') },
-  { format: 'italic',        icon: 'italic',        label: t('notes.formatItalic') },
-  { format: 'underline',     icon: 'underline',     label: t('notes.formatUnderline') },
-  { format: 'strikethrough', icon: 'strikethrough', label: t('notes.formatStrikethrough') },
-  null,
-  { format: 'heading',       icon: 'heading',       label: t('notes.formatHeading') },
-  { format: 'list',          icon: 'list',          label: t('notes.formatList') },
-  { format: 'ordered-list',  icon: 'list-ordered',  label: t('notes.formatOrderedList') },
-  { format: 'checklist',     icon: 'list-checks',   label: t('notes.formatChecklist') },
-  null,
-  { format: 'link',          icon: 'link',          label: t('notes.formatLink') },
-  { format: 'code',          icon: 'code',          label: t('notes.formatCode') },
-  { format: 'quote',         icon: 'quote',         label: t('notes.formatQuote') },
-  { format: 'divider',       icon: 'minus',         label: t('notes.formatDivider') },
-];
-
-/**
- * Formatierungsleiste des Editors. Zuvor 13 handgeschriebene Buttons, die nur
- * ein `title` trugen: kein verlässlicher Screenreader-Name, kein role="toolbar",
- * und die Trenner waren bedeutungslose <span>. Jetzt datengetrieben — eine
- * Quelle für Reihenfolge, Icon und Beschriftung.
- */
-function renderFormatToolbar() {
-  const items = FORMAT_ACTIONS().map((a) => a === null
-    ? '<span class="note-format-btn--sep" role="separator" aria-orientation="vertical"></span>'
-    : `<button type="button" class="note-format-btn" data-format="${a.format}"
-               title="${esc(a.label)}" aria-label="${esc(a.label)}">
-         <i data-lucide="${a.icon}" class="icon-md" aria-hidden="true"></i>
-       </button>`
-  ).join('');
-
-  return `<div class="note-format-toolbar" role="toolbar" aria-label="${t('notes.formatToolbarLabel')}">${items}</div>`;
-}
-
-function applyFormat(textarea, format) {
-  const start = textarea.selectionStart;
-  const end   = textarea.selectionEnd;
-  const text  = textarea.value;
-  const sel   = text.slice(start, end);
-
-  let before, after, insert;
-  switch (format) {
-    case 'bold':
-      before = '**'; after = '**';
-      insert = sel || 'Text';
-      break;
-    case 'italic':
-      before = '*'; after = '*';
-      insert = sel || 'Text';
-      break;
-    case 'underline':
-      before = '<u>'; after = '</u>';
-      insert = sel || 'Text';
-      break;
-    case 'strikethrough':
-      before = '~~'; after = '~~';
-      insert = sel || 'Text';
-      break;
-    case 'code':
-      before = '`'; after = '`';
-      insert = sel || 'Code';
-      break;
-    case 'link':
-      if (sel) {
-        textarea.setRangeText(`[${sel}](url)`, start, end, 'select');
-        textarea.selectionStart = start + sel.length + 3;
-        textarea.selectionEnd   = start + sel.length + 6;
-      } else {
-        textarea.setRangeText('[Linktext](url)', start, end, 'select');
-        textarea.selectionStart = start + 1;
-        textarea.selectionEnd   = start + 9;
-      }
-      return;
-    case 'heading': {
-      const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-      const lineEnd   = text.indexOf('\n', start);
-      const line      = text.slice(lineStart, lineEnd === -1 ? text.length : lineEnd);
-      const match     = line.match(/^(#{1,3})\s/);
-      if (match && match[1].length < 3) {
-        textarea.setRangeText('#' + line, lineStart, lineEnd === -1 ? text.length : lineEnd, 'end');
-      } else if (match && match[1].length >= 3) {
-        textarea.setRangeText(line.replace(/^#{1,3}\s/, ''), lineStart, lineEnd === -1 ? text.length : lineEnd, 'end');
-      } else {
-        textarea.setRangeText('## ' + line, lineStart, lineEnd === -1 ? text.length : lineEnd, 'end');
-      }
-      return;
-    }
-    case 'list': {
-      if (sel) {
-        const lines = sel.split('\n').map((l) => l.startsWith('- ') ? l : `- ${l}`);
-        textarea.setRangeText(lines.join('\n'), start, end, 'end');
-        return;
-      }
-      const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-      const currentLine = text.slice(lineStart, start);
-      if (currentLine.trim() === '') {
-        textarea.setRangeText('- ', start, start, 'end');
-      } else {
-        textarea.setRangeText('\n- ', start, start, 'end');
-      }
-      return;
-    }
-    case 'ordered-list': {
-      if (sel) {
-        const lines = sel.split('\n').map((l, i) => `${i + 1}. ${l.replace(/^\d+\.\s/, '')}`);
-        textarea.setRangeText(lines.join('\n'), start, end, 'end');
-        return;
-      }
-      const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-      const currentLine = text.slice(lineStart, start);
-      if (currentLine.trim() === '') {
-        textarea.setRangeText('1. ', start, start, 'end');
-      } else {
-        textarea.setRangeText('\n1. ', start, start, 'end');
-      }
-      return;
-    }
-    case 'checklist': {
-      if (sel) {
-        const lines = sel.split('\n').map((l) => l.startsWith('- [ ] ') ? l : `- [ ] ${l}`);
-        textarea.setRangeText(lines.join('\n'), start, end, 'end');
-        return;
-      }
-      const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-      const currentLine = text.slice(lineStart, start);
-      if (currentLine.trim() === '') {
-        textarea.setRangeText('- [ ] ', start, start, 'end');
-      } else {
-        textarea.setRangeText('\n- [ ] ', start, start, 'end');
-      }
-      return;
-    }
-    case 'quote': {
-      if (sel) {
-        const lines = sel.split('\n').map((l) => l.startsWith('> ') ? l : `> ${l}`);
-        textarea.setRangeText(lines.join('\n'), start, end, 'end');
-        return;
-      }
-      const lineStart = text.lastIndexOf('\n', start - 1) + 1;
-      const currentLine = text.slice(lineStart, start);
-      if (currentLine.trim() === '') {
-        textarea.setRangeText('> ', start, start, 'end');
-      } else {
-        textarea.setRangeText('\n> ', start, start, 'end');
-      }
-      return;
-    }
-    case 'divider':
-      textarea.setRangeText('\n\n---\n\n', start, end, 'end');
-      return;
-    default: return;
-  }
-
-  const replacement = `${before}${insert}${after}`;
-  textarea.setRangeText(replacement, start, end, 'select');
-  // Selektion auf den eingefügten Text setzen (ohne Marker)
-  textarea.selectionStart = start + before.length;
-  textarea.selectionEnd   = start + before.length + insert.length;
-}
-
-// --------------------------------------------------------
 // Modal
 // --------------------------------------------------------
 
@@ -608,7 +443,7 @@ function openNoteModal({ mode, note = null }) {
     </div>
     <div class="form-group">
       <label class="form-label" for="note-content">${t('notes.contentLabel')} <span class="form-label__hint">${t('notes.contentMarkdownHint')}</span></label>
-      ${renderFormatToolbar()}
+      ${renderMarkdownToolbar()}
       <textarea class="form-input" id="note-content" rows="6"
                 placeholder="${t('notes.contentPlaceholder')}"
                 style="resize:vertical;">${esc(isEdit ? note.content : '')}</textarea>
@@ -803,22 +638,9 @@ function openNoteModal({ mode, note = null }) {
         });
       });
 
-      // Formatierungs-Toolbar
+      // Formatierungs-Toolbar (geteilt mit den Aufgaben-Notizen, #731)
       const textarea = panel.querySelector('#note-content');
-      panel.querySelectorAll('.note-format-btn[data-format]').forEach((btn) => {
-        btn.addEventListener('click', () => {
-          applyFormat(textarea, btn.dataset.format);
-          textarea.focus();
-        });
-      });
-
-      textarea.addEventListener('keydown', (e) => {
-        if (e.ctrlKey || e.metaKey) {
-          if (e.key === 'b') { e.preventDefault(); applyFormat(textarea, 'bold'); }
-          if (e.key === 'i') { e.preventDefault(); applyFormat(textarea, 'italic'); }
-          if (e.key === 'u') { e.preventDefault(); applyFormat(textarea, 'underline'); }
-        }
-      });
+      wireMarkdownToolbar(panel, textarea);
 
       panel.querySelector('#note-modal-cancel').addEventListener('click', closeModal);
 

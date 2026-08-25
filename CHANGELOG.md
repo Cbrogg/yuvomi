@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **Task notes get the formatting toolbar the notes module has always had** (#731). Task notes have
+  rendered as Markdown since v2.7.0, through the same renderer the notes module uses - but there was
+  no way to write it except by typing the syntax. On a phone, `- [ ]` is a detour nobody should have
+  to know about.
+
+  The toolbar is not a copy: it moved out of the notes module into a shared component both now draw
+  from, along with its insertion rules. Two versions of thirteen buttons would only have drifted, and
+  the checklist button in particular had to behave identically on both sides - a checkbox written in
+  a task should be the same characters as one written in a note.
+
+  Its labels moved with it, from `notes.format*` to `markdown.*`, because they no longer belong to
+  one module.
+
 - **A rendered checkbox can be ticked by tapping it** (#704). Notes drew `- [ ]` as a styled box that
   was deliberately inert. To tick something off you opened the note, changed `[ ]` into `[x]` in the
   text and saved - three steps for what looks like a one-tap control, and on a wall tablet with a
@@ -28,6 +41,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Boxes stay decorative wherever a tick could not be written back honestly: on the dashboard, which
   shows a truncated excerpt whose line numbers are not the note's, in task notes, and in the reader
   while the editor holds unsaved text.
+
+### Fixed
+
+- **The formatting toolbar wrote German into every language** (#731). Clicking "Link" inserted
+  `[Linktext](url)` and clicking "Bold" without a selection inserted `Text` - both fixed in the
+  source rather than translated. That text lands in the note itself, so it is interface text like
+  any other, and 23 of 24 languages got the German word. It now comes from the translation.
 
 ## [2.41.2] - 2026-08-25
 
