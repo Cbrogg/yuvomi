@@ -12,7 +12,7 @@ import { esc, fmtLocation, renderMarkdownLight } from '/utils/html.js';
 // `todayKey` heisst hier schon ein Parameter (bzw. eine lokale Bindung), der den
 // Bezugstag traegt - der Import kommt deshalb unter eigenem Namen herein.
 import { toLocalDateKey, parseLocalDateKey, addLocalDays, todayKey as householdToday } from '/utils/date.js';
-import { nowFields, zonedUTCProxy } from '/utils/timezone.js';
+import { nowFields, zonedUTCProxy, zonedDateKey } from '/utils/timezone.js';
 import { predictCycle, PHASE } from '/utils/health-cycle.js';
 import { localizeBirthdayEvent } from '/utils/birthday-event.js';
 import { countdownPhrase, countdownRank } from '/utils/countdown.js';
@@ -414,11 +414,15 @@ function mastheadDateLabel(now = new Date()) {
 // zusammengesetztes „Datum, Zeit" per Komma zu zerschneiden (locale-fragil:
 // manche Locales setzen selbst ein Komma ins Datum).
 function relativeDateLabel(d) {
-  const today = new Date();
-  const tomorrow = new Date(today);
-  tomorrow.setDate(today.getDate() + 1);
-  if (d.toDateString() === today.toDateString()) return t('common.today');
-  if (d.toDateString() === tomorrow.toDateString()) return t('common.tomorrow');
+  // Beide Seiten als Kalendertag der ANZEIGEZONE. `toDateString()` liest die
+  // Browser-Zone, und `d` ist hier oft ein echter Zeitpunkt (ein synchronisierter
+  // Termin etwa): ein Geraet in einer anderen Zone nannte denselben Termin dann
+  // „Heute", waehrend er im Haushalt morgen liegt (#829, Nachlese #851).
+  const day = zonedDateKey(d);
+  if (!day) return formatDate(d);
+  const today = householdToday();
+  if (day === today) return t('common.today');
+  if (day === addLocalDays(today, 1)) return t('common.tomorrow');
   return formatDate(d);
 }
 
@@ -4167,7 +4171,7 @@ export async function render(container, { user }) {
   }
 }
 
-export const __test = { buildTodayHighlights, buildTodayProgram, buildTodayCockpitModel, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate, renderWallSurface, renderWallWho, selectMetricTiles, METRIC_TILE_ORDER, PROGRAM_ROW_CAP, WALL_ROW_CAP, weatherToneKey, weatherMotionAttr, weatherTempBand, weatherSpanModel, weatherDayLabel, weatherTodayRange, renderWeatherWidget, renderWallWeather };
+export const __test = { buildTodayHighlights, buildTodayProgram, buildTodayCockpitModel, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate, renderWallSurface, renderWallWho, selectMetricTiles, METRIC_TILE_ORDER, PROGRAM_ROW_CAP, WALL_ROW_CAP, weatherToneKey, weatherMotionAttr, weatherTempBand, weatherSpanModel, weatherDayLabel, weatherTodayRange, renderWeatherWidget, renderWallWeather, relativeDateLabel };
 
 function wireWeatherRefresh(container, onUpdated = null) {
   const refreshBtn = container.querySelector('#weather-refresh-btn');

@@ -344,6 +344,66 @@ test('formatDueDate: eine Faelligkeit spaeter am Tag ist nicht schon ueberfaelli
   }
 });
 
+/* „Heute"/„Morgen" an einem echten ZEITPUNKT (#829, Nachlese #851).
+ *
+ * Hier stand `d.toDateString() === new Date().toDateString()` - beide Seiten in
+ * der Browser-Zone. `d` ist an dieser Stelle oft ein synchronisierter Termin,
+ * also ein Instant mit eigener Zone: ein Geraet in einer anderen Zone nannte
+ * denselben Termin „Heute", waehrend er im Haushalt morgen liegt. Anders als bei
+ * `formatDueDate` wird hier wirklich UMGERECHNET, denn ein Instant traegt seine
+ * Zone selbst - das ist der Unterschied, den utils/timezone.js fuehrt.
+ *
+ * Geprueft wird die EIGENSCHAFT ueber ein Raster, nicht ein konstruierter
+ * Einzelfall: „das Label heisst genau dann heute, wenn der Tag des Zeitpunkts in
+ * der Anzeigezone der heutige ist". Eine erste Fassung setzte einen einzelnen
+ * Zeitpunkt und war gruen und blind - er fiel zufaellig in BEIDEN Zonen auf
+ * heute, also unterschied er die Fassungen nicht. Ein Raster ueber zwei Tage
+ * trifft die Abweichung zwangslaeufig, sobald die Zonen auseinanderliegen. */
+test('relativeDateLabel benennt einen Zeitpunkt in der Anzeigezone', async () => {
+  const tz = await import('/utils/timezone.js');
+  const { __test } = await import('../public/pages/dashboard.js');
+  const shiftDay = (key, days) => {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(Date.UTC(y, m - 1, d) + days * 86400000).toISOString().slice(0, 10);
+  };
+
+  try {
+    for (const zone of ['Pacific/Honolulu', 'Pacific/Kiritimati']) {
+      tz.setDisplayTimeZone(zone);
+      const n = tz.nowFields();
+      const p2 = (x) => String(x).padStart(2, '0');
+      const today = `${n.year}-${p2(n.month)}-${p2(n.day)}`;
+
+      let sawToday = 0;
+      let sawTomorrow = 0;
+      // Alle zwei Stunden ueber zwei Tage, ab jetzt.
+      for (let h = 0; h < 48; h += 2) {
+        const d = new Date(Date.now() + h * 3600000);
+        const dayInZone = tz.zonedDateKey(d);
+        const label = __test.relativeDateLabel(d);
+
+        if (dayInZone === today) {
+          nodeAssert.equal(label, 'common.today',
+            `${zone}: +${h}h faellt in der Anzeigezone auf heute (${dayInZone}), heisst aber "${label}"`);
+          sawToday += 1;
+        } else if (dayInZone === shiftDay(today, 1)) {
+          nodeAssert.equal(label, 'common.tomorrow',
+            `${zone}: +${h}h faellt auf morgen (${dayInZone}), heisst aber "${label}"`);
+          sawTomorrow += 1;
+        } else {
+          nodeAssert.ok(label !== 'common.today' && label !== 'common.tomorrow',
+            `${zone}: +${h}h faellt auf ${dayInZone}, traegt aber "${label}"`);
+        }
+      }
+      // Sonst haette das Raster nichts geprueft.
+      nodeAssert.ok(sawToday > 0 && sawTomorrow > 0,
+        `${zone}: das Raster traf weder heute noch morgen - es prueft nichts`);
+    }
+  } finally {
+    tz.setDisplayTimeZone(null);
+  }
+});
+
 test('Tagesprogramm: Ausblick kennt die nächste fällige Aufgabe über heute hinaus', async () => {
   const { __test } = await import('../public/pages/dashboard.js');
   const todayStr = toLocalDateKey(new Date());
