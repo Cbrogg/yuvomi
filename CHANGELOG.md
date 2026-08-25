@@ -62,15 +62,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Eine abgeleitete Erinnerung lässt sich nicht mehr von Hand setzen oder löschen.** `POST`, `PUT`
-  und beide `DELETE`-Wege auf `/api/v1/reminders` antworten für `subscription`, `inventory_item`,
-  `inventory_tracked_date` und `pantry_item` mit 400 statt sie anzunehmen. Der Grund ist, dass sie
-  nie gehalten haben: das jeweilige Modul stellt die Erinnerung bei jedem Schreibvorgang neu her,
-  ein eigener Termin war also spätestens beim nächsten Speichern weg und eine gelöschte Zeile
-  wieder da - beim Vorrat binnen einer Minute, ohne dass irgendwo gestanden hätte, warum. Ein
-  ehrliches 400 sagt es sofort. **Verwerfen** (`PATCH /:id/dismiss`) bleibt für alle Herkünfte der
-  Weg, der hält, weil die Zeile dabei bestehen bleibt; die Oberfläche benutzt ihn ohnehin und setzt
-  selbst nur Aufgaben- und Termin-Erinnerungen.
+- **Eine Vorrats-Erinnerung lässt sich nicht von Hand setzen oder löschen.** `POST`, `PUT` und beide
+  `DELETE`-Wege auf `/api/v1/reminders` antworten für `pantry_item` mit 400. Der Grund ist, dass es
+  nie gehalten hätte: der Benachrichtigungslauf stellt diese Erinnerungen in jedem Durchgang wieder
+  her, ein eigener Termin wäre binnen einer Minute weg und eine gelöschte Zeile wieder da - ohne
+  dass irgendwo gestanden hätte, warum. Ein ehrliches 400 sagt es sofort. **Verwerfen**
+  (`PATCH /:id/dismiss`) ist der Weg, der hält, weil die Zeile dabei bestehen bleibt.
+
+  Abo-, Garantie- und Fristen-Erinnerungen bleiben bewusst setzbar, obwohl auch sie abgeleitet sind:
+  dort schreibt nur das jeweilige Modul beim Speichern, ein handgesetzter Termin hält also bis zur
+  nächsten Änderung des Abos oder Geräts. Das ist eine Halbwertszeit, mit der man arbeiten kann -
+  und kein Anlass, eine zugesagte Schnittstelle rückwirkend zu schliessen.
 
 - **Der Vorlauf einer Erinnerung wird nur noch an einer Stelle gerechnet.** Dieselben vier Zeilen
   ("N Tage vor diesem Datum, morgens, ohne Zeitzonen-Suffix") standen zweimal im Baum - einmal für

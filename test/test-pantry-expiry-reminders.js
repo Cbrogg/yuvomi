@@ -664,3 +664,61 @@ test('auch der Einkaufs-Import respektiert den Rechteentzug', async () => {
   const row = db.prepare('SELECT id FROM pantry_items WHERE name = ?').get('Datteln');
   assert.equal(countReminders(row.id), 0);
 });
+
+// --------------------------------------------------------------------------
+// DER RIEGEL MUSS AUCH FUER GEKLEMMTE TERMINE GREIFEN
+//
+// Der Guard "ein Schreibvorgang ohne Terminwirkung laesst eine offene Meldung
+// stehen" benutzt FUTURE_EXPIRY - also den Fall, in dem gar nicht geklemmt
+// wird. Er war gruen, waehrend genau die Ware, fuer die die Klemmung gebaut
+// ist, bei JEDEM Stepper-Tap eine neue Zeile bekam.
+// --------------------------------------------------------------------------
+test('geklemmte Frischware bekommt bei jedem Tap NICHT eine neue Meldung', async () => {
+  const res = await call('POST', '/pantry', { body: { name: 'Skyr Natur', quantity: 3, expires_on: dateKeyInDays(5) } });
+  const id = res.body.data.id;
+  const first = reminderFor(id);
+  assert.ok(first, 'Frischware wird geklemmt, es muss eine Zeile geben');
+
+  // Zugestellt und weggewischt - beides muss den Tap ueberleben.
+  db.prepare("UPDATE reminders SET pushed_at = '2026-08-01T09:00:00Z', dismissed = 1 WHERE id = ?").run(first.id);
+
+  for (const quantity of [2, 1]) {
+    const tap = await call('PATCH', `/pantry/${id}`, { body: { quantity } });
+    assert.equal(tap.status, 200);
+  }
+
+  const after = reminderFor(id);
+  assert.equal(after.id, first.id, 'jeder Tap legte eine neue Zeile an - dieselbe Meldung jeden Morgen');
+  assert.equal(after.remind_at, first.remind_at);
+  assert.equal(after.pushed_at, '2026-08-01T09:00:00Z');
+  assert.equal(after.dismissed, 1, 'ein zurueckgesetztes dismissed macht das Wegwischen wertlos');
+  assert.equal(countReminders(id), 1);
+});
+
+test('ein vorgezogenes MHD holt auch eine geklemmte Meldung nach vorne', async () => {
+  const res = await call('POST', '/pantry', { body: { name: 'Ricotta', quantity: 1, expires_on: dateKeyInDays(40) } });
+  const id = res.body.data.id;
+  const before = reminderFor(id);
+  assert.equal(before.remind_at, `${dateKeyInDays(33)}T09:00`);
+
+  // Falsch eingetragen, korrigiert: das Glas laeuft schon in vier Tagen ab.
+  const fix = await call('PUT', `/pantry/${id}`, { body: { name: 'Ricotta', quantity: 1, expires_on: dateKeyInDays(4) } });
+  assert.equal(fix.status, 200);
+
+  const after = reminderFor(id);
+  // Die alte Zeile meldete SPAETER als der Artikel ueberhaupt haelt - sie war
+  // falsch, nicht bloss unveraendert. `<=` unterscheidet die beiden Faelle.
+  assert.notEqual(after.remind_at, before.remind_at);
+  assert.ok(!reminderIsPast(after.remind_at));
+  assert.ok(after.remind_at <= `${dateKeyInDays(1)}T09:00`);
+});
+
+test('ein nachtraeglich abgelaufenes MHD raeumt die offene Meldung ab', async () => {
+  const res = await call('POST', '/pantry', { body: { name: 'Mozzarella', quantity: 1, expires_on: dateKeyInDays(20) } });
+  const id = res.body.data.id;
+  assert.equal(countReminders(id), 1);
+
+  await call('PUT', `/pantry/${id}`, { body: { name: 'Mozzarella', quantity: 1, expires_on: dateKeyInDays(-1) } });
+  assert.equal(countReminders(id), 0,
+    'eine Vorwarnung auf etwas, das die Frist gerissen hat, gehoert weg statt stehenzubleiben');
+});

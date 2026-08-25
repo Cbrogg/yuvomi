@@ -16,20 +16,25 @@ const router = express.Router();
 const VALID_ENTITY_TYPES = ['task', 'event', 'subscription', 'inventory_item', 'inventory_tracked_date', 'pantry_item'];
 
 /**
- * ABGELEITETE HERKÜNFTE: ihre Erinnerung ist keine Eingabe, sondern eine Folge
- * von Moduldaten - Abo-Termin, Garantieende, Inventar-Frist, Mindesthaltbarkeit.
- * Das Modul stellt sie bei jedem Schreibvorgang neu her (löschen, dann anlegen),
- * und der Vorrat zusätzlich in jedem Benachrichtigungslauf.
+ * HERKÜNFTE, DIE EIN LAUF LAUFEND HERSTELLT und die deshalb keine Handeingabe
+ * annehmen: `pantry_item` stellt server/services/pantry-reminders.js in JEDEM
+ * Benachrichtigungsdurchgang wieder her. Ein von Hand gesetzter Termin ist dort
+ * binnen einer Minute weg, und zwar spurlos - ihn anzunehmen wäre eine Zusage,
+ * die niemand hält. Ein ehrliches 400 sagt es sofort.
  *
- * Eine von Hand gesetzte Erinnerung überlebt das nicht. Sie anzunehmen wäre eine
- * Zusage, die beim nächsten Speichern gebrochen wird - und beim Vorrat binnen
- * einer Minute, ohne dass irgendwo steht, warum sie verschwunden ist. Ein
- * ehrliches 400 sagt es sofort.
+ * WARUM NICHT AUCH `subscription`, `inventory_item`, `inventory_tracked_date`.
+ * Auch sie werden abgeleitet, aber nur beim SCHREIBEN ihres Objekts: dort hält
+ * ein handgesetzter Termin bis zur nächsten Änderung des Abos oder Geräts, und
+ * das ist eine Halbwertszeit, mit der man arbeiten kann. Sie mitzusperren wäre
+ * die geradere Regel und ein rückwirkender Bruch an einer zugesagten
+ * `/api/v1`-Oberfläche, für den es keinen Anlass gibt. Die Unterscheidung ist
+ * nicht Bequemlichkeit, sondern der Unterschied zwischen "hält bis du es
+ * änderst" und "ist in sechzig Sekunden weg" (Entscheidung 2026-08-26).
  *
- * Die LESEWEGE (GET, DELETE) kennen alle Typen weiter: der Erinnerungs-Toast
- * muss eine abgeleitete Meldung anzeigen und wegwischen können.
+ * Die LESEWEGE (GET) kennen alle Typen weiter: der Erinnerungs-Toast muss eine
+ * abgeleitete Meldung anzeigen und wegwischen können.
  */
-const DERIVED_ENTITY_TYPES = ['subscription', 'inventory_item', 'inventory_tracked_date', 'pantry_item'];
+const DERIVED_ENTITY_TYPES = ['pantry_item'];
 
 /** Herkünfte, die ein Schreibweg annehmen darf: alle ausser den abgeleiteten. */
 const SETTABLE_ENTITY_TYPES = VALID_ENTITY_TYPES.filter((t) => !DERIVED_ENTITY_TYPES.includes(t));

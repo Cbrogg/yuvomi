@@ -114,19 +114,9 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), denie
     return;
   }
 
-  // NUR ERSETZEN, WENN SICH DER TERMIN WIRKLICH ÄNDERT. Bedingungsloses
-  // Löschen-und-neu-Anlegen sah nach der einfacheren Regel aus und war die
-  // teurere: der ±-Stepper ist der häufigste Schreibweg dieses Moduls, und ein
-  // Tap auf "einen weniger" hätte eine bereits zugestellte, noch offene Meldung
-  // entfernt - endgültig, denn der Vorlauf ist dann verstrichen und niemand
-  // legt sie wieder an. Wer eine Menge korrigiert oder einen Namen tippt,
-  // ändert nichts an der Frage, wann dieses Glas abläuft.
   const existing = database.prepare(`
     SELECT id, remind_at FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?
   `).get(item.id);
-  if (existing?.remind_at === remindAt) return;
-
-  drop();
 
   /* FRISCHWARE IST HIER DER HAUPTFALL, NICHT DER AUSREISSER.
    *
@@ -152,17 +142,47 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), denie
    * Der SQL-Grobschnitt der missing-Abfrage siebt diese Zeilen ohnehin schon
    * aus, bevor sie hier ankommen - dieser Zweig ist die Regel, jener ist die
    * Ersparnis. Beide werden einzeln geprüft, weil ein Test gegen den Voll-Sync
-   * grün bliebe, wenn nur die Regel verschwände.*/
+   * grün bliebe, wenn nur die Regel verschwände. */
   if (reminderIsInThePast(remindAt, now)) {
-    if (!clampToNextMorning) return;
+    if (!clampToNextMorning) {
+      // Ohne Handlung im Rücken bleibt eine bestehende Zeile, wie sie ist -
+      // ergänzt wird hier nichts.
+      if (!existing) drop();
+      return;
+    }
+    if (item.expires_on < todayKey(database, now)) {
+      // Schon abgelaufen: eine Vorwarnung auf etwas, das die Frist bereits
+      // gerissen hat, ist keine Warnung mehr. Das sagt der Chip "abgelaufen".
+      drop();
+      return;
+    }
 
-    // Schon abgelaufen: eine Vorwarnung auf etwas, das die Frist bereits
-    // gerissen hat, ist keine Warnung mehr. Das sagt der Chip "abgelaufen".
-    if (item.expires_on < todayKey(database, now)) return;
+    const soonest = nextMorning(now);
 
-    remindAt = nextMorning(now);
+    /* GEGEN DEN GEKLEMMTEN WERT VERGLEICHEN, NICHT GEGEN DEN ROHEN.
+     *
+     * Hier stand der Vergleich `existing?.remind_at === remindAt` weiter oben,
+     * vor der Klemmung - und traf damit bei genau der Ware nie zu, für die die
+     * Klemmung gebaut ist. Gemessen: ein Joghurt mit fünf Tagen MHD bekam bei
+     * JEDEM Stepper-Tap eine neue Zeile, einen Tag später, mit `pushed_at` auf
+     * NULL und `dismissed` auf 0. Dieselbe Meldung jeden Morgen, und ein
+     * Wegwischen hielt bis zum nächsten Tap. Der Riegel, der das verhindern
+     * sollte, hat es verursacht.
+     *
+     * `<=` statt `===`: `soonest` wandert täglich weiter, eine bestehende Zeile
+     * soll aber liegenbleiben. Sie ist genau dann falsch, wenn sie SPÄTER
+     * meldet als möglich - etwa, weil das MHD nachträglich vorgezogen wurde. */
+    if (existing && existing.remind_at <= soonest) return;
+    remindAt = soonest;
+  } else if (existing?.remind_at === remindAt) {
+    // NICHTS ZU TUN. Der ±-Stepper ist der häufigste Schreibweg dieses Moduls;
+    // bedingungsloses Löschen-und-neu-Anlegen hätte bei jedem Tap eine bereits
+    // zugestellte, noch offene Meldung entfernt. Wer eine Menge korrigiert oder
+    // einen Namen tippt, ändert nichts daran, wann dieses Glas abläuft.
+    return;
   }
 
+  drop();
   database.prepare(`
     INSERT INTO reminders (entity_type, entity_id, remind_at, created_by)
     VALUES ('pantry_item', ?, ?, ?)
