@@ -9,6 +9,7 @@ import * as db from '../../db.js';
 import { str, num, date as validateDate, month as validateMonth, collectErrors, MAX_TITLE, MAX_SHORT } from '../../middleware/validate.js';
 import { normalizeObjectVisibility } from '../../services/budget-visibility.js';
 import { computeLoanSchedule, MAX_LOAN_MONTHS } from '../../services/loan-amortization.js';
+import { translate, resolveHouseholdLocale } from '../../utils/i18n.js';
 import {
   budgetFilter, mayEdit, getBudgetMode, loanSummaryRow, loadLoan, refreshLoanStatus, cents,
   budgetCurrency, toBudgetAmount, CURRENCY_RE, validateAccountRef, addMonths,
@@ -541,6 +542,15 @@ router.post('/loans/:id/payments', (req, res) => {
     // angewandt: eine spätere Kursänderung lässt gebuchte Raten unberührt.
     const budgetAmount = toBudgetAmount(paymentAmount, loan);
     const foreign = loan.is_foreign_currency ? ` (${loan.currency})` : '';
+    // Der Titel wird in der Datensprache des Haushalts gespeichert, wie schon bei
+    // Geburtstagsterminen (#524/#631/#632). Grund ist derselbe: die Zeile in
+    // budget_entries ist das, was REST-API, CSV-Export, FTS-Suchindex und MCP zu
+    // sehen bekommen - keiner dieser Kanäle durchläuft die Client-Übersetzung.
+    // Vorher stand hier ein fest englischer Titel; der übersetzte Fallback in
+    // public/pages/budget.js kam nie zum Zug, weil er nur bei LEEREM Titel greift.
+    // Er bleibt trotzdem, denn nachgetragene Raten (#813) haben gar keinen
+    // Budget-Eintrag - genau dort trägt er.
+    const title = translate(resolveHouseholdLocale(db.get()), 'budget.loanPaymentTitle', { borrower: loan.borrower }) + foreign;
     // Richtung (#638): Bei einem aufgenommenen Kredit verlässt die Rate den Haushalt -
     // negativer Betrag und eine expense-Kategorie. Beides muss zusammen wechseln,
     // sonst steht eine Ausgabe unter „Geschenke & Transfers" (income).
@@ -553,7 +563,7 @@ router.post('/loans/:id/payments', (req, res) => {
         INSERT INTO budget_entries (title, amount, category, subcategory, date, is_recurring, created_by, owner_id, visibility, account_id)
         VALUES (?, ?, ?, ?, ?, 0, ?, ?, ?, ?)
       `).run(
-        `Loan repayment: ${loan.borrower}${foreign}`,
+        title,
         booking.sign * budgetAmount,
         booking.category,
         booking.subcategory,

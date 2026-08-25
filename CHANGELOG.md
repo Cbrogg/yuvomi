@@ -47,6 +47,25 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Editing now loads the actual entry instead of assembling a second, partial copy of it. The
   assembled one still describes the row in the list, where the loan currency is the right figure to
   show - it was never an editing record, and now nothing treats it as one.
+- **A booked loan instalment was titled in English, whatever the household language** (found while
+  verifying #859). Ticking off an instalment writes a budget entry called `Loan repayment: <name>`,
+  and that string was fixed in the source. In 23 of the 24 languages it has read as English ever
+  since - in the entry list, in the CSV export, in search results and over the API.
+
+  There is a translated title, and it has been there for a while, but it only ever applied when the
+  stored title was empty. Regular instalments always have one, so it never got a turn. Where it did
+  work was instalments backdated on an existing loan, which carry no budget entry at all - so the
+  same list could show a translated title next to an English one, for two instalments of the same
+  loan.
+
+  The title is now written in the household's data language, the same way birthday events have been
+  since v1.x (#524, #631, #632), and for the same reason: that row is what the REST API, the CSV
+  export, the search index and MCP read, and none of those paths pass through the translation that
+  happens in the browser. The translated fallback stays where it earns its keep - on backdated
+  instalments.
+
+  Existing entries keep their titles. The title of a budget entry is yours to edit, and rewriting
+  one on a language change would overwrite a decision somebody may well have made on purpose.
 
 
 ## [2.41.1] - 2026-08-25
