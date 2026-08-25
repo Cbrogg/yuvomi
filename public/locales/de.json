@@ -2458,7 +2458,10 @@
         "twoFactorHouseholdHint": "Wer im Haushalt bereits einen zweiten Faktor eingerichtet hat - und ob er für alle Pflicht ist.",
         "twoFactorRequireLabel": "Für alle verpflichtend",
         "twoFactorMemberOn": "eingerichtet",
-        "twoFactorMemberOff": "nicht eingerichtet"
+        "twoFactorMemberOff": "nicht eingerichtet",
+        "memberSsoOnlyLabel": "Nur SSO-Anmeldung",
+        "memberSsoOnlyHint": "Das Konto bekommt kein Passwort. Anmelden kann sich das Mitglied nur über SSO.",
+        "memberSsoOnlyEditHint": "Ist der Schalter an, verliert das Konto sein Passwort und kommt nur noch über SSO herein. Zum Ausschalten muss ein neues Passwort gesetzt werden."
     },
     "login": {
         "tagline": "Willkommen zurück bei deinem Familienplaner.",
@@ -2488,7 +2491,10 @@
         "twoFactorInvalid": "Der Code stimmt nicht.",
         "twoFactorExpired": "Die Anmeldung ist abgelaufen. Bitte melde dich erneut an.",
         "twoFactorMissing": "Bitte gib den Code ein.",
-        "twoFactorCancel": "Abbrechen"
+        "twoFactorCancel": "Abbrechen",
+        "ssoOnlyHint": "Die Anmeldung an diesem Haushalt läuft ausschließlich über Single Sign-On.",
+        "guestPasswordLogin": "Als Gast mit Passwort anmelden",
+        "accountCannotSignIn": "Dieses Konto kann sich nicht anmelden. Wende dich an die Administration deines Haushalts."
     },
     "setup": {
         "title": "Willkommen bei Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "Benutzername oder E-Mail",
         "submit": "Link senden",
         "sent": "Falls ein passendes Konto existiert, wurde ein Link zum Zurücksetzen gesendet.",
-        "backToLogin": "Zurück zur Anmeldung"
+        "backToLogin": "Zurück zur Anmeldung",
+        "unavailable": "Dieser Haushalt bietet kein Zurücksetzen des Passworts an. Wende dich an die Administration deines Haushalts."
     },
     "resetPassword": {
         "title": "Neues Passwort festlegen",

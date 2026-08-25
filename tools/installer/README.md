@@ -59,7 +59,8 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
      - **Storage & backups** — the host data folder (`DATA_DIR`), automatic backups,
        off-site WebDAV backups (`WEBDAV_BACKUP_*`), and local-folder, WebDAV or
        Google Drive document storage. Everything that decides *where data lives*
-     - **Advanced** — Single Sign-On (OIDC), the three home-network permissions
+     - **Advanced** — Single Sign-On (OIDC, including whether SSO becomes the only
+       way in), the three home-network permissions
        (calendar subscriptions, recipe mirrors, WebDAV target - they lift the SSRF
        protection and are asked as one group), the calendar sync interval, live
        currency rates (`FIXER_API_KEY`) and the Web-Push contact (`VAPID_SUBJECT`).

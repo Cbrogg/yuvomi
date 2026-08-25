@@ -249,7 +249,9 @@
     "syncIntervalHint": "Yuvomi'nin takvimleri ve kişileri ne sıklıkla eşitleyeceği. Sağlayıcın hız sınırı uyguluyorsa artır.",
     "errSyncInterval": "Dakika olarak pozitif bir tam sayı gir.",
     "sectionPrivateNetwork": "Ev ağına erişim",
-    "privateNetworkHint": "Yuvomi varsayılan olarak kendi ağındaki adreslere bağlantıları reddeder; bu, sunucunun iç servislere ulaşmaya kandırılmasına karşı korur. Evde gerçekten çalıştırdıklarını etkinleştir."
+    "privateNetworkHint": "Yuvomi varsayılan olarak kendi ağındaki adreslere bağlantıları reddeder; bu, sunucunun iç servislere ulaşmaya kandırılmasına karşı korur. Evde gerçekten çalıştırdıklarını etkinleştir.",
+    "authPasswordLogin": "Kullanıcı adı ve şifreyle girişi koru",
+    "authPasswordLoginHint": "Kapatmak SSO'yu tek giriş yolu yapar: giriş formu ve şifre sıfırlama kaybolur. Sağlayıcıya erişilemez hale gelirse dönüş yolu .env dosyasını düzenlemek ve yeniden başlatmaktır."
   },
   "welcome": {
     "title": "Yuvomi’ye hoş geldiniz",

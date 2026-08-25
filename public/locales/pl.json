@@ -2458,7 +2458,10 @@
         "twoFactorHouseholdHint": "Kto w gospodarstwie ma już skonfigurowany drugi składnik - i czy jest wymagany dla wszystkich.",
         "twoFactorRequireLabel": "Wymagane dla wszystkich",
         "twoFactorMemberOn": "skonfigurowane",
-        "twoFactorMemberOff": "nieskonfigurowane"
+        "twoFactorMemberOff": "nieskonfigurowane",
+        "memberSsoOnlyLabel": "Tylko logowanie przez SSO",
+        "memberSsoOnlyHint": "Konto nie otrzyma hasła. Członek może zalogować się wyłącznie przez SSO.",
+        "memberSsoOnlyEditHint": "Przy włączonym przełączniku konto traci hasło i wchodzi już tylko przez SSO. Aby go wyłączyć, trzeba ustawić nowe hasło."
     },
     "login": {
         "tagline": "Witaj ponownie w swoim planerze rodzinnym.",
@@ -2488,7 +2491,10 @@
         "twoFactorInvalid": "Ten kod się nie zgadza.",
         "twoFactorExpired": "Logowanie wygasło. Zaloguj się ponownie.",
         "twoFactorMissing": "Wpisz kod.",
-        "twoFactorCancel": "Anuluj"
+        "twoFactorCancel": "Anuluj",
+        "ssoOnlyHint": "Logowanie do tego gospodarstwa domowego odbywa się wyłącznie przez SSO.",
+        "guestPasswordLogin": "Logowanie gościa hasłem",
+        "accountCannotSignIn": "To konto nie może się zalogować. Skontaktuj się z administratorem swojego gospodarstwa domowego."
     },
     "setup": {
         "title": "Witamy w Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "Nazwa użytkownika lub e-mail",
         "submit": "Wyślij link",
         "sent": "Jeśli pasujące konto istnieje, link do zresetowania hasła został wysłany.",
-        "backToLogin": "Powrót do logowania"
+        "backToLogin": "Powrót do logowania",
+        "unavailable": "To gospodarstwo domowe nie oferuje resetowania hasła. Skontaktuj się z administratorem swojego gospodarstwa domowego."
     },
     "resetPassword": {
         "title": "Ustaw nowe hasło",

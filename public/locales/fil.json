@@ -2458,7 +2458,10 @@
         "twoFactorHouseholdHint": "Sino sa sambahayan ang nakapag-set up na ng pangalawang factor - at kung kailangan ito ng lahat.",
         "twoFactorRequireLabel": "Kailangan ng lahat",
         "twoFactorMemberOn": "naka-set up",
-        "twoFactorMemberOff": "hindi naka-set up"
+        "twoFactorMemberOff": "hindi naka-set up",
+        "memberSsoOnlyLabel": "Pag-sign in sa SSO lamang",
+        "memberSsoOnlyHint": "Walang password na makukuha ang account. Makakapag-sign in lang ang miyembro sa pamamagitan ng SSO.",
+        "memberSsoOnlyEditHint": "Kapag naka-on ito, mawawala ang password ng account at sa SSO na lang ito papasok. Para i-off, kailangang magtakda ng bagong password."
     },
     "login": {
         "tagline": "Maligayang pagbabalik sa iyong family planner.",
@@ -2488,7 +2491,10 @@
         "twoFactorInvalid": "Mali ang code na iyon.",
         "twoFactorExpired": "Nag-expire na ang pag-sign in. Mag-sign in ulit.",
         "twoFactorMissing": "Pakilagay ang code.",
-        "twoFactorCancel": "Kanselahin"
+        "twoFactorCancel": "Kanselahin",
+        "ssoOnlyHint": "Ang pag-sign in sa sambahayang ito ay eksklusibong sa pamamagitan ng SSO.",
+        "guestPasswordLogin": "Pag-sign in ng bisita gamit ang password",
+        "accountCannotSignIn": "Hindi makakapag-sign in ang account na ito. Makipag-ugnayan sa administrador ng iyong sambahayan."
     },
     "setup": {
         "title": "Maligayang pagdating sa Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "Username o email",
         "submit": "Ipadala ang link",
         "sent": "Kung may tugmang account, naipadala na ang link para sa pag-reset.",
-        "backToLogin": "Bumalik sa pag-log in"
+        "backToLogin": "Bumalik sa pag-log in",
+        "unavailable": "Hindi nag-aalok ang sambahayang ito ng pag-reset ng password. Makipag-ugnayan sa administrador ng iyong sambahayan."
     },
     "resetPassword": {
         "title": "Maglagay ng bagong password",

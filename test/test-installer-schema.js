@@ -82,11 +82,17 @@ const UPLOAD_KEYS = ['MAX_UPLOAD_MB'];
 // wer sie nachtraeglich fuellt, macht aus einer Datumsangabe eine Sammelkiste.
 const OIDC_SIGNUP_KEYS = ['OIDC_ALLOW_SIGNUP'];
 
+// Der Schalter, der SSO zum einzigen Weg hinein macht (#847). Wieder eine
+// eigene Liste, aus demselben Grund wie eine Zeile darueber - und weil dieser
+// Key als einziger im oidc-Bereich gar nicht mit OIDC_ anfaengt: er beschreibt,
+// was die EINGEBAUTE Anmeldung darf, nicht was der Anbieter darf.
+const PASSWORD_LOGIN_KEYS = ['AUTH_ALLOW_PASSWORD_LOGIN'];
+
 const TOTAL_KEYS = ORIGINAL_KEYS.length + GOOGLE_DRIVE_KEYS.length + OUTLOOK_KEYS.length + 2 + P5_KEYS.length
   + DOCUMENT_STORAGE_KEYS.length + DOCUMENT_STORAGE_LOCAL_KEYS.length
   + SUBSCRIPTION_KEYS.length + EMAIL_KEYS.length + WEBDAV_BACKUP_KEYS.length
   + WIZARD_EXTRA_KEYS.length + COMPLETENESS_KEYS.length + UPLOAD_KEYS.length
-  + OIDC_SIGNUP_KEYS.length; // + TZ + OIKOS_HTTP_PORT
+  + OIDC_SIGNUP_KEYS.length + PASSWORD_LOGIN_KEYS.length; // + TZ + OIKOS_HTTP_PORT
 
 // ── Regel-Guard: .env.example ⇄ ENV_SCHEMA ⇄ gesendetes env-Objekt ───────────
 //

@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "家庭中谁已设置了第二重验证，以及是否对所有人强制启用。",
         "twoFactorRequireLabel": "对所有人强制",
         "twoFactorMemberOn": "已设置",
-        "twoFactorMemberOff": "未设置"
+        "twoFactorMemberOff": "未设置",
+        "memberSsoOnlyLabel": "仅通过 SSO 登录",
+        "memberSsoOnlyHint": "该账户不会设置密码，成员只能通过 SSO 登录。",
+        "memberSsoOnlyEditHint": "开关打开时，账户将失去密码，只能通过 SSO 进入。关闭时必须设置新密码。"
     },
     "login": {
         "tagline": "欢迎回到您的家庭计划工具。",
@@ -2476,7 +2479,10 @@
         "twoFactorInvalid": "验证码不正确。",
         "twoFactorExpired": "登录已过期，请重新登录。",
         "twoFactorMissing": "请输入验证码。",
-        "twoFactorCancel": "取消"
+        "twoFactorCancel": "取消",
+        "ssoOnlyHint": "登录此家庭仅通过 SSO 进行。",
+        "guestPasswordLogin": "以访客身份用密码登录",
+        "accountCannotSignIn": "此账户无法登录，请联系您家庭的管理员。"
     },
     "setup": {
         "title": "欢迎使用 Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "用户名或电子邮箱",
         "submit": "发送链接",
         "sent": "如果存在匹配的账户，重置链接已发送。",
-        "backToLogin": "返回登录"
+        "backToLogin": "返回登录",
+        "unavailable": "此家庭未提供密码重置。请联系您家庭的管理员。"
     },
     "resetPassword": {
         "title": "设置新密码",

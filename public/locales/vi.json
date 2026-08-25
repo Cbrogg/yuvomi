@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Ai trong gia đình đã thiết lập yếu tố thứ hai - và có bắt buộc với mọi người hay không.",
         "twoFactorRequireLabel": "Bắt buộc với mọi người",
         "twoFactorMemberOn": "đã thiết lập",
-        "twoFactorMemberOff": "chưa thiết lập"
+        "twoFactorMemberOff": "chưa thiết lập",
+        "memberSsoOnlyLabel": "Chỉ đăng nhập bằng SSO",
+        "memberSsoOnlyHint": "Tài khoản không nhận mật khẩu. Thành viên chỉ có thể đăng nhập qua SSO.",
+        "memberSsoOnlyEditHint": "Khi bật, tài khoản mất mật khẩu và chỉ vào được qua SSO. Để tắt, cần đặt một mật khẩu mới."
     },
     "login": {
         "tagline": "Chào mừng bạn trở lại trình lập kế hoạch gia đình.",
@@ -2476,7 +2479,10 @@
         "twoFactorInvalid": "Mã không đúng.",
         "twoFactorExpired": "Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.",
         "twoFactorMissing": "Vui lòng nhập mã.",
-        "twoFactorCancel": "Hủy"
+        "twoFactorCancel": "Hủy",
+        "ssoOnlyHint": "Việc đăng nhập vào hộ gia đình này chỉ diễn ra qua SSO.",
+        "guestPasswordLogin": "Đăng nhập khách bằng mật khẩu",
+        "accountCannotSignIn": "Tài khoản này không thể đăng nhập. Vui lòng liên hệ quản trị viên hộ gia đình của bạn."
     },
     "setup": {
         "title": "Chào mừng đến với Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "Tên đăng nhập hoặc e-mail",
         "submit": "Gửi liên kết",
         "sent": "Nếu có tài khoản phù hợp, liên kết đặt lại đã được gửi.",
-        "backToLogin": "Quay lại đăng nhập"
+        "backToLogin": "Quay lại đăng nhập",
+        "unavailable": "Hộ gia đình này không cung cấp việc đặt lại mật khẩu. Vui lòng liên hệ quản trị viên hộ gia đình của bạn."
     },
     "resetPassword": {
         "title": "Đặt mật khẩu mới",

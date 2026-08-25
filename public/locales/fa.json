@@ -2458,7 +2458,10 @@
         "twoFactorHouseholdHint": "چه کسانی در خانه عامل دوم را تنظیم کرده‌اند - و آیا برای همه الزامی است.",
         "twoFactorRequireLabel": "الزامی برای همه",
         "twoFactorMemberOn": "تنظیم‌شده",
-        "twoFactorMemberOff": "تنظیم‌نشده"
+        "twoFactorMemberOff": "تنظیم‌نشده",
+        "memberSsoOnlyLabel": "فقط ورود با SSO",
+        "memberSsoOnlyHint": "این حساب رمز عبوری دریافت نمی‌کند. عضو تنها می‌تواند از طریق SSO وارد شود.",
+        "memberSsoOnlyEditHint": "با روشن بودن این کلید، حساب رمز عبور خود را از دست می‌دهد و فقط از طریق SSO وارد می‌شود. برای خاموش کردن باید رمز عبور جدیدی تعیین شود."
     },
     "login": {
         "tagline": "دوباره به برنامه‌ریز خانوادگی‌تان خوش آمدید.",
@@ -2488,7 +2491,10 @@
         "twoFactorInvalid": "این کد درست نیست.",
         "twoFactorExpired": "ورود منقضی شده است. دوباره وارد شوید.",
         "twoFactorMissing": "لطفاً کد را وارد کنید.",
-        "twoFactorCancel": "لغو"
+        "twoFactorCancel": "لغو",
+        "ssoOnlyHint": "ورود به این خانوار فقط از طریق SSO انجام می‌شود.",
+        "guestPasswordLogin": "ورود مهمان با رمز عبور",
+        "accountCannotSignIn": "این حساب نمی‌تواند وارد شود. لطفاً با مدیر خانوار خود تماس بگیرید."
     },
     "setup": {
         "title": "به Yuvomi خوش آمدید",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "نام کاربری یا ایمیل",
         "submit": "ارسال پیوند",
         "sent": "اگر حساب مطابقی وجود داشته باشد، پیوند بازنشانی ارسال شد.",
-        "backToLogin": "بازگشت به ورود"
+        "backToLogin": "بازگشت به ورود",
+        "unavailable": "این خانوار امکان بازنشانی رمز عبور را ارائه نمی‌دهد. لطفاً با مدیر خانوار خود تماس بگیرید."
     },
     "resetPassword": {
         "title": "تعیین رمز عبور جدید",

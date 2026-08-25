@@ -43,12 +43,12 @@ export async function render(container) {
               autocomplete="name" maxlength="128" />
             <p class="auth-form__hint" id="join-display-name-hint" hidden>${esc(t('join.fieldFixed'))}</p>
           </div>
-          <div class="form-group">
+          <div class="form-group" id="join-password-group">
             <label class="label" for="join-password">${esc(t('join.passwordLabel'))}</label>
             <input class="input" type="password" id="join-password" name="password"
               autocomplete="new-password" required />
           </div>
-          <div class="form-group">
+          <div class="form-group" id="join-confirm-group">
             <label class="label" for="join-confirm">${esc(t('join.confirmLabel'))}</label>
             <input class="input" type="password" id="join-confirm" name="confirm"
               autocomplete="new-password" required />
@@ -108,6 +108,21 @@ export async function render(container) {
     field.classList.add('input--fixed');
     hint.hidden = false;
   };
+  // Mit SSO als einzigem Anmeldeweg vergibt die Annahme kein Passwort (#847).
+  // Zwei Pflichtfelder, deren Inhalt der Server verwirft, waeren schlimmer als
+  // keine: der Eingeladene daechte, er haette eines gesetzt.
+  const passwordRequired = preview.password_required !== false;
+  if (!passwordRequired) {
+    for (const id of ['#join-password-group', '#join-confirm-group']) {
+      const group = container.querySelector(id);
+      if (group) group.hidden = true;
+    }
+    for (const id of ['#join-password', '#join-confirm']) {
+      const field = container.querySelector(id);
+      if (field) { field.required = false; field.value = ''; }
+    }
+  }
+
   if (preview.username) fix(usernameEl, usernameHint, preview.username);
   if (preview.display_name) fix(displayNameEl, displayNameHint, preview.display_name);
   (preview.username ? displayNameEl : usernameEl).focus();
@@ -123,14 +138,19 @@ export async function render(container) {
     if (!username) { fail(t('join.usernameRequired')); return; }
     if (!USERNAME_PATTERN.test(username)) { fail(t('join.usernameInvalid')); return; }
     if (displayName.length > MAX_DISPLAY_NAME) { fail(t('join.displayNameTooLong')); return; }
-    // Wie der Server (normalizePassword): auf macOS/Firefox kommen Umlaute als
-    // NFD an und zählen roh doppelt, nach NFC bleibt weniger übrig (#608).
-    if (password.normalize('NFC').length < 8) { fail(t('join.tooShort')); return; }
-    if (password !== confirm) { fail(t('join.mismatch')); return; }
+    if (passwordRequired) {
+      // Wie der Server (normalizePassword): auf macOS/Firefox kommen Umlaute als
+      // NFD an und zählen roh doppelt, nach NFC bleibt weniger übrig (#608).
+      if (password.normalize('NFC').length < 8) { fail(t('join.tooShort')); return; }
+      if (password !== confirm) { fail(t('join.mismatch')); return; }
+    }
 
     btn.disabled = true;
     try {
-      await auth.acceptInvite({ token, password, username, display_name: displayName });
+      await auth.acceptInvite({
+        token, username, display_name: displayName,
+        ...(passwordRequired ? { password } : {}),
+      });
       form.hidden = true;
       intro.hidden = true;
       show(successEl, t('join.success'));

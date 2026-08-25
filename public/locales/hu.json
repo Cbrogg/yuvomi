@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Ki állított be már második lépcsőt a háztartásban - és hogy mindenkinek kötelező-e.",
         "twoFactorRequireLabel": "Mindenkinek kötelező",
         "twoFactorMemberOn": "beállítva",
-        "twoFactorMemberOff": "nincs beállítva"
+        "twoFactorMemberOff": "nincs beállítva",
+        "memberSsoOnlyLabel": "Csak SSO-bejelentkezés",
+        "memberSsoOnlyHint": "A fiók nem kap jelszót. A tag csak SSO-val tud bejelentkezni.",
+        "memberSsoOnlyEditHint": "Bekapcsolt kapcsolóval a fiók elveszíti a jelszavát, és csak SSO-val jut be. A kikapcsoláshoz új jelszót kell megadni."
     },
     "login": {
         "tagline": "Üdv újra a családi tervezőben.",
@@ -2476,7 +2479,10 @@
         "twoFactorInvalid": "Ez a kód nem stimmel.",
         "twoFactorExpired": "A bejelentkezés lejárt. Jelentkezz be újra.",
         "twoFactorMissing": "Add meg a kódot.",
-        "twoFactorCancel": "Mégse"
+        "twoFactorCancel": "Mégse",
+        "ssoOnlyHint": "Az ebbe a háztartásba való belépés kizárólag SSO-val történik.",
+        "guestPasswordLogin": "Vendég bejelentkezés jelszóval",
+        "accountCannotSignIn": "Ez a fiók nem tud bejelentkezni. Kérjük, forduljon a háztartás rendszergazdájához."
     },
     "setup": {
         "title": "Üdvözöljük a Yuvomi-ban",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "Felhasználónév vagy email",
         "submit": "Link küldése",
         "sent": "Ha létezik megfelelő fiók, egy visszaállító linket küldtünk.",
-        "backToLogin": "Vissza a bejelentkezéshez"
+        "backToLogin": "Vissza a bejelentkezéshez",
+        "unavailable": "Ez a háztartás nem kínál jelszó-visszaállítást. Kérjük, forduljon a háztartás rendszergazdájához."
     },
     "resetPassword": {
         "title": "Új jelszó beállítása",

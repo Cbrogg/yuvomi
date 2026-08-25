@@ -249,7 +249,9 @@
     "syncIntervalHint": "Milyen gyakran szinkronizálja a Yuvomi a naptárakat és névjegyeket. Növeld, ha a szolgáltatód korlátozza.",
     "errSyncInterval": "Adj meg egy pozitív egész számot percben.",
     "sectionPrivateNetwork": "Hozzáférés az otthoni hálózatodhoz",
-    "privateNetworkHint": "A Yuvomi alapértelmezés szerint elutasítja a saját hálózatod címeire irányuló kapcsolatokat, ami megvédi attól, hogy a kiszolgálót belső szolgáltatások elérésére vegyék rá. Engedélyezd, amit valóban futtatsz otthon."
+    "privateNetworkHint": "A Yuvomi alapértelmezés szerint elutasítja a saját hálózatod címeire irányuló kapcsolatokat, ami megvédi attól, hogy a kiszolgálót belső szolgáltatások elérésére vegyék rá. Engedélyezd, amit valóban futtatsz otthon.",
+    "authPasswordLogin": "A felhasználónévvel és jelszóval való belépés megtartása",
+    "authPasswordLoginHint": "Kikapcsolásával az SSO lesz az egyetlen út befelé: a bejelentkezési űrlap és a jelszó-visszaállítás eltűnik. Ha a szolgáltató elérhetetlenné válik, a visszaút a .env fájl szerkesztése és egy újraindítás."
   },
   "welcome": {
     "title": "Üdvözöl a Yuvomi",

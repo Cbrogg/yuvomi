@@ -7,6 +7,76 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **SSO can be the only way in** (#847). Even with an identity provider configured, Yuvomi kept a
+  second door open: the login form stayed, password reset stayed, and every account carried a
+  password hash. For a household whose provider is the single source of truth about identities, that
+  is one door too many. `AUTH_ALLOW_PASSWORD_LOGIN=false` closes it - the login page shows the SSO
+  button and nothing else, `POST /auth/login` is refused outright, and password reset disappears
+  with it rather than remaining a route that can still send mail.
+
+  The bolt sits on the route, not only on the page: a rule that just the login screen knows is
+  bypassed entirely by `curl`.
+
+  **The switch waits until somebody can actually get in that way.** Two conditions, and the second
+  is the one that makes it safe: all four OIDC variables set, and at least one **administrator**
+  already linked to the provider. A fresh installation creates its first admin through `/setup` with
+  a password - were the switch to take hold before that, the account would be dead the moment it was
+  created and `/setup` closed behind it. And an ordinary member linking first is not enough either:
+  the way in has to stay open for whoever could open it again. Until both hold, password login stays
+  on and the server says so on startup, because a security switch that silently does nothing is
+  worse than none - the operator believes the door is shut while it stands open.
+
+  Existing password hashes are never touched, so setting the variable back to `true` restores the
+  form unchanged. Recovery when the provider becomes unreachable is a documented `.env` change plus
+  a restart; a break-glass account with a password would defeat the point of the setting, so there
+  is none.
+
+  Two kinds of account are deliberately unaffected. Guests of shared expenses keep their password
+  and their reset - they are external people an admin creates with an assigned password, and they
+  have no business in the household's directory. And invitations adapt instead of breaking: while
+  the switch is in effect, accepting one creates an account without a password, linked on first SSO
+  sign-in through the invitation's email address.
+
+- **An account can be created without a password.** Preparing an account for an SSO user used to
+  mean inventing one - and the invented password stayed a working credential. The "SSO sign-in only"
+  toggle under Settings → Administration → Family creates the account without one, and switches an
+  existing account either way. Turning it off again requires setting a password in the same step, so
+  an account is never left with no way in at all.
+
+  This is deliberately an explicit flag rather than "no password was sent": a forgotten field must
+  never quietly produce an account nobody can sign into. For the same reason such an account needs
+  an email address that belongs to no other member - a matching *username* deliberately never links,
+  so without a unique address the first SSO sign-in could never find it. This also lays the
+  groundwork for members who never sign in themselves but can still be assigned tasks.
+
+### Fixed
+
+- The two password-reset pages now say why there is nothing to reset, instead of showing a form
+  whose submission is silently pointless. That was already the case without SMTP or `BASE_URL`
+  configured; the SSO-only mode adds a second reason. The redemption page deliberately asks a
+  different question than the request page - whoever opens it already has their mail, so a
+  temporarily unavailable SMTP must not lock out a valid token.
+
+- Editing an SSO-only member's name, colour or role no longer signs them out of every device. The
+  family editor sends the state of the toggle on every save, and that rewrote the password
+  placeholder each time.
+
+### Security
+
+- **A password reset could give a passwordless SSO account a working password** (#847).
+  `POST /auth/forgot-password` did not know about the `$oidc$` placeholder that accounts provisioned
+  through SSO carry instead of a hash, so the flow happily set a real one - reachable by anyone who
+  knows the address stored in Contacts, and defeating the placeholder's whole promise that no
+  password can ever match. Both of the ways an account is resolved are now closed, by username and
+  by email alike, and the generic anti-enumeration response is unchanged so the difference reveals
+  nothing.
+
+  A token issued before an account was converted no longer overtakes that decision either: up to an
+  hour can pass between issuing and redeeming, and it answers exactly like an invalid token.
+
+
 ## [2.39.0] - 2026-08-24
 
 ### Added

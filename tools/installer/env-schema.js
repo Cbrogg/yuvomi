@@ -89,6 +89,11 @@ export const ENV_SCHEMA = [
   // beim ersten SSO-Klick ungefragt ein Konto (#654). Default 'true' - jede
   // bestehende Installation bleibt nach dem Update, wie sie war.
   { key: 'OIDC_ALLOW_SIGNUP',           type: 'default', label: 'Allow SSO Account Creation', default: 'true', required: false, group: 'oidc', writeToEnv: true },
+  // SSO als einziger Weg hinein (#847): schaltet Anmeldeformular und
+  // Passwort-Reset ab. Der Server ignoriert den Schalter, solange OIDC nicht
+  // vollstaendig konfiguriert ist, und meldet das beim Start - sonst spaerrte
+  // eine einzelne Zeile den Haushalt aus seiner eigenen App aus.
+  { key: 'AUTH_ALLOW_PASSWORD_LOGIN',   type: 'default', label: 'Allow Password Login',     default: 'true', required: false, group: 'oidc', writeToEnv: true },
   // Automatische Backups.
   { key: 'BACKUP_ENABLED',              type: 'default', label: 'Backups Enabled',          default: 'true', group: 'backup',  writeToEnv: true },
   { key: 'BACKUP_SCHEDULE',             type: 'default', label: 'Backup Schedule (cron)',   default: '0 2 * * *', group: 'backup', writeToEnv: true },

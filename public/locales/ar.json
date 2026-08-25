@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "مَن في المنزل أعدَّ بالفعل عاملاً ثانيًا - وهل هو إلزامي للجميع.",
         "twoFactorRequireLabel": "إلزامي للجميع",
         "twoFactorMemberOn": "مُعَدّ",
-        "twoFactorMemberOff": "غير مُعَدّ"
+        "twoFactorMemberOff": "غير مُعَدّ",
+        "memberSsoOnlyLabel": "تسجيل الدخول بـ SSO فقط",
+        "memberSsoOnlyHint": "لن يحصل الحساب على كلمة مرور. لا يمكن للعضو تسجيل الدخول إلا عبر SSO.",
+        "memberSsoOnlyEditHint": "عند تفعيل هذا الخيار يفقد الحساب كلمة مروره ولا يدخل إلا عبر SSO. لإيقافه يجب تعيين كلمة مرور جديدة."
     },
     "login": {
         "tagline": "مرحبًا بعودتك إلى منظّم عائلتك.",
@@ -2476,7 +2479,10 @@
         "twoFactorInvalid": "الرمز غير صحيح.",
         "twoFactorExpired": "انتهت صلاحية تسجيل الدخول. سجّل الدخول من جديد.",
         "twoFactorMissing": "أدخل الرمز.",
-        "twoFactorCancel": "إلغاء"
+        "twoFactorCancel": "إلغاء",
+        "ssoOnlyHint": "تسجيل الدخول إلى هذا المنزل يتم حصريًا عبر الدخول الموحد SSO.",
+        "guestPasswordLogin": "تسجيل دخول الضيف بكلمة مرور",
+        "accountCannotSignIn": "لا يمكن لهذا الحساب تسجيل الدخول. يرجى التواصل مع مسؤول منزلك."
     },
     "setup": {
         "title": "مرحبًا بك في Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "اسم المستخدم أو البريد الإلكتروني",
         "submit": "إرسال الرابط",
         "sent": "إذا كان هناك حساب مطابق، فقد أُرسل رابط لإعادة التعيين.",
-        "backToLogin": "العودة إلى تسجيل الدخول"
+        "backToLogin": "العودة إلى تسجيل الدخول",
+        "unavailable": "لا يوفّر هذا المنزل إعادة تعيين كلمة المرور. يرجى التواصل مع مسؤول منزلك."
     },
     "resetPassword": {
         "title": "تعيين كلمة مرور جديدة",

@@ -190,7 +190,7 @@ no subscription, no upsell and no paid tier.
 - **No build step** - pure ES modules and plain CSS. No bundler, no transpiler, no framework, no runtime CDN.
 - **Apple HIG in the Liquid Glass language** - the system font stack and Apple's type scale, capsule controls, inset-grouped lists and spring motion, verified for WCAG AA in light and dark.
 - **Privacy first** - fully self-hosted, optional SQLCipher AES-256 database encryption, zero telemetry.
-- **Sign-in that scales to a household** - optional two-factor authentication (TOTP with recovery codes, enforceable household-wide), optional single sign-on via any OIDC provider (with a switch for whether an unknown identity gets an account, so a provider that serves more than this household does not hand everyone a way in), invite links instead of handed-over passwords, and optional self-service password reset by email.
+- **Sign-in that scales to a household** - optional two-factor authentication (TOTP with recovery codes, enforceable household-wide), optional single sign-on via any OIDC provider (with a switch for whether an unknown identity gets an account, so a provider that serves more than this household does not hand everyone a way in, and another for making SSO the only way in at all), invite links instead of handed-over passwords, and optional self-service password reset by email.
 - **24 languages** with automatic detection. A separate household setting decides the language of entries Yuvomi creates itself, so an exported calendar speaks your household's language instead of English.
 
 <p align="center">

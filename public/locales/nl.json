@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Wie in het huishouden al een tweede factor heeft ingesteld - en of het voor iedereen verplicht is.",
         "twoFactorRequireLabel": "Verplicht voor iedereen",
         "twoFactorMemberOn": "ingesteld",
-        "twoFactorMemberOff": "niet ingesteld"
+        "twoFactorMemberOff": "niet ingesteld",
+        "memberSsoOnlyLabel": "Alleen SSO-aanmelding",
+        "memberSsoOnlyHint": "Het account krijgt geen wachtwoord. Het lid kan zich alleen via SSO aanmelden.",
+        "memberSsoOnlyEditHint": "Staat de schakelaar aan, dan verliest het account zijn wachtwoord en komt het alleen nog via SSO binnen. Uitschakelen vereist een nieuw wachtwoord."
     },
     "login": {
         "tagline": "Welkom terug bij je gezinsplanner.",
@@ -2476,7 +2479,10 @@
         "twoFactorInvalid": "Die code klopt niet.",
         "twoFactorExpired": "Het aanmelden is verlopen. Meld je opnieuw aan.",
         "twoFactorMissing": "Voer de code in.",
-        "twoFactorCancel": "Annuleren"
+        "twoFactorCancel": "Annuleren",
+        "ssoOnlyHint": "Aanmelden bij dit huishouden gaat uitsluitend via SSO.",
+        "guestPasswordLogin": "Gastaanmelding met wachtwoord",
+        "accountCannotSignIn": "Dit account kan zich niet aanmelden. Neem contact op met de beheerder van je huishouden."
     },
     "setup": {
         "title": "Welkom bij Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "Gebruikersnaam of e-mail",
         "submit": "Link versturen",
         "sent": "Als er een bijbehorend account bestaat, is er een herstellink verstuurd.",
-        "backToLogin": "Terug naar inloggen"
+        "backToLogin": "Terug naar inloggen",
+        "unavailable": "Dit huishouden biedt geen wachtwoordherstel aan. Neem contact op met de beheerder van je huishouden."
     },
     "resetPassword": {
         "title": "Nieuw wachtwoord instellen",

@@ -36,6 +36,11 @@ export async function render(container) {
   // Passwort-Login nie blockiert – dann wird ohne SSO gerendert.
   const oidc = await fetchOidcConfig();
   const ssoEnabled = oidc?.enabled === true;
+  // SSO als einziger Weg hinein (#847). Bewusst an `ssoEnabled` gekoppelt: eine
+  // Anmeldeseite ganz ohne Weg hinein waere schlimmer als eine mit einem zu
+  // viel. Der Server haelt dieselbe Regel, hier ist sie nur die Anzeige davon -
+  // faellt der Aufruf aus (`oidc === null`), bleibt es beim Formular.
+  const passwordLoginEnabled = !(ssoEnabled && oidc?.password_login_enabled === false);
 
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
@@ -54,8 +59,16 @@ export async function render(container) {
         <p class="auth-hero__tagline">${esc(t('login.tagline'))}</p>
       </div>
       <div class="auth-card card card--padded">
-
-        <form class="auth-form" id="auth-form" novalidate>
+        ${!passwordLoginEnabled ? `
+        <div class="auth-form" id="sso-only-block">
+          <p class="auth-form__sso-only">${esc(t('login.ssoOnlyHint'))}</p>
+          <a href="/api/v1/auth/oidc/start" class="btn btn--primary auth-form__submit">${esc(t('login.loginWithSso'))}</a>
+          <p class="auth-form__forgot">
+            <button type="button" class="auth-linkish" id="show-password-form">${esc(t('login.guestPasswordLogin'))}</button>
+          </p>
+        </div>
+        ` : ''}
+        <form class="auth-form" id="auth-form" novalidate ${!passwordLoginEnabled ? 'hidden' : ''}>
           <div class="form-group">
             <label class="label" for="username">${esc(t('login.usernameLabel'))}</label>
             <input
@@ -91,7 +104,7 @@ export async function render(container) {
           <button type="submit" class="btn btn--primary auth-form__submit" id="auth-btn">
             <span class="auth-btn__label">${esc(t('login.loginButton'))}</span>
           </button>
-          ${ssoEnabled ? `
+          ${ssoEnabled && passwordLoginEnabled ? `
           <div class="auth-divider">${esc(t('login.orDivider'))}</div>
           <a href="/api/v1/auth/oidc/start" class="btn btn--secondary auth-form__submit">${esc(t('login.loginWithSso'))}</a>
           ` : ''}
@@ -118,7 +131,6 @@ export async function render(container) {
   const form = container.querySelector('#auth-form');
   const errorEl = container.querySelector('#form-error');
   const submitBtn = container.querySelector('#auth-btn');
-  const versionEl = container.querySelector('#auth-version');
 
   container.querySelectorAll('a[data-link]').forEach((a) =>
     a.addEventListener('click', (e) => { e.preventDefault(); window.yuvomi.navigate(a.getAttribute('href')); }));
@@ -135,6 +147,18 @@ export async function render(container) {
       ? t('login.ssoNoAccount')
       : t('login.ssoError'));
   }
+
+  // Mit SSO als Hauptweg tritt das Formular zurueck, verschwindet aber NICHT
+  // (#847): der Schalter gilt dem Haushalt, und die Gaeste aus den geteilten
+  // Ausgaben sind keine - der Server laesst sie ausdruecklich weiter herein,
+  // also braucht die Oberflaeche einen Weg fuer sie. Ein zweiter Klick ist der
+  // Preis dafuer, dass der Haushalt SSO als DEN Weg sieht.
+  container.querySelector('#show-password-form')?.addEventListener('click', (e) => {
+    const form = container.querySelector('#auth-form');
+    if (form) form.hidden = false;
+    e.currentTarget.closest('p')?.remove();
+    form?.querySelector('#username')?.focus();
+  });
 
   // K3: Passwort-Sichtbarkeits-Toggle
   const passwordInput = form.querySelector('#password');
@@ -183,24 +207,7 @@ export async function render(container) {
     container.querySelector('#username').focus();
   }
 
-  fetch(VERSION_URL, { cache: 'no-store' })
-    .then((r) => r.json())
-    .then((d) => {
-      if (d?.app_name) {
-        try { localStorage.setItem(APP_NAME_STORAGE_KEY, d.app_name); } catch (_) {}
-        // Nur neu anwenden, wenn sich der Name tatsächlich geändert hat –
-        // verhindert ein sichtbares Titel-Flackern bei jedem Aufruf.
-        if (d.app_name !== storedAppName) setAppBranding(d.app_name);
-      }
-      // „Passwort vergessen?" wie SSO gaten: nur anbieten, wenn der Server eine
-      // Reset-Mail tatsächlich zustellen kann (SMTP + BASE_URL). Sonst Sackgasse.
-      if (d?.password_reset_enabled) {
-        const forgot = container.querySelector('.auth-form__forgot');
-        if (forgot) forgot.hidden = false;
-      }
-      versionEl.textContent = d?.version ? t('login.version', { version: d.version }) : '';
-    })
-    .catch(() => {});
+  hydrateFromVersion(container, storedAppName);
 
   form.addEventListener('submit', async (e) => {
     e.preventDefault();
@@ -248,12 +255,34 @@ export async function render(container) {
       }
       window.yuvomi.navigate('/', result.user);
     } catch (err) {
+      // Die Seite hat sich fuer das Formular entschieden, der Server lehnt es
+      // ab: dann lagen ihr die Anmeldewege beim Zeichnen nicht vor (#847). Das
+      // passiert, wenn `/auth/oidc/config` in ihr Zeitfenster nicht geantwortet
+      // hat - sie faellt dann bewusst auf das Formular zurueck, was ohne SSO
+      // richtig ist und mit SSO-only einen Weg zeigt, den es nicht gibt.
+      //
+      // Statt das im Voraus zu erraten, heilt die Antwort des Servers die
+      // Anzeige: neu zeichnen holt die Konfiguration erneut und baut die
+      // richtige Fassung. Keine Schleife - das passiert nur auf ein Absenden
+      // hin, und der zweite Versuch fragt eine Adresse, die gerade geantwortet
+      // hat.
+      // NUR dieser eine Grund. `POST /login` antwortet auch mit 403, wenn ein
+      // Konto der Haushaltshilfe gehoert - das ist eine dauerhafte Absage, und
+      // ein Neuzeichnen wuerde sie verschlucken und den Nutzer vor dasselbe
+      // Formular stellen, ohne ihm je zu sagen, warum es nicht geht.
+      if (err.status === 403 && /password login is disabled/i.test(err.message || '')) {
+        return render(container);
+      }
+
       // Fehler-Ehrlichkeit: nur 401 heißt „falsche Zugangsdaten". 429 ist die
       // Sperre; alles andere (Status 0 = offline, 5xx = Serverfehler) ist ein
       // Verbindungsproblem – der Nutzer darf nicht fälschlich an sich zweifeln.
       let message;
       if (err.status === 429) message = t('login.tooManyAttempts');
       else if (err.status === 401) message = t('login.invalidCredentials');
+      // Eine Absage ist kein Verbindungsproblem: wer „Verbindung fehlgeschlagen"
+      // liest, versucht es weiter, statt sich an seine Verwaltung zu wenden.
+      else if (err.status === 403) message = t('login.accountCannotSignIn');
       else message = t('login.networkError');
       showError(errorEl, message);
 
@@ -396,6 +425,42 @@ function renderSecondFactor(container, { recoveryAvailable }) {
 function showError(el, message) {
   el.textContent = message;
   el.hidden = false;
+}
+
+/**
+ * Traegt Anwendungsname, Version und die Verfuegbarkeit des Passwort-Resets
+ * nach, sobald `/version` geantwortet hat. Nicht blockierend: die Anmeldung
+ * funktioniert auch, wenn dieser Aufruf ausbleibt.
+ *
+ * Geteilt von beiden Fassungen der Seite - der mit Formular und der mit
+ * ausschliesslich SSO (#847). Der Reset-Link existiert in der zweiten gar
+ * nicht, das `if` unten faellt dort schlicht ins Leere.
+ *
+ * @param {HTMLElement} container
+ * @param {string} storedAppName  bereits angewandter Name, gegen Titel-Flackern
+ */
+function hydrateFromVersion(container, storedAppName) {
+  fetch(VERSION_URL, { cache: 'no-store' })
+    .then((r) => r.json())
+    .then((d) => {
+      if (d?.app_name) {
+        try { localStorage.setItem(APP_NAME_STORAGE_KEY, d.app_name); } catch (_) {}
+        // Nur neu anwenden, wenn sich der Name tatsächlich geändert hat –
+        // verhindert ein sichtbares Titel-Flackern bei jedem Aufruf.
+        if (d.app_name !== storedAppName) setAppBranding(d.app_name);
+      }
+      // „Passwort vergessen?" wie SSO gaten: nur anbieten, wenn der Server eine
+      // Reset-Mail tatsächlich zustellen kann (SMTP + BASE_URL). Sonst Sackgasse.
+      if (d?.password_reset_enabled) {
+        const forgot = container.querySelector('.auth-form__forgot');
+        if (forgot) forgot.hidden = false;
+      }
+      const versionEl = container.querySelector('#auth-version');
+      if (versionEl) {
+        versionEl.textContent = d?.version ? t('login.version', { version: d.version }) : '';
+      }
+    })
+    .catch(() => {});
 }
 
 /**

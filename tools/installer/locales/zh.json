@@ -249,7 +249,9 @@
     "syncIntervalHint": "Yuvomi 同步日历和联系人的频率。如果服务商限制请求频率，请调高该值。",
     "errSyncInterval": "请输入以分钟为单位的正整数。",
     "sectionPrivateNetwork": "访问你的家庭网络",
-    "privateNetworkHint": "Yuvomi 默认拒绝连接到你自己网络上的地址，这可以防止服务器被诱导访问内部服务。请只启用你在家中确实运行的服务。"
+    "privateNetworkHint": "Yuvomi 默认拒绝连接到你自己网络上的地址，这可以防止服务器被诱导访问内部服务。请只启用你在家中确实运行的服务。",
+    "authPasswordLogin": "保留用户名和密码登录",
+    "authPasswordLoginHint": "关闭后 SSO 将成为唯一的入口：登录表单和密码重置都会消失。若提供方无法访问，返回的办法是修改 .env 文件并重启。"
   },
   "welcome": {
     "title": "欢迎使用 Yuvomi",

@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Kdo v domácnosti už má nastavený druhý faktor - a jestli je povinný pro všechny.",
         "twoFactorRequireLabel": "Povinné pro všechny",
         "twoFactorMemberOn": "nastaveno",
-        "twoFactorMemberOff": "nenastaveno"
+        "twoFactorMemberOff": "nenastaveno",
+        "memberSsoOnlyLabel": "Pouze přihlášení přes SSO",
+        "memberSsoOnlyHint": "Účet nedostane žádné heslo. Člen se může přihlásit pouze přes SSO.",
+        "memberSsoOnlyEditHint": "Je-li přepínač zapnutý, účet ztratí své heslo a dostane se dovnitř jen přes SSO. K vypnutí je nutné nastavit nové heslo."
     },
     "login": {
         "tagline": "Vítejte zpět ve svém rodinném plánovači.",
@@ -2476,7 +2479,10 @@
         "twoFactorInvalid": "Tento kód nesouhlasí.",
         "twoFactorExpired": "Přihlášení vypršelo. Přihlas se znovu.",
         "twoFactorMissing": "Zadej kód.",
-        "twoFactorCancel": "Zrušit"
+        "twoFactorCancel": "Zrušit",
+        "ssoOnlyHint": "Přihlášení do této domácnosti probíhá výhradně přes SSO.",
+        "guestPasswordLogin": "Přihlášení hosta heslem",
+        "accountCannotSignIn": "Tento účet se nemůže přihlásit. Obraťte se na správce vaší domácnosti."
     },
     "setup": {
         "title": "Vítejte v Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "Uživatelské jméno nebo e-mail",
         "submit": "Odeslat odkaz",
         "sent": "Pokud odpovídající účet existuje, byl odeslán odkaz pro obnovení.",
-        "backToLogin": "Zpět na přihlášení"
+        "backToLogin": "Zpět na přihlášení",
+        "unavailable": "Tato domácnost nenabízí obnovu hesla. Obraťte se na správce vaší domácnosti."
     },
     "resetPassword": {
         "title": "Nastavit nové heslo",

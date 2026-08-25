@@ -2446,7 +2446,10 @@
         "twoFactorHouseholdHint": "Who in the household has already set up a second factor - and whether it is required for everyone.",
         "twoFactorRequireLabel": "Required for everyone",
         "twoFactorMemberOn": "set up",
-        "twoFactorMemberOff": "not set up"
+        "twoFactorMemberOff": "not set up",
+        "memberSsoOnlyLabel": "SSO sign-in only",
+        "memberSsoOnlyHint": "The account gets no password. The member can only sign in through SSO.",
+        "memberSsoOnlyEditHint": "With this on, the account loses its password and only gets in through SSO. Turning it off requires setting a new password."
     },
     "login": {
         "tagline": "Welcome back to your family planner.",
@@ -2476,7 +2479,10 @@
         "twoFactorInvalid": "That code is not right.",
         "twoFactorExpired": "The sign-in has expired. Please sign in again.",
         "twoFactorMissing": "Please enter the code.",
-        "twoFactorCancel": "Cancel"
+        "twoFactorCancel": "Cancel",
+        "ssoOnlyHint": "Signing in to this household works exclusively through single sign-on.",
+        "guestPasswordLogin": "Guest sign-in with password",
+        "accountCannotSignIn": "This account cannot sign in. Please contact your household's administrator."
     },
     "setup": {
         "title": "Welcome to Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "Username or email",
         "submit": "Send link",
         "sent": "If a matching account exists, a reset link has been sent.",
-        "backToLogin": "Back to login"
+        "backToLogin": "Back to login",
+        "unavailable": "This household does not offer password reset. Please contact your household's administrator."
     },
     "resetPassword": {
         "title": "Set a new password",

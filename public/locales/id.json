@@ -2458,7 +2458,10 @@
         "twoFactorHouseholdHint": "Siapa di rumah tangga yang sudah menyiapkan faktor kedua - dan apakah wajib untuk semua.",
         "twoFactorRequireLabel": "Wajib untuk semua",
         "twoFactorMemberOn": "sudah disiapkan",
-        "twoFactorMemberOff": "belum disiapkan"
+        "twoFactorMemberOff": "belum disiapkan",
+        "memberSsoOnlyLabel": "Hanya masuk dengan SSO",
+        "memberSsoOnlyHint": "Akun tidak mendapatkan kata sandi. Anggota hanya dapat masuk melalui SSO.",
+        "memberSsoOnlyEditHint": "Jika sakelar aktif, akun kehilangan kata sandinya dan hanya masuk melalui SSO. Untuk mematikannya, kata sandi baru harus ditetapkan."
     },
     "login": {
         "tagline": "Selamat datang kembali di perencana keluarga Anda.",
@@ -2488,7 +2491,10 @@
         "twoFactorInvalid": "Kode itu tidak cocok.",
         "twoFactorExpired": "Masa masuk sudah berakhir. Silakan masuk lagi.",
         "twoFactorMissing": "Silakan masukkan kode.",
-        "twoFactorCancel": "Batal"
+        "twoFactorCancel": "Batal",
+        "ssoOnlyHint": "Masuk ke rumah tangga ini hanya melalui SSO.",
+        "guestPasswordLogin": "Masuk tamu dengan kata sandi",
+        "accountCannotSignIn": "Akun ini tidak dapat masuk. Silakan hubungi administrator rumah tangga Anda."
     },
     "setup": {
         "title": "Selamat datang di Yuvomi",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "Nama pengguna atau email",
         "submit": "Kirim tautan",
         "sent": "Jika ada akun yang cocok, tautan atur ulang telah dikirim.",
-        "backToLogin": "Kembali ke halaman masuk"
+        "backToLogin": "Kembali ke halaman masuk",
+        "unavailable": "Rumah tangga ini tidak menyediakan pengaturan ulang kata sandi. Silakan hubungi administrator rumah tangga Anda."
     },
     "resetPassword": {
         "title": "Tetapkan kata sandi baru",

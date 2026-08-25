@@ -156,7 +156,9 @@
     "syncIntervalHint": "Hoe vaak Yuvomi agenda's en contacten synchroniseert. Verhoog dit als je provider je afremt.",
     "errSyncInterval": "Voer een positief geheel aantal minuten in.",
     "sectionPrivateNetwork": "Toegang tot je thuisnetwerk",
-    "privateNetworkHint": "Yuvomi weigert standaard verbindingen naar adressen in je eigen netwerk, wat beschermt tegen een server die verleid wordt interne diensten te benaderen. Sta toe wat je thuis echt draait."
+    "privateNetworkHint": "Yuvomi weigert standaard verbindingen naar adressen in je eigen netwerk, wat beschermt tegen een server die verleid wordt interne diensten te benaderen. Sta toe wat je thuis echt draait.",
+    "authPasswordLogin": "Aanmelden met gebruikersnaam en wachtwoord behouden",
+    "authPasswordLoginHint": "Uitschakelen maakt SSO de enige manier om binnen te komen: het aanmeldformulier en het herstellen van het wachtwoord verdwijnen. Is de provider onbereikbaar, dan loopt de weg terug via het .env-bestand en een herstart."
   },
   "review": {
     "title": "Controleren",

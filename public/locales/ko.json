@@ -2458,7 +2458,10 @@
         "twoFactorHouseholdHint": "가정의 누가 이미 2단계 인증을 설정했는지, 그리고 모두에게 필수인지 여부입니다.",
         "twoFactorRequireLabel": "모두에게 필수",
         "twoFactorMemberOn": "설정됨",
-        "twoFactorMemberOff": "설정 안 됨"
+        "twoFactorMemberOff": "설정 안 됨",
+        "memberSsoOnlyLabel": "SSO 로그인만 허용",
+        "memberSsoOnlyHint": "이 계정에는 비밀번호가 없습니다. 구성원은 SSO로만 로그인할 수 있습니다.",
+        "memberSsoOnlyEditHint": "켜면 계정은 비밀번호를 잃고 SSO로만 들어옵니다. 끄려면 새 비밀번호를 설정해야 합니다."
     },
     "login": {
         "tagline": "가족 플래너에 다시 오신 것을 환영합니다.",
@@ -2488,7 +2491,10 @@
         "twoFactorInvalid": "코드가 맞지 않습니다.",
         "twoFactorExpired": "로그인이 만료되었습니다. 다시 로그인하세요.",
         "twoFactorMissing": "코드를 입력하세요.",
-        "twoFactorCancel": "취소"
+        "twoFactorCancel": "취소",
+        "ssoOnlyHint": "이 가정의 로그인은 SSO로만 이루어집니다.",
+        "guestPasswordLogin": "비밀번호로 게스트 로그인",
+        "accountCannotSignIn": "이 계정은 로그인할 수 없습니다. 가정의 관리자에게 문의해 주세요."
     },
     "setup": {
         "title": "Yuvomi에 오신 것을 환영합니다",
@@ -3235,7 +3241,8 @@
         "identifierLabel": "사용자 이름 또는 이메일",
         "submit": "링크 보내기",
         "sent": "일치하는 계정이 있으면 재설정 링크가 전송되었습니다.",
-        "backToLogin": "로그인으로 돌아가기"
+        "backToLogin": "로그인으로 돌아가기",
+        "unavailable": "이 가정은 비밀번호 재설정을 제공하지 않습니다. 가정의 관리자에게 문의해 주세요."
     },
     "resetPassword": {
         "title": "새 비밀번호 설정",

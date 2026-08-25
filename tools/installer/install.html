@@ -1206,6 +1206,10 @@
               <label><input type="checkbox" id="adv-oidc-allow-signup" checked> <span data-i18n="advanced.oidcAllowSignup">Let SSO sign-ins create new accounts</span></label>
               <div class="hint" data-i18n="advanced.oidcAllowSignupHint">Turn this off when your provider serves more people than this household. Existing accounts still sign in and still get linked.</div>
             </div>
+            <div class="field">
+              <label><input type="checkbox" id="adv-auth-password-login" checked> <span data-i18n="advanced.authPasswordLogin">Keep the username and password login</span></label>
+              <div class="hint" data-i18n="advanced.authPasswordLoginHint">Turning this off makes SSO the only way in: the login form and password reset disappear. It takes effect once at least one account is linked to your provider, so a fresh install can still create its first admin. If your provider becomes unreachable, the way back is editing the .env file and restarting.</div>
+            </div>
           </div>
         </div>
 
@@ -1654,7 +1658,7 @@ const S = {
   EMAIL_SMTP_USER: '', EMAIL_SMTP_PASS: '', EMAIL_FROM_ADDRESS: '', EMAIL_FROM_NAME: '',
   SESSION_SECURE: '', TRUST_PROXY: '',
   OIDC_ISSUER: '', OIDC_CLIENT_ID: '', OIDC_CLIENT_SECRET: '', OIDC_REDIRECT_URI: '',
-  OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM: '', OIDC_ALLOW_SIGNUP: '',
+  OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM: '', OIDC_ALLOW_SIGNUP: '', AUTH_ALLOW_PASSWORD_LOGIN: '',
   BACKUP_ENABLED: '', BACKUP_SCHEDULE: '', BACKUP_KEEP: '',
   WEBDAV_BACKUP_ENABLED: '', WEBDAV_BACKUP_URL: '', WEBDAV_BACKUP_USERNAME: '',
   WEBDAV_BACKUP_PASSWORD: '', WEBDAV_BACKUP_PATH: '', WEBDAV_BACKUP_KEEP: '',
@@ -1779,6 +1783,7 @@ function buildEnv() {
     OIDC_CLIENT_SECRET: S.OIDC_CLIENT_SECRET, OIDC_REDIRECT_URI: S.OIDC_REDIRECT_URI,
     OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM: S.OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM,
     OIDC_ALLOW_SIGNUP: S.OIDC_ALLOW_SIGNUP,
+    AUTH_ALLOW_PASSWORD_LOGIN: S.AUTH_ALLOW_PASSWORD_LOGIN,
     BACKUP_ENABLED: S.BACKUP_ENABLED, BACKUP_SCHEDULE: S.BACKUP_SCHEDULE, BACKUP_KEEP: S.BACKUP_KEEP,
     WEBDAV_BACKUP_ENABLED: S.WEBDAV_BACKUP_ENABLED, WEBDAV_BACKUP_URL: S.WEBDAV_BACKUP_URL,
     WEBDAV_BACKUP_USERNAME: S.WEBDAV_BACKUP_USERNAME, WEBDAV_BACKUP_PASSWORD: S.WEBDAV_BACKUP_PASSWORD,
@@ -2546,10 +2551,15 @@ $('adv-next').addEventListener('click', () => {
     // der, der in die .env muss. Der Server-Default legt Konten an, das Haekchen
     // ist also nur die Bestaetigung des Defaults und braucht keine Zeile.
     S.OIDC_ALLOW_SIGNUP = $('adv-oidc-allow-signup').checked ? '' : 'false';
+    // Dasselbe Muster: der Server laesst die Passwort-Anmeldung zu, das Haekchen
+    // bestaetigt nur den Default. Und der abgewaehlte Zustand ist ohne OIDC
+    // wirkungslos - deshalb steht er ausschliesslich in diesem Zweig.
+    S.AUTH_ALLOW_PASSWORD_LOGIN = $('adv-auth-password-login').checked ? '' : 'false';
   } else {
     S.OIDC_ISSUER = ''; S.OIDC_CLIENT_ID = ''; S.OIDC_CLIENT_SECRET = ''; S.OIDC_REDIRECT_URI = '';
     S.OIDC_TRUST_EMAIL_WITHOUT_VERIFIED_CLAIM = '';
     S.OIDC_ALLOW_SIGNUP = '';
+    S.AUTH_ALLOW_PASSWORD_LOGIN = '';
   }
   showErr('adv-err', '');
 
