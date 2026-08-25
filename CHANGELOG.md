@@ -9,6 +9,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Seven more places still asked the browser what time it is** (#851). Found by widening the guard
+  that was supposed to prevent exactly this. It matched `new Date(x).getHours()` - the getters
+  written straight onto the expression - and missed the far more common `const now = new Date();
+  now.getFullYear()`. Green and blind.
+
+  What it had been letting through: the day the date picker rings as **today**; the running month in
+  **Budget** and in **Inventory**; the "Today"/"Tomorrow" label on dashboard rows, which is handed
+  real instants and so was converting them into the wrong zone; which medication windows count as
+  **still open today**; and the date a new **shared expense** is pre-filled with. On a device in
+  another zone every one of them could be a day out.
+
+  All seven now ask `nowFields()` / `todayKey()`. The guard reads bindings as well as expressions,
+  and it stays a rule rather than an allowlist: `getSeconds`/`getMilliseconds` are excluded because
+  they are the same in every zone, and only `utils/timezone.js` (which answers the question) and
+  `theme-init.js` (which runs before any zone is known, and decides something about the device
+  anyway) are exempt.
+
 - **A task's due label followed the browser's clock, not the household's** (#851). `due_date` and
   `due_time` are zoneless wall-clock time: whoever typed "21:00" meant 21:00, whichever zone the
   household keeps. Both due labels - the one on the dashboard and the one in the Tasks module - ran
