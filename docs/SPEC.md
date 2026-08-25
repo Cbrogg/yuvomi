@@ -1323,14 +1323,13 @@ Per-user reminders attached to tasks, calendar events, subscriptions, inventory 
 | pushed_at | TEXT | ISO 8601 datetime, nullable — set once all active notification targets have been sent, skipped, or exhausted, so the reminder is not processed indefinitely |
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
 
-Nur `task` und `event` werden über `POST`/`PUT /api/v1/reminders` gesetzt oder darüber gelöscht. Die
-vier übrigen sind **abgeleitet**: ihr Modul stellt die Erinnerung bei jedem Schreibvorgang neu her
-(Abo-Termin, Garantieende, Inventar-Frist, Mindesthaltbarkeit), beim Vorrat zusätzlich in jedem
-Benachrichtigungslauf. Ein von Hand gesetzter oder gelöschter Termin überlebt das nicht, deshalb
-antworten `POST`, `PUT` und beide `DELETE`-Wege dafür mit 400. Lesen und **Verwerfen**
-(`PATCH /:id/dismiss`) bleiben für alle sechs möglich - der Erinnerungs-Toast muss auch eine
-abgeleitete Meldung anzeigen und wegwischen können, und ein Verwerfen hält, weil die Zeile
-bestehen bleibt.
+Only `task` and `event` are set or deleted through `POST`/`PUT`/`DELETE /api/v1/reminders`. The
+other four are **derived**: their module recreates the reminder on every write (renewal date,
+warranty end, inventory deadline, best-before date), and the pantry additionally on every
+notification run. A hand-set or hand-deleted row does not survive that, so `POST`, `PUT` and both
+`DELETE` paths answer 400 for them. Reading and **dismissing** (`PATCH /:id/dismiss`) stay open for
+all six - the reminder toast has to show a derived notification and let the user wave it away, and
+dismissing holds precisely because the row stays.
 
 Calendar events support **multiple reminders** (e.g. "15 minutes before" *and* "1 day before").
 Each reminder is an independent row and is delivered separately by the notification scheduler.

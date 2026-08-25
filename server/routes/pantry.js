@@ -18,7 +18,7 @@ import * as db from '../db.js';
 import { createLogger } from '../logger.js';
 import { str, oneOf, num, date, id as idParam, collectErrors, MAX_TITLE, MAX_TEXT, MAX_SHORT } from '../middleware/validate.js';
 import { normalizePantryUnit, normalizePantryQuantity } from '../../public/utils/pantry-units.js';
-import { syncPantryExpiryReminder } from '../services/pantry-reminders.js';
+import { syncPantryExpiryReminder, usersWithoutPantry } from '../services/pantry-reminders.js';
 
 const log = createLogger('Pantry');
 const router = express.Router();
@@ -48,8 +48,8 @@ function getItem(itemId) {
  * Artikel meldet, steht dort - sie wird auch vom Push-Lauf gebraucht, der den
  * ganzen Bestand nachzieht, und darf deshalb nicht im Router wohnen.
  */
-function syncReminder(item) {
-  syncPantryExpiryReminder(db.get(), item);
+function syncReminder(item, denied = null) {
+  syncPantryExpiryReminder(db.get(), item, new Date(), denied);
 }
 
 /**
@@ -322,6 +322,12 @@ router.post('/import-shopping', (req, res) => {
     const categoryNames = validCategoryNames();
     const fallbackCategory = categoryNames[categoryNames.length - 1] ?? 'Sonstiges';
 
+    // Die Rechte EINMAL fuer den ganzen Import aufloesen, nicht je Zeile: die
+    // Schleife laeuft synchron in einer Transaktion, und bei vierzig Eintraegen
+    // und vier Mitgliedern waeren das ein paar hundert Abfragen, die alle
+    // dieselbe Antwort geben.
+    const denied = usersWithoutPantry(db.get());
+
     const result = db.get().transaction(() => {
       const findMatch = db.get().prepare(`
         SELECT id, quantity FROM pantry_items
@@ -371,11 +377,11 @@ router.post('/import-shopping', (req, res) => {
           bump.run(normalizePantryQuantity(Number(match.quantity) + quantity, { fallback: quantity }), match.id);
           // Eine aufgefüllte Charge kann von Menge 0 zurückkommen - dann ist die
           // Erinnerung wieder fällig, die das Ausbuchen abgeräumt hat.
-          syncReminder(getItem(match.id));
+          syncReminder(getItem(match.id), denied);
           merged += 1;
         } else {
           const inserted = insert.run(source.name, quantity, unit, locationId, category, expiresOn, userId);
-          syncReminder(getItem(inserted.lastInsertRowid));
+          syncReminder(getItem(inserted.lastInsertRowid), denied);
           added += 1;
         }
       }

@@ -592,3 +592,27 @@ test('DELETE /reminders lehnt pantry_item ab - verwerfen ist der Weg, der haelt'
   syncAllPantryExpiryReminders(db);
   assert.equal(reminderFor(id).dismissed, 1);
 });
+
+test('auch der Einkaufs-Import respektiert den Rechteentzug', async () => {
+  const user = db.prepare(
+    "INSERT INTO users (username, display_name, password_hash, role, family_role) VALUES ('importer','Importer','x','member','child')"
+  ).run().lastInsertRowid;
+  db.prepare("INSERT INTO access_permissions (subject_type, subject_id, resource_type, resource_key, access) VALUES ('user', ?, 'module', 'pantry', 'none')")
+    .run(String(user));
+
+  const listId = db.prepare("INSERT INTO shopping_lists (name, created_by) VALUES ('Gesperrt', ?)").run(A).lastInsertRowid;
+  const sid = db.prepare(
+    "INSERT INTO shopping_items (list_id, name, category, is_checked) VALUES (?, 'Datteln', 'Sonstiges', 1)"
+  ).run(listId).lastInsertRowid;
+
+  const res = await call('POST', '/pantry/import-shopping', {
+    as: { id: user },
+    body: { list_id: listId, items: [{ shopping_item_id: sid, quantity: 1, expires_on: FUTURE_EXPIRY }] },
+  });
+  assert.equal(res.status, 200);
+
+  // Das Set wird EINMAL fuer den ganzen Import aufgeloest und durchgereicht -
+  // die Regel gilt trotzdem fuer jede Zeile.
+  const row = db.prepare('SELECT id FROM pantry_items WHERE name = ?').get('Datteln');
+  assert.equal(countReminders(row.id), 0);
+});

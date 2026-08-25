@@ -160,7 +160,7 @@ function pantryDisabled(database) {
  * getCountdowns(). Einmal je Lauf aufgelöst statt einmal je Artikel: ein
  * Haushalt hat eine Handvoll Mitglieder und womöglich hunderte Gläser.
  */
-function usersWithoutPantry(database) {
+export function usersWithoutPantry(database) {
   const users = database.prepare('SELECT id, role, family_role FROM users').all();
   const denied = new Set();
   for (const user of users) {
