@@ -26,7 +26,7 @@ import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
 import { isSoloHousehold } from '/utils/household.js';
 import { todayKey, parseLocalDateKey } from '/utils/date.js';
-import { nowFields } from '/utils/timezone.js';
+import { nowFields, zonedDateKey, zonedTimeKey } from '/utils/timezone.js';
 import { isNavModuleReadOnly } from '/permissions.js';
 
 // --------------------------------------------------------
@@ -1195,7 +1195,11 @@ let state = {
   // Achse wirken sie ODER, zwischen den Achsen UND. Tags bleiben UND-verknüpft.
   filters:         { status: ['open'], priority: [], assigned_to: [], tags: [] },
   groupMode:       'category',   // 'category' | 'due'
-  viewMode:        'list',       // 'list' | 'kanban' (resolved at render time)
+  viewMode:        'list',       // 'list' | 'kanban' | 'history' (resolved at render time)
+  // Der Verlauf (#791) hat einen eigenen Bestand, weil er etwas anderes zeigt
+  // als `tasks`: nicht Aufgaben, sondern Vorgänge. Er wird geblättert statt
+  // gefiltert - deshalb ein Cursor und kein Seitenindex.
+  history:         { entries: [], hasMore: false, cursor: null, userId: null, loading: false, error: null },
   showFuture:      false,
   subtasksExpandedByDefault: false,
   // Persönliche Standard-Erinnerungsliste für neue Aufgaben (#695), leer = nur
@@ -2087,6 +2091,13 @@ function renderTaskDetail(task, reminders = [], container = null) {
     // Der Riegel steht jetzt trotzdem auch dort (`wireCountdownGate`).
     { icon: 'hourglass', label: t('dashboard.countdownTitle'), value: task.countdown && task.due_date ? t('tasks.countdownDetail') : '' },
     { icon: 'align-left', label: t('tasks.descriptionLabel'), node: descriptionNode(task.description), multiline: true },
+    // „Wann war das zuletzt dran" - nur bei wiederkehrenden Aufgaben (#791).
+    // Eine einmalige Aufgabe beantwortet die Frage schon mit ihrem Status: sie
+    // ist erledigt oder nicht, und ein Verlauf mit genau einer Zeile darin
+    // wiederholte nur, was zwei Zeilen weiter oben steht.
+    task.is_recurring
+      ? { icon: 'history', label: t('tasks.historySeriesTitle'), node: seriesHistoryNode(task), multiline: true }
+      : null,
     // Ganz unten und immer sichtbar: die Unterhaltung ist der einzige Abschnitt,
     // der auch dann etwas anbietet, wenn er leer ist - nämlich das Eingabefeld.
     { icon: 'message-square', label: t('tasks.commentsLabel'), node: commentsNode(task), multiline: true },
@@ -2980,10 +2991,275 @@ function wireKanbanTouch(container) {
 }
 
 // --------------------------------------------------------
+// Verlauf (#791)
+//
+// Die dritte Ansicht neben Liste und Board, und die einzige, die keine Aufgaben
+// zeigt, sondern Vorgänge: wer wann was abgehakt hat. Sie hängt an demselben
+// `#task-list` wie die beiden anderen - eine zweite Fläche daneben hieße, dass
+// jede Änderung am Seitenlayout an zwei Stellen nachgezogen werden muss.
+//
+// SIE BEGINNT LEER. Aufgezeichnet wird seit der Migration, und was davor
+// abgehakt wurde, hat niemand aufgeschrieben. Der Leerzustand sagt das, statt
+// „nichts erledigt" zu behaupten - das wäre für einen Haushalt, der seit Monaten
+// Aufgaben abhakt, schlicht gelogen.
+// --------------------------------------------------------
+
+/** Die Tages-Überschrift zu einem Datums-Key der Anzeigezone. */
+function historyDayLabel(dayKey) {
+  const today = todayKey();
+  if (dayKey === today) return t('common.today');
+  // Gestern über den Key rechnen, nicht über 24 Stunden: zwei aufeinander
+  // folgende Kalendertage liegen an der Sommerzeitgrenze nicht 24h auseinander.
+  const yesterday = new Date(parseLocalDateKey(today).getTime() - 86400000);
+  if (dayKey === zonedDateKey(yesterday)) return t('common.yesterday');
+  return formatDate(parseLocalDateKey(dayKey), { weekday: 'long', day: 'numeric', month: 'long' });
+}
+
+/**
+ * Einträge nach dem Kalendertag der Anzeigezone bündeln.
+ *
+ * Über `zonedDateKey` und nicht über `completed_at.slice(0, 10)`: der
+ * gespeicherte Zeitpunkt ist UTC, und ein Haken um 23:30 Ortszeit landete damit
+ * westlich von UTC unter dem Tag danach - dieselbe Falle, gegen die
+ * `toLocalDateKey()` in der ganzen App steht.
+ */
+function groupHistoryByDay(entries) {
+  const groups = [];
+  const index = new Map();
+  for (const entry of entries) {
+    const day = zonedDateKey(entry.completed_at);
+    if (!index.has(day)) {
+      index.set(day, { day, entries: [] });
+      groups.push(index.get(day));
+    }
+    index.get(day).entries.push(entry);
+  }
+  return groups;
+}
+
+/**
+ * Ein Vorgang: wer, was, wann.
+ *
+ * Auf der geteilten Zeilen-Grammatik (styles/list-row.css) und mit demselben
+ * Avatar wie ueberall sonst - `renderAvatarStack` traegt schon die Frage, ob
+ * Bild oder Initialen, und welche Textfarbe auf dieser Nutzerfarbe lesbar ist.
+ * Ein eigener Avatar hier haette dieselbe Kontrastrechnung ein zweites Mal
+ * anstellen muessen, und die erste hat sie beim Avatar der Mitglieder bereits
+ * einmal falsch gehabt.
+ */
+function renderHistoryEntry(entry) {
+  const name = entry.user_name || t('tasks.historyUnknownMember');
+  const avatar = renderAvatarStack(
+    [{ display_name: name, color: entry.user_color, avatar_data: entry.user_avatar }],
+    { size: 32, maxVisible: 1 },
+  );
+  // Der Avatar traegt hier NICHTS bei, was nicht daneben stuende: der Name
+  // steht als Text in der Metazeile. Ohne aria-hidden liest die Sprachausgabe
+  // „AJ ... Alex Johnson" - derselbe Mensch zweimal, einmal als Kuerzel.
+  return `
+    <button type="button" class="list-row history-row" data-history-task="${entry.task_id}">
+      <span class="history-row__avatar" aria-hidden="true">${avatar}</span>
+      <span class="list-row__main history-row__main">
+        <span class="list-row__name">${esc(entry.title)}</span>
+        <span class="list-row__meta">
+          ${esc(name)}${entry.is_recurring
+            ? ` <i data-lucide="repeat" class="icon-sm" aria-hidden="true"></i>` : ''}
+        </span>
+      </span>
+      <time class="history-row__time" datetime="${esc(entry.completed_at)}">${esc(zonedTimeKey(entry.completed_at))}</time>
+    </button>`;
+}
+
+/** Die Personenauswahl - „Alle" plus je ein Mitglied. */
+function renderHistoryPeople() {
+  const chip = (id, label) => {
+    const on = state.history.userId === id;
+    return `<button type="button" class="group-toggle__btn${on ? ' group-toggle__btn--active' : ''}"
+            data-history-user="${id === null ? '' : id}" aria-pressed="${on}">
+      <span class="group-toggle__label">${esc(label)}</span>
+    </button>`;
+  };
+  // Nur wer wirklich etwas beisteuern kann: die Housekeeping-Konten sind aus
+  // /meta/options schon heraus, und ein Haushalt aus einer Person braucht die
+  // Auswahl gar nicht.
+  if (isSoloHousehold(state.users)) return '';
+  return `
+    <div class="group-toggle history-people" role="group" aria-label="${t('tasks.historyPersonFilter')}">
+      ${chip(null, t('common.all'))}
+      ${state.users.map((u) => chip(u.id, u.display_name)).join('')}
+    </div>`;
+}
+
+function renderHistory(container) {
+  const listEl = container.querySelector('#task-list');
+  if (!listEl) return;
+
+  if (state.history.error) {
+    listEl.replaceChildren();
+    mountLoadError(listEl, {
+      title: t('tasks.historyLoadError'),
+      description: t('common.loadErrorDescription'),
+      error: state.history.error,
+      retryLabel: t('common.retry'),
+      onRetry: () => loadHistory(container),
+    });
+    return;
+  }
+
+  const { entries, hasMore } = state.history;
+  const body = entries.length
+    ? groupHistoryByDay(entries).map(({ day, entries: dayEntries }) => `
+        <div class="task-group list-group">
+          <h2 class="list-group__title">
+            <span>${esc(historyDayLabel(day))}</span>
+            <span class="list-group__count">${dayEntries.length}</span>
+          </h2>
+          <div class="list-rows">${dayEntries.map(renderHistoryEntry).join('')}</div>
+        </div>`).join('')
+    // Ein Leerzustand ohne Anlegen-Knopf: „erledige etwas" ist keine Handlung,
+    // die dieser Bildschirm anbieten kann, und der Hinweis erklärt stattdessen,
+    // warum hier auch in einem gut geführten Haushalt nichts stehen kann.
+    : emptyStateHTML({
+      icon: 'history',
+      title: state.history.userId === null ? t('tasks.historyEmptyTitle') : t('tasks.historyEmptyPersonTitle'),
+      description: t('tasks.historyEmptyDescription'),
+      // Der Hinweis erklaert, warum der Verlauf des HAUSHALTS leer sein kann,
+      // obwohl seit Monaten abgehakt wird. Unter einem Personenfilter erklaert
+      // er die falsche Sache: dort ist die Antwort schlicht, dass diese Person
+      // nichts abgehakt hat.
+      hint: state.history.userId === null ? t('tasks.historyEmptyHint') : undefined,
+    });
+
+  listEl.replaceChildren();
+  listEl.insertAdjacentHTML('beforeend', `
+    ${renderHistoryPeople()}
+    ${body}
+    ${hasMore ? `<div class="history-more">
+      <button type="button" class="btn btn--secondary" id="history-more">${t('tasks.historyLoadMore')}</button>
+    </div>` : ''}
+  `);
+  if (window.lucide) window.lucide.createIcons({ el: listEl });
+  stagger(listEl.querySelectorAll('.history-row'));
+
+  listEl.querySelectorAll('[data-history-user]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const raw = btn.dataset.historyUser;
+      state.history.userId = raw === '' ? null : Number(raw);
+      loadHistory(container);
+    });
+  });
+  listEl.querySelector('#history-more')?.addEventListener('click', (e) => {
+    const stop = btnLoading(e.currentTarget);
+    loadHistory(container, { append: true }).catch(stop);
+  });
+  listEl.querySelectorAll('[data-history-task]').forEach((row) => {
+    row.addEventListener('click', () => openTaskFromHistory(row.dataset.historyTask, container));
+  });
+}
+
+/** Ein Verlaufseintrag führt zu seiner Aufgabe - der einzige Weg von hier weg. */
+async function openTaskFromHistory(id, container) {
+  try {
+    const [task, reminder] = await Promise.all([loadTaskForEdit(id), loadReminderForTask(id)]);
+    openTaskDetail({ task, users: state.users, reminder }, container);
+  } catch (err) {
+    window.yuvomi.showToast(err.message ?? t('common.errorGeneric'), 'danger');
+  }
+}
+
+/**
+ * Verlauf laden. `append` hängt die nächste Seite an, alles andere fängt vorn
+ * an - ein Personenwechsel darf keine Mischung aus zwei Abfragen stehen lassen.
+ */
+async function loadHistory(container, { append = false } = {}) {
+  if (state.history.loading) return;
+  state.history.loading = true;
+  const params = new URLSearchParams({ limit: '50' });
+  if (state.history.userId !== null) params.set('user_id', String(state.history.userId));
+  if (append && state.history.cursor) {
+    params.set('before_at', state.history.cursor.before_at);
+    params.set('before_id', String(state.history.cursor.before_id));
+  }
+  try {
+    const res = await api.get(`/tasks/completions?${params}`);
+    state.history.entries = append ? [...state.history.entries, ...(res.data ?? [])] : (res.data ?? []);
+    state.history.hasMore = !!res.has_more;
+    state.history.cursor = res.next_cursor ?? null;
+    state.history.error = null;
+  } catch (err) {
+    console.error('[Tasks] Verlauf-Ladefehler:', err.message);
+    state.history.error = err;
+    if (!append) { state.history.entries = []; state.history.hasMore = false; state.history.cursor = null; }
+  } finally {
+    state.history.loading = false;
+    renderHistory(container);
+  }
+}
+
+/**
+ * „Zuletzt erledigt" für die Detailansicht - über die ganze Wiederholungskette,
+ * nicht nur für die Instanz, die gerade offen daliegt.
+ *
+ * Nachgeladen statt mitgeliefert: die Aufgabenliste holt Dutzende Zeilen, und
+ * eine Historie an jeder davon wäre Ladearbeit für eine Zeile, die man erst
+ * beim Öffnen sieht.
+ */
+function seriesHistoryNode(task) {
+  // Ohne eigene Ueberschrift: die Detailzeile traegt ihr Label schon, und eine
+  // zweite daneben saehe aus wie ein zweiter Abschnitt.
+  const list = document.createElement('div');
+  list.className = 'detail-history';
+  const placeholder = document.createElement('p');
+  placeholder.className = 'detail-history__empty';
+  placeholder.textContent = t('common.loading');
+  list.appendChild(placeholder);
+
+  api.get(`/tasks/${task.id}/completions?limit=10`).then((res) => {
+    const entries = res.data ?? [];
+    list.replaceChildren();
+    if (!entries.length) {
+      const none = document.createElement('p');
+      none.className = 'detail-history__empty';
+      none.textContent = t('tasks.historySeriesEmpty');
+      list.appendChild(none);
+      return;
+    }
+    for (const entry of entries) {
+      const row = document.createElement('p');
+      row.className = 'detail-history__row';
+      const when = document.createElement('span');
+      when.className = 'detail-history__when';
+      when.textContent = `${historyDayLabel(zonedDateKey(entry.completed_at))}, ${zonedTimeKey(entry.completed_at)}`;
+      const who = document.createElement('span');
+      who.className = 'detail-history__who';
+      who.textContent = entry.user_name || t('tasks.historyUnknownMember');
+      row.append(when, who);
+      list.appendChild(row);
+    }
+  }).catch(() => {
+    list.replaceChildren();
+    const failed = document.createElement('p');
+    failed.className = 'detail-history__empty';
+    failed.textContent = t('tasks.historySeriesLoadError');
+    list.appendChild(failed);
+  });
+
+  return list;
+}
+
+// --------------------------------------------------------
 // Partielle DOM-Updates
 // --------------------------------------------------------
 
 function renderTaskList(container) {
+  // VOR dem Ladefehler der Aufgaben: der Verlauf hat seinen eigenen Bestand und
+  // seinen eigenen Fehler. Ein gescheitertes `/tasks` sagt nichts darüber, ob
+  // die Vorgänge zu haben sind - stünde die Weiche danach, zeigte der Verlauf
+  // den Fehler einer Abfrage, die er gar nicht braucht.
+  if (state.viewMode === 'history') {
+    renderHistory(container);
+    return;
+  }
   // VOR der Kanban-Weiche: nach einem Ladefehler ist `state.tasks` ebenfalls
   // leer, und beide Ansichten haengen an demselben `#task-list`. Nur die
   // Reihenfolge trennt hier „nichts angelegt" von „nicht geladen".
@@ -3539,60 +3815,95 @@ function wireFilterChips(container) {
   });
 }
 
+/**
+ * Alles am Seitenkopf, was von der gewaehlten Ansicht abhaengt - an EINER
+ * Stelle.
+ *
+ * Vorher stand dieselbe Bedingung zweimal da: einmal als Interpolation im
+ * Anfangs-Markup, einmal im Klick-Handler des Umschalters. Mit zwei Ansichten
+ * ging das gerade noch gut; mit der dritten waeren es zwei Listen gewesen, die
+ * auseinanderlaufen koennen, und eine davon haette den Verlauf vergessen.
+ *
+ * Sichtbarkeit ueber [hidden] statt style.display: ein Zustand, den auch
+ * assistive Technik als „nicht vorhanden" liest.
+ */
+function syncViewChrome(container) {
+  const mode = state.viewMode;
+  const isList = mode === 'list';
+  const isHistory = mode === 'history';
+
+  container.querySelectorAll('#view-toggle [data-view]').forEach((b) => {
+    const on = b.dataset.view === mode;
+    b.classList.toggle('group-toggle__btn--active', on);
+    b.setAttribute('aria-pressed', String(on));
+  });
+
+  // Der Kopf fluchtet mit dem Koerper, den er ueberschreibt - und der wechselt
+  // hier die Breite. Liste und Verlauf sind aufs Lesemass gekappt (720px), das
+  // Kanban-Board nimmt die volle Content-Spalte (gemessen 1156px bei 1440px
+  // Fensterbreite); ein fester Modifier im Markup stimmte in genau einer der
+  // Ansichten (Critique 2026-08-13).
+  container.querySelector('.tasks-toolbar')?.classList.toggle('page-toolbar--narrow', !isKanbanMode());
+
+  // Suche, Filterleiste, Gruppierung und Sammelauswahl fragen alle nach
+  // AUFGABEN. Der Verlauf zeigt Vorgaenge - ein Statusfilter darueber waere
+  // eine Auswahl, die nichts veraendern kann.
+  const search = container.querySelector('.tasks-toolbar__search');
+  if (search) search.hidden = isHistory;
+  const filtersRow = container.querySelector('.tasks-filters-row');
+  if (filtersRow) filtersRow.hidden = isHistory;
+  const groupToggle = container.querySelector('#group-mode-toggle');
+  if (groupToggle) groupToggle.hidden = !isList;
+  const bulkSelectBtn = container.querySelector('#btn-bulk-select');
+  if (bulkSelectBtn) {
+    bulkSelectBtn.hidden = !isList;
+    if (!isList) {
+      state.bulkSelectMode = false;
+      state.selectedTaskIds.clear();
+      bulkSelectBtn.classList.remove('btn--active');
+      bulkSelectBtn.setAttribute('aria-pressed', 'false');
+    }
+  }
+}
+
+/** Nimmt die Ansicht die volle Content-Spalte ein? */
+function isKanbanMode() {
+  return state.viewMode === 'kanban';
+}
+
 function wireViewToggle(container) {
   const toggle = container.querySelector('#view-toggle');
   if (!toggle) return;
-  // Der Kopf fluchtet mit dem Körper, den er überschreibt - und der wechselt
-  // hier die Breite. Die Liste ist aufs Lesemaß gekappt (720px), das
-  // Kanban-Board nimmt die volle Content-Spalte (gemessen 1156px bei 1440px
-  // Fensterbreite); ein fester Modifier im Markup stimmte in genau einer der
-  // beiden Ansichten (Critique 2026-08-13).
-  //
-  // Der Anfangswert steht hier und NICHT als Interpolation im class-Attribut:
-  // zwei Guards lesen die Rail-Aliasse per Regex aus `class="..."`, und ein
-  // `${...}` darin macht aus `?`, `===` und `'list'` je einen Klassennamen -
-  // `.?` als Rail traf danach jeden Selektor der App. Ein Markup-Attribut, das
-  // statisch gelesen wird, bleibt statisch geschrieben.
-  const toolbarEl = container.querySelector('.tasks-toolbar');
-  const syncToolbarWidth = () =>
-    toolbarEl?.classList.toggle('page-toolbar--narrow', state.viewMode === 'list');
-  syncToolbarWidth();
+  syncViewChrome(container);
   toggle.querySelectorAll('[data-view]').forEach((btn) => {
     btn.addEventListener('click', () => {
       state.viewMode = btn.dataset.view;
       localStorage.setItem('yuvomi-tasks-view', state.viewMode);
       renderFilters(container);
-      toggle.querySelectorAll('[data-view]').forEach((b) => {
-        const on = b.dataset.view === state.viewMode;
-        b.classList.toggle('group-toggle__btn--active', on);
-        b.setAttribute('aria-pressed', String(on));
-      });
-      syncToolbarWidth();
-      // Sichtbarkeit über [hidden] statt style.display: ein Zustand, den auch
-      // assistive Technik als „nicht vorhanden" liest.
-      const groupToggle = container.querySelector('#group-mode-toggle');
-      if (groupToggle) groupToggle.hidden = state.viewMode !== 'list';
-      const bulkSelectBtn = container.querySelector('#btn-bulk-select');
-      if (bulkSelectBtn) {
-        bulkSelectBtn.hidden = state.viewMode !== 'list';
-        if (state.viewMode === 'kanban') {
-          state.bulkSelectMode = false;
-          state.selectedTaskIds.clear();
-          bulkSelectBtn.classList.remove('btn--active');
-          bulkSelectBtn.setAttribute('aria-pressed', 'false');
-        }
-      }
+      syncViewChrome(container);
+
       // Skeleton-Flash: einen Frame Render-Feedback geben, dann Ansicht aufbauen
       const listEl = container.querySelector('#task-list');
       if (listEl) listEl.style.opacity = '0.4';
+      const restore = () => {
+        const el = container.querySelector('#task-list');
+        if (el) { el.style.transition = 'opacity 0.15s'; el.style.opacity = ''; }
+      };
       requestAnimationFrame(() => {
+        // Der Verlauf holt Vorgaenge, die beiden anderen Ansichten Aufgaben -
+        // zwei Abfragen, und der Umschalter darf nicht die falsche fahren. Ein
+        // gemeinsames loadTasks() haette den Verlauf mit einer Aufgabenliste
+        // befuellt, die er gar nicht anzeigt.
+        if (state.viewMode === 'history') {
+          loadHistory(container).finally(restore);
+          return;
+        }
         // Task-Menge neu laden: der Kanban lädt alle Stati (kein status-Param),
         // die Liste wendet den Statusfilter wieder an (Audit A1-07/P3). Fällt bei
         // Netzfehler auf ein reines Re-Render der vorhandenen Aufgaben zurück.
         loadTasks(container).catch(() => renderTaskList(container)).finally(() => {
           updateBulkActionsBar(container);
-          const el = container.querySelector('#task-list');
-          if (el) { el.style.transition = 'opacity 0.15s'; el.style.opacity = ''; }
+          restore();
         });
       });
     });
@@ -3852,14 +4163,21 @@ export async function render(container, { user }) {
   // View-Mode: URL-Parameter > localStorage > Default 'list'
   const urlView = new URLSearchParams(window.location.search).get('view');
   const savedView = localStorage.getItem('yuvomi-tasks-view');
-  state.viewMode = (urlView === 'kanban' || urlView === 'list') ? urlView
-    : (savedView === 'kanban' || savedView === 'list') ? savedView
+  const KNOWN_VIEWS = ['list', 'kanban', 'history'];
+  state.viewMode = KNOWN_VIEWS.includes(urlView) ? urlView
+    : KNOWN_VIEWS.includes(savedView) ? savedView
     : 'list';
 
   // showFuture aus localStorage wiederherstellen
   try { state.showFuture = localStorage.getItem(SHOW_FUTURE_KEY) === '1'; } catch {}
 
   const isKanban = state.viewMode === 'kanban';
+  const isHistory = state.viewMode === 'history';
+  // Was nur die Aufgabenliste betrifft, verschwindet im Verlauf: Suche,
+  // Filterleiste, Gruppierung und die Sammelauswahl fragen alle nach Aufgaben,
+  // und der Verlauf zeigt Vorgänge. Ein Statusfilter über einer Liste von
+  // Erledigungen wäre eine Auswahl, die nichts verändern kann.
+  const isTaskList = !isHistory;
 
   // Initiales Skeleton (all values are from i18n keys or hardcoded constants, no user data)
   container.replaceChildren();
@@ -3877,16 +4195,20 @@ export async function render(container, { user }) {
         })}
         <div class="page-toolbar__actions">
           <div class="group-toggle group-toggle--icons" id="view-toggle" role="group" aria-label="${t('tasks.viewToggleLabel')}">
-            <button type="button" class="group-toggle__btn ${isKanban ? '' : 'group-toggle__btn--active'}" data-view="list"
-                    title="${t('tasks.listView')}" aria-label="${t('tasks.listView')}" aria-pressed="${!isKanban}">
+            <button type="button" class="group-toggle__btn ${isKanban || isHistory ? '' : 'group-toggle__btn--active'}" data-view="list"
+                    title="${t('tasks.listView')}" aria-label="${t('tasks.listView')}" aria-pressed="${!isKanban && !isHistory}">
               <i data-lucide="list" class="icon-md" aria-hidden="true"></i>
             </button>
             <button type="button" class="group-toggle__btn ${isKanban ? 'group-toggle__btn--active' : ''}" data-view="kanban"
                     title="${t('tasks.kanbanView')}" aria-label="${t('tasks.kanbanView')}" aria-pressed="${isKanban}">
               <i data-lucide="columns" class="icon-md" aria-hidden="true"></i>
             </button>
+            <button type="button" class="group-toggle__btn ${isHistory ? 'group-toggle__btn--active' : ''}" data-view="history"
+                    title="${t('tasks.historyView')}" aria-label="${t('tasks.historyView')}" aria-pressed="${isHistory}">
+              <i data-lucide="history" class="icon-md" aria-hidden="true"></i>
+            </button>
           </div>
-          <button class="btn btn--ghost btn--icon" id="btn-bulk-select" ${isKanban ? 'hidden' : ''}
+          <button class="btn btn--ghost btn--icon" id="btn-bulk-select"
                   title="${t('tasks.bulkSelect')}" aria-label="${t('tasks.bulkSelect')}" aria-pressed="false">
             <i data-lucide="list-checks" class="icon-lg" aria-hidden="true"></i>
           </button>
@@ -3917,7 +4239,7 @@ export async function render(container, { user }) {
                  Icon allein. Das aria-label steht deshalb IMMER da - der
                  zugaengliche Name darf nicht an einer Media-Query haengen. -->
             <div class="group-toggle" id="group-mode-toggle" role="group"
-                 aria-label="${t('tasks.groupToggleLabel')}" ${isKanban ? 'hidden' : ''}>
+                 aria-label="${t('tasks.groupToggleLabel')}">
               <button type="button" class="group-toggle__btn group-toggle__btn--active"
                       data-mode="category" aria-pressed="true"
                       aria-label="${t('tasks.categoryLabel')}">
@@ -4035,6 +4357,10 @@ export async function render(container, { user }) {
     ?.addEventListener('click', () => openTagManager(container));
   renderFilters(container);
   renderTaskList(container);
+  // Der Verlauf holt seinen Bestand selbst - er steckt nicht in `/tasks`, und
+  // sein Ladefehler ist ein eigener. Erst nach renderTaskList, damit die Fläche
+  // schon steht, wenn die Antwort kommt.
+  if (state.viewMode === 'history') loadHistory(container);
 
   wirePageSearch(container, {
     id: 'tasks-search',
