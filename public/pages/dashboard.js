@@ -31,6 +31,9 @@ import { MODULE_ICON, moduleIconHTML } from '/nav-icons.js';
 import { exitWallMode, isWallActive, syncWallMode } from '/utils/wall-mode.js';
 import { rememberLayoutHint, layoutHintSizes, layoutHintQuery } from '/utils/dashboard-layout-hint.js';
 import { emptyHintHTML } from '/utils/empty-state.js';
+import { quickLinkHost } from '/utils/quick-link-url.js';
+import { prefersInkText } from '/utils/contrast.js';
+import { openQuickLinksManager } from '/components/quick-links-manager.js';
 
 // Hält den AbortController des aktuellen FAB-Listeners - wird bei jedem render() erneuert.
 let _fabController = null;
@@ -330,6 +333,7 @@ function widgetLabel(id) {
     clock:    () => t('dashboard.clock'),
     metrics:  () => t('dashboard.metrics'),
     countdown: () => t('dashboard.countdownTitle'),
+    quicklinks: () => t('dashboard.quickLinksTitle'),
   };
   return (map[id] ?? (() => id))();
 }
@@ -1180,6 +1184,98 @@ function renderPinnedNotes(notes) {
   return `<div class="widget widget--notes">
     ${widgetHeader('notes', t('nav.notes'), notes.length, '/notes')}
     <div class="notes-grid-widget">${items}</div>
+  </div>`;
+}
+
+/* DIE KACHELREIHE (#469) - was sie ist und was sie bewusst nicht ist.
+ *
+ * Vier Melder wollten dasselbe: von der Startseite des Haushalts zu den anderen
+ * Diensten im Haus, ohne zwei Klicks Umweg über eine Notiz. Die Diskussion lief
+ * zweimal über die Frage, ob daraus eine Lesezeichen-Bibliothek wird (#759), und
+ * ist zweimal dagegen ausgegangen. Was hier steht, ist deshalb eine ZEILE aus
+ * Kacheln und kein Modul: Name, Adresse, Bild, und wer sie sieht.
+ *
+ * KEIN VORDEFINIERTER APP-KATALOG. radicchiodev hat den Grund geliefert: eine
+ * Liste bekannter Dienste ist an dem Tag falsch, an dem jemand einen betreibt,
+ * der nicht darauf steht. Was hier zählt, ist eine Adresse.
+ *
+ * KEIN FAVICON. Das Bild wird hochgeladen und liegt in der Zeile - ein
+ * geholtes Favicon hiesse, dass die Startseite bei jedem Aufbau jeden
+ * verlinkten Host anspricht. Wer keins hochlädt, bekommt den Anfangsbuchstaben
+ * auf seiner Farbe, dieselbe Antwort wie ein Mitglied ohne Foto: zwölf gleiche
+ * Weltkugeln unterscheiden nichts, "J" auf Violett schon.
+ */
+function quickLinkMonogram(name) {
+  // Der erste BUCHSTABE, nicht das erste Zeichen: ein Name wie "🎬 Jellyfin"
+  // ergäbe sonst eine Kachel, die auf jedem Gerät anders aussieht.
+  const match = String(name ?? '').match(/\p{L}|\p{N}/u);
+  return (match ? match[0] : '?').toUpperCase();
+}
+
+function renderQuickLinkTile(s) {
+  const name = String(s.name ?? '');
+  const host = quickLinkHost(s.url);
+  const face = s.icon_data
+    ? `<img src="${esc(s.icon_data)}" alt="" loading="lazy">`
+    : `<span class="quick-link-tile__monogram" aria-hidden="true">${esc(quickLinkMonogram(name))}</span>`;
+  // WEISS AUF EINER FREI GEWAEHLTEN FARBE IST NICHT IMMER LESBAR - dieselbe
+  // Messung, die die Avatar-Initialen einmal gekostet hat (utils/contrast.js).
+  // CSS kann das nicht entscheiden: die Farbe kommt aus der Datenbank.
+  const ink = prefersInkText(s.color) ? ' quick-link-tile__face--ink' : '';
+  // Die Farbe steht nur da, wenn es eine gibt - eine leere CSS-Variable ist
+  // keine Farbe, sondern ein kaputtes Rezept (dieselbe Falle wie bei den
+  // Notizen, siehe renderPinnedNotes).
+  const tint = s.color ? ` style="--quick-link-color:${esc(s.color)};"` : '';
+  // `rel` und `referrerpolicy` sind hier keine Formalie: ein Ziel im Heimnetz
+  // hat nichts davon zu erfahren, von welcher Adresse aus dieser Haushalt
+  // seine Yuvomi-Instanz betreibt, und `noopener` nimmt der geöffneten Seite
+  // den Griff auf das Fenster, aus dem sie kam.
+  // Name und volle Adresse stehen im `title`: die Host-Zeile darunter ist
+  // einzeilig und kuerzt, und eine gekuerzte Adresse darf nicht die einzige
+  // Auskunft darueber sein, wohin die Kachel fuehrt.
+  return `<a class="quick-link-tile" href="${esc(s.url)}" target="_blank"
+             title="${esc(`${name} - ${s.url}`)}"
+             rel="noopener noreferrer" referrerpolicy="no-referrer"${tint}>
+    <span class="quick-link-tile__face${ink}">${face}</span>
+    <span class="quick-link-tile__name">${esc(name)}</span>
+    ${host ? `<span class="quick-link-tile__host">${esc(host)}</span>` : ''}
+    ${s.visibility === 'private'
+      ? `<i data-lucide="lock" class="quick-link-tile__private" aria-label="${esc(t('quickLinks.privateBadge'))}"></i>`
+      : ''}
+  </a>`;
+}
+
+function renderQuickLinks(items) {
+  const list = Array.isArray(items) ? items : [];
+  const header = widgetHeader('quicklinks', t('dashboard.quickLinksTitle'), list.length, null, null, 'dashboard');
+
+  if (!list.length) {
+    // Der Leerzustand ist hier der WICHTIGSTE Zustand: das Widget kommt
+    // ausgeblendet ins Haus, wer es holt, hat noch nichts angelegt, und es gibt
+    // keine zweite Seite, auf der er anfangen könnte. Deshalb nicht der stumme
+    // Hinweis der anderen Kacheln, sondern der Weg selbst.
+    return `<div class="widget widget--quicklinks">
+      ${header}
+      <div class="widget__empty">
+        <i data-lucide="compass" class="empty-state__icon" aria-hidden="true"></i>
+        <div>${t('quickLinks.emptyTitle')}</div>
+        <button type="button" class="widget__empty-cta" data-quick-links-manage>
+          <i data-lucide="plus" aria-hidden="true"></i>
+          <span>${esc(t('quickLinks.addFirst'))}</span>
+        </button>
+      </div>
+    </div>`;
+  }
+
+  return `<div class="widget widget--quicklinks">
+    ${header}
+    <div class="quick-link-row">
+      ${list.map(renderQuickLinkTile).join('')}
+      <button type="button" class="quick-link-tile quick-link-tile--add" data-quick-links-manage>
+        <span class="quick-link-tile__face"><i data-lucide="pencil" aria-hidden="true"></i></span>
+        <span class="quick-link-tile__name">${esc(t('quickLinks.manage'))}</span>
+      </button>
+    </div>
   </div>`;
 }
 
@@ -2412,6 +2508,7 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
     shopping: () => renderShoppingLists(data.shoppingLists ?? []),
     weather: () => (weather ? renderWeatherWidget(weather) : ''),
     clock: () => renderClockWidget(),
+    quicklinks: () => renderQuickLinks(data.quicklinks ?? []),
     // Die Kachelreihe braucht als einziges Widget zu wissen, wer sonst noch
     // dasteht - sie ist die einzige, die fremde Zahlen zeigt. Gerechnet aus
     // DERSELBEN Bedingung, nach der die Kacheln gleich gefiltert werden, damit
@@ -3469,6 +3566,15 @@ function wireLinks(container, rerender, { editing = false } = {}) {
       });
     }
   });
+
+  // Der Weg zur Pflege der Schnellzugriffe geht von der Kachel aus (#469): die
+  // Reihe hat keine Seite, weil sie kein Modul ist. Im Anpassen-Modus nicht -
+  // dort zieht man Kacheln, man bearbeitet ihren Inhalt nicht.
+  if (!editing) {
+    container.querySelectorAll('[data-quick-links-manage]').forEach((el) => {
+      el.addEventListener('click', () => openQuickLinksManager({ onChange: rerender }));
+    });
+  }
 
   // Task-Items öffnen Quick-Action-Modal statt direkt zu navigieren
   if (editing) return;
