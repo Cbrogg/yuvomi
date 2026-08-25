@@ -1762,8 +1762,12 @@ function layoutOhne(missing) {
 }
 
 test('Widget-Merge: eine fehlende Id landet an ihrer Default-Position, nicht hinten', () => {
+  // Die Zahl steht hier fest und wird bei jedem neuen Widget von Hand
+  // nachgezogen - das ist der Zweck: ein Selektor, der aus derselben Liste
+  // abgeleitet waere, koennte nie melden, dass die Liste sich geaendert hat.
+  // Zuletzt nachgezogen fuer `quicklinks` (#469).
   const geprueft = widgets.WIDGET_IDS.length;
-  assert(geprueft === 16, `Reichweite: ${geprueft} Ids geprueft, nicht die erwarteten 16`);
+  assert(geprueft === 17, `Reichweite: ${geprueft} Ids geprueft, nicht die erwarteten 17`);
   const falsch = widgets.WIDGET_IDS.filter((id) => {
     const merged = widgets.normalizeDashboardConfig(layoutOhne(id));
     return merged.map((w) => w.id).join(',') !== widgets.WIDGET_IDS.join(',');

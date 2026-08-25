@@ -7,6 +7,42 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The overview can carry a row of household links** (#469). A family that uses Yuvomi as its home
+  page needs the way to Jellyfin, Immich or the router to be *there* - not in a note two clicks away.
+  Four people asked for it from two directions, and #759 was closed in favour of this one, so what
+  ships is the small version both ends agreed on: a tile row, not a module. Name, address, picture,
+  and who sees it.
+
+  **No catalogue of known apps.** Anything keyed to a list of supported services is wrong the day
+  somebody runs one that is not on it, so a shortcut is just an address. Typing
+  `192.168.1.5:8096` is enough - `https://` is filled in where no scheme is given, which is how
+  anybody actually writes down a machine on their own network.
+
+  **The picture is uploaded, never fetched.** A favicon would mean the household reaches out to
+  every linked host each time the overview is drawn, which is precisely the quiet outbound traffic
+  this app does not do. Without a picture the tile carries the first letter of its name on a colour
+  from the same palette a member without a photo gets - twelve identical globes distinguish nothing,
+  "J" on blue does. The letter picks its own text colour, because white on a light tile measured
+  2.7:1 and that is the same finding the avatar initials cost once already.
+
+  Each link is shared with the household or private to whoever made it, and private means private:
+  an admin does not see it either, and it is not in the payload. The row itself starts hidden and is
+  fetched from the customise tray - on day one it would have nothing to show, and a tile that only
+  asks to be set up is not worth putting on every existing dashboard unasked.
+
+  Both the picture and the number of tiles are capped (128 KB, 24), because these images travel
+  differently than an avatar does: they sit in the row as a data URL and go out with *every* build
+  of the overview, all at once. A generous cap times an unbounded count is a home page that loads
+  megabytes before it shows anything.
+
+  What lands in the `href` is checked on the server and not only in the form, with the same function
+  the browser uses (`/utils/quick-link-url.js`): only `http` and `https` pass. A `javascript:` value
+  is recognised as a scheme and refused with that as the reason, rather than being quietly turned
+  into something that merely fails to parse.
+
+
 ## [2.42.0] - 2026-08-25
 
 ### Added

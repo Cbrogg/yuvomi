@@ -33,6 +33,13 @@ const SERVER_DIR = path.join(ROOT, 'server');
  * aus `public/` importieren darf. Reine Funktionen, front- und backend-identisch.
  */
 const SHARED_ISOMORPHIC = new Set([
+  // #469: Was aus einem Adressfeld eine Adresse macht - oder eine Absage. Das
+  // Ergebnis landet als `href` einer Kachel auf der Startseite; die Route
+  // prueft es, weil eine Client-Pruefung keine Grenze ist, und das Formular
+  // prueft es, damit es sofort widerspricht statt nach dem Absenden. Zwei
+  // Fassungen liefen hier nicht bei einem Tippfehler auseinander, sondern bei
+  // genau dem Wert, den jemand sucht, der sie auseinanderlaufen sehen will.
+  'public/utils/quick-link-url.js',
   'public/utils/recipe-meal-types.js',
   'public/utils/contact-name.js',
   'public/utils/pantry-units.js',
