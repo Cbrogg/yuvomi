@@ -1,8 +1,10 @@
-<!-- version: 2.42.0 -->
-Checklists in notes can now be ticked by tapping them. Until now the little checkbox next to a `- [ ]` item was decoration: to cross something off you had to open the note, find the line, change the brackets by hand and save. For a shopping list on a kitchen tablet that was three steps too many, and it made the feature look broken even though it was only ever meant to be read. Tapping a box now works on the pinned card and in the note itself, and because only that one line is rewritten, two people ticking different items at the same moment both keep their tick. Nothing needs configuring.
+<!-- version: 2.43.0 -->
+The overview can now carry a row of quick links to the other things you run at home. A family that uses Yuvomi as its home page needs the way to Jellyfin, Immich or the router to be right there, not tucked into a note two taps away. Each tile is a name, an address and a picture, and you can keep a link to yourself instead of sharing it with the household. Typing `192.168.1.5:8096` is enough - the `https://` is filled in for you.
 
-Task notes get the same formatting toolbar the notes module has always had. Task notes have rendered Markdown for a while, but writing it meant knowing the syntax - on a phone, typing `- [ ]` is a detour nobody should need. The buttons for headings, lists, checklists, links and emphasis now sit above the note field in tasks too, and they are the same buttons, so a checklist written in a task is identical to one written in a note.
+The row does not appear on its own. It starts hidden, because on the day you update it would have nothing to show, and your existing dashboard layout is left exactly as it is. To switch it on, open the overview, tap Customize, and pick "Quick links" from the tray at the bottom; from there the first tile is one tap away.
 
-Two smaller things are fixed along the way. The formatting buttons used to insert German placeholder text in every language - clicking "Link" wrote `[Linktext](url)` whatever language the household was set to. And two buttons, "Remove tags" in the task selection bar and "Find logo" in the subscription form, were showing no icon at all.
+Pictures are uploaded from your device and never fetched from the linked site. Reaching out for a favicon would mean your home page contacts every service you have linked, every time it loads, and that is not something this app does. A tile without a picture shows the first letter of its name on a colour you choose.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.42.0
+Nothing needs configuring and there is nothing to do after the update - the new table is created automatically on first start.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.43.0

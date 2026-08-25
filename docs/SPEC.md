@@ -2263,6 +2263,58 @@ never see express — therefore had no module check at all (#823).
 
 Primary key: `(subject_type, subject_id, resource_type, resource_key)`.
 
+### Quick Links (migration v160, #469)
+| Column | Type | Constraint |
+|--------|------|-----------|
+| name | TEXT | NOT NULL - what the tile is called; also the source of its monogram when no picture is set |
+| url | TEXT | NOT NULL - normalised `http`/`https` address (see below) |
+| icon_data | TEXT | nullable - the tile picture as a data URL (`image/png\|jpeg\|webp`), capped at **128 KB** |
+| color | TEXT | nullable - HEX; the ground the monogram sits on |
+| visibility | TEXT | NOT NULL DEFAULT `all` - `all` \| `private` |
+| created_by | INTEGER | FK → Users |
+| position | INTEGER | NOT NULL DEFAULT 0 - household-wide order, dragged rather than sorted |
+| created_at / updated_at | TEXT | ISO 8601 |
+
+A household may hold at most **24** quick links.
+
+**A row, not a module (#469).** The thread ran twice over the question of whether this becomes a
+bookmark library, and #759 was closed in favour of the small version four people had converged on:
+a tile row on the overview with a name, an address, a picture and the question of who sees it.
+There is deliberately no table for collections, tags or folders - a collection would be one more
+column here, not a rebuild.
+
+**No catalogue of known apps.** Anything keyed to a list of supported services is wrong the day
+somebody runs one that is not on it, so a quick link is only an address. `192.168.1.5:8096` is a
+valid entry: a missing scheme is filled in with `https://`, which is how anybody actually writes
+down a machine on their own network.
+
+**Only `http` and `https` reach an `href`.** The check lives in `public/utils/quick-link-url.js`
+and is called by **both** sides - the form, so it objects immediately, and the route, because a
+client-side check is not a boundary (it is on the `test:layer-boundary` allowlist for exactly that
+reason). The actual guard is the protocol allowlist *after* parsing; the scheme detection in front
+of it decides the **reason**: a `javascript:` value is recognised as a scheme and refused as such
+rather than being turned into `https://javascript:…` and merely failing to parse, and `vbscript:1`
+is refused instead of being stored as a valid `https://vbscript:1/` nobody meant.
+
+**The picture is uploaded, never fetched.** A favicon would mean the household reaches out to every
+linked host on every build of the overview - the quiet outbound traffic this app does not do. It is
+stored inline as a data URL like `users.avatar_data`, and both caps exist because these pictures
+travel differently than an avatar: they ship with *every* overview response, all at once. Without a
+picture the tile carries the first letter of its name on `color`, and that letter picks its own text
+colour via `prefersInkText` (`utils/contrast.js`) - white on a light tile measures 2.7:1.
+
+**`private` means private.** A quick link that is not shared is visible to its author alone; the
+admin is expressly not an exception, and it is not merely hidden in the browser - `listQuickLinksFor`
+filters it out of the payload, including the aggregated `/dashboard` response. Editing follows the
+same rule and ships with the row: `can_edit` is computed on the server by the same function that
+draws the boundary (`mayEdit`), so the client does not restate the rule from its own idea of who it
+is. A foreign private link answers `404` rather than `403` - the latter would confirm it exists.
+
+API: `GET/POST /api/v1/quick-links`, `PUT/DELETE /api/v1/quick-links/:id`, `PUT /api/v1/quick-links/order`.
+The scope key is `dashboard` (`scopes.js`), not one of its own: the row is not a permissions module,
+but without a mapping the route would be locked for *every* scoped token, since `tokenAllows`
+refuses unknown modules.
+
 ---
 
 ## Modules
@@ -2350,6 +2402,7 @@ tone): light 3.65-5.18:1, dark 7.42-12.24:1, all above the 3:1 asked of graphics
 - Cycle (v0.98.0): **owner-only, opt-in** prediction glance — current phase, cycle day in a mini progress ring, and the next period as a countdown + date. Unlike the family-visible widgets, cycle data is **never aggregated into the shared `/dashboard` payload**: the tile fetches the signed-in user's own `/health/cycle` data client-side, and only when the tile is enabled. Default-hidden, offered as an opt-in in Customize; hidden when the Health module is disabled
 - Clock (v1.84.0 · #651): time and weekday + date, built for a wall tablet without a system bar. The digits scale with the tile width (container query on the existing `dashboard-widget` container, capped by row count so a one-row tile does not blow the date off the card), follow the user's 12h/24h and date-format preferences, and tick on the minute rather than the second (the display has no seconds). A `visibilitychange` refresh catches up after a throttled background tab. **Default-hidden:** on a device with a system clock a second one is duplication, so it is offered as an opt-in in Customize
 - Metrics row: up to four module tiles in one row, each carrying a count and a jump target, for the modules that are reachable only through "More". The row shows what is **not already on the screen**: a module the "Heute" panel already summarises is skipped, and so is one whose own widget is visible, so it follows the current layout instead of holding its own idea of it. In practice it leads with the modules a standard dashboard has no widget for at all - rewards, health and the housekeeping log. Where a household does not use those, no tile appears and the widget renders nothing. Counts come from the shared `/dashboard` payload (`openTaskCount` and the per-module figures beside it), not from one request per module. It is a widget like any other: it moves, hides and resizes in Customize, and it can be locked for a member. Its `permissions.js` entry carries `module: null`, like Family, Weather and Clock - it belongs to no single module, and it does not need to, because **each tile checks its own module** and a locked budget therefore never produces a budget tile. What the row-level lock adds is the ability to take away the row as such
+- Quick links (#469): a row of household links - name, address, picture, and who sees it. Not a module and therefore without a page of its own: managing them starts from the tile, because whoever sees the row is already where it belongs. Each tile opens in a new tab with `rel="noopener noreferrer"` and `referrerpolicy="no-referrer"`, so a target on the home network learns nothing about where this household runs its Yuvomi. A private link carries a lock mark. **Default-hidden:** on day one the row has nothing to show, and a tile that only asks to be set up is not worth adding to every existing dashboard unasked - it is offered as an opt-in in Customize. Its `permissions.js` entry carries `module: null`, like Family, Weather and Clock
 - FAB (quick actions): + Task, + Event, + Shopping list item, + Note
 
 The three newer modules (Rewards, Health, Housekeeping) start **hidden** by default — they are specialised and not active in every household, so they are offered as opt-ins in **Customize** rather than adding empty tiles to a fresh dashboard. Existing saved layouts are untouched.

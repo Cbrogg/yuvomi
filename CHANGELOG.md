@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.43.0] - 2026-08-25
+
 ### Added
 
 - **The overview can carry a row of household links** (#469). A family that uses Yuvomi as its home
@@ -41,6 +43,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   the browser uses (`/utils/quick-link-url.js`): only `http` and `https` pass. A `javascript:` value
   is recognised as a scheme and refused with that as the reason, rather than being quietly turned
   into something that merely fails to parse.
+
+- **`CONTRIBUTING.md` states what part AI agents play in this project** (#687). Yuvomi holds a
+  household's calendar, health notes, documents and finances, so it is fair to ask who - or what -
+  wrote the code that handles them. The new section says plainly that coding agents are used here
+  extensively, that two of them review pull requests automatically, and that contributors should
+  mention it in one line when one drafted their patch.
+
+  It deliberately does not promise that a human has read and understood every merged line. For a
+  one-person project shipping several releases a week that is not a promise anybody could keep, and
+  a promise that cannot be kept invites exactly the trust it does not earn. What it states instead
+  is verifiable: every merge is performed by the maintainer, there is no path by which an agent
+  merges its own work, the suite runs on every pull request, the Hard Constraints are enforced by
+  tests rather than intentions, and anything touching authentication, permissions, storage or the
+  network is reviewed line by line.
 
 
 ## [2.42.0] - 2026-08-25
