@@ -295,7 +295,8 @@
         "memberOpenTasks": "{{count}} وظیفه",
         "memberOpenTasks_one": "{{count}} وظیفه",
         "manage": "مدیریت",
-        "todayNothingElseTomorrow": "امروز دیگر برنامه‌ای نیست - فردا: {{title}}"
+        "todayNothingElseTomorrow": "امروز دیگر برنامه‌ای نیست - فردا: {{title}}",
+        "weatherHighLow": "بیشینه {{max}}°، کمینه {{min}}°"
     },
     "tasks": {
         "manageCategories": "مدیریت دسته‌ها",

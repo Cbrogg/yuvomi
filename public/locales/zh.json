@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}}项任务",
         "memberOpenTasks_one": "{{count}}项任务",
         "manage": "管理",
-        "todayNothingElseTomorrow": "今天没有其他安排了。明天：{{title}}"
+        "todayNothingElseTomorrow": "今天没有其他安排了。明天：{{title}}",
+        "weatherHighLow": "最高 {{max}}°、最低 {{min}}°"
     },
     "tasks": {
         "manageCategories": "管理类别",

@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} việc",
         "memberOpenTasks_one": "{{count}} việc",
         "manage": "Quản lý",
-        "todayNothingElseTomorrow": "Hôm nay không còn gì khác - ngày mai: {{title}}"
+        "todayNothingElseTomorrow": "Hôm nay không còn gì khác - ngày mai: {{title}}",
+        "weatherHighLow": "Cao nhất {{max}}°, thấp nhất {{min}}°"
     },
     "tasks": {
         "manageCategories": "Quản lý danh mục",

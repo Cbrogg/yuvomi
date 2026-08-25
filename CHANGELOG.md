@@ -7,6 +7,79 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Seven more places still asked the browser what time it is** (#851). Found by widening the guard
+  that was supposed to prevent exactly this. It matched `new Date(x).getHours()` - the getters
+  written straight onto the expression - and missed the far more common `const now = new Date();
+  now.getFullYear()`. Green and blind.
+
+  What it had been letting through: the day the date picker rings as **today**; the running month in
+  **Budget** and in **Inventory**; the "Today"/"Tomorrow" label on dashboard rows, which is handed
+  real instants and so was converting them into the wrong zone; which medication windows count as
+  **still open today**; and the date a new **shared expense** is pre-filled with. On a device in
+  another zone every one of them could be a day out.
+
+  Two more surfaced while fixing those. `toDateString()` is the same clock under another name -
+  three places in the dashboard compared calendar days with it, and it sits outside the guard's
+  pattern because it uses no getter at all. And the sort key that decides whether the next Outlook
+  item is an event or a task read the browser's hour off a value that may or may not carry a zone.
+
+  All of them now ask `nowFields()` / `todayKey()`, or compare day keys. The guard reads bindings as well as expressions,
+  and it stays a rule rather than an allowlist: `getSeconds`/`getMilliseconds` are excluded because
+  they are the same in every zone, and only `utils/timezone.js` (which answers the question) and
+  `theme-init.js` (which runs before any zone is known, and decides something about the device
+  anyway) are exempt.
+
+- **A task's due label followed the browser's clock, not the household's** (#851). `due_date` and
+  `due_time` are zoneless wall-clock time: whoever typed "21:00" meant 21:00, whichever zone the
+  household keeps. Both due labels - the one on the dashboard and the one in the Tasks module - ran
+  that through `new Date(...)`, which turns it into an instant in the **browser's** zone; the
+  formatters then converted that instant into the display zone. With the household on Honolulu and
+  the browser in Berlin, a task entered for 21:00 read 9:00.
+
+  The same clock decided "today" and "tomorrow". In the Tasks module that put two clocks in one
+  view: the grouping has followed `todayKey()` since #829, so a task could sit under **Tomorrow**
+  and be labelled **Due today** in the same list.
+
+  Both now read the wall-clock stamp as what it is and ask the display zone what day it is. This was
+  the seventh clock; #829 part 3 unified six.
+
+- **The weather forecast was off by a day** (#851). The server already keeps the running day out of
+  `forecast` so it is not shown twice - but the display kept labelling `forecast[0]` "Today"
+  regardless. What stood there was tomorrow, so the row read as though a day were missing, and every
+  column after it named the wrong weekday. Both surfaces carried the same copied line: the card on a
+  phone and the wall-tablet view.
+
+  A forecast day is now named from **its own date**, never from its position. The reference is the
+  calendar day **at the weather location**, which the payload states explicitly - neither the
+  browser's zone nor the household zone can answer it, because a household may well watch the
+  weather somewhere else. Where that reference is missing, the day keeps its weekday: no label at
+  all beats a wrong one.
+
+  The response cache now expires at the weather location's midnight as well as after its usual 30
+  minutes. Cached in the last half hour of a day, it would otherwise still be served after
+  midnight, with `today` naming yesterday.
+
+  The legacy OpenWeatherMap branch bundled its three-hour steps into **UTC** days. That only held
+  near the prime meridian: far west of it the running day was dropped by the wrong key in the
+  evening and the forecast began at the day after tomorrow, far east of it a single UTC day fell
+  across two local days and blended their readings into a high and low that existed on neither. The
+  buckets are local days now, the symbol comes from whichever step is closest to **local** noon, and
+  only days after today enter the row.
+
+### Added
+
+- **Today's high and low on the weather card** (#851). The card carried a temperature span for every
+  forecast day and, for today, only the momentary reading - the one day you can actually still plan
+  around was the one without a range. It now sits under the current temperature in the same
+  vocabulary as the row below it, on the card and on the wall tablet.
+
+  Open-Meteo only. The legacy OpenWeatherMap provider has no daily aggregate to give: its
+  three-hour list starts at the next step, so by the afternoon today's bucket is missing the
+  morning and its maximum can fall below the current reading standing right beside it. A range
+  that is sometimes a range is worse than none.
+
 ## [2.40.0] - 2026-08-25
 
 ### Added

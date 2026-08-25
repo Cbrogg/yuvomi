@@ -295,7 +295,8 @@
         "memberOpenTasks": "{{count}} na gawain",
         "memberOpenTasks_one": "{{count}} na mga gawain",
         "manage": "Pamahalaan",
-        "todayNothingElseTomorrow": "Wala nang iba ngayon - bukas: {{title}}"
+        "todayNothingElseTomorrow": "Wala nang iba ngayon - bukas: {{title}}",
+        "weatherHighLow": "Pinakamataas {{max}}°, pinakamababa {{min}}°"
     },
     "tasks": {
         "manageCategories": "Pamahalaan ang mga kategorya",

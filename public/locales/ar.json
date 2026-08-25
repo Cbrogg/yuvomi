@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} مهام",
         "memberOpenTasks_one": "{{count}} مهمة",
         "manage": "إدارة",
-        "todayNothingElseTomorrow": "لا شيء آخر اليوم - غدًا: {{title}}"
+        "todayNothingElseTomorrow": "لا شيء آخر اليوم - غدًا: {{title}}",
+        "weatherHighLow": "العظمى {{max}}°، الصغرى {{min}}°"
     },
     "tasks": {
         "manageCategories": "إدارة الفئات",

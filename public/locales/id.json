@@ -295,7 +295,8 @@
         "memberOpenTasks": "{{count}} tugas",
         "memberOpenTasks_one": "{{count}} tugas",
         "manage": "Kelola",
-        "todayNothingElseTomorrow": "Tidak ada lagi hari ini - besok: {{title}}"
+        "todayNothingElseTomorrow": "Tidak ada lagi hari ini - besok: {{title}}",
+        "weatherHighLow": "Tertinggi {{max}}°, terendah {{min}}°"
     },
     "tasks": {
         "manageCategories": "Kelola kategori",

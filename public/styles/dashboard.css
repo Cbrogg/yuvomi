@@ -1189,6 +1189,27 @@
   white-space: nowrap;
 }
 
+/* Hoch und Tief des laufenden Tages (#851). Dasselbe Vokabular wie die
+ * Vorhersagereihe darunter - semibold Hoch, gedaempftes Tief - damit die Karte
+ * eine Zahlensprache spricht und nicht zwei. */
+.weather-widget__range {
+  display: flex;
+  gap: var(--space-1);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  line-height: 1.2;
+  margin-bottom: var(--space-0h);
+  white-space: nowrap;
+}
+
+.weather-widget__range-high {
+  font-weight: var(--font-weight-semibold);
+}
+
+.weather-widget__range-low {
+  color: var(--color-text-secondary);
+}
+
 .weather-widget__desc {
   font-size: var(--text-sm);
   font-weight: var(--font-weight-medium);
@@ -1492,6 +1513,7 @@ svg.weather-forecast__icon {
 /* Tiny weather keeps the current conditions readable instead of forcing
  * forecast rows into a 1x1 tile. */
 .widget-size--1x1 > .weather-widget .weather-widget__meta,
+.widget-size--1x1 > .weather-widget .weather-widget__range,
 .widget-size--1x1 > .weather-widget .weather-widget__glyph,
 .widget-size--1x1 > .weather-widget .weather-forecast {
   display: none;
@@ -4327,6 +4349,21 @@ svg.weather-forecast__icon {
   color: var(--color-text-primary);
 }
 
+.wall-weather__range {
+  display: flex;
+  gap: var(--space-1);
+  font-size: var(--wall-row-sub);
+  font-variant-numeric: tabular-nums;
+}
+
+.wall-weather__range-high {
+  color: var(--color-text-primary);
+}
+
+.wall-weather__range-low {
+  color: var(--color-text-tertiary);
+}
+
 .wall-weather__desc {
   overflow: hidden;
   text-overflow: ellipsis;
@@ -4518,6 +4555,7 @@ svg.weather-forecast__icon {
 
 [data-wall-night] .wall-row__title,
 [data-wall-night] .wall-weather__temp,
+[data-wall-night] .wall-weather__range-high,
 [data-wall-night] .wall-weather__day-high {
   color: var(--color-text-secondary);
 }
