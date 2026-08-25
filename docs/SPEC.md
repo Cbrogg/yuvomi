@@ -1327,8 +1327,8 @@ All types except `pantry_item` can be set and deleted through `POST`/`PUT`/`DELE
 /api/v1/reminders`. Four of them are **derived** - their module recreates the reminder whenever the
 underlying object is written (renewal date, warranty end, inventory deadline, best-before date) - but
 only the pantry is additionally rebuilt on **every notification run**. A hand-set `pantry_item`
-reminder is therefore gone within a minute and a deleted one is back, so those three paths answer
-400 for it; for the other three derived types a hand-set date survives until the next change to
+reminder is therefore gone within a minute and a deleted one is back, so all four write paths
+(`POST`, `PUT`, `DELETE /:id`, `DELETE` by filter) answer 400 for it; for the other three derived types a hand-set date survives until the next change to
 their object, which is a half-life you can work with, and closing them would break a published
 `/api/v1` surface for no reason.
 

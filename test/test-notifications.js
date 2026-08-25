@@ -641,25 +641,25 @@ test('pantry reminders carry the item name and its best-before date as body', as
   const db = makeDb();
   const store = createNotificationChannelStore({ db });
   store.createChannel({ provider: 'ntfy', name: 'ntfy', enabled: true, config: { baseUrl: 'https://ntfy.test', topic: 'family' }, secrets: {} });
-  // Das MHD liegt bewusst WEIT ZURUECK: der Voll-Sync zieht einen offenen Termin
-  // gerade, und mit einem Datum nahe am heutigen haette dieser Test an der
-  // Wanduhr gehangen - er waere gruen gewesen, solange die Uhr hinter 09:00
-  // steht, und rot davor. Mit einem verstrichenen Soll-Termin greift der
-  // Vergangenheits-Riegel, und der gesetzte remind_at bleibt stehen.
-  db.prepare("INSERT INTO pantry_items (id, name, quantity, expires_on, created_by) VALUES (1, 'Joghurt', 2, '2020-03-01', 1)").run();
+  // FESTES `now`, UND MHD/remind_at PASSEN EXAKT ZUSAMMEN. Beides ist noetig:
+  // der Voll-Sync raeumt eine Vorwarnung ab, deren Artikel laengst abgelaufen
+  // ist, und er zieht einen abweichenden Termin gerade. Nur wenn
+  // `expires_on - 7 Tage` genau dem gesetzten remind_at entspricht, laesst er
+  // die Zeile in Ruhe - und dann haengt der Test auch an keiner Wanduhr.
+  db.prepare("INSERT INTO pantry_items (id, name, quantity, expires_on, created_by) VALUES (1, 'Joghurt', 2, '2026-08-27', 1)").run();
   db.prepare("INSERT INTO reminders (id, entity_type, entity_id, remind_at, created_by) VALUES (1, 'pantry_item', 1, ?, 1)")
-    .run('2026-06-19T09:59:00.000Z');
+    .run('2026-08-20T09:00');
   const payloads = [];
   const providers = {
     ntfy: { id: 'ntfy', send: async ({ payload }) => { payloads.push(payload); return { ok: true, status: 200 }; } },
   };
   const pushService = { sendPushToUser: async () => 0 };
 
-  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date() });
+  await processDueNotifications({ database: db, channelStore: store, pushService, providers, now: new Date('2026-08-20T10:00:00Z') });
   assert.equal(payloads.length, 1);
   // Regression: ohne den pantry_item-Zweig im entity_title-CASE kaeme hier der
   // Fallback-Body 'Reminder' an - eine Meldung, die nicht sagt, welcher Artikel.
-  assert.equal(payloads[0].body, 'Joghurt - 2020-03-01');
+  assert.equal(payloads[0].body, 'Joghurt - 2026-08-27');
   // Herkunfts-Regel: der Titel nennt das Modul, und das Ziel fuehrt dorthin -
   // beides steht in EINEM Eintrag, damit es nicht auseinanderlaufen kann.
   assert.equal(payloads[0].title, 'Pantry');

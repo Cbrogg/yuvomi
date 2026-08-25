@@ -499,23 +499,41 @@ test('PUT /reminders lehnt pantry_item ebenso ab wie POST', async () => {
   assert.equal(countReminders(id), 1, 'die abgeleitete Erinnerung bleibt unangetastet');
 });
 
-test('der Voll-Sync setzt einen Termin nie auf einen verstrichenen Zeitpunkt', () => {
+test('der Voll-Sync zieht eine ueberholte Zeile nach vorne, nie in die Vergangenheit', () => {
   const id = db.prepare(
     "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Linsen', 1, 'pkg', 'Sonstiges', ?, ?)"
   ).run(dateKeyInDays(EXPIRY_SOON_DAYS + 60), A).lastInsertRowid;
   syncAllPantryExpiryReminders(db);
   const before = reminderFor(id);
 
-  // MHD am Router vorbei nach vorne gezogen, sodass der Soll-Termin hinter uns
-  // laege - der Restore-Fall, den die Terminkorrektur adressiert.
+  // MHD am Router vorbei nach vorne gezogen - der Restore-Fall.
   db.prepare('UPDATE pantry_items SET expires_on = ? WHERE id = ?').run(dateKeyInDays(2), id);
   syncAllPantryExpiryReminders(db);
 
-  // Die due-Abfrage kommt im selben Durchgang direkt danach: ein
-  // zurueckdatierter Termin ginge sofort raus. syncPantryExpiryReminder legt
-  // eine solche Zeile gar nicht erst an, und dieselbe Regel gilt hier.
-  assert.equal(reminderFor(id).remind_at, before.remind_at);
-  assert.ok(!reminderIsPast(reminderFor(id).remind_at));
+  const after = reminderFor(id);
+  // STEHENLASSEN WAERE FALSCH GEWESEN, und das war der Fehler: die alte Zeile
+  // meldete Wochen NACH dem neuen Ablauf. Sie ist nicht zufaellig anders, sie
+  // ist nachweislich ueberholt.
+  assert.notEqual(after.remind_at, before.remind_at);
+  // Und trotzdem nie zurueckdatiert: die due-Abfrage kommt im selben Durchgang
+  // direkt danach, ein verstrichener Termin ginge sofort raus.
+  assert.ok(!reminderIsPast(after.remind_at));
+  assert.match(after.remind_at, /T09:00$/);
+  assert.ok(after.remind_at.slice(0, 10) <= dateKeyInDays(2), 'und nie nach dem Ablauf');
+});
+
+test('der Voll-Sync raeumt eine Zeile ab, deren Artikel inzwischen abgelaufen ist', () => {
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Bohnen', 1, 'can', 'Sonstiges', ?, ?)"
+  ).run(dateKeyInDays(EXPIRY_SOON_DAYS + 60), A).lastInsertRowid;
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 1);
+
+  db.prepare('UPDATE pantry_items SET expires_on = ? WHERE id = ?').run(dateKeyInDays(-3), id);
+  syncAllPantryExpiryReminders(db);
+
+  assert.equal(countReminders(id), 0,
+    'eine Vorwarnung, die erst nach dem Ablauf kaeme, ist keine - sie gehoert weg');
 });
 
 // --------------------------------------------------------------------------
@@ -721,4 +739,19 @@ test('ein nachtraeglich abgelaufenes MHD raeumt die offene Meldung ab', async ()
   await call('PUT', `/pantry/${id}`, { body: { name: 'Mozzarella', quantity: 1, expires_on: dateKeyInDays(-1) } });
   assert.equal(countReminders(id), 0,
     'eine Vorwarnung auf etwas, das die Frist gerissen hat, gehoert weg statt stehenzubleiben');
+});
+
+test('ein heute ablaufender Artikel bekommt keine Vorwarnung fuer morgen', async () => {
+  // `nextMorning()` klemmt auf MORGEN, sobald die Uhr an 09:00 vorbei ist. Ohne
+  // die Pruefung gegen `expires_on` bekaeme derselbe Artikel je nach Tageszeit
+  // eine korrekte Meldung (frueh eingetragen) oder eine einen Tag NACH dem
+  // Ablauf (spaet eingetragen) - ein Verhalten, das an der Uhr haengt.
+  const res = await call('POST', '/pantry', { body: { name: 'Tagesware', quantity: 1, expires_on: dateKeyInDays(0) } });
+  assert.equal(res.status, 201);
+
+  const reminder = reminderFor(res.body.data.id);
+  if (reminder) {
+    assert.ok(reminder.remind_at.slice(0, 10) <= dateKeyInDays(0),
+      'eine Vorwarnung nach dem Ablauf ist keine Vorwarnung');
+  }
 });

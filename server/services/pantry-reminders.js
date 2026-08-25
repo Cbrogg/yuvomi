@@ -20,7 +20,6 @@
 
 import { reminderDateBefore, reminderIsInThePast, REMINDER_TIME_SUFFIX } from '../utils/reminder-schedule.js';
 import { resolvePermissions } from '../permissions.js';
-import { todayKey } from '../utils/timezone.js';
 import { createLogger } from '../logger.js';
 
 const log = createLogger('PantryReminders');
@@ -75,7 +74,7 @@ export const EXPIRY_REMINDER_OFFSET_DAYS = 7;
  * @param {object} item - Zeile aus `pantry_items`
  * @param {Date} [now]
  */
-export function syncPantryExpiryReminder(database, item, now = new Date(), denied = null, { clampToNextMorning = false } = {}) {
+export function syncPantryExpiryReminder(database, item, now = new Date(), access = null, { clampToNextMorning = false } = {}) {
   const drop = () => database.prepare(`
     DELETE FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?
   `).run(item.id);
@@ -93,7 +92,8 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), denie
   //
   // `denied` ist der Batch-Weg: der Voll-Sync löst die Rechte einmal je Lauf
   // auf statt einmal je Glas. Ohne das Set fragt diese Funktion selbst.
-  if (pantryDisabled(database) || creatorLacksPantry(database, item.created_by, denied)) {
+  const { disabled, denied } = access ?? { disabled: pantryDisabled(database), denied: null };
+  if (disabled || creatorLacksPantry(database, item.created_by, denied)) {
     drop();
     return;
   }
@@ -144,20 +144,22 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), denie
    * Ersparnis. Beide werden einzeln geprüft, weil ein Test gegen den Voll-Sync
    * grün bliebe, wenn nur die Regel verschwände. */
   if (reminderIsInThePast(remindAt, now)) {
-    if (!clampToNextMorning) {
-      // Ohne Handlung im Rücken bleibt eine bestehende Zeile, wie sie ist -
-      // ergänzt wird hier nichts.
-      if (!existing) drop();
-      return;
-    }
-    if (item.expires_on < todayKey(database, now)) {
-      // Schon abgelaufen: eine Vorwarnung auf etwas, das die Frist bereits
-      // gerissen hat, ist keine Warnung mehr. Das sagt der Chip "abgelaufen".
+    // Ohne Handlung im Rücken bleibt eine bestehende Zeile, wie sie ist -
+    // ergänzt wird hier nichts. (Ein `drop()` stand hier und war wirkungslos:
+    // es löscht über denselben Schlüssel, mit dem `existing` gelesen wurde.)
+    if (!clampToNextMorning) return;
+    const soonest = nextMorning(now);
+
+    // DER GEKLEMMTE TAG MUSS NOCH VOR DEM ABLAUF LIEGEN. Ein Vergleich gegen
+    // "heute" reichte dafür nicht: `nextMorning()` klemmt auf MORGEN, sobald
+    // die Uhr an 09:00 vorbei ist. Ein Artikel, der heute abläuft und um 11:00
+    // eingetragen wird, hätte seine "Vorwarnung" damit einen Tag NACH dem
+    // Ablauf bekommen - und um 08:00 eingetragen wäre dasselbe MHD korrekt
+    // gemeldet worden. Ein Verhalten, das an der Tageszeit haengt, ist keines.
+    if (soonest.slice(0, 10) > item.expires_on) {
       drop();
       return;
     }
-
-    const soonest = nextMorning(now);
 
     /* GEGEN DEN GEKLEMMTEN WERT VERGLEICHEN, NICHT GEGEN DEN ROHEN.
      *
@@ -237,6 +239,18 @@ function creatorLacksPantry(database, userId, denied = null) {
   return resolvePermissions(database, user).modules.pantry === 'none';
 }
 
+/**
+ * Der Zugriffs-Kontext in einem Rutsch, für Aufrufer, die die Frage für viele
+ * Zeilen stellen (Voll-Sync, Einkaufs-Import). Ohne ihn beantwortet
+ * syncPantryExpiryReminder() sie je Artikel neu - was für einen einzelnen
+ * Schreibvorgang richtig ist und für vierzig Importzeilen vierzig identische
+ * Abfragen wären.
+ */
+export function resolvePantryAccess(database) {
+  const disabled = pantryDisabled(database);
+  return { disabled, denied: disabled ? new Set() : usersWithoutPantry(database) };
+}
+
 export function usersWithoutPantry(database) {
   const users = database.prepare('SELECT id, role, family_role FROM users').all();
   const denied = new Set();
@@ -280,6 +294,10 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
     return;
   }
   const denied = usersWithoutPantry(database);
+  // Der Zugriffs-Kontext EINMAL je Lauf: die haushaltweite Abschaltung steht
+  // zwei Zeilen weiter oben schon fest, und ohne sie hier durchzureichen fragte
+  // jeder einzelne Artikel dieselbe sync_config-Zeile erneut ab.
+  const access = { disabled: false, denied };
   // Die Empfänger-Achse gehört IN die Bedingung, nicht hinter sie: sonst
   // filterte sie nur, was neu entsteht, und eine Meldung überlebte den Entzug
   // ihrer Grundlage. Der haushaltweite Zweig oben räumt ab - diese Achse muss
@@ -326,7 +344,7 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
       AND id NOT IN (SELECT entity_id FROM reminders WHERE entity_type = 'pantry_item')
   `).all(...deniedList, `-${EXPIRY_REMINDER_OFFSET_DAYS} days`, iso(now).slice(0, 10));
 
-  for (const item of missing) syncPantryExpiryReminder(database, item, now, denied);
+  for (const item of missing) syncPantryExpiryReminder(database, item, now, access);
 
   // UND EINEN VERALTETEN TERMIN GERADEZIEHEN, aber nur einen, der noch nichts
   // getan hat. Ein Wiederherstellen aus dem Backup oder ein Eingriff von Hand
@@ -352,6 +370,7 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
   `).all(`-${EXPIRY_REMINDER_OFFSET_DAYS} days`, REMINDER_TIME_SUFFIX);
 
   const retime = database.prepare('UPDATE reminders SET remind_at = ? WHERE id = ?');
+  const discard = database.prepare('DELETE FROM reminders WHERE id = ?');
   for (const row of stale) {
     let target;
     try {
@@ -364,14 +383,30 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
     // Die SQL-Bedingung hat das schon ausgeschlossen; der Vergleich bleibt als
     // Rückfallebene, falls SQLite und JS das Datum je verschieden formen.
     if (target === row.remind_at) continue;
-    // NIE AUF EINEN VERSTRICHENEN ZEITPUNKT. Dieselbe Regel, mit der
-    // syncPantryExpiryReminder() eine solche Zeile gar nicht erst anlegt - hier
-    // wiegt sie schwerer: die due-Abfrage kommt im selben Durchgang direkt
-    // danach, die Meldung ginge also sofort raus. Und ein spaeter erhoehter
-    // Vorlauf wuerde beim ersten Lauf nach dem Update JEDE offene
-    // Vorrats-Erinnerung auf einmal ausloesen. Die alte Zeile bleibt dann
-    // stehen; der Router zieht sie gerade, sobald jemand den Artikel anfasst.
-    if (reminderIsInThePast(target, now)) continue;
+
+    /* NIE AUF EINEN VERSTRICHENEN ZEITPUNKT: die due-Abfrage kommt im selben
+     * Durchgang direkt danach, die Meldung ginge also sofort raus. Und ein
+     * spaeter erhoehter Vorlauf wuerde beim ersten Lauf nach dem Update jede
+     * offene Vorrats-Erinnerung auf einmal ausloesen.
+     *
+     * STEHENLASSEN IST TROTZDEM FALSCH, und das war der Fehler hier: die Zeile
+     * ist ja nicht zufaellig anders, sie ist NACHWEISLICH ueberholt. Gemessen:
+     * MHD am Router vorbei von Oktober auf September gezogen, `remind_at` blieb
+     * auf dem Oktobertermin - die Vorwarnung waere drei Wochen NACH dem Ablauf
+     * gekommen. Das ist keine Vorwarnung mehr.
+     *
+     * Also dieselbe Behandlung wie im Router, mit derselben Begruendung: so
+     * frueh wie moeglich, solange das noch vor dem Ablauf liegt, und weg, wenn
+     * nicht. Das ist keine Nachholung - die Zeile existiert bereits, korrigiert
+     * wird nur ihr Zeitpunkt. Und sie ist nach der WHERE-Klausel weder
+     * zugestellt noch weggewischt, ein Doppel-Push also ausgeschlossen. */
+    if (reminderIsInThePast(target, now)) {
+      const soonest = nextMorning(now);
+      if (soonest.slice(0, 10) > row.expires_on) { discard.run(row.id); continue; }
+      if (row.remind_at <= soonest) continue;
+      retime.run(soonest, row.id);
+      continue;
+    }
     retime.run(target, row.id);
   }
 }

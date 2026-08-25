@@ -18,7 +18,7 @@ import * as db from '../db.js';
 import { createLogger } from '../logger.js';
 import { str, oneOf, num, date, id as idParam, collectErrors, MAX_TITLE, MAX_TEXT, MAX_SHORT } from '../middleware/validate.js';
 import { normalizePantryUnit, normalizePantryQuantity } from '../../public/utils/pantry-units.js';
-import { syncPantryExpiryReminder, usersWithoutPantry } from '../services/pantry-reminders.js';
+import { syncPantryExpiryReminder, resolvePantryAccess } from '../services/pantry-reminders.js';
 
 const log = createLogger('Pantry');
 const router = express.Router();
@@ -48,12 +48,12 @@ function getItem(itemId) {
  * Artikel meldet, steht dort - sie wird auch vom Push-Lauf gebraucht, der den
  * ganzen Bestand nachzieht, und darf deshalb nicht im Router wohnen.
  */
-function syncReminder(item, denied = null) {
+function syncReminder(item, access = null) {
   // `clampToNextMorning`: auf DIESEM Weg hat gerade jemand gehandelt. Ein
   // frisch gekaufter Joghurt mit fünf Tagen MHD bekäme sonst nie eine Meldung,
   // weil sein Vorlauf schon verstrichen ist - die Begründung steht am
   // Vergangenheits-Riegel in server/services/pantry-reminders.js.
-  syncPantryExpiryReminder(db.get(), item, new Date(), denied, { clampToNextMorning: true });
+  syncPantryExpiryReminder(db.get(), item, new Date(), access, { clampToNextMorning: true });
 }
 
 /**
@@ -330,7 +330,7 @@ router.post('/import-shopping', (req, res) => {
     // Schleife laeuft synchron in einer Transaktion, und bei vierzig Eintraegen
     // und vier Mitgliedern waeren das ein paar hundert Abfragen, die alle
     // dieselbe Antwort geben.
-    const denied = usersWithoutPantry(db.get());
+    const access = resolvePantryAccess(db.get());
 
     const result = db.get().transaction(() => {
       const findMatch = db.get().prepare(`
@@ -381,11 +381,11 @@ router.post('/import-shopping', (req, res) => {
           bump.run(normalizePantryQuantity(Number(match.quantity) + quantity, { fallback: quantity }), match.id);
           // Eine aufgefüllte Charge kann von Menge 0 zurückkommen - dann ist die
           // Erinnerung wieder fällig, die das Ausbuchen abgeräumt hat.
-          syncReminder(getItem(match.id), denied);
+          syncReminder(getItem(match.id), access);
           merged += 1;
         } else {
           const inserted = insert.run(source.name, quantity, unit, locationId, category, expiresOn, userId);
-          syncReminder(getItem(inserted.lastInsertRowid), denied);
+          syncReminder(getItem(inserted.lastInsertRowid), access);
           added += 1;
         }
       }
