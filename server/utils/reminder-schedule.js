@@ -20,6 +20,13 @@
 /** Feste Tageszeit der Ankündigung. Eine Frist hat keine Uhrzeit - die Meldung braucht eine. */
 const REMINDER_TIME = '09:00';
 
+/**
+ * Dieselbe Tageszeit als anhängbares Suffix, für Aufrufer, die den Termin in
+ * SQL bilden (`date(x, '-7 days') || ?`). Exportiert statt dort getippt: eine
+ * Uhrzeit, die an zwei Stellen steht, ist zwei Uhrzeiten.
+ */
+export const REMINDER_TIME_SUFFIX = `T${REMINDER_TIME}`;
+
 function dateKey(date) {
   return [
     date.getUTCFullYear(),

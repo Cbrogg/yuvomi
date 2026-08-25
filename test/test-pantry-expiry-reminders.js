@@ -131,12 +131,60 @@ test('POST ohne MHD legt keine Erinnerung an - das Datum ist der Schalter', asyn
   assert.equal(countReminders(res.body.data.id), 0);
 });
 
-test('ein MHD, dessen Vorlauf schon verstrichen ist, meldet nicht nachträglich', async () => {
-  // Morgen ablaufend: der Termin (7 Tage davor) liegt hinter uns.
-  const res = await call('POST', '/pantry', { body: { name: 'Milch', quantity: 1, expires_on: dateKeyInDays(1) } });
+test('frisch gekaufte Ware mit kurzem MHD meldet am naechsten Morgen', async () => {
+  // Der HAUPTFALL dieses Moduls: Milch, Joghurt, Salat haben beim Einkauf fast
+  // immer weniger als sieben Tage MHD, ihr Vorlauf liegt also schon hinter uns.
+  // Die Inventar-Regel haette sie ersatzlos verworfen - der Chip faerbte sich
+  // gelb und die Meldung kam fuer genau diese Artikel nie.
+  const res = await call('POST', '/pantry', { body: { name: 'Milch', quantity: 1, expires_on: dateKeyInDays(3) } });
+  assert.equal(res.status, 201);
+
+  const reminder = reminderFor(res.body.data.id);
+  assert.ok(reminder, 'ohne die Klemmung bliebe Frischware dauerhaft stumm');
+
+  // Geklemmt auf den naechsten 09:00, nicht auf "sofort": eine Ablaufwarnung
+  // ist eine Morgenfrage, kein Alarm eine Minute nach dem Eintippen.
+  assert.match(reminder.remind_at, /T09:00$/);
+  assert.ok(!reminderIsPast(reminder.remind_at), 'ein geklemmter Termin steht bevor');
+  assert.ok(reminder.remind_at <= `${dateKeyInDays(1)}T09:00`, 'hoechstens der morgige Morgen');
+});
+
+test('ein bereits abgelaufener Artikel bekommt keine Vorwarnung mehr', async () => {
+  const res = await call('POST', '/pantry', { body: { name: 'Alte Milch', quantity: 1, expires_on: dateKeyInDays(-2) } });
   assert.equal(res.status, 201);
   assert.equal(countReminders(res.body.data.id), 0,
-    'sonst meldet der nächste Push-Lauf sofort, was der Nutzer gerade eingetragen hat');
+    'eine Vorwarnung auf etwas, das die Frist gerissen hat, ist keine Warnung - das sagt der Chip "abgelaufen"');
+});
+
+test('der Voll-Sync holt einen verstrichenen Vorlauf NICHT nach', () => {
+  // Die Gegenseite der Klemmung: der Lauf weiss nicht, dass jemand gehandelt
+  // hat. Holte er nach, bekaeme ein Haushalt am ersten Morgen nach dem Update
+  // jede bald ablaufende Zeile seines Bestands auf einmal.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Feta', 1, 'pkg', 'Sonstiges', ?, ?)"
+  ).run(dateKeyInDays(3), A).lastInsertRowid;
+
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 0);
+});
+
+test('ohne die Handlungs-Option klemmt gar nichts', () => {
+  // ZWEI SCHICHTEN, EINZELN GEPRUEFT. Der Test darueber faellt schon am
+  // SQL-Grobschnitt der missing-Abfrage - er wuerde gruen bleiben, wenn die
+  // Regel selbst verschwaende. Dieser Aufruf geht direkt an die Funktion und
+  // trifft deshalb die Zeile, um die es geht: ohne `clampToNextMorning` bleibt
+  // ein verstrichener Vorlauf ersatzlos, so wie im Inventar.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Halloumi', 1, 'pkg', 'Sonstiges', ?, ?)"
+  ).run(dateKeyInDays(3), A).lastInsertRowid;
+
+  syncPantryExpiryReminder(db, db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id));
+  assert.equal(countReminders(id), 0);
+
+  // Und mit der Option entsteht sie - dieselbe Zeile, dieselbe Lage.
+  syncPantryExpiryReminder(db, db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id),
+    new Date(), null, { clampToNextMorning: true });
+  assert.equal(countReminders(id), 1);
 });
 
 test('Menge 0 bekommt keine Erinnerung, das Auffüllen holt sie zurück', async () => {

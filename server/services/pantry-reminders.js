@@ -18,8 +18,9 @@
  * Wiederherstellen aus dem Backup oder ein Eingriff von Hand den Bestand ändert.
  */
 
-import { reminderDateBefore, reminderIsInThePast } from '../utils/reminder-schedule.js';
+import { reminderDateBefore, reminderIsInThePast, REMINDER_TIME_SUFFIX } from '../utils/reminder-schedule.js';
 import { resolvePermissions } from '../permissions.js';
+import { todayKey } from '../utils/timezone.js';
 import { createLogger } from '../logger.js';
 
 const log = createLogger('PantryReminders');
@@ -74,7 +75,7 @@ export const EXPIRY_REMINDER_OFFSET_DAYS = 7;
  * @param {object} item - Zeile aus `pantry_items`
  * @param {Date} [now]
  */
-export function syncPantryExpiryReminder(database, item, now = new Date(), denied = null) {
+export function syncPantryExpiryReminder(database, item, now = new Date(), denied = null, { clampToNextMorning = false } = {}) {
   const drop = () => database.prepare(`
     DELETE FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?
   `).run(item.id);
@@ -92,8 +93,7 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), denie
   //
   // `denied` ist der Batch-Weg: der Voll-Sync löst die Rechte einmal je Lauf
   // auf statt einmal je Glas. Ohne das Set fragt diese Funktion selbst.
-  const blocked = denied ?? usersWithoutPantry(database);
-  if (pantryDisabled(database) || blocked.has(item.created_by)) {
+  if (pantryDisabled(database) || creatorLacksPantry(database, item.created_by, denied)) {
     drop();
     return;
   }
@@ -127,14 +127,57 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), denie
   if (existing?.remind_at === remindAt) return;
 
   drop();
-  // Ein verstrichener Termin wird nicht angelegt: sonst meldete der nächste
-  // Lauf sofort, was gerade erst eingetragen wurde.
-  if (reminderIsInThePast(remindAt, now)) return;
+
+  /* FRISCHWARE IST HIER DER HAUPTFALL, NICHT DER AUSREISSER.
+   *
+   * Das Inventar verwirft einen verstrichenen Termin ersatzlos, und dort ist
+   * das richtig: er entsteht nur bei einem zurückdatierten Altgerät. Dieselbe
+   * Regel im Vorrat kehrt ihre Wirkung um - Milch, Joghurt und Salat haben beim
+   * Einkauf fast immer weniger als sieben Tage MHD. Der Chip färbte sich gelb,
+   * und die Meldung, für die dieses Feature gebaut ist, kam für genau diese
+   * Artikel nie.
+   *
+   * Der Termin wird deshalb GEKLEMMT statt verworfen: auf den nächsten 09:00,
+   * die ohnehin die Tageszeit jeder Ablaufmeldung sind. Eine Ablaufwarnung ist
+   * eine Morgenfrage ("was muss heute weg"), kein Sofortalarm - ohne die
+   * Klemmung stünde die Meldung eine Minute nach dem Eintippen im Toast.
+   *
+   * ABER NUR AUF DIESEM WEG. Der Voll-Sync setzt die Option nicht: er holt
+   * keine verstrichenen Vorläufe nach, weil er nicht weiss, dass gerade jemand
+   * gehandelt hat. Sonst bekäme ein Haushalt am ersten Morgen nach dem Update
+   * jede bald ablaufende Zeile seines Bestands auf einmal - dreissig Meldungen,
+   * für die niemand etwas getan hat. Dieselbe Trennung wie bei "ersetzen vs.
+   * ergänzen": der Router weiss um die Handlung, der Lauf nicht.
+   *
+   * Der SQL-Grobschnitt der missing-Abfrage siebt diese Zeilen ohnehin schon
+   * aus, bevor sie hier ankommen - dieser Zweig ist die Regel, jener ist die
+   * Ersparnis. Beide werden einzeln geprüft, weil ein Test gegen den Voll-Sync
+   * grün bliebe, wenn nur die Regel verschwände.*/
+  if (reminderIsInThePast(remindAt, now)) {
+    if (!clampToNextMorning) return;
+
+    // Schon abgelaufen: eine Vorwarnung auf etwas, das die Frist bereits
+    // gerissen hat, ist keine Warnung mehr. Das sagt der Chip "abgelaufen".
+    if (item.expires_on < todayKey(database, now)) return;
+
+    remindAt = nextMorning(now);
+  }
 
   database.prepare(`
     INSERT INTO reminders (entity_type, entity_id, remind_at, created_by)
     VALUES ('pantry_item', ?, ?, ?)
   `).run(item.id, remindAt, item.created_by);
+}
+
+/**
+ * Der nächste 09:00, der noch bevorsteht - heute, wenn die Uhr ihn noch nicht
+ * passiert hat, sonst morgen. In naiv-UTC wie jeder `remind_at`.
+ */
+function nextMorning(now) {
+  const target = new Date(now);
+  target.setUTCHours(9, 0, 0, 0);
+  if (target.getTime() <= now.getTime()) target.setUTCDate(target.getUTCDate() + 1);
+  return `${target.toISOString().slice(0, 10)}${REMINDER_TIME_SUFFIX}`;
 }
 
 /**
@@ -160,6 +203,20 @@ function pantryDisabled(database) {
  * getCountdowns(). Einmal je Lauf aufgelöst statt einmal je Artikel: ein
  * Haushalt hat eine Handvoll Mitglieder und womöglich hunderte Gläser.
  */
+/**
+ * Fehlt AUSGERECHNET DIESEM Empfänger der Vorrat? Der Einzelweg fragte über
+ * usersWithoutPantry() die Rechte aller Mitglieder auf, um eine einzige Antwort
+ * zu bekommen - in einem Sechs-Personen-Haushalt ein Dutzend Abfragen je Tap
+ * auf den ±-Stepper. `denied` ist weiterhin der Batch-Weg für den Voll-Sync und
+ * den Einkaufs-Import, die die Frage ohnehin für viele Zeilen stellen.
+ */
+function creatorLacksPantry(database, userId, denied = null) {
+  if (denied) return denied.has(userId);
+  const user = database.prepare('SELECT id, role, family_role FROM users WHERE id = ?').get(userId);
+  if (!user) return true;
+  return resolvePermissions(database, user).modules.pantry === 'none';
+}
+
 export function usersWithoutPantry(database) {
   const users = database.prepare('SELECT id, role, family_role FROM users').all();
   const denied = new Set();
@@ -260,11 +317,19 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
   // `pushed_at IS NULL AND dismissed = 0` ist die Grenze: was zugestellt oder
   // weggewischt wurde, bleibt liegen. Es zu ersetzen hiesse, dieselbe Meldung
   // ein zweites Mal zu schicken oder ein Wegwischen zu widerrufen.
+  // DER VERGLEICH STEHT IN SQL, aus demselben Grund wie der Grobschnitt oben:
+  // sonst läse dieser Block minütlich jede offene Zeile und rechnete jedes
+  // Datum in JS nach, um fast immer nichts zu tun - bei dreihundert Artikeln
+  // eine knappe halbe Million Leerdurchläufe am Tag. Der Soll-Termin lässt sich
+  // in SQL genauso bilden wie in reminderDateBefore(): Datum minus Vorlauf,
+  // Tageszeit angehängt. Beide Bausteine kommen gebunden aus JS, damit weder
+  // die Zahl noch die Uhrzeit ein zweites Mal im Baum steht.
   const stale = database.prepare(`
     SELECT r.id, r.remind_at, p.expires_on
     FROM reminders r JOIN pantry_items p ON p.id = r.entity_id
     WHERE r.entity_type = 'pantry_item' AND r.pushed_at IS NULL AND r.dismissed = 0
-  `).all();
+      AND date(p.expires_on, ?) || ? <> r.remind_at
+  `).all(`-${EXPIRY_REMINDER_OFFSET_DAYS} days`, REMINDER_TIME_SUFFIX);
 
   const retime = database.prepare('UPDATE reminders SET remind_at = ? WHERE id = ?');
   for (const row of stale) {
@@ -276,6 +341,8 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
       // beiden Abfragen geändert wurde. Der nächste Lauf räumt sie ab.
       continue;
     }
+    // Die SQL-Bedingung hat das schon ausgeschlossen; der Vergleich bleibt als
+    // Rückfallebene, falls SQLite und JS das Datum je verschieden formen.
     if (target === row.remind_at) continue;
     // NIE AUF EINEN VERSTRICHENEN ZEITPUNKT. Dieselbe Regel, mit der
     // syncPantryExpiryReminder() eine solche Zeile gar nicht erst anlegt - hier

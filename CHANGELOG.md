@@ -40,8 +40,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   schon zugestellt oder weggewischt wurde, lässt er in Ruhe: sonst käme dieselbe Meldung bei jedem
   Durchgang wieder.
 
-  Ein nachgetragener Artikel, dessen Vorlauf schon verstrichen ist, meldet nichts - sonst käme die
-  Nachricht im nächsten Durchlauf sofort für etwas, das man gerade selbst eingetragen hat.
+  **Frisch gekaufte Ware ist hier der Hauptfall, nicht der Ausreisser.** Milch, Joghurt und Salat
+  haben beim Einkauf fast immer weniger als sieben Tage - ihr Vorlauf liegt beim Eintragen schon
+  hinter uns. Die Regel aus dem Inventar hätte sie ersatzlos verworfen: der Chip färbte sich gelb,
+  und die Meldung, für die dieses Feature gebaut ist, wäre für genau diese Artikel nie gekommen.
+  Beim Eintragen wird der Termin deshalb auf den nächsten Morgen gezogen statt fallengelassen - eine
+  Ablaufwarnung ist eine Morgenfrage ("was muss heute weg"), kein Alarm eine Minute nach dem
+  Eintippen. Was die Frist schon gerissen hat, meldet nicht mehr; das sagt der Chip "abgelaufen".
+
+  Der Nachlauf über den Bestand zieht dagegen nichts nach vorne: sonst käme am ersten Morgen nach
+  dem Update jede bald ablaufende Zeile des Vorrats auf einmal, für die niemand etwas getan hat.
 
 ### Fixed
 

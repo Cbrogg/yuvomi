@@ -49,7 +49,11 @@ function getItem(itemId) {
  * ganzen Bestand nachzieht, und darf deshalb nicht im Router wohnen.
  */
 function syncReminder(item, denied = null) {
-  syncPantryExpiryReminder(db.get(), item, new Date(), denied);
+  // `clampToNextMorning`: auf DIESEM Weg hat gerade jemand gehandelt. Ein
+  // frisch gekaufter Joghurt mit fünf Tagen MHD bekäme sonst nie eine Meldung,
+  // weil sein Vorlauf schon verstrichen ist - die Begründung steht am
+  // Vergangenheits-Riegel in server/services/pantry-reminders.js.
+  syncPantryExpiryReminder(db.get(), item, new Date(), denied, { clampToNextMorning: true });
 }
 
 /**
