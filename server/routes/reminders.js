@@ -304,11 +304,16 @@ router.delete('/:id', (req, res) => {
     }
 
     const reminder = db.get().prepare(
-      'SELECT id FROM reminders WHERE id = ? AND created_by = ?'
+      'SELECT id, entity_type FROM reminders WHERE id = ? AND created_by = ?'
     ).get(reminderId, userId);
 
     if (!reminder) {
       return res.status(404).json({ error: 'Erinnerung nicht gefunden.', code: 404 });
+    }
+    // Dieselbe Sperre wie beim Filter-Weg daneben: ohne sie bliebe eine
+    // Hintertuer mit exakt derselben folgenlosen Wirkung.
+    if (DERIVED_ENTITY_TYPES.includes(reminder.entity_type)) {
+      return res.status(400).json({ error: derivedTypeError(reminder.entity_type), code: 400 });
     }
 
     db.get().prepare('DELETE FROM reminders WHERE id = ?').run(reminderId);
@@ -332,6 +337,15 @@ router.delete('/', (req, res) => {
 
     if (!VALID_ENTITY_TYPES.includes(entityType) || !entityId) {
       return res.status(400).json({ error: 'entity_type und entity_id sind erforderlich.', code: 400 });
+    }
+    // AUCH HIER, aus demselben Grund wie bei POST und PUT - und mit derselben
+    // Wirkungslosigkeit: die geloeschte Zeile legt der naechste Modul-Sync
+    // wieder an, beim Vorrat binnen einer Minute und mit zurueckgesetztem
+    // `pushed_at`, also als frische Meldung. Wer eine abgeleitete Erinnerung
+    // loswerden will, verwirft sie (PATCH /:id/dismiss): das haelt, weil die
+    // Zeile bestehen bleibt.
+    if (DERIVED_ENTITY_TYPES.includes(entityType)) {
+      return res.status(400).json({ error: derivedTypeError(entityType), code: 400 });
     }
 
     db.get().prepare(`

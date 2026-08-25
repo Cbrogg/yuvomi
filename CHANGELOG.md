@@ -54,13 +54,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Changed
 
-- **Eine abgeleitete Erinnerung lässt sich nicht mehr von Hand setzen.** `POST` und `PUT` auf
-  `/api/v1/reminders` antworten für `subscription`, `inventory_item`, `inventory_tracked_date` und
-  `pantry_item` mit 400 statt sie anzunehmen. Der Grund ist, dass sie nie gehalten haben: das
-  jeweilige Modul stellt die Erinnerung bei jedem Schreibvorgang neu her, ein eigener Termin war
-  also spätestens beim nächsten Speichern weg - beim Vorrat binnen einer Minute, ohne dass irgendwo
-  gestanden hätte, warum. Ein ehrliches 400 sagt es sofort. Lesen und Verwerfen bleiben für alle
-  Herkünfte möglich; die Oberfläche setzt ohnehin nur Aufgaben- und Termin-Erinnerungen.
+- **Eine abgeleitete Erinnerung lässt sich nicht mehr von Hand setzen oder löschen.** `POST`, `PUT`
+  und beide `DELETE`-Wege auf `/api/v1/reminders` antworten für `subscription`, `inventory_item`,
+  `inventory_tracked_date` und `pantry_item` mit 400 statt sie anzunehmen. Der Grund ist, dass sie
+  nie gehalten haben: das jeweilige Modul stellt die Erinnerung bei jedem Schreibvorgang neu her,
+  ein eigener Termin war also spätestens beim nächsten Speichern weg und eine gelöschte Zeile
+  wieder da - beim Vorrat binnen einer Minute, ohne dass irgendwo gestanden hätte, warum. Ein
+  ehrliches 400 sagt es sofort. **Verwerfen** (`PATCH /:id/dismiss`) bleibt für alle Herkünfte der
+  Weg, der hält, weil die Zeile dabei bestehen bleibt; die Oberfläche benutzt ihn ohnehin und setzt
+  selbst nur Aufgaben- und Termin-Erinnerungen.
 
 - **Der Vorlauf einer Erinnerung wird nur noch an einer Stelle gerechnet.** Dieselben vier Zeilen
   ("N Tage vor diesem Datum, morgens, ohne Zeitzonen-Suffix") standen zweimal im Baum - einmal für

@@ -1312,18 +1312,25 @@ Planned/estimated budget (Budget → Plan). A **steady monthly plan**: one amoun
 
 ### Reminders
 
-Per-user reminders attached to tasks, calendar events, subscriptions, or inventory items.
+Per-user reminders attached to tasks, calendar events, subscriptions, inventory items, inventory tracked dates, or pantry items.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
 | entity_type | TEXT | `task`, `event`, `subscription`, `inventory_item`, `inventory_tracked_date`, or `pantry_item`, NOT NULL |
-
-Nur `task` und `event` werden über `POST`/`PUT /api/v1/reminders` gesetzt. Die vier übrigen sind **abgeleitet**: ihr Modul stellt die Erinnerung bei jedem Schreibvorgang neu her (Abo-Termin, Garantieende, Inventar-Frist, Mindesthaltbarkeit), beim Vorrat zusätzlich in jedem Benachrichtigungslauf. Ein von Hand gesetzter Termin überlebt das nicht, deshalb antworten beide Schreibwege dafür mit 400. Lesen und Verwerfen bleiben für alle sechs möglich - der Erinnerungs-Toast muss auch eine abgeleitete Meldung anzeigen und wegwischen können.
 | entity_id | INTEGER | Entity identifier, NOT NULL |
 | remind_at | TEXT | ISO 8601 datetime, NOT NULL |
 | dismissed | INTEGER | 0/1, default 0 |
 | pushed_at | TEXT | ISO 8601 datetime, nullable — set once all active notification targets have been sent, skipped, or exhausted, so the reminder is not processed indefinitely |
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+
+Nur `task` und `event` werden über `POST`/`PUT /api/v1/reminders` gesetzt oder darüber gelöscht. Die
+vier übrigen sind **abgeleitet**: ihr Modul stellt die Erinnerung bei jedem Schreibvorgang neu her
+(Abo-Termin, Garantieende, Inventar-Frist, Mindesthaltbarkeit), beim Vorrat zusätzlich in jedem
+Benachrichtigungslauf. Ein von Hand gesetzter oder gelöschter Termin überlebt das nicht, deshalb
+antworten `POST`, `PUT` und beide `DELETE`-Wege dafür mit 400. Lesen und **Verwerfen**
+(`PATCH /:id/dismiss`) bleiben für alle sechs möglich - der Erinnerungs-Toast muss auch eine
+abgeleitete Meldung anzeigen und wegwischen können, und ein Verwerfen hält, weil die Zeile
+bestehen bleibt.
 
 Calendar events support **multiple reminders** (e.g. "15 minutes before" *and* "1 day before").
 Each reminder is an independent row and is delivered separately by the notification scheduler.

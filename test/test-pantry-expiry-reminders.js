@@ -531,3 +531,64 @@ test('ein Schreibvorgang ohne Terminwirkung laesst eine offene Meldung stehen', 
   assert.equal(after.id, before.id);
   assert.equal(after.pushed_at, '2026-08-01T09:00:00Z');
 });
+
+test('ein Rechteentzug raeumt die bestehende Meldung ab, nicht nur die kuenftige', () => {
+  const user = db.prepare(
+    "INSERT INTO users (username, display_name, password_hash, role, family_role) VALUES ('entzug','Entzug','x','member','child')"
+  ).run().lastInsertRowid;
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Couscous', 1, 'pkg', 'Sonstiges', ?, ?)"
+  ).run(FUTURE_EXPIRY, user).lastInsertRowid;
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 1);
+
+  db.prepare("INSERT INTO access_permissions (subject_type, subject_id, resource_type, resource_key, access) VALUES ('user', ?, 'module', 'pantry', 'none')")
+    .run(String(user));
+  syncAllPantryExpiryReminders(db);
+
+  // Der Entzug filterte zuerst nur, was NEU entsteht - die bestehende Zeile
+  // ueberlebte ihn und meldete weiter fuer ein Modul, das dieses Mitglied nicht
+  // mehr oeffnen kann. Der haushaltweite Zweig raeumt ab; diese Achse muss
+  // dasselbe tun, sonst verhalten sich zwei Formen derselben Sperre verschieden.
+  assert.equal(countReminders(id), 0);
+});
+
+test('wer fuer ein anderes Mitglied speichert, legt ihm keine gesperrte Meldung an', () => {
+  const user = db.prepare(
+    "INSERT INTO users (username, display_name, password_hash, role, family_role) VALUES ('fremd','Fremd','x','member','child')"
+  ).run().lastInsertRowid;
+  db.prepare("INSERT INTO access_permissions (subject_type, subject_id, resource_type, resource_key, access) VALUES ('user', ?, 'module', 'pantry', 'none')")
+    .run(String(user));
+
+  // Der Vorrat kennt kein Eigentuemer-Gate: jeder darf jede Zeile aendern.
+  // created_by bleibt aber der urspruengliche Eintragende - und ihm gehoerte
+  // die Erinnerung, an der Rechtepruefung des Voll-Syncs vorbei.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Bulgur', 1, 'pkg', 'Sonstiges', ?, ?)"
+  ).run(FUTURE_EXPIRY, user).lastInsertRowid;
+
+  syncPantryExpiryReminder(db, db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id));
+  assert.equal(countReminders(id), 0, 'beide Ausloeser muessen dieselbe Rechtefrage stellen');
+});
+
+test('DELETE /reminders lehnt pantry_item ab - verwerfen ist der Weg, der haelt', async () => {
+  const item = await call('POST', '/pantry', { body: { name: 'Zaatar', quantity: 1, expires_on: FUTURE_EXPIRY } });
+  const id = item.body.data.id;
+  assert.equal(countReminders(id), 1);
+
+  const byFilter = await call('DELETE', `/reminders?entity_type=pantry_item&entity_id=${id}`);
+  assert.equal(byFilter.status, 400);
+  assert.equal(countReminders(id), 1);
+
+  // Und die Hintertuer ueber die ID hat dieselbe folgenlose Wirkung.
+  const byId = await call('DELETE', `/reminders/${reminderFor(id).id}`);
+  assert.equal(byId.status, 400);
+  assert.equal(countReminders(id), 1);
+
+  // Verwerfen dagegen haelt: die Zeile bleibt stehen, der Voll-Sync sieht sie
+  // und legt nichts nach.
+  const dismissed = await call('PATCH', `/reminders/${reminderFor(id).id}/dismiss`);
+  assert.equal(dismissed.status, 200);
+  syncAllPantryExpiryReminders(db);
+  assert.equal(reminderFor(id).dismissed, 1);
+});

@@ -74,12 +74,26 @@ export const EXPIRY_REMINDER_OFFSET_DAYS = 7;
  * @param {object} item - Zeile aus `pantry_items`
  * @param {Date} [now]
  */
-export function syncPantryExpiryReminder(database, item, now = new Date()) {
+export function syncPantryExpiryReminder(database, item, now = new Date(), denied = null) {
   const drop = () => database.prepare(`
     DELETE FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?
   `).run(item.id);
 
   if (!item.expires_on || !item.created_by || Number(item.quantity) <= 0) {
+    drop();
+    return;
+  }
+
+  // DIE RECHTEFRAGE STEHT HIER, nicht nur im Voll-Sync. Sie stand dort zuerst,
+  // und das war zu wenig an zwei Enden: eine bestehende Meldung überlebte den
+  // Entzug, und wer einen Artikel speichert, den ein anderes Mitglied angelegt
+  // hat, legte diesem eine neue an - an der Prüfung vorbei. Beide Auslöser
+  // fragen jetzt dieselbe Stelle.
+  //
+  // `denied` ist der Batch-Weg: der Voll-Sync löst die Rechte einmal je Lauf
+  // auf statt einmal je Glas. Ohne das Set fragt diese Funktion selbst.
+  const blocked = denied ?? usersWithoutPantry(database);
+  if (pantryDisabled(database) || blocked.has(item.created_by)) {
     drop();
     return;
   }
@@ -189,6 +203,13 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
     return;
   }
   const denied = usersWithoutPantry(database);
+  // Die Empfänger-Achse gehört IN die Bedingung, nicht hinter sie: sonst
+  // filterte sie nur, was neu entsteht, und eine Meldung überlebte den Entzug
+  // ihrer Grundlage. Der haushaltweite Zweig oben räumt ab - diese Achse muss
+  // dasselbe tun, sonst verhalten sich zwei Formen derselben Sperre verschieden.
+  const deniedList = [...denied];
+  const deniedPlaceholders = deniedList.map(() => '?').join(', ');
+  const NOT_DENIED = deniedList.length ? `AND created_by NOT IN (${deniedPlaceholders})` : '';
 
   // `date(x) = x` ist die kalendarische Prüfung in SQL: SQLite normalisiert ein
   // '2027-02-30' zu '2027-03-02' und liefert für '2026-13-01' NULL, beides
@@ -199,6 +220,7 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
   const QUALIFIES = `
     expires_on IS NOT NULL AND date(expires_on) = expires_on
     AND created_by IS NOT NULL AND quantity > 0
+    ${NOT_DENIED}
   `;
 
   // GEGENSTANDSLOSES ZUERST: der Artikel ist weg, verbraucht oder hat sein
@@ -208,7 +230,7 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
     DELETE FROM reminders
     WHERE entity_type = 'pantry_item'
       AND entity_id NOT IN (SELECT id FROM pantry_items WHERE ${QUALIFIES})
-  `).run();
+  `).run(...deniedList);
 
   // Fehlende ergänzen. Artikel mit bestehender Zeile stehen gar nicht erst in
   // der Ergebnismenge.
@@ -225,12 +247,9 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
     WHERE ${QUALIFIES}
       AND date(expires_on, ?) >= date(?)
       AND id NOT IN (SELECT entity_id FROM reminders WHERE entity_type = 'pantry_item')
-  `).all(`-${EXPIRY_REMINDER_OFFSET_DAYS} days`, iso(now).slice(0, 10));
+  `).all(...deniedList, `-${EXPIRY_REMINDER_OFFSET_DAYS} days`, iso(now).slice(0, 10));
 
-  for (const item of missing) {
-    if (denied.has(item.created_by)) continue;
-    syncPantryExpiryReminder(database, item, now);
-  }
+  for (const item of missing) syncPantryExpiryReminder(database, item, now, denied);
 
   // UND EINEN VERALTETEN TERMIN GERADEZIEHEN, aber nur einen, der noch nichts
   // getan hat. Ein Wiederherstellen aus dem Backup oder ein Eingriff von Hand
