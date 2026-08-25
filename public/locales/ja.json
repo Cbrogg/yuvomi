@@ -695,7 +695,6 @@
         "assignedLabel": "担当者",
         "assignedNobody": "- なし -",
         "colorLabel": "色",
-        "colorOverriddenByAssignee": "色は割り当てられたユーザーによって上書きされます",
         "descriptionLabel": "説明",
         "descriptionPlaceholder": "任意…",
         "deleteConfirm": "「{{title}}」を削除しますか？",

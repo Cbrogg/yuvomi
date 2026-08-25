@@ -695,7 +695,6 @@
         "assignedLabel": "Tilldelad till",
         "assignedNobody": "- Ingen -",
         "colorLabel": "Färg",
-        "colorOverriddenByAssignee": "Färgen åsidosätts av tilldelade användare",
         "descriptionLabel": "Beskrivning",
         "descriptionPlaceholder": "Frivillig…",
         "deleteConfirm": "Vill du verkligen ta bort \"{{title}}\"?",

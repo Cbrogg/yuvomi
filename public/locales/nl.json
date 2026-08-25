@@ -695,7 +695,6 @@
         "assignedLabel": "Toegewezen aan",
         "assignedNobody": "- Niemand -",
         "colorLabel": "Kleur",
-        "colorOverriddenByAssignee": "Kleur wordt overschreven door toegewezen gebruikers",
         "descriptionLabel": "Beschrijving",
         "descriptionPlaceholder": "Optioneel…",
         "deleteConfirm": "\"{{title}}\" echt verwijderen?",

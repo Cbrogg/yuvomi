@@ -695,7 +695,6 @@
         "assignedLabel": "Призначено",
         "assignedNobody": "- Нікому -",
         "colorLabel": "Колір",
-        "colorOverriddenByAssignee": "Колір замінюється призначеними користувачами",
         "descriptionLabel": "Опис",
         "descriptionPlaceholder": "Необов'язково…",
         "deleteConfirm": "Справді видалити «{{title}}»?",

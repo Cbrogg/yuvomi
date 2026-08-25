@@ -695,7 +695,6 @@
         "assignedLabel": "Atanan",
         "assignedNobody": "- Kimse -",
         "colorLabel": "Renk",
-        "colorOverriddenByAssignee": "Renk, atanan kullanıcılar tarafından geçersiz kılınır",
         "descriptionLabel": "Açıklama",
         "descriptionPlaceholder": "İsteğe bağlı…",
         "deleteConfirm": "\"{{title}}\" silinsin mi?",

@@ -3098,28 +3098,13 @@ function wireEventForm(panel, { mode, event = null, reminder = null }) {
   bindUserMultiSelect(panel, 'cal_assigned');
   wireVisibilityWarning(panel, '#modal-visibility', 'cal_assigned', '#modal-visibility-warning');
 
-  // Color-Picker ausgrauen wenn Assignees gesetzt sind (Avatar-Farbe hat Vorrang)
-  function syncColorPickerState() {
-    const hasAssignees = getSelectedUserIds(panel, 'cal_assigned').length > 0;
-    const group  = panel.querySelector('.js-color-picker-group');
-    const hint   = panel.querySelector('#color-picker-assignee-hint');
-    const picker = panel.querySelector('#event-color-picker');
-    if (group)  group.classList.toggle('color-picker--disabled', hasAssignees);
-    if (hint)   hint.hidden = !hasAssignees;
-    if (picker) {
-      picker.setAttribute('aria-disabled', hasAssignees ? 'true' : 'false');
-      picker.querySelectorAll('.color-swatch').forEach((s) => {
-        if (hasAssignees) {
-          s.setAttribute('tabindex', '-1');
-        } else {
-          s.setAttribute('tabindex', s.classList.contains('color-swatch--active') ? '0' : '-1');
-        }
-      });
-    }
-  }
-  const msWidget = panel.querySelector('.user-ms[data-ms-name="cal_assigned"]');
-  msWidget?.addEventListener('change', syncColorPickerState);
-  syncColorPickerState();
+  // Der Farbwaehler war ausgegraut, sobald jemand zugewiesen war, mit dem
+  // Hinweis, die Farbe der Person schlage sie ohnehin. Das galt bis v2.35.0.
+  // Seit #815 steht die Terminfarbe in resolveEventColor VORN, und weil
+  // calendar_events.color NOT NULL ist und auch den Leerstring ablehnt, ist sie
+  // immer gesetzt: die Zuweisung faerbt seither nie mehr. Die Sperre nahm dem
+  // Nutzer also eine Wahl ab, um ein Versprechen zu halten, das der Code nicht
+  // mehr gab. Wer der Termin ist, sagt weiterhin der Avatar-Stack daneben.
 
   const selectedColor = isEdit ? (event?.color || EVENT_COLORS[0]) : EVENT_COLORS[0];
 
@@ -3420,7 +3405,7 @@ function buildEventModalContent({ mode, event, date, reminder = null, time = nul
     && (!!event.description || hasAttachment(event));
 
   const advancedFieldsHtml = `
-    <div class="form-group js-color-picker-group">
+    <div class="form-group">
       <label class="form-label" id="event-color-label">${t('calendar.colorLabel')}</label>
       <div class="color-picker" id="event-color-picker" role="radiogroup" aria-labelledby="event-color-label">
         ${pickerColors(isEdit ? event : null).map((c, i) => `
@@ -3431,7 +3416,6 @@ function buildEventModalContent({ mode, event, date, reminder = null, time = nul
                aria-label="${esc(EVENT_COLOR_NAMES()[c] ?? t('calendar.colorCurrent'))}"></div>
         `).join('')}
       </div>
-      <p class="form-hint color-picker__assignee-hint" id="color-picker-assignee-hint" hidden>${t('calendar.colorOverriddenByAssignee')}</p>
     </div>
 
     <div class="form-group">

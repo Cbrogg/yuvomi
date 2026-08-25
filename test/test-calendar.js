@@ -812,6 +812,14 @@ test('die eigene Terminfarbe schlaegt die Farbe der zugewiesenen Person', () => 
   // Kalenderfarbe, die jeder Termin des Kalenders traegt und die deshalb nichts
   // ueber diesen einen aussagt. Ohne diese Haelfte waere der Test auch dann
   // gruen, wenn die Zuweisung gar nicht mehr faerbte.
+  //
+  // WORAUF SICH DIESE HAELFTE NICHT BERUFEN DARF: sie beschreibt die Funktion,
+  // nicht die App. `calendar_events.color` ist NOT NULL und lehnt auch den
+  // Leerstring ab - ein Termin AUS DER DATENBANK erreicht die beiden unteren
+  // Zweige also nie. Sie bleiben stehen, weil sie die Rangfolge vollstaendig
+  // halten (und wieder greifen, sollte die Spalte je eine "keine eigene Farbe"
+  // kennen), aber wer hier gruen sieht, hat keine Zusicherung ueber das, was ein
+  // Nutzer zu sehen bekommt.
   assert(resolveEventColor({ assigned_users: assignee, cal_color: '#0000FF' }) === '#FF0000',
     'ohne eigene Farbe muss die Zuweisung faerben');
   assert(resolveEventColor({ cal_color: '#0000FF' }) === '#0000FF',

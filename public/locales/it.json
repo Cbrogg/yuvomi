@@ -695,7 +695,6 @@
         "assignedLabel": "Assegnato a",
         "assignedNobody": "- Nessuno -",
         "colorLabel": "Colore",
-        "colorOverriddenByAssignee": "Il colore viene sostituito dagli utenti assegnati",
         "descriptionLabel": "Descrizione",
         "descriptionPlaceholder": "Opzionale…",
         "deleteConfirm": "Eliminare davvero \"{{title}}\"?",

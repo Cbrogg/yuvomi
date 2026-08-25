@@ -856,7 +856,6 @@
         "attachmentDocumentDescription": "Tệp đính kèm đã được tải lên cho sự kiện lịch \"{{title}}\".",
         "agendaEmpty": "Không có sự kiện nào trong phạm vi đã chọn",
         "taskChipAriaLabel": "Nhiệm vụ: {{title}}",
-        "colorOverriddenByAssignee": "Màu sắc bị ghi đè bởi người được giao",
         "toggleHolidays": "Ngày lễ",
         "toggleSchool": "Kỳ nghỉ học",
         "toggleBirthdays": "Sinh nhật",

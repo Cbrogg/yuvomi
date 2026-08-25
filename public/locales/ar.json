@@ -695,7 +695,6 @@
         "assignedLabel": "مسند إلى",
         "assignedNobody": "- لا أحد -",
         "colorLabel": "اللون",
-        "colorOverriddenByAssignee": "يتم تجاوز اللون بواسطة المستخدمين المعينين",
         "descriptionLabel": "الوصف",
         "descriptionPlaceholder": "اختياري…",
         "deleteConfirm": "هل تريد حذف \"{{title}}\"؟",

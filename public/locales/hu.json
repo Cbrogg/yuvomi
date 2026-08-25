@@ -695,7 +695,6 @@
         "assignedLabel": "Hozzárendelve",
         "assignedNobody": "- Senki -",
         "colorLabel": "Szín",
-        "colorOverriddenByAssignee": "A szín felülírva a hozzárendelt felhasználó(k) által",
         "descriptionLabel": "Leírás",
         "descriptionPlaceholder": "Opcionális…",
         "deleteConfirm": "Valóban törölni szeretné a(z) \"{{title}}\" eseményt?",
