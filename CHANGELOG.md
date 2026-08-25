@@ -7,6 +7,34 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The weather forecast was off by a day** (#851). The server already keeps the running day out of
+  `forecast` so it is not shown twice - but the display kept labelling `forecast[0]` "Today"
+  regardless. What stood there was tomorrow, so the row read as though a day were missing, and every
+  column after it named the wrong weekday. Both surfaces carried the same copied line: the card on a
+  phone and the wall-tablet view.
+
+  A forecast day is now named from **its own date**, never from its position. The reference is the
+  calendar day **at the weather location**, which the payload states explicitly - neither the
+  browser's zone nor the household zone can answer it, because a household may well watch the
+  weather somewhere else. Where that reference is missing, the day keeps its weekday: no label at
+  all beats a wrong one.
+
+  The legacy OpenWeatherMap branch bundled its three-hour steps into **UTC** days. That only held
+  near the prime meridian: far west of it the running day was dropped by the wrong key in the
+  evening and the forecast began at the day after tomorrow, far east of it a single UTC day fell
+  across two local days and blended their readings into a high and low that existed on neither. The
+  buckets are local days now, the symbol comes from whichever step is closest to **local** noon, and
+  only days after today enter the row.
+
+### Added
+
+- **Today's high and low on the weather card** (#851). The card carried a temperature span for every
+  forecast day and, for today, only the momentary reading - the one day you can actually still plan
+  around was the one without a range. It now sits under the current temperature in the same
+  vocabulary as the row below it, on the card and on the wall tablet.
+
 ## [2.40.0] - 2026-08-25
 
 ### Added
