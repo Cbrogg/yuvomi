@@ -292,22 +292,107 @@ test('OWM ohne timezone-Feld: der UTC-Tag bleibt die Bezugsgroesse', async () =>
   } finally { await close(); }
 });
 
-test('OWM: fehlt heute in der Vorhersage, bleibt das Hoch/Tief leer statt erfunden', async () => {
-  // `main.temp_min`/`temp_max` sind bei OWM die momentane Streuung ueber das
-  // Stadtgebiet, nicht die Tageswerte - fuer die meisten Orte identisch mit
-  // `temp`. Als Tagesspanne ausgegeben waeren das zwei gleiche Zahlen mit dem
-  // Anschein einer Auskunft. Der Bezugstag bleibt trotzdem stehen.
+test('OWM gibt NIE eine Tagesspanne aus - auch nicht, wenn heute in der Liste steht', async () => {
+  // Zwei Quellen kaemen in Frage und beide taugen nicht. Die Drei-Stunden-Liste
+  // beginnt beim naechsten Schritt: nachmittags fehlen ihrem heutigen Bucket die
+  // Morgenwerte, sein Maximum kann sogar unter der Ist-Temperatur liegen.
+  // `main.temp_min`/`temp_max` sind die momentane Streuung ueber das Stadtgebiet,
+  // fuer die meisten Orte identisch mit `temp`. Der Bezugstag steht trotzdem -
+  // an ihm benennt die Anzeige ihre Tage.
+  const today = new Date().toISOString().slice(0, 10);
   const tomorrow = new Date(Date.now() + 86400000).toISOString().slice(0, 10);
+
+  for (const [label, dates] of [['ohne heutigen Bucket', [tomorrow]], ['mit heutigem Bucket', [today, tomorrow]]]) {
+    const { baseUrl, close } = await startApp({
+      env: { OPENWEATHER_API_KEY: 'key123', OPENWEATHER_CITY: `Honolulu-${label}` },
+      fetchFn: OWM_TZ_FETCH(0, dates),
+    });
+    try {
+      const { body } = await getJson(baseUrl);
+      assert.equal(body.data.today.date, today, label);
+      assert.equal(body.data.today.temp_max, null, `${label}: keine erfundene Hoechsttemperatur`);
+      assert.equal(body.data.today.temp_min, null, `${label}: keine erfundene Tiefsttemperatur`);
+      assert.equal(body.data.forecast[0].date, tomorrow, label);
+    } finally { await close(); }
+  }
+});
+
+test('Open-Meteo behaelt sein Hoch/Tief - dort sind es echte Tagesaggregate', async () => {
   const { baseUrl, close } = await startApp({
-    env: { OPENWEATHER_API_KEY: 'key123', OPENWEATHER_CITY: 'Honolulu' },
-    fetchFn: OWM_TZ_FETCH(0, [tomorrow]),
+    env: { WEATHER_LAT: '52.52', WEATHER_LON: '13.41' },
+    fetchFn: OM_FETCH,
   });
   try {
     const { body } = await getJson(baseUrl);
-    assert.equal(body.data.today.date, new Date().toISOString().slice(0, 10));
-    assert.equal(body.data.today.temp_max, null);
-    assert.equal(body.data.today.temp_min, null);
-    assert.equal(body.data.forecast[0].date, tomorrow);
+    assert.equal(body.data.today.temp_max, 22);
+    assert.equal(body.data.today.temp_min, 14);
+  } finally { await close(); }
+});
+
+test('der Cache haelt nicht ueber die Ortsmitternacht hinweg', async () => {
+  // Eine kurz vor Mitternacht abgelegte Antwort haette sonst bis zu eine halbe
+  // Stunde danach `today.date` auf gestern stehen - der erste Vorhersagetag ist
+  // dann in Wahrheit heute, traegt aber nur seinen Wochentag.
+  let served = 0;
+  const daily = (start) => {
+    const days = [0, 1, 2].map((i) =>
+      new Date(new Date(`${start}T00:00:00Z`).getTime() + i * 86400000).toISOString().slice(0, 10));
+    return { time: days, weather_code: [0, 1, 2], temperature_2m_max: [20, 21, 22], temperature_2m_min: [10, 11, 12] };
+  };
+  // Erst der 24., nach dem "Tageswechsel" der 25. - der Aufrufzaehler steht fuer
+  // die verstrichene Zeit, denn Date.now() laesst sich hier nicht anhalten.
+  const fetchFn = async () => ({
+    ok: true,
+    json: async () => ({
+      utc_offset_seconds: 0,
+      current: { temperature_2m: 18, apparent_temperature: 17, relative_humidity_2m: 60,
+        is_day: 1, weather_code: 0, wind_speed_10m: 9 },
+      daily: daily(served++ === 0 ? '2026-06-05' : '2026-06-06'),
+    }),
+  });
+
+  const { baseUrl, close } = await startApp({
+    env: { WEATHER_LAT: '1.11', WEATHER_LON: '2.22' },
+    fetchFn,
+  });
+  try {
+    const first = await getJson(baseUrl);
+    assert.equal(first.body.data.today.date, '2026-06-05');
+
+    // Zweiter Abruf: der Eintrag ist keine 30 Minuten alt, sein Tag aber ein
+    // anderer als der laufende - beide Fixture-Tage liegen in der Vergangenheit,
+    // also trifft `dayKey === heute` in keinem Fall zu und der Cache muss weichen.
+    const second = await getJson(baseUrl);
+    assert.equal(served, 2, 'der Cache haette eine Antwort von gestern weitergereicht');
+    assert.equal(second.body.data.today.date, '2026-06-06');
+  } finally { await close(); }
+});
+
+test('der Cache greift innerhalb desselben Ortstags', async () => {
+  // Die Gegenprobe zum Test darueber: liegt der Tag der Antwort noch richtig,
+  // darf kein zweiter Abruf hinausgehen.
+  let served = 0;
+  const today = new Date().toISOString().slice(0, 10);
+  const next = (i) => new Date(Date.now() + i * 86400000).toISOString().slice(0, 10);
+  const fetchFn = async () => {
+    served += 1;
+    return { ok: true, json: async () => ({
+      utc_offset_seconds: 0,
+      current: { temperature_2m: 18, apparent_temperature: 17, relative_humidity_2m: 60,
+        is_day: 1, weather_code: 0, wind_speed_10m: 9 },
+      daily: { time: [today, next(1), next(2)], weather_code: [0, 1, 2],
+        temperature_2m_max: [20, 21, 22], temperature_2m_min: [10, 11, 12] },
+    }) };
+  };
+
+  const { baseUrl, close } = await startApp({
+    env: { WEATHER_LAT: '3.33', WEATHER_LON: '4.44' },
+    fetchFn,
+  });
+  try {
+    await getJson(baseUrl);
+    await getJson(baseUrl);
+    assert.equal(served, 1, 'derselbe Ortstag: der Cache muss halten');
   } finally { await close(); }
 });
 

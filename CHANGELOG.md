@@ -35,6 +35,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   weather somewhere else. Where that reference is missing, the day keeps its weekday: no label at
   all beats a wrong one.
 
+  The response cache now expires at the weather location's midnight as well as after its usual 30
+  minutes. Cached in the last half hour of a day, it would otherwise still be served after
+  midnight, with `today` naming yesterday.
+
   The legacy OpenWeatherMap branch bundled its three-hour steps into **UTC** days. That only held
   near the prime meridian: far west of it the running day was dropped by the wrong key in the
   evening and the forecast began at the day after tomorrow, far east of it a single UTC day fell
@@ -48,6 +52,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   forecast day and, for today, only the momentary reading - the one day you can actually still plan
   around was the one without a range. It now sits under the current temperature in the same
   vocabulary as the row below it, on the card and on the wall tablet.
+
+  Open-Meteo only. The legacy OpenWeatherMap provider has no daily aggregate to give: its
+  three-hour list starts at the next step, so by the afternoon today's bucket is missing the
+  morning and its maximum can fall below the current reading standing right beside it. A range
+  that is sometimes a range is worse than none.
 
 ## [2.40.0] - 2026-08-25
 

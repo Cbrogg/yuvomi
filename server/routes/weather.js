@@ -132,13 +132,25 @@ export function buildRouter({ cfgGet: cfgGetFn = cfgGet, fetchFn = null } = {}) 
         ? `om:${lat}|${lon}|${units}`
         : `owm:${owmCity}|${units}|${owmLang}`;
 
+      // Die halbe Stunde ist die eine Grenze, der ORTSTAG die andere. Eine kurz
+      // vor Mitternacht abgelegte Antwort wuerde sonst noch eine halbe Stunde
+      // danach ausgeliefert - mit `today.date` auf gestern: der erste
+      // Vorhersagetag ist dann in Wahrheit heute, traegt aber nur seinen
+      // Wochentag, und im Hauptblock steht das Hoch/Tief von gestern. Deshalb
+      // liegt der Ortsoffset mit im Eintrag - nur damit laesst sich fragen, ob
+      // der Tag, den die Antwort meint, ueberhaupt noch laeuft.
       const cached = cache.get(cacheKey);
-      if (cached && Date.now() - cached.ts < CACHE_TTL_MS) {
+      if (cached
+        && Date.now() - cached.ts < CACHE_TTL_MS
+        && cached.dayKey === utcDateKey(new Date(Date.now() + cached.offsetMs))) {
         return res.json({ data: cached.data });
       }
 
       // ── 3. Fetch ─────────────────────────────────────────────
       let data;
+      // Der Offset des Wetterorts, gesetzt vom jeweiligen Zweig. Gebraucht wird er
+      // nur fuer die Tagesgrenze des Caches oben.
+      let locationOffsetMs = 0;
 
       if (provider === 'open-meteo') {
         const tempUnit  = units === 'imperial' ? 'fahrenheit' : 'celsius';
@@ -176,6 +188,9 @@ export function buildRouter({ cfgGet: cfgGetFn = cfgGet, fetchFn = null } = {}) 
           desc: `wmo.${om.daily.weather_code[i]}`,
         }));
         const omToday = days[0]?.date ?? utcDateKey();
+        // Open-Meteo gibt den Offset des Ortes mit heraus - Folge von
+        // `timezone=auto`, die Antwort ist ohnehin in Ortszeit geschluesselt.
+        locationOffsetMs = (Number(om.utc_offset_seconds) || 0) * 1000;
 
         data = {
           provider: 'open-meteo',
@@ -216,6 +231,7 @@ export function buildRouter({ cfgGet: cfgGetFn = cfgGet, fetchFn = null } = {}) 
         const owmOffsetMs = (Number(currentJson.timezone) || 0) * 1000;
         const owmLocal = (dtTxt) => new Date(new Date(`${String(dtTxt).replace(' ', 'T')}Z`).getTime() + owmOffsetMs);
         const owmToday = utcDateKey(new Date(Date.now() + owmOffsetMs));
+        locationOffsetMs = owmOffsetMs;
         let todayDay = null;
         let forecastDays = [];
 
@@ -257,22 +273,26 @@ export function buildRouter({ cfgGet: cfgGetFn = cfgGet, fetchFn = null } = {}) 
           forecastDays = days.filter((d) => d.date > owmToday).slice(0, 5);
         }
 
-        // Ohne heutigen Eintrag in der Vorhersage (spaet abends deckt die
-        // Drei-Stunden-Liste den laufenden Tag nicht mehr ab) bleibt das Hoch/Tief
-        // leer. `main.temp_min`/`temp_max` waeren hier nicht die Tageswerte,
-        // sondern die momentane Streuung ueber das Stadtgebiet - fuer die meisten
-        // Orte identisch mit `temp`, also zwei gleiche Zahlen mit dem Anschein
-        // einer Spanne. `date` steht trotzdem: es ist die Bezugsgroesse, an der
-        // die Anzeige ihre Tage benennt.
-        if (!todayDay) {
-          todayDay = {
-            date:     owmToday,
-            temp_min: null,
-            temp_max: null,
-            icon:     currentJson.weather[0]?.icon,
-            desc:     currentJson.weather[0]?.description,
-          };
-        }
+        // DIESER PROVIDER KENNT KEINE TAGESSPANNE, also gibt er auch keine aus.
+        //
+        // Die Drei-Stunden-Liste beginnt beim naechsten Schritt, nicht bei
+        // Mitternacht: nachmittags fehlen dem heutigen Bucket die Morgenwerte,
+        // sein Maximum ist dann nicht das Tagesmaximum und kann sogar unter der
+        // Ist-Temperatur daneben liegen. `main.temp_min`/`temp_max` taugen als
+        // Ersatz ebenso wenig - das ist die momentane Streuung ueber das
+        // Stadtgebiet, fuer die meisten Orte identisch mit `temp`, also zwei
+        // gleiche Zahlen mit dem Anschein einer Auskunft.
+        //
+        // Open-Meteo liefert dagegen echte Tagesaggregate und behaelt sein
+        // Hoch/Tief. `date` steht auch hier: es ist die Bezugsgroesse, an der die
+        // Anzeige ihre Tage benennt, und die stimmt unabhaengig davon.
+        todayDay = {
+          date:     owmToday,
+          temp_min: null,
+          temp_max: null,
+          icon:     todayDay?.icon ?? currentJson.weather[0]?.icon,
+          desc:     todayDay?.desc ?? currentJson.weather[0]?.description,
+        };
 
         data = {
           provider: 'openweathermap',
@@ -301,7 +321,12 @@ export function buildRouter({ cfgGet: cfgGetFn = cfgGet, fetchFn = null } = {}) 
           cache.delete(k);
         }
       }
-      cache.set(cacheKey, { data, ts: Date.now() });
+      cache.set(cacheKey, {
+        data,
+        ts: Date.now(),
+        offsetMs: locationOffsetMs,
+        dayKey: data.today?.date ?? utcDateKey(new Date(Date.now() + locationOffsetMs)),
+      });
       res.json({ data });
     } catch (err) {
       log.warn('Error:', err.message);
