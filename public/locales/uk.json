@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} завдань",
         "memberOpenTasks_one": "{{count}} завдання",
         "manage": "Керувати",
-        "todayNothingElseTomorrow": "Більше на сьогодні нічого немає - завтра: {{title}}"
+        "todayNothingElseTomorrow": "Більше на сьогодні нічого немає - завтра: {{title}}",
+        "weatherHighLow": "Максимум {{max}}°, мінімум {{min}}°"
     },
     "tasks": {
         "manageCategories": "Керування категоріями",
@@ -694,7 +695,6 @@
         "assignedLabel": "Призначено",
         "assignedNobody": "- Нікому -",
         "colorLabel": "Колір",
-        "colorOverriddenByAssignee": "Колір замінюється призначеними користувачами",
         "descriptionLabel": "Опис",
         "descriptionPlaceholder": "Необов'язково…",
         "deleteConfirm": "Справді видалити «{{title}}»?",
@@ -869,7 +869,8 @@
         "recurringScopeHintFollowing": "Стосується події {{date}} та всіх наступних.",
         "recurringScopeHintSeries": "Стосується всієї серії.",
         "detailWhen": "Час",
-        "detailCalendar": "Календар"
+        "detailCalendar": "Календар",
+        "colorCurrent": "Поточний колір"
     },
     "notes": {
         "title": "Нотатки",

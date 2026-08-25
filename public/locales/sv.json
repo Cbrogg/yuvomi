@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} uppgifter",
         "memberOpenTasks_one": "{{count}} uppgift",
         "manage": "Hantera",
-        "todayNothingElseTomorrow": "Inget mer idag - imorgon: {{title}}"
+        "todayNothingElseTomorrow": "Inget mer idag - imorgon: {{title}}",
+        "weatherHighLow": "Högsta {{max}}°, lägsta {{min}}°"
     },
     "tasks": {
         "manageCategories": "Hantera kategorier",
@@ -694,7 +695,6 @@
         "assignedLabel": "Tilldelad till",
         "assignedNobody": "- Ingen -",
         "colorLabel": "Färg",
-        "colorOverriddenByAssignee": "Färgen åsidosätts av tilldelade användare",
         "descriptionLabel": "Beskrivning",
         "descriptionPlaceholder": "Frivillig…",
         "deleteConfirm": "Vill du verkligen ta bort \"{{title}}\"?",
@@ -869,7 +869,8 @@
         "recurringScopeHintFollowing": "Påverkar händelsen den {{date}} och alla följande.",
         "recurringScopeHintSeries": "Påverkar hela serien.",
         "detailWhen": "Tid",
-        "detailCalendar": "Kalender"
+        "detailCalendar": "Kalender",
+        "colorCurrent": "Nuvarande färg"
     },
     "notes": {
         "title": "Anteckningar",

@@ -295,7 +295,8 @@
         "memberOpenTasks": "{{count}} na gawain",
         "memberOpenTasks_one": "{{count}} na mga gawain",
         "manage": "Pamahalaan",
-        "todayNothingElseTomorrow": "Wala nang iba ngayon - bukas: {{title}}"
+        "todayNothingElseTomorrow": "Wala nang iba ngayon - bukas: {{title}}",
+        "weatherHighLow": "Pinakamataas {{max}}°, pinakamababa {{min}}°"
     },
     "tasks": {
         "manageCategories": "Pamahalaan ang mga kategorya",
@@ -706,7 +707,6 @@
         "assignedLabel": "Naatasan kay",
         "assignedNobody": "- Wala -",
         "colorLabel": "Kulay",
-        "colorOverriddenByAssignee": "Napapalitan ang kulay ng mga naatasang user",
         "colorBlue": "Asul",
         "colorGreen": "Berde",
         "colorOrange": "Kahel",
@@ -881,7 +881,8 @@
         "recurringScopeHintFollowing": "Naaapektuhan ang kaganapan noong {{date}} at lahat ng kasunod.",
         "recurringScopeHintSeries": "Naaapektuhan ang buong serye.",
         "detailWhen": "Oras",
-        "detailCalendar": "Kalendaryo"
+        "detailCalendar": "Kalendaryo",
+        "colorCurrent": "Kasalukuyang kulay"
     },
     "notes": {
         "title": "Board",

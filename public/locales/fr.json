@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} tâches",
         "memberOpenTasks_one": "{{count}} tâche",
         "manage": "Gérer",
-        "todayNothingElseTomorrow": "Plus rien d'autre aujourd'hui - demain : {{title}}"
+        "todayNothingElseTomorrow": "Plus rien d'autre aujourd'hui - demain : {{title}}",
+        "weatherHighLow": "Maximale {{max}}°, minimale {{min}}°"
     },
     "tasks": {
         "manageCategories": "Gérer les catégories",
@@ -694,7 +695,6 @@
         "assignedLabel": "Assigné à",
         "assignedNobody": "- Personne -",
         "colorLabel": "Couleur",
-        "colorOverriddenByAssignee": "La couleur est remplacée par les utilisateurs assignés",
         "descriptionLabel": "Description",
         "descriptionPlaceholder": "Optionnel…",
         "deleteConfirm": "Supprimer « {{title}} » ?",
@@ -869,7 +869,8 @@
         "recurringScopeHintFollowing": "Affecte l'événement du {{date}} et tous les suivants.",
         "recurringScopeHintSeries": "Affecte toute la série.",
         "detailWhen": "Heure",
-        "detailCalendar": "Calendrier"
+        "detailCalendar": "Calendrier",
+        "colorCurrent": "Couleur actuelle"
     },
     "notes": {
         "title": "Notes",

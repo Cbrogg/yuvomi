@@ -295,7 +295,8 @@
         "memberOpenTasks": "{{count}} وظیفه",
         "memberOpenTasks_one": "{{count}} وظیفه",
         "manage": "مدیریت",
-        "todayNothingElseTomorrow": "امروز دیگر برنامه‌ای نیست - فردا: {{title}}"
+        "todayNothingElseTomorrow": "امروز دیگر برنامه‌ای نیست - فردا: {{title}}",
+        "weatherHighLow": "بیشینه {{max}}°، کمینه {{min}}°"
     },
     "tasks": {
         "manageCategories": "مدیریت دسته‌ها",
@@ -706,7 +707,6 @@
         "assignedLabel": "واگذار به",
         "assignedNobody": "- هیچ‌کس -",
         "colorLabel": "رنگ",
-        "colorOverriddenByAssignee": "رنگ توسط شخص(های) واگذارشده بازنویسی می‌شود",
         "colorBlue": "آبی",
         "colorGreen": "سبز",
         "colorOrange": "نارنجی",
@@ -881,7 +881,8 @@
         "recurringScopeHintFollowing": "رویداد {{date}} و همه‌ی بعدی‌ها را تحت تأثیر قرار می‌دهد.",
         "recurringScopeHintSeries": "کل مجموعه را تحت تأثیر قرار می‌دهد.",
         "detailWhen": "زمان",
-        "detailCalendar": "تقویم"
+        "detailCalendar": "تقویم",
+        "colorCurrent": "رنگ فعلی"
     },
     "notes": {
         "title": "یادداشت‌ها",

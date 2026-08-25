@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} úkolů",
         "memberOpenTasks_one": "{{count}} úkol",
         "manage": "Spravovat",
-        "todayNothingElseTomorrow": "Dnes už nic dalšího - zítra: {{title}}"
+        "todayNothingElseTomorrow": "Dnes už nic dalšího - zítra: {{title}}",
+        "weatherHighLow": "Nejvyšší {{max}}°, nejnižší {{min}}°"
     },
     "tasks": {
         "manageCategories": "Spravovat kategorie",
@@ -694,7 +695,6 @@
         "assignedLabel": "Přiřazeno",
         "assignedNobody": "- Nikdo -",
         "colorLabel": "Barva",
-        "colorOverriddenByAssignee": "Barva je přepsána přiřazenými uživateli",
         "descriptionLabel": "Popis",
         "descriptionPlaceholder": "Volitelné…",
         "deleteConfirm": "Opravdu smazat \"{{title}}\"?",
@@ -869,7 +869,8 @@
         "recurringScopeHintFollowing": "Ovlivní událost dne {{date}} a všechny následující.",
         "recurringScopeHintSeries": "Ovlivní celou sérii.",
         "detailWhen": "Čas",
-        "detailCalendar": "Kalendář"
+        "detailCalendar": "Kalendář",
+        "colorCurrent": "Aktuální barva"
     },
     "notes": {
         "title": "Nástěnka",

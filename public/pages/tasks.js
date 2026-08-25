@@ -25,6 +25,7 @@ import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
 import { isSoloHousehold } from '/utils/household.js';
 import { todayKey, parseLocalDateKey } from '/utils/date.js';
+import { nowFields } from '/utils/timezone.js';
 import { isNavModuleReadOnly } from '/permissions.js';
 
 // --------------------------------------------------------
@@ -169,15 +170,33 @@ function renderVisibilityBadge(visibility) {
 
 function formatDueDate(dateStr, timeStr, isDone = false) {
   if (!dateStr) return null;
-  const dueDate = timeStr ? new Date(`${dateStr}T${timeStr}`) : new Date(`${dateStr}T23:59:59`);
-  if (isNaN(dueDate)) return null;
 
-  const now    = new Date();
-  const today  = new Date(now.getFullYear(), now.getMonth(), now.getDate());
-  const dueDay = new Date(dueDate.getFullYear(), dueDate.getMonth(), dueDate.getDate());
-  const calDayDiff = Math.round((dueDay - today) / (1000 * 60 * 60 * 24));
+  // Zonenlose WANDUHRZEIT, nicht Zeitpunkt. `new Date(`${dateStr}T${timeStr}`)`
+  // machte aus "21:00" einen Zeitpunkt der BROWSER-Zone, den formatTime
+  // anschliessend in die Anzeigezone umrechnete - mit Haushalt auf Honolulu und
+  // Browser in Berlin stand an einer fuer 21:00 eingetragenen Aufgabe 9:00.
+  // Dieselbe Uhr entschied ueber "heute"/"morgen", und die Gruppierung nebenan
+  // folgt seit #829 laengst `todayKey()`: dieselbe Ansicht ging damit nach zwei
+  // Uhren, eine Aufgabe konnte unter "Morgen" stehen und "Heute faellig" heissen.
+  const dayKey = String(dateStr).slice(0, 10);
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(dayKey)) return null;
+  const dueTime = timeStr ? String(timeStr).slice(0, 5) : null;
+  if (timeStr && !/^\d{2}:\d{2}$/.test(dueTime)) return null;
+  const dueStamp = `${dayKey}T${dueTime ?? '23:59'}`;
 
-  const timeLabel = timeStr ? ` – ${formatTime(dueDate)}` : '';
+  const now = nowFields();
+  if (!now) return null;
+  const p2 = (n) => String(n).padStart(2, '0');
+  const todayDay = `${now.year}-${p2(now.month)}-${p2(now.day)}`;
+  const nowStamp = `${todayDay}T${p2(now.hour)}:${p2(now.minute)}`;
+
+  // Kalendertage, nicht Millisekunden: ueber eine Sommerzeitgrenze liegen zwei
+  // Tage nicht 24h auseinander, ihre Keys aber immer genau einen.
+  const calDayDiff = Math.round(
+    (parseLocalDateKey(dayKey) - parseLocalDateKey(todayDay)) / (1000 * 60 * 60 * 24),
+  );
+
+  const timeLabel = dueTime ? ` – ${formatTime(dueStamp)}` : '';
 
   /* DAS JAHR STEHT NUR DA, WO ES ETWAS UNTERSCHEIDET.
    *
@@ -190,17 +209,18 @@ function formatDueDate(dateStr, timeStr, isDone = false) {
    * Über `formatDayMonth` und nicht per slice: die Reihenfolge und das
    * Trennzeichen hängen an der Datumsformat-Präferenz (dmy, mdy, ymd), und ein
    * abgeschnittener String hätte sie in drei von sieben Formaten verdreht. */
-  const dateLabel = dueDay.getFullYear() === today.getFullYear()
-    ? formatDayMonth(dueDate)
-    : formatDate(dueDate);
-  const fullLabel = timeStr ? `${dateLabel}, ${formatTime(dueDate)}` : dateLabel;
+  const dateLabel = dayKey.slice(0, 4) === todayDay.slice(0, 4)
+    ? formatDayMonth(dayKey)
+    : formatDate(dayKey);
+  const fullLabel = dueTime ? `${dateLabel}, ${formatTime(dueStamp)}` : dateLabel;
 
   // Erledigte/archivierte Aufgaben können nicht überfällig sein - neutrales Datum.
   if (isDone) {
     return { label: fullLabel, cls: '' };
   }
 
-  if (dueDate < now) {
+  // Beide Seiten sind Wanduhrzeit DERSELBEN Zone und damit als Text vergleichbar.
+  if (dueStamp < nowStamp) {
     return { label: `${t('tasks.overdue')} – ${fullLabel}`, cls: 'due-date--overdue' };
   }
   if (calDayDiff === 0) {
@@ -4026,4 +4046,4 @@ export async function render(container, { user }) {
 }
 
 // Testfläche: nur reine Funktionen, deren Vertrag außerhalb dieser Datei zählt.
-export const __test = { groupBy, groupKey };
+export const __test = { groupBy, groupKey, formatDueDate };

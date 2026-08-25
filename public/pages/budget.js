@@ -294,9 +294,11 @@ function addMonths(ym, n) {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
 }
 
+// Der Monat, in dem der HAUSHALT gerade lebt. Aus der Browser-Uhr gelesen
+// sprang das Budget in der Nacht zum Monatsersten in einer anderen Zone einen
+// Monat zu frueh oder zu spaet um (#829, Nachlese #851).
 function currentMonth() {
-  const now = new Date();
-  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  return todayKey().slice(0, 7);
 }
 
 // Tagesanker für einen Monat: im laufenden Monat der heutige Tag, sonst der
@@ -406,8 +408,7 @@ async function loadBudgetMeta() {
 export async function render(container, { user }) {
   _container = container;
   _user = user;
-  const today = new Date();
-  state.month = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+  state.month = currentMonth();
   // `state` ist ein Modul-Singleton und überlebt den Seitenwechsel. Filter sind
   // aber an eine Sitzung mit dem Modul gebunden: sonst zeigt das Budget nach
   // einer Woche noch den Kontoauszug von damals — beim Darlehens-Statusfilter

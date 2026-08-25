@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} कार्य",
         "memberOpenTasks_one": "{{count}} कार्य",
         "manage": "प्रबंधित करें",
-        "todayNothingElseTomorrow": "आज और कुछ नहीं - कल: {{title}}"
+        "todayNothingElseTomorrow": "आज और कुछ नहीं - कल: {{title}}",
+        "weatherHighLow": "अधिकतम {{max}}°, न्यूनतम {{min}}°"
     },
     "tasks": {
         "manageCategories": "श्रेणियाँ प्रबंधित करें",
@@ -694,7 +695,6 @@
         "assignedLabel": "सौंपा गया",
         "assignedNobody": "- कोई नहीं -",
         "colorLabel": "रंग",
-        "colorOverriddenByAssignee": "रंग असाइन किए गए उपयोगकर्ताओं द्वारा ओवरराइड किया गया है",
         "descriptionLabel": "विवरण",
         "descriptionPlaceholder": "वैकल्पिक…",
         "deleteConfirm": "\"{{title}}\" हटाएं?",
@@ -869,7 +869,8 @@
         "recurringScopeHintFollowing": "{{date}} की घटना और सभी आगे वाली को प्रभावित करता है।",
         "recurringScopeHintSeries": "पूरी शृंखला को प्रभावित करता है।",
         "detailWhen": "समय",
-        "detailCalendar": "कैलेंडर"
+        "detailCalendar": "कैलेंडर",
+        "colorCurrent": "वर्तमान रंग"
     },
     "notes": {
         "title": "नोट बोर्ड",

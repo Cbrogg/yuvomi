@@ -283,7 +283,8 @@
         "memberOpenTasks": "タスク{{count}}件",
         "memberOpenTasks_one": "タスク{{count}}件",
         "manage": "管理",
-        "todayNothingElseTomorrow": "今日はこの後予定はありません。明日: {{title}}"
+        "todayNothingElseTomorrow": "今日はこの後予定はありません。明日: {{title}}",
+        "weatherHighLow": "最高 {{max}}°、最低 {{min}}°"
     },
     "tasks": {
         "manageCategories": "カテゴリーを管理",
@@ -694,7 +695,6 @@
         "assignedLabel": "担当者",
         "assignedNobody": "- なし -",
         "colorLabel": "色",
-        "colorOverriddenByAssignee": "色は割り当てられたユーザーによって上書きされます",
         "descriptionLabel": "説明",
         "descriptionPlaceholder": "任意…",
         "deleteConfirm": "「{{title}}」を削除しますか？",
@@ -869,7 +869,8 @@
         "recurringScopeHintFollowing": "{{date}} 以降のすべての予定に影響します。",
         "recurringScopeHintSeries": "シリーズ全体に影響します。",
         "detailWhen": "時間",
-        "detailCalendar": "カレンダー"
+        "detailCalendar": "カレンダー",
+        "colorCurrent": "現在の色"
     },
     "notes": {
         "title": "メモボード",

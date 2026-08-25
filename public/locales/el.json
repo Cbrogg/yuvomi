@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} εργασίες",
         "memberOpenTasks_one": "{{count}} εργασία",
         "manage": "Διαχείριση",
-        "todayNothingElseTomorrow": "Τίποτα άλλο για σήμερα - αύριο: {{title}}"
+        "todayNothingElseTomorrow": "Τίποτα άλλο για σήμερα - αύριο: {{title}}",
+        "weatherHighLow": "Μέγιστη {{max}}°, ελάχιστη {{min}}°"
     },
     "tasks": {
         "manageCategories": "Διαχείριση κατηγοριών",
@@ -694,7 +695,6 @@
         "assignedLabel": "Ανατεθειμένο σε",
         "assignedNobody": "- Κανέναν -",
         "colorLabel": "Χρώμα",
-        "colorOverriddenByAssignee": "Το χρώμα παρακάμπτεται από τους ανατεθειμένους χρήστες",
         "descriptionLabel": "Περιγραφή",
         "descriptionPlaceholder": "Προαιρετικό…",
         "deleteConfirm": "Διαγραφή «{{title}}»;",
@@ -869,7 +869,8 @@
         "recurringScopeHintFollowing": "Επηρεάζει το συμβάν στις {{date}} και όλα τα επόμενα.",
         "recurringScopeHintSeries": "Επηρεάζει ολόκληρη τη σειρά.",
         "detailWhen": "Ώρα",
-        "detailCalendar": "Ημερολόγιο"
+        "detailCalendar": "Ημερολόγιο",
+        "colorCurrent": "Τρέχον χρώμα"
     },
     "notes": {
         "title": "Σημειώσεις",

@@ -295,7 +295,8 @@
         "memberOpenTasks": "{{count}} tugas",
         "memberOpenTasks_one": "{{count}} tugas",
         "manage": "Kelola",
-        "todayNothingElseTomorrow": "Tidak ada lagi hari ini - besok: {{title}}"
+        "todayNothingElseTomorrow": "Tidak ada lagi hari ini - besok: {{title}}",
+        "weatherHighLow": "Tertinggi {{max}}°, terendah {{min}}°"
     },
     "tasks": {
         "manageCategories": "Kelola kategori",
@@ -706,7 +707,6 @@
         "assignedLabel": "Ditugaskan kepada",
         "assignedNobody": "- Tidak ada -",
         "colorLabel": "Warna",
-        "colorOverriddenByAssignee": "Warna ditimpa oleh orang yang ditugaskan",
         "colorBlue": "Biru",
         "colorGreen": "Hijau",
         "colorOrange": "Oranye",
@@ -881,7 +881,8 @@
         "recurringScopeHintFollowing": "Memengaruhi acara pada {{date}} dan semua berikutnya.",
         "recurringScopeHintSeries": "Memengaruhi seluruh seri.",
         "detailWhen": "Waktu",
-        "detailCalendar": "Kalender"
+        "detailCalendar": "Kalender",
+        "colorCurrent": "Warna saat ini"
     },
     "notes": {
         "title": "Catatan",

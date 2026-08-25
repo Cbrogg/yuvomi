@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} مهام",
         "memberOpenTasks_one": "{{count}} مهمة",
         "manage": "إدارة",
-        "todayNothingElseTomorrow": "لا شيء آخر اليوم - غدًا: {{title}}"
+        "todayNothingElseTomorrow": "لا شيء آخر اليوم - غدًا: {{title}}",
+        "weatherHighLow": "العظمى {{max}}°، الصغرى {{min}}°"
     },
     "tasks": {
         "manageCategories": "إدارة الفئات",
@@ -694,7 +695,6 @@
         "assignedLabel": "مسند إلى",
         "assignedNobody": "- لا أحد -",
         "colorLabel": "اللون",
-        "colorOverriddenByAssignee": "يتم تجاوز اللون بواسطة المستخدمين المعينين",
         "descriptionLabel": "الوصف",
         "descriptionPlaceholder": "اختياري…",
         "deleteConfirm": "هل تريد حذف \"{{title}}\"؟",
@@ -869,7 +869,8 @@
         "recurringScopeHintFollowing": "يؤثر على الموعد في {{date}} وكل ما يليه.",
         "recurringScopeHintSeries": "يؤثر على السلسلة بأكملها.",
         "detailWhen": "الوقت",
-        "detailCalendar": "التقويم"
+        "detailCalendar": "التقويم",
+        "colorCurrent": "اللون الحالي"
     },
     "notes": {
         "title": "لوحة الملاحظات",
