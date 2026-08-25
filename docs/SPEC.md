@@ -220,6 +220,58 @@ is case-insensitive, and a word character before the `@` disqualifies it, so `in
 a mention. A mentioned member is only notified if they may see the task: a mention is not a way to
 deliver the title of a private task.
 
+### Task Completions (migration v161, #791)
+
+Ticking a task off is an **event**, not just a state. `status = 'done'` answers "is this still
+outstanding"; it cannot answer what was completed today, what yesterday, when a recurring chore was
+last done, or who did it. This table records the transition.
+
+| Column | Type | Constraint |
+|--------|------|-----------|
+| task_id | INTEGER | FK → Tasks (CASCADE delete), NOT NULL, UNIQUE |
+| series_id | INTEGER | NOT NULL — root of the repetition chain, or the task itself. No FK: the root may be deleted without taking later entries with it |
+| user_id | INTEGER | FK → Users (SET NULL) — **who ticked it off** |
+| completed_at | TEXT | ISO 8601 UTC, default now |
+
+**Why a table and not two columns.** A completed recurring task spawns a follow-up instance
+(`recurrence_origin_id`), so the history of one series is spread across a chain of rows whose links
+can be deleted individually. "When was this last done" hangs on exactly that chain, which is why
+`series_id` is resolved once on write (walking the chain to its root) rather than on every read: an
+entry stays with its series even if the chain later breaks.
+
+**No snapshot of title, category or member.** A copy would be a second truth beside the task — and
+the dangerous one, because **visibility** is a truth too. Someone who sets a task to private later
+has hidden it; an entry carrying its own copy of the old level would keep giving it away. Both read
+paths join `tasks` and apply the same `visibilityWhere` as every other task list. The price, paid
+deliberately, is `ON DELETE CASCADE`: deleting a task deletes its completions.
+
+**Who, not whom.** `user_id` is the acting person, which is deliberately different from
+`reward_ledger`, where points go to the *assignees* (`rewardTargets`). Points are a merit and can be
+shared; a completion is an occurrence — it happens once, through one click.
+
+**Subtasks are never recorded.** A subtask is a checklist item of the same instruction; the event of
+the series is the parent being ticked off. Filing a task away (`archived`) is not a status change
+(#688) and writes nothing either.
+
+Reverting deletes the row rather than posting a counter-entry — the same decision as
+`reverseTaskEarnings`, for the same reason: a checkbox toggled three times is noise, not history.
+The UNIQUE index on `task_id` is also the idempotency net if the same transition arrives twice.
+
+**Known boundary:** the inbound CalDAV sync writes `status` straight into the row and does not pass
+through this path, so ticking a mirrored task off in Apple Reminders does not appear in the history.
+The reward ledger has the same gap for the same reason: that run has no acting person - it uses the
+household's credentials, not a member's. An entry without a person is possible (the column allows
+NULL) but needs its own presentation, since "no longer in the household" would be the wrong answer
+for a sync. Stated here as a decision rather than inherited silently.
+
+API: `GET /api/v1/tasks/completions` (household feed, newest first, cursor-paged over
+`(completed_at, id)` because a bulk action puts several completions in the same second), and
+`GET /api/v1/tasks/{id}/completions` (the whole series behind one task). No date range on either:
+which calendar day an instant belongs to is a question for the display timezone
+(`public/utils/timezone.js`), and a server taking a `from` day would have to keep a second clock for
+it. **The history starts empty** — recording began with this migration, and nothing wrote down what
+was completed before it.
+
 ### Rewards (migration v70)
 
 Points-and-rewards system. A member earns a task's `points` when the task is marked done (awarded to its assigned members; if unassigned, to the acting user — useful for a wall-mounted kiosk tablet on a single account). Participation is **opt-in per member**; redemptions require **parent/admin approval** by default — an admin can disable this household-wide (`rewards_require_approval` preference, Settings → Modules → Rewards) so redemptions are granted immediately. The Rewards module itself is toggleable in Settings → Modules → Rewards (nav visibility). A member's balance is always `SUM(delta)` over `reward_ledger` — there is no separately stored balance that could drift. Point award is idempotent (partial unique index) and reversed when a task leaves the `done` state.
@@ -2436,7 +2488,16 @@ The surface carries four things, in this order: **the time**, large (this is whe
 - List view (default): grouped by category or due date (toggleable), filter: person, priority, status. **Category groups follow the managed order (v2.39.0, #845):** their sequence is the position in the category list the server returns, i.e. the `sort_order` set by dragging in **Manage categories** - not the alphabet. Until then the groups were sorted with `localeCompare(b, 'de')`, which ignored that order, compared the internal key rather than the visible label (`misc` sorts under M while the page shows "Sonstiges"), and applied German collation to every language. A category missing from the list sorts last, and only among those does the label decide, in the active locale. **Each of those three axes takes several values at once (v1.78.1, #671)** and combines them with OR — "high or medium" is a question worth asking, while AND across two priorities would always be empty, since a task carries exactly one. The axes still combine with AND among themselves, so every row narrows the list. Tags stay AND-combined (see [Task Tags](#task-tags-migration-v115-586)); there a task really can carry both. `GET /api/v1/tasks` takes each value as its own parameter (`?priority=high&priority=medium`) and keeps accepting a single one
 - **Collapsible groups (v2.28.0, #812):** each group header is a button (`aria-expanded`, keyboard-reachable) that folds its rows away; the count stays on the collapsed header, so the size of a folded group is still readable. Collapsed groups are stored per device in `localStorage` (`yuvomi:taskCollapsedGroups`) as `<mode>:<id>` — the mode belongs in the key because a category may be named like a due-date group, and the id is the category key or a fixed name (`overdue`/`today`/`thisWeek`/`nextWeek`/`later`/`noDate`), never the translated label: `groupBy()` returns `{ id, label, tasks }` for exactly that reason, otherwise "Heute" and "Today" would be two groups and every language switch would unfold everything. Only collapsed state is stored, so a newly created category appears open.
 - Kanban: columns Open → In Progress → Done, drag & drop
-- View mode persisted in localStorage; URL parameter `?view=kanban` overrides (useful for tablet kiosk setups)
+- **History (v2.44.0, #791):** the third view, and the only one that does not show tasks but
+  occurrences: who ticked off what, and when. Grouped by calendar day in the display timezone
+  (`zonedDateKey`, not `completed_at.slice(0, 10)` — the stored instant is UTC, so a tick at 23:30
+  local time would land under the next day west of it), newest first, with an optional filter by
+  person and a "Show more" cursor. Search, the filter bar, grouping and bulk select disappear here:
+  they all ask about tasks, and a status filter over a list of completions would be a choice that
+  cannot change anything. See [Task Completions](#task-completions-migration-v161-791) for the data
+  model and why the view starts empty. A recurring task additionally carries **Last completed** in
+  its detail view, across the whole repetition chain rather than just the instance currently open.
+- View mode persisted in localStorage; URL parameter `?view=kanban` (or `?view=history`) overrides (useful for tablet kiosk setups)
 
 **Features:**
 - CRUD + subtasks (max 2 levels, checkbox list, progress bar). Subtasks are tickable **wherever they are visible** — on the task card and, since v1.78.1 (#671), in the detail view too. Read-only rows there had assumed the list next door would carry the interaction, but that list keeps them behind a collapsed progress bar, so a freshly created subtask could end up visible and unreachable at the same time

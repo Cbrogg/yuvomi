@@ -7,6 +7,51 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **The tasks module keeps a history of what was completed** (#791). Ticking a task off was a state,
+  not an event: a task carried `done`, and nothing recorded when that happened or who did it. So the
+  four questions in the thread - what did I finish today, what yesterday, when was this chore last
+  done, and who did it - had no answer anywhere, and the reason was not a missing view but data that
+  was never written down.
+
+  There is now a third view beside List and Board. It shows occurrences rather than tasks, grouped by
+  day, newest first, with the member who ticked it off and the time. Search, filters, grouping and
+  bulk select disappear there, because they all ask about tasks - a status filter over a list of
+  completions would be a choice that cannot change anything. Tapping an entry opens its task. A
+  recurring task additionally shows **Last completed** in its detail view, across the whole
+  repetition chain rather than just the instance currently open - which is precisely the "when was
+  this last done" case, and the one a single `completed_at` column could not have answered: a
+  completed recurring task spawns a follow-up instance, so its history is spread over a chain of
+  rows.
+
+  **The entry carries no copy of the task.** No title, no category, no member name, and above all no
+  copy of the visibility level. Both read paths join the task and apply the same visibility rule as
+  every other task list, so a task set to private *after* the fact disappears from the history too.
+  A snapshot would have kept giving away what was just locked away. The price for that single truth
+  is deliberate: deleting a task deletes its completions with it.
+
+  **It records who ticked it off, which is not necessarily who it was assigned to.** The rewards
+  ledger decides that differently on purpose - points go to the assignees and can be shared, because
+  they are a merit. A completion is an occurrence: it happens once, through one click. Subtasks are
+  never recorded, since a checklist item is part of its parent instruction, and filing a task away is
+  not a status change (#688) and writes nothing either.
+
+  **The history starts empty, and says so.** Recording begins with this release; what a household
+  ticked off before it was never written down, and the empty state explains that instead of claiming
+  nothing was ever done.
+
+  Paging uses a `(completed_at, id)` cursor rather than an offset: a bulk action puts several
+  completions in the same second, and an offset would skip a row that arrived while somebody was
+  paging. There is no date range in the query, because which calendar day an instant belongs to is a
+  question for the display timezone - a server taking a `from` day would have to keep a second clock
+  for it.
+
+  One boundary is stated rather than inherited: the inbound CalDAV sync writes the status straight
+  into the row, so ticking a mirrored task off in Apple Reminders does not reach the history. That
+  run has no acting person - it uses the household's credentials, not a member's - which is the same
+  reason the reward ledger has the same gap.
+
 ### Fixed
 
 - **The automated pull request review went silent** and left four runs in a row without a finding
