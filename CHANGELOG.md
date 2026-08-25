@@ -9,6 +9,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **A task's due label followed the browser's clock, not the household's** (#851). `due_date` and
+  `due_time` are zoneless wall-clock time: whoever typed "21:00" meant 21:00, whichever zone the
+  household keeps. Both due labels - the one on the dashboard and the one in the Tasks module - ran
+  that through `new Date(...)`, which turns it into an instant in the **browser's** zone; the
+  formatters then converted that instant into the display zone. With the household on Honolulu and
+  the browser in Berlin, a task entered for 21:00 read 9:00.
+
+  The same clock decided "today" and "tomorrow". In the Tasks module that put two clocks in one
+  view: the grouping has followed `todayKey()` since #829, so a task could sit under **Tomorrow**
+  and be labelled **Due today** in the same list.
+
+  Both now read the wall-clock stamp as what it is and ask the display zone what day it is. This was
+  the seventh clock; #829 part 3 unified six.
+
 - **The weather forecast was off by a day** (#851). The server already keeps the running day out of
   `forecast` so it is not shown twice - but the display kept labelling `forecast[0]` "Today"
   regardless. What stood there was tomorrow, so the row read as though a day were missing, and every
