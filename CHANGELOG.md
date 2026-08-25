@@ -33,8 +33,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   zurück: jeder Schreibweg, auch der ±-Stepper und die Übernahme aus der Einkaufsliste, führt durch
   dieselbe Stelle.
 
+  **Der Bestand zieht nach, nicht erst beim nächsten Anfassen.** Der Vorrat, der schon vor diesem
+  Update im Regal stand, wurde nie gespeichert - ohne einen Nachlauf hätte genau das unberührte Glas
+  hinten im Regal nie gemeldet, also der Fall, für den die Frage überhaupt gestellt wurde. Der
+  Benachrichtigungslauf ergänzt deshalb fehlende Erinnerungen und räumt gegenstandslose ab. Was
+  schon zugestellt oder weggewischt wurde, lässt er in Ruhe: sonst käme dieselbe Meldung bei jedem
+  Durchgang wieder.
+
   Ein nachgetragener Artikel, dessen Vorlauf schon verstrichen ist, meldet nichts - sonst käme die
   Nachricht im nächsten Durchlauf sofort für etwas, das man gerade selbst eingetragen hat.
+
+### Fixed
+
+- **Die Übernahme aus der Einkaufsliste prüft das Mindesthaltbarkeitsdatum jetzt gegen den
+  Kalender.** Sie sah bisher nur nach der Form, ein `2027-02-30` kam durch. Das blieb folgenlos,
+  solange niemand mit dem Datum rechnete - eine unsinnige Zeile im Vorrat, mehr nicht. Beide
+  Prüfungen sind jetzt dieselbe Funktion, die auch das Formular benutzt; eine Zeile mit unmöglichem
+  Datum wird beim Import still übergangen, wie eine, deren Artikel schon gelöscht wurde.
 
 ### Changed
 

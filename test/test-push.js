@@ -27,7 +27,8 @@ function makeDb() {
       purchase_date TEXT, warranty_months INTEGER);
     CREATE TABLE inventory_item_dates (id INTEGER PRIMARY KEY AUTOINCREMENT, item_id INTEGER NOT NULL,
       label TEXT NOT NULL, date TEXT NOT NULL);
-    CREATE TABLE pantry_items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, expires_on TEXT);
+    CREATE TABLE pantry_items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL,
+      quantity REAL NOT NULL DEFAULT 1, expires_on TEXT, created_by INTEGER REFERENCES users(id) ON DELETE SET NULL);
     CREATE TABLE reminders (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       entity_type TEXT NOT NULL CHECK(entity_type IN ('task','event','subscription','inventory_item','inventory_tracked_date','pantry_item')),

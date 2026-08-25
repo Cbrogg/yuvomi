@@ -31,6 +31,7 @@ import express from 'express';
 const dbmod = await import('../server/db.js');
 const { default: pantryRouter } = await import('../server/routes/pantry.js');
 const { default: remindersRouter } = await import('../server/routes/reminders.js');
+const { syncAllPantryExpiryReminders } = await import('../server/services/pantry-reminders.js');
 const db = dbmod.get();
 
 /**
@@ -238,4 +239,134 @@ test('POST /reminders akzeptiert pantry_item als entity_type', async () => {
     body: { entity_type: 'pantry_item', entity_id: item.body.data.id, remind_at: '2099-01-01T09:00' },
   });
   assert.equal(res.status, 201, 'ohne den Eintrag in VALID_ENTITY_TYPES antwortet die Route 400');
+});
+
+// --------------------------------------------------------------------------
+// DER BESTAND, DEN NIEMAND MEHR ANFASST
+//
+// Der Router legt die Erinnerung beim Speichern an. Ein Vorrat, der schon vor
+// diesem Feature im Regal stand, wird nie gespeichert - ohne den Voll-Sync
+// haette genau das unberuehrte Glas hinten im Regal nie gemeldet, also der
+// Fall, fuer den #811 ueberhaupt gestellt wurde.
+// --------------------------------------------------------------------------
+test('der Voll-Sync holt Bestandsartikel nach, die nie durch den Router liefen', () => {
+  // Direkt in die Tabelle geschrieben - genau die Lage nach einem Update.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Marmelade', 2, 'jar', 'Sonstiges', ?, ?)"
+  ).run(FUTURE_EXPIRY, A).lastInsertRowid;
+  assert.equal(countReminders(id), 0, 'ein direkter INSERT laeuft an syncReminder vorbei - das ist der Ausgangspunkt');
+
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 1, 'nach dem Lauf meldet auch der Altbestand');
+  assert.equal(reminderFor(id).remind_at, `${dateKeyInDays(30)}T09:00`);
+});
+
+test('der Voll-Sync fasst eine bereits zugestellte Erinnerung nicht an', () => {
+  // DER FEHLER, DEN DIESER TEST FESTHAELT: der erste Wurf des Voll-Syncs loeschte
+  // und legte neu an, wie es der Router tut. Damit fiel bei JEDEM Durchgang
+  // `pushed_at` auf NULL zurueck - dieselbe Meldung waere im Minutentakt wieder
+  // rausgegangen, und ein Wegwischen haette bis zum naechsten Lauf gehalten.
+  //
+  // Der Router darf ersetzen, weil er weiss, dass sich der Artikel geaendert
+  // hat. Dieser Lauf weiss das nicht und ergaenzt deshalb nur.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Reis', 1, 'pkg', 'Sonstiges', ?, ?)"
+  ).run(FUTURE_EXPIRY, A).lastInsertRowid;
+  syncAllPantryExpiryReminders(db);
+
+  const before = reminderFor(id);
+  db.prepare("UPDATE reminders SET pushed_at = '2026-08-01T09:00:00Z', dismissed = 1 WHERE id = ?").run(before.id);
+
+  syncAllPantryExpiryReminders(db);
+
+  const after = reminderFor(id);
+  assert.equal(after.id, before.id, 'die Zeile wurde ersetzt statt in Ruhe gelassen');
+  assert.equal(after.pushed_at, '2026-08-01T09:00:00Z', 'zurueckgesetztes pushed_at = dieselbe Meldung nochmal');
+  assert.equal(after.dismissed, 1, 'zurueckgesetztes dismissed = das Wegwischen haelt nicht');
+});
+
+test('der Voll-Sync ist idempotent - zweimal laufen heisst nicht zwei Meldungen', () => {
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Honig', 1, 'jar', 'Sonstiges', ?, ?)"
+  ).run(FUTURE_EXPIRY, A).lastInsertRowid;
+
+  syncAllPantryExpiryReminders(db);
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 1);
+});
+
+test('der Voll-Sync raeumt ab, was die Bedingungen nicht mehr erfuellt', () => {
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Senf', 1, 'jar', 'Sonstiges', ?, ?)"
+  ).run(FUTURE_EXPIRY, A).lastInsertRowid;
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 1);
+
+  // Menge am Router vorbei auf 0 gesetzt: die Erinnerung muss trotzdem gehen.
+  db.prepare('UPDATE pantry_items SET quantity = 0 WHERE id = ?').run(id);
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 0);
+});
+
+test('ein Artikel ohne Ersteller bekommt keine Erinnerung - es gaebe keinen Empfaenger', () => {
+  // created_by ist seit Migration v109 nullable: wer ein Mitglied loescht,
+  // verliert nicht den Haushaltsvorrat. reminders.created_by ist NOT NULL.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Kapern', 1, 'jar', 'Sonstiges', ?, NULL)"
+  ).run(FUTURE_EXPIRY).lastInsertRowid;
+  syncAllPantryExpiryReminders(db);
+  assert.equal(countReminders(id), 0);
+});
+
+// --------------------------------------------------------------------------
+// EIN KAPUTTES DATUM DARF DEN SPEICHERVORGANG NICHT SPRENGEN
+// --------------------------------------------------------------------------
+test('ein kalendarisch unmoegliches MHD verhindert nur die Meldung, nicht das Speichern', async () => {
+  // '2027-02-30' passiert die Form, nicht den Kalender. Bestandszeilen aus der
+  // Zeit vor der kalendarischen Pruefung im Import koennen so aussehen.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Altbestand', 1, 'pcs', 'Sonstiges', '2027-02-30', ?)"
+  ).run(A).lastInsertRowid;
+
+  // Ohne den Auffangzweig wirft die Rechnung mitten in der Transaktion: der
+  // Artikel bliebe dauerhaft unbearbeitbar.
+  const res = await call('PATCH', `/pantry/${id}`, { body: { quantity: 5 } });
+  assert.equal(res.status, 200, 'ein alter Datensatz darf nicht unbearbeitbar werden');
+  assert.equal(res.body.data.quantity, 5);
+  assert.equal(countReminders(id), 0);
+
+  // Und der Voll-Sync stirbt nicht an dieser Zeile.
+  assert.doesNotThrow(() => syncAllPantryExpiryReminders(db));
+});
+
+test('der Import uebergeht ein kalendarisch unmoegliches MHD, statt alles zurueckzurollen', async () => {
+  const listId = db.prepare("INSERT INTO shopping_lists (name, created_by) VALUES ('Import', ?)").run(A).lastInsertRowid;
+  const mk = (name) => db.prepare(
+    "INSERT INTO shopping_items (list_id, name, category, is_checked) VALUES (?, ?, 'Sonstiges', 1)"
+  ).run(listId, name).lastInsertRowid;
+
+  const bad = mk('Schlechtes Datum');
+  const good = mk('Gutes Datum');
+  const res = await call('POST', '/pantry/import-shopping', {
+    body: {
+      list_id: listId,
+      items: [
+        { shopping_item_id: bad, quantity: 1, expires_on: '2027-02-30' },
+        { shopping_item_id: good, quantity: 1, expires_on: FUTURE_EXPIRY },
+      ],
+    },
+  });
+
+  // Vor der kalendarischen Pruefung riss die erste Zeile die zweite mit: 500,
+  // Transaktion zurueckgerollt, auch der gueltige Artikel weg.
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.added, 2, 'beide Artikel landen im Vorrat');
+
+  const badRow = db.prepare('SELECT * FROM pantry_items WHERE name = ?').get('Schlechtes Datum');
+  assert.equal(badRow.expires_on, null, 'das unmoegliche Datum wird nicht gespeichert');
+  assert.equal(countReminders(badRow.id), 0);
+
+  const goodRow = db.prepare('SELECT * FROM pantry_items WHERE name = ?').get('Gutes Datum');
+  assert.equal(goodRow.expires_on, FUTURE_EXPIRY);
+  assert.equal(countReminders(goodRow.id), 1);
 });

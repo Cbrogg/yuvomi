@@ -13,6 +13,7 @@ import { webhookProvider } from './notification-providers/webhook.js';
 import { syncAllBirthdayReminders } from './birthdays.js';
 import { resolveHouseholdLocale, translate } from '../utils/i18n.js';
 import { warrantyEndDate } from './inventory-deadlines.js';
+import { syncAllPantryExpiryReminders } from './pantry-reminders.js';
 
 const log = createLogger('Notifications');
 const APP_NAME = 'Yuvomi';
@@ -285,6 +286,18 @@ export async function processDueNotifications({
     } catch (err) {
       log.error(`Birthday sync failed for user ${user.id}:`, err?.message || err);
     }
+  }
+
+  // DER BESTAND ZIEHT HIER NACH, nicht erst beim naechsten Anfassen. Der
+  // Router legt die Erinnerung eines Artikels beim Speichern an - aber ein
+  // Vorrat, der schon vor diesem Feature im Regal stand, ist nie gespeichert
+  // worden und haette nie gemeldet. Gleiche Bauart und gleiche Stelle wie der
+  // Geburtstags-Sync darueber: idempotent, ohne Zustand, bei jedem Lauf erneut.
+  // Haushaltsweit statt je Nutzer - der Vorrat gehoert dem Haushalt.
+  try {
+    syncAllPantryExpiryReminders(activeDb, now);
+  } catch (err) {
+    log.error('Pantry expiry sync failed:', err?.message || err);
   }
 
   const due = activeDb.prepare(`

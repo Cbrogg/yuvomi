@@ -18,7 +18,7 @@ import * as db from '../db.js';
 import { createLogger } from '../logger.js';
 import { str, oneOf, num, date, id as idParam, collectErrors, MAX_TITLE, MAX_TEXT, MAX_SHORT } from '../middleware/validate.js';
 import { normalizePantryUnit, normalizePantryQuantity } from '../../public/utils/pantry-units.js';
-import { reminderDateBefore, reminderIsInThePast } from '../utils/reminder-schedule.js';
+import { syncPantryExpiryReminder } from '../services/pantry-reminders.js';
 
 const log = createLogger('Pantry');
 const router = express.Router();
@@ -44,58 +44,12 @@ function getItem(itemId) {
 }
 
 /**
- * Vorlauf der Ablauf-Erinnerung in Tagen.
- *
- * BEWUSST DIESELBE ZAHL wie `EXPIRY_SOON_DAYS` in public/utils/pantry-status.js,
- * die den Chip "läuft bald ab" gelb färbt: die Meldung kündigt genau diesen
- * Zustandswechsel an. Zwei Zahlen dafür wären zwei Wahrheiten - der Haushalt
- * bekäme die Nachricht an einem anderen Tag, als die Liste den Artikel
- * markiert, und keiner der beiden Tage wäre erklärbar. Ein Guard in
- * test/test-frontend-audit.js hält die Definitionen zusammen; dasselbe Muster
- * wie WARRANTY_ALERT_DAYS im Inventar.
- */
-const EXPIRY_REMINDER_OFFSET_DAYS = 7;
-
-/**
- * Erinnerungs-Lebenszyklus, identisches Muster wie
- * server/routes/inventory/items.js#syncReminder: bei jedem Schreiben erst
- * löschen, dann - falls die Bedingungen greifen - neu anlegen. Kein Diffing,
- * keine Sonderfälle für "nur ein Feld hat sich geändert".
- *
- * VIER BEDINGUNGEN, und die vierte ist die einzige, die vom Inventar abweicht:
- *
- * - kein MHD, keine Meldung. Das Datum IST der Schalter, so wie Kaufdatum plus
- *   Garantiemonate es am Gegenstand sind. Salz und Reis bleiben still, ohne
- *   dass jemand dafür etwas abwählen muss.
- * - kein `created_by` (das Mitglied wurde gelöscht, v109 setzt die Spalte auf
- *   NULL statt den Bestand mitzureißen): niemand, dem die Meldung gehört.
- *   `reminders.created_by` ist NOT NULL, es gibt hier also keinen Empfänger.
- * - der Termin liegt schon hinter uns: ein nachgetragener Artikel, dessen MHD
- *   in drei Tagen abläuft, würde sonst im nächsten Push-Lauf sofort melden -
- *   dieselbe Regel wie im Inventar für zurückdatierte Altgeräte.
- * - MENGE 0: verbraucht. Der Chip zeigt "läuft bald ab" auch bei leerem
- *   Bestand, und das ist dort richtig, weil eine Liste passiv ist - man sieht
- *   sie, wenn man hinsieht. Eine Push-Meldung unterbricht. Für eine leere
- *   Packung gibt es nichts mehr zu retten, also ist sie nur Lärm. Das
- *   Wiederauffüllen legt die Erinnerung wieder an, weil jeder Schreibpfad
- *   durch diese Funktion geht.
+ * Kurze Fassade auf server/services/pantry-reminders.js: die Regel, WANN ein
+ * Artikel meldet, steht dort - sie wird auch vom Push-Lauf gebraucht, der den
+ * ganzen Bestand nachzieht, und darf deshalb nicht im Router wohnen.
  */
 function syncReminder(item) {
-  const database = db.get();
-  database.prepare(`
-    DELETE FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?
-  `).run(item.id);
-
-  if (!item.expires_on || !item.created_by) return;
-  if (Number(item.quantity) <= 0) return;
-
-  const remindAt = reminderDateBefore(item.expires_on, EXPIRY_REMINDER_OFFSET_DAYS);
-  if (reminderIsInThePast(remindAt)) return;
-
-  database.prepare(`
-    INSERT INTO reminders (entity_type, entity_id, remind_at, created_by)
-    VALUES ('pantry_item', ?, ?, ?)
-  `).run(item.id, remindAt, item.created_by);
+  syncPantryExpiryReminder(db.get(), item);
 }
 
 /**
@@ -393,7 +347,14 @@ router.post('/import-shopping', (req, res) => {
         const quantity = normalizePantryQuantity(entry.quantity, { fallback: 1 });
         const unit = normalizePantryUnit(entry.unit);
         const locationId = entry.location_id ? Number(entry.location_id) || null : null;
-        const expiresOn = /^\d{4}-\d{2}-\d{2}$/.test(String(entry.expires_on ?? '')) ? String(entry.expires_on) : null;
+        // KALENDARISCH prüfen, nicht nur die Form: `date()` ist dieselbe
+        // Funktion, die POST/PUT/PATCH benutzen. Die rohe Regex liess ein
+        // '2027-02-30' durch - vorher nur eine unsinnige Zeile, seit die
+        // Erinnerung mit dem Datum RECHNET ein Fehler mitten in der
+        // Transaktion, der den ganzen Import zurückrollt. Ein ungültiges MHD
+        // übergeht die Zeile still, wie eine fremde Listen-ID: der Import ist
+        // eine Massenübernahme, kein Formular.
+        const expiresOn = date(entry.expires_on, 'Mindesthaltbarkeitsdatum').value;
         const category = categoryNames.includes(source.category) ? source.category : fallbackCategory;
 
         // Gleicher Name, gleiche Einheit, gleicher Ort UND gleiches MHD →
@@ -449,18 +410,24 @@ router.post('/', (req, res) => {
     const { values, errors } = validateItemFields(req.body);
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
-    const result = db.get().prepare(`
-      INSERT INTO pantry_items
-        (name, quantity, unit, location_id, category, expires_on, min_quantity, notes, created_by)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    `).run(
-      values.name, values.quantity, values.unit, values.location_id,
-      values.category, values.expires_on, values.min_quantity, values.notes,
-      req.authUserId || req.session.userId
-    );
+    // Schreiben und Erinnerung in EINER Transaktion, wie in
+    // server/routes/inventory/items.js: sonst kann der Artikel stehen und die
+    // Erinnerung fehlen, ohne dass die Antwort davon erzählt.
+    const created = db.get().transaction(() => {
+      const result = db.get().prepare(`
+        INSERT INTO pantry_items
+          (name, quantity, unit, location_id, category, expires_on, min_quantity, notes, created_by)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+      `).run(
+        values.name, values.quantity, values.unit, values.location_id,
+        values.category, values.expires_on, values.min_quantity, values.notes,
+        req.authUserId || req.session.userId
+      );
+      const item = getItem(result.lastInsertRowid);
+      syncReminder(item);
+      return item;
+    })();
 
-    const created = getItem(result.lastInsertRowid);
-    syncReminder(created);
     res.status(201).json({ data: created });
   } catch (err) {
     log.error('POST / error:', err);
@@ -484,18 +451,21 @@ router.put('/:itemId', (req, res) => {
     const { values, errors } = validateItemFields(req.body, { current: item });
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
 
-    db.get().prepare(`
-      UPDATE pantry_items
-      SET name = ?, quantity = ?, unit = ?, location_id = ?, category = ?,
-          expires_on = ?, min_quantity = ?, notes = ?
-      WHERE id = ?
-    `).run(
-      values.name, values.quantity, values.unit, values.location_id,
-      values.category, values.expires_on, values.min_quantity, values.notes, item.id
-    );
+    const updated = db.get().transaction(() => {
+      db.get().prepare(`
+        UPDATE pantry_items
+        SET name = ?, quantity = ?, unit = ?, location_id = ?, category = ?,
+            expires_on = ?, min_quantity = ?, notes = ?
+        WHERE id = ?
+      `).run(
+        values.name, values.quantity, values.unit, values.location_id,
+        values.category, values.expires_on, values.min_quantity, values.notes, item.id
+      );
+      const fresh = getItem(item.id);
+      syncReminder(fresh);
+      return fresh;
+    })();
 
-    const updated = getItem(item.id);
-    syncReminder(updated);
     res.json({ data: updated });
   } catch (err) {
     log.error('PUT /:itemId error:', err);
@@ -525,14 +495,18 @@ router.patch('/:itemId', (req, res) => {
     const fields = Object.keys(values);
     if (!fields.length) return res.json({ data: item });
 
-    db.get().prepare(`
-      UPDATE pantry_items SET ${fields.map((f) => `${f} = ?`).join(', ')} WHERE id = ?
-    `).run(...fields.map((f) => values[f]), item.id);
+    const updated = db.get().transaction(() => {
+      db.get().prepare(`
+        UPDATE pantry_items SET ${fields.map((f) => `${f} = ?`).join(', ')} WHERE id = ?
+      `).run(...fields.map((f) => values[f]), item.id);
 
-    // Auch der ±-Stepper landet hier: wer den letzten Joghurt ausbucht, soll
-    // nicht in fünf Tagen an sein Ablaufdatum erinnert werden.
-    const updated = getItem(item.id);
-    syncReminder(updated);
+      // Auch der ±-Stepper landet hier: wer den letzten Joghurt ausbucht, soll
+      // nicht in fünf Tagen an sein Ablaufdatum erinnert werden.
+      const fresh = getItem(item.id);
+      syncReminder(fresh);
+      return fresh;
+    })();
+
     res.json({ data: updated });
   } catch (err) {
     log.error('PATCH /:itemId error:', err);
@@ -549,13 +523,17 @@ router.delete('/:itemId', (req, res) => {
     const vId = idParam(req.params.itemId, 'Artikel-ID');
     if (vId.error) return res.status(400).json({ error: vId.error, code: 400 });
 
-    const result = db.get().prepare('DELETE FROM pantry_items WHERE id = ?').run(vId.value);
-    if (result.changes === 0) return res.status(404).json({ error: 'Item not found.', code: 404 });
+    const removed = db.get().transaction(() => {
+      const result = db.get().prepare('DELETE FROM pantry_items WHERE id = ?').run(vId.value);
+      if (result.changes === 0) return false;
 
-    // `reminders` hat keinen Fremdschlüssel auf die Entität - entity_id ist über
-    // sechs Tabellen hinweg polymorph, ein FK könnte nur auf eine davon zeigen.
-    // Aufräumen ist deshalb Sache des Routers, wie im Inventar auch.
-    db.get().prepare("DELETE FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?").run(vId.value);
+      // `reminders` hat keinen Fremdschlüssel auf die Entität - entity_id ist
+      // über sechs Tabellen hinweg polymorph, ein FK könnte nur auf eine davon
+      // zeigen. Aufräumen ist deshalb Sache des Routers, wie im Inventar auch.
+      db.get().prepare("DELETE FROM reminders WHERE entity_type = 'pantry_item' AND entity_id = ?").run(vId.value);
+      return true;
+    })();
+    if (!removed) return res.status(404).json({ error: 'Item not found.', code: 404 });
 
     res.status(204).end();
   } catch (err) {

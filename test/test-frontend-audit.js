@@ -12856,7 +12856,7 @@ test('der Vorlauf einer Fristmeldung ist die Schwelle, die die Zeile faerbt', ()
     {
       what: 'Vorrat: Mindesthaltbarkeit',
       client: ['../public/utils/pantry-status.js', /EXPIRY_SOON_DAYS\s*=\s*(\d+)/],
-      server: ['../server/routes/pantry.js', /EXPIRY_REMINDER_OFFSET_DAYS\s*=\s*(\d+)/],
+      server: ['../server/services/pantry-reminders.js', /EXPIRY_REMINDER_OFFSET_DAYS\s*=\s*(\d+)/],
     },
     {
       what: 'Inventar: Garantieende',
