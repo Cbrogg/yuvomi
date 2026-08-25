@@ -36,6 +36,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Which of the two it is follows from the loan, is changed there, and any other answer was going to
   be silently overruled on save.
 
+  Two further faults surfaced once this path could be walked at all, and both are fixed here. Opening
+  an instalment for editing from the loan list filled the dialog from the instalment rather than from
+  the budget entry it belongs to. On a foreign-currency loan that meant the loan-currency figure went
+  in where the budget-currency one belongs, so saving converted it a second time - 100 USD at 0.50
+  became a 200 USD instalment. And because that stand-in carries no account, the dialog offered "no
+  account" and saving unlinked the instalment from the account it was charged to, moving that
+  account's balance. Both happened even if all you touched was the title.
+
+  Editing now loads the actual entry instead of assembling a second, partial copy of it. The
+  assembled one still describes the row in the list, where the loan currency is the right figure to
+  show - it was never an editing record, and now nothing treats it as one.
+
 
 ## [2.41.1] - 2026-08-25
 

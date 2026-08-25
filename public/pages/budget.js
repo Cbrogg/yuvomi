@@ -1524,22 +1524,26 @@ function isBorrowedLoan(loan) {
   return loan?.direction === 'borrowed';
 }
 
+/**
+ * Rate als Zeilen-Ansicht: Betrag in DARLEHENSWÄHRUNG, Vorzeichen aus der Richtung.
+ *
+ * Nur zum Anzeigen. Der gekoppelte Budget-Eintrag steht in Budget-Währung und trägt
+ * Felder, die hier nicht vorkommen - Konto, Sichtbarkeit, Belege. Wer dieses Objekt
+ * bearbeiten liesse, schriebe den Ratenbetrag als Budget-Betrag zurück und räumte
+ * nebenbei jedes Feld ab, das der Nachbau nicht kennt. Das Bearbeiten lädt deshalb
+ * den echten Eintrag, siehe openLoanPaymentEntry().
+ */
 function loanPaymentToEntry(loan, payment) {
   if (!payment.budget_entry_id) return null;
   return {
     id: payment.budget_entry_id,
-    // Kopplung mitgeben: das Edit-Modal sperrt daran den Typ-Umschalter. Über die
-    // Eintragsliste kommt sie ohnehin aus der API mit (entryWithLoanMeta) - ohne
-    // sie hier wäre der Umschalter je nach Einstiegspunkt mal gesperrt, mal nicht.
-    loan_id: loan.id,
-    loan_payment_id: payment.id,
     // Fallbacks über t() bzw. leer: der frühere hartkodierte englische Titel und
     // die deutsche Kategorie „Geschenke & Transfers" waren in 22 von 23 Sprachen
     // falsch — und die Kategorie ist längst ein Key, kein Anzeigename.
     title: payment.entry_title || t('budget.loanPaymentTitle', { borrower: loan.borrower }),
     // budget_loan_payments.amount ist per CHECK immer positiv (Betrag der Rate);
-    // das Vorzeichen trägt der gekoppelte Budget-Eintrag, und genau den bearbeitet
-    // das Edit-Modal - ohne die Spiegelung stünde dort eine Ausgabe als Einnahme.
+    // das Vorzeichen trägt der gekoppelte Budget-Eintrag - ohne die Spiegelung
+    // stünde eine Ausgabe in der Zeile als Einnahme.
     amount: (isBorrowedLoan(loan) ? -1 : 1) * Number(payment.amount || 0),
     category: payment.entry_category || '',
     subcategory: payment.entry_subcategory || '',
@@ -1654,10 +1658,7 @@ function wireLoansPage() {
   });
   _container.querySelectorAll('[data-action="loan-payment-edit"]').forEach((btn) => {
     btn.addEventListener('click', () => {
-      const loan = state.loans.loans.find((item) => item.id === parseInt(btn.dataset.loanId, 10));
-      const payment = loan?.payments?.find((item) => item.id === parseInt(btn.dataset.paymentId, 10));
-      const entry = loan && payment ? loanPaymentToEntry(loan, payment) : null;
-      if (entry) openBudgetModal({ mode: 'edit', entry });
+      openLoanPaymentEntry(parseInt(btn.dataset.loanId, 10), parseInt(btn.dataset.paymentId, 10));
     });
   });
   _container.querySelectorAll('[data-action="loan-payment-delete"]').forEach((btn) => {
@@ -1665,6 +1666,28 @@ function wireLoansPage() {
       await deleteLoanPayment(parseInt(btn.dataset.loanId, 10), parseInt(btn.dataset.paymentId, 10));
     });
   });
+}
+
+/**
+ * Öffnet den Bearbeiten-Dialog einer Rate mit dem ECHTEN Budget-Eintrag.
+ *
+ * Der Drilldown liefert dieselbe Zeile, die auch die Eintragsliste bearbeitet: Betrag
+ * in Budget-Währung, Konto, Sichtbarkeit, Belege, Darlehens-Kopplung. Aus der Rate ein
+ * Eintragsobjekt zu bauen hiesse, denselben Datensatz ein zweites Mal und unvollständig
+ * zu führen, und jedes dabei fehlende Feld wird beim Speichern stillschweigend geleert.
+ */
+async function openLoanPaymentEntry(loanId, paymentId) {
+  try {
+    const res = await api.get(`/budget?loan_id=${loanId}`);
+    const entry = (res.data ?? []).find((e) => e.loan_payment_id === paymentId);
+    if (!entry) {
+      window.yuvomi?.showToast(t('common.unknownError'), 'danger');
+      return;
+    }
+    openBudgetModal({ mode: 'edit', entry });
+  } catch (err) {
+    window.yuvomi?.showToast(err.data?.error ?? t('common.unknownError'), 'danger');
+  }
 }
 
 function openLoanReport(loan) {

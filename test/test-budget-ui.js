@@ -1189,19 +1189,24 @@ test('der Typ-Umschalter nimmt bei einer Darlehensrate keine Eingabe entgegen', 
   assert.ok(toggle.includes('budget.loanPaymentTypeLocked'), 'die Sperre bleibt unerklärt');
 });
 
-test('jeder Weg ins Bearbeiten-Modal bringt die Darlehens-Kopplung mit', () => {
-  // Über die Eintragsliste kommt sie aus der API (entryWithLoanMeta), über die
-  // Ratenliste aus einem hier gebauten Objekt. Fehlte sie dort, wäre der
-  // Umschalter je nach Einstiegspunkt mal gesperrt und mal nicht - und genau so
-  // eine halb wirksame Sperre lässt sich nicht als Zusicherung lesen.
+test('das Bearbeiten-Modal bekommt immer einen echten Eintrag, nie einen nachgebauten', () => {
+  // loanPaymentToEntry() baut aus einer Rate ein Anzeige-Objekt: Betrag in
+  // Darlehenswährung, ohne Konto, ohne Sichtbarkeit, ohne Belege. Als Vorlage zum
+  // Bearbeiten schriebe es den Ratenbetrag als Budget-Betrag zurück (bei
+  // Fremdwährung um den Kurs daneben) und leerte jedes Feld, das es nicht kennt.
+  // Es ist deshalb kein Einstieg ins Modal - der Drilldown liefert den echten.
   const built = budget.slice(budget.indexOf('function loanPaymentToEntry'), budget.indexOf('function renderLoanPaymentEntry'));
-  assert.ok(built.includes('loan_id: loan.id'), 'das gebaute Eintragsobjekt nennt sein Darlehen nicht');
-  assert.ok(built.includes('loan_payment_id: payment.id'), 'das gebaute Eintragsobjekt nennt seine Rate nicht');
+  assert.doesNotMatch(built, /openBudgetModal/, 'der Nachbau oeffnet selbst das Modal');
 
-  // Die Erkennung darf sich nicht auf eines der beiden Felder verlassen: die API
-  // liefert beide, ein Drilldown-Eintrag ohne Zahlungs-Join nur loan_id.
-  const detect = budget.match(/const isLoanPayment = [^;]+;/);
-  assert.ok(detect, 'isLoanPayment ist nicht mehr auffindbar');
-  assert.match(detect[0], /entry\.loan_payment_id != null/, 'loan_payment_id wird nicht geprüft');
-  assert.match(detect[0], /entry\.loan_id != null/, 'loan_id wird nicht geprüft');
+  const handler = budget.slice(budget.indexOf("data-action=\"loan-payment-edit\"]').forEach"));
+  const body = handler.slice(0, handler.indexOf('});'));
+  assert.doesNotMatch(body, /loanPaymentToEntry/,
+    'der Bearbeiten-Knopf oeffnet das Modal mit dem nachgebauten Objekt');
+  assert.match(body, /openLoanPaymentEntry/, 'der Bearbeiten-Knopf laedt den Eintrag nicht nach');
+
+  const loader = budget.slice(budget.indexOf('async function openLoanPaymentEntry'));
+  const loaderBody = loader.slice(0, loader.indexOf('\nfunction '));
+  assert.match(loaderBody, /api\.get\(`\/budget\?loan_id=/, 'der Eintrag kommt nicht aus dem Drilldown');
+  assert.match(loaderBody, /loan_payment_id === paymentId/, 'die geladene Zeile wird nicht der Rate zugeordnet');
+  assert.match(loaderBody, /openBudgetModal\(\{ mode: 'edit', entry \}\)/, 'das Modal wird nicht mit dem geladenen Eintrag geoeffnet');
 });
