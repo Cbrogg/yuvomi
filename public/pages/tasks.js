@@ -3954,7 +3954,11 @@ export async function render(container, { user }) {
               ${t('tasks.bulkTagAdd')}
             </button>
             <button class="btn btn--secondary btn--sm" id="bulk-tag-remove">
-              <i data-lucide="tag-off" class="icon-md" aria-hidden="true"></i>
+              <!-- Nicht "tag-off": das Icon gibt es im gebuendelten Lucide nicht,
+                   der Knopf stand deshalb leer da. "eraser" traegt das Wegnehmen
+                   und laesst sich vom "tag" des Nachbarknopfs unterscheiden -
+                   zweimal dasselbe Icon nebeneinander waere keine Wahl. -->
+              <i data-lucide="eraser" class="icon-md" aria-hidden="true"></i>
               ${t('tasks.bulkTagRemove')}
             </button>
             <button class="btn btn--danger btn--sm" id="bulk-delete">

@@ -44,6 +44,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Two buttons had no icon at all.** "Remove tags" in the task bulk bar and "Find logo" in the
+  subscription form asked for `tag-off` and `image-search`, neither of which is in the bundled Lucide
+  build. `createIcons()` leaves an unknown name alone rather than failing, so both buttons simply
+  stood there empty, with the only trace a browser console warning. They now use icons that exist,
+  and a guard checks every icon name against the bundle - which is also the net under the next
+  Lucide update, since it drops renamed aliases and the app still uses some of them.
+
 - **The formatting toolbar wrote German into every language** (#731). Clicking "Link" inserted
   `[Linktext](url)` and clicking "Bold" without a selection inserted `Text` - both fixed in the
   source rather than translated. That text lands in the note itself, so it is interface text like
