@@ -50,6 +50,15 @@ export const EXPIRY_REMINDER_OFFSET_DAYS = 7;
  * - kein `created_by` (das Mitglied wurde gelöscht, Migration v109 setzt die
  *   Spalte auf NULL statt den Bestand mitzureißen): es gibt niemanden, dem die
  *   Meldung gehört. `reminders.created_by` ist NOT NULL.
+ *
+ *   DAS IST EINE ECHTE LÜCKE, und sie wird hier bewusst nicht geschlossen: der
+ *   Vorrat gehört dem Haushalt, eine Erinnerung aber immer einem Nutzer. Auf
+ *   den gerade handelnden auszuweichen wäre die naheliegende Reparatur und
+ *   verschöbe stillschweigend, wem die Meldung gehört - wer ein Glas
+ *   nachfüllt, hat damit nicht dessen Fristen übernommen. Die richtige Antwort
+ *   ist eine Erinnerung, die dem Haushalt gehört; die gibt es im Datenmodell
+ *   nicht, und sie einzuführen ist eine Änderung an allen sechs Herkünften,
+ *   nicht an dieser.
  * - der Termin liegt schon hinter uns: ein nachgetragener Artikel, dessen MHD
  *   in drei Tagen abläuft, würde sonst im nächsten Push-Lauf sofort melden -
  *   dieselbe Regel wie im Inventar für zurückdatierte Altgeräte.
@@ -116,8 +125,15 @@ export function syncPantryExpiryReminder(database, item, now = new Date()) {
  * @param {Date} [now]
  */
 export function syncAllPantryExpiryReminders(database, now = new Date()) {
+  // `date(x) = x` ist die kalendarische Prüfung in SQL: SQLite normalisiert ein
+  // '2027-02-30' zu '2027-03-02' und liefert für '2026-13-01' NULL, beides
+  // ungleich der Eingabe. Bestandszeilen mit unmöglichem Datum fallen so hier
+  // heraus, statt in jedem Lauf erneut in die Rechnung zu geraten und dieselbe
+  // Warnung zu schreiben - bei einem Lauf je Minute wären das ~1440 Zeilen
+  // Lograuschen am Tag, für einen Artikel, an dem sich nichts ändert.
   const QUALIFIES = `
-    expires_on IS NOT NULL AND created_by IS NOT NULL AND quantity > 0
+    expires_on IS NOT NULL AND date(expires_on) = expires_on
+    AND created_by IS NOT NULL AND quantity > 0
   `;
 
   // GEGENSTANDSLOSES ZUERST: der Artikel ist weg, verbraucht oder hat sein
@@ -129,8 +145,8 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
       AND entity_id NOT IN (SELECT id FROM pantry_items WHERE ${QUALIFIES})
   `).run();
 
-  // Und dann nur die Lücken. Artikel mit bestehender Zeile stehen gar nicht
-  // erst in der Ergebnismenge.
+  // Fehlende ergänzen. Artikel mit bestehender Zeile stehen gar nicht erst in
+  // der Ergebnismenge.
   const missing = database.prepare(`
     SELECT id, quantity, expires_on, created_by FROM pantry_items
     WHERE ${QUALIFIES}
@@ -138,4 +154,32 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
   `).all();
 
   for (const item of missing) syncPantryExpiryReminder(database, item, now);
+
+  // UND EINEN VERALTETEN TERMIN GERADEZIEHEN, aber nur einen, der noch nichts
+  // getan hat. Ein Wiederherstellen aus dem Backup oder ein Eingriff von Hand
+  // kann `expires_on` ändern, ohne durch den Router zu gehen; dann meldete die
+  // alte Zeile zu einem Zeitpunkt, den ihr eigener Text (er kommt beim
+  // Zustellen frisch aus dem Artikel) nicht mehr trägt.
+  //
+  // `pushed_at IS NULL AND dismissed = 0` ist die Grenze: was zugestellt oder
+  // weggewischt wurde, bleibt liegen. Es zu ersetzen hiesse, dieselbe Meldung
+  // ein zweites Mal zu schicken oder ein Wegwischen zu widerrufen.
+  const stale = database.prepare(`
+    SELECT r.id, r.remind_at, p.expires_on
+    FROM reminders r JOIN pantry_items p ON p.id = r.entity_id
+    WHERE r.entity_type = 'pantry_item' AND r.pushed_at IS NULL AND r.dismissed = 0
+  `).all();
+
+  const retime = database.prepare('UPDATE reminders SET remind_at = ? WHERE id = ?');
+  for (const row of stale) {
+    let target;
+    try {
+      target = reminderDateBefore(row.expires_on, EXPIRY_REMINDER_OFFSET_DAYS);
+    } catch {
+      // Kann nach dem QUALIFIES-Filter nur eine Zeile sein, die zwischen den
+      // beiden Abfragen geändert wurde. Der nächste Lauf räumt sie ab.
+      continue;
+    }
+    if (target !== row.remind_at) retime.run(target, row.id);
+  }
 }

@@ -351,9 +351,15 @@ router.post('/import-shopping', (req, res) => {
         // Funktion, die POST/PUT/PATCH benutzen. Die rohe Regex liess ein
         // '2027-02-30' durch - vorher nur eine unsinnige Zeile, seit die
         // Erinnerung mit dem Datum RECHNET ein Fehler mitten in der
-        // Transaktion, der den ganzen Import zurückrollt. Ein ungültiges MHD
-        // übergeht die Zeile still, wie eine fremde Listen-ID: der Import ist
-        // eine Massenübernahme, kein Formular.
+        // Transaktion, der den ganzen Import zurückrollt.
+        //
+        // DER ARTIKEL KOMMT TROTZDEM AN, nur ohne MHD. Er selbst ist in
+        // Ordnung - Name, Menge und Kategorie stammen aus der Einkaufsliste,
+        // kaputt ist allein das Datum. Die Zeile zu verwerfen hiesse: jemand
+        // hakt den Joghurt ab, drückt Übernehmen, und der Joghurt fehlt im
+        // Vorrat. Ein Artikel ohne Ablaufdatum ist der kleinere Verlust, und
+        // es ist der Zustand, den der Vorrat für die Mehrheit seiner Zeilen
+        // ohnehin kennt.
         const expiresOn = date(entry.expires_on, 'Mindesthaltbarkeitsdatum').value;
         const category = categoryNames.includes(source.category) ? source.category : fallbackCategory;
 

@@ -15,6 +15,22 @@ const router = express.Router();
 
 const VALID_ENTITY_TYPES = ['task', 'event', 'subscription', 'inventory_item', 'inventory_tracked_date', 'pantry_item'];
 
+/**
+ * ABGELEITETE HERKÜNFTE: ihre Erinnerung ist keine Eingabe, sondern eine Folge
+ * von Moduldaten - Abo-Termin, Garantieende, Inventar-Frist, Mindesthaltbarkeit.
+ * Das Modul stellt sie bei jedem Schreibvorgang neu her (löschen, dann anlegen),
+ * und der Vorrat zusätzlich in jedem Benachrichtigungslauf.
+ *
+ * Eine von Hand gesetzte Erinnerung überlebt das nicht. Sie anzunehmen wäre eine
+ * Zusage, die beim nächsten Speichern gebrochen wird - und beim Vorrat binnen
+ * einer Minute, ohne dass irgendwo steht, warum sie verschwunden ist. Ein
+ * ehrliches 400 sagt es sofort.
+ *
+ * Die LESEWEGE (GET, DELETE) kennen alle Typen weiter: der Erinnerungs-Toast
+ * muss eine abgeleitete Meldung anzeigen und wegwischen können.
+ */
+const DERIVED_ENTITY_TYPES = ['subscription', 'inventory_item', 'inventory_tracked_date', 'pantry_item'];
+
 // Obergrenze für mehrere Erinnerungen je Entität (z. B. Kalender-Termin, #436).
 const MAX_REMINDERS_PER_ENTITY = 5;
 
@@ -136,6 +152,8 @@ router.post('/', (req, res) => {
 
     if (!entity_type || !VALID_ENTITY_TYPES.includes(entity_type)) {
       errors.push(`entity_type must be one of: ${VALID_ENTITY_TYPES.join(', ')}.`);
+    } else if (DERIVED_ENTITY_TYPES.includes(entity_type)) {
+      errors.push(`Reminders for ${entity_type} are derived from the item itself and cannot be set here.`);
     }
 
     if (errors.length) {

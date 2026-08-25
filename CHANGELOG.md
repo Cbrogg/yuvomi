@@ -48,8 +48,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Die Übernahme aus der Einkaufsliste prüft das Mindesthaltbarkeitsdatum jetzt gegen den
   Kalender.** Sie sah bisher nur nach der Form, ein `2027-02-30` kam durch. Das blieb folgenlos,
   solange niemand mit dem Datum rechnete - eine unsinnige Zeile im Vorrat, mehr nicht. Beide
-  Prüfungen sind jetzt dieselbe Funktion, die auch das Formular benutzt; eine Zeile mit unmöglichem
-  Datum wird beim Import still übergangen, wie eine, deren Artikel schon gelöscht wurde.
+  Prüfungen sind jetzt dieselbe Funktion, die auch das Formular benutzt. Der Artikel kommt trotzdem
+  im Vorrat an, nur ohne Datum: er selbst ist in Ordnung, kaputt ist allein das MHD - und ihn ganz
+  zu verwerfen hiesse, dass jemand den Joghurt abhakt, Übernehmen drückt und der Joghurt fehlt.
 
 ### Changed
 
