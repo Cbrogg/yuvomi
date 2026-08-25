@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "{{count}} fiş eklendi",
         "receiptsAttachedLabel_one": "{{count}} fiş eklendi",
         "loanPaidInstallmentsLabel": "Halihazırda ödenen taksitler",
-        "loanPaidInstallmentsHint": "Zaten devam eden bir kredi için. Bu taksitler kaydedilir, ancak bütçeye işlenmez."
+        "loanPaidInstallmentsHint": "Zaten devam eden bir kredi için. Bu taksitler kaydedilir, ancak bütçeye işlenmez.",
+        "loanPaymentTypeLocked": "Gelir mi gider mi olduğu kredi türüne bağlıdır ve orada değiştirilir."
     },
     "settings": {
         "healthCycleEnableLabel": "Döngü sekmesini göster",

@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "Připojené doklady: {{count}}",
         "receiptsAttachedLabel_one": "Připojený doklad: {{count}}",
         "loanPaidInstallmentsLabel": "Již zaplacené splátky",
-        "loanPaidInstallmentsHint": "Pro půjčku, která již běží. Tyto splátky se doplní, ale nezaúčtují se do rozpočtu."
+        "loanPaidInstallmentsHint": "Pro půjčku, která již běží. Tyto splátky se doplní, ale nezaúčtují se do rozpočtu.",
+        "loanPaymentTypeLocked": "Příjem nebo výdaj se řídí typem půjčky a mění se tam."
     },
     "settings": {
         "healthCycleEnableLabel": "Zobrazit kartu cyklu",

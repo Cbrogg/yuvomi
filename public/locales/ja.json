@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "領収書 {{count}} 件を添付",
         "receiptsAttachedLabel_one": "領収書 {{count}} 件を添付",
         "loanPaidInstallmentsLabel": "支払い済みの回数",
-        "loanPaidInstallmentsHint": "すでに返済中のローン用です。これらの回は記録されますが、家計簿には計上されません。"
+        "loanPaidInstallmentsHint": "すでに返済中のローン用です。これらの回は記録されますが、家計簿には計上されません。",
+        "loanPaymentTypeLocked": "収入か支出かは貸付・借入の別に従い、そちらで変更します。"
     },
     "settings": {
         "healthCycleEnableLabel": "周期タブを表示",

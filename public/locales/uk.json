@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "Прикріплено чеків: {{count}}",
         "receiptsAttachedLabel_one": "Прикріплено чек: {{count}}",
         "loanPaidInstallmentsLabel": "Уже сплачені платежі",
-        "loanPaidInstallmentsHint": "Для позики, що вже виплачується. Ці платежі фіксуються, але не проводяться в бюджеті."
+        "loanPaidInstallmentsHint": "Для позики, що вже виплачується. Ці платежі фіксуються, але не проводяться в бюджеті.",
+        "loanPaymentTypeLocked": "Дохід або витрата залежить від типу позики й змінюється там."
     },
     "settings": {
         "healthCycleEnableLabel": "Показати вкладку циклу",

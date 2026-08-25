@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "Đã đính kèm {{count}} chứng từ",
         "receiptsAttachedLabel_one": "Đã đính kèm {{count}} chứng từ",
         "loanPaidInstallmentsLabel": "Số kỳ đã trả",
-        "loanPaidInstallmentsHint": "Dành cho khoản vay đang trả dở. Các kỳ này được ghi nhận nhưng không hạch toán vào ngân sách."
+        "loanPaidInstallmentsHint": "Dành cho khoản vay đang trả dở. Các kỳ này được ghi nhận nhưng không hạch toán vào ngân sách.",
+        "loanPaymentTypeLocked": "Thu nhập hay chi phí phụ thuộc vào loại khoản vay và được thay đổi ở đó."
     },
     "settings": {
         "healthCycleEnableLabel": "Hiện tab chu kỳ",

@@ -1390,7 +1390,8 @@
         "receiptsAttachedLabel": "{{count}} bonnen bijgevoegd",
         "receiptsAttachedLabel_one": "{{count}} bon bijgevoegd",
         "loanPaidInstallmentsLabel": "Al betaalde termijnen",
-        "loanPaidInstallmentsHint": "Voor een lening die al loopt. Deze termijnen worden vastgelegd, maar niet in het budget geboekt."
+        "loanPaidInstallmentsHint": "Voor een lening die al loopt. Deze termijnen worden vastgelegd, maar niet in het budget geboekt.",
+        "loanPaymentTypeLocked": "Inkomst of uitgave volgt de soort lening en wordt daar gewijzigd."
     },
     "settings": {
         "healthCycleEnableLabel": "Cyclustabblad tonen",
