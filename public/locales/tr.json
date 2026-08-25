@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} görev",
         "memberOpenTasks_one": "{{count}} görev",
         "manage": "Yönet",
-        "todayNothingElseTomorrow": "Bugün başka bir şey yok - yarın: {{title}}"
+        "todayNothingElseTomorrow": "Bugün başka bir şey yok - yarın: {{title}}",
+        "weatherHighLow": "En yüksek {{max}}°, en düşük {{min}}°"
     },
     "tasks": {
         "manageCategories": "Kategorileri yönet",

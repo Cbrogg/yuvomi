@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} कार्य",
         "memberOpenTasks_one": "{{count}} कार्य",
         "manage": "प्रबंधित करें",
-        "todayNothingElseTomorrow": "आज और कुछ नहीं - कल: {{title}}"
+        "todayNothingElseTomorrow": "आज और कुछ नहीं - कल: {{title}}",
+        "weatherHighLow": "अधिकतम {{max}}°, न्यूनतम {{min}}°"
     },
     "tasks": {
         "manageCategories": "श्रेणियाँ प्रबंधित करें",

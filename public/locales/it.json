@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} attività",
         "memberOpenTasks_one": "{{count}} attività",
         "manage": "Gestisci",
-        "todayNothingElseTomorrow": "Nient'altro per oggi - domani: {{title}}"
+        "todayNothingElseTomorrow": "Nient'altro per oggi - domani: {{title}}",
+        "weatherHighLow": "Massima {{max}}°, minima {{min}}°"
     },
     "tasks": {
         "manageCategories": "Gestisci categorie",

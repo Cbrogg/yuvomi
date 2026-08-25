@@ -295,7 +295,8 @@
         "memberOpenTasks": "{{count}} Aufgaben",
         "memberOpenTasks_one": "{{count}} Aufgabe",
         "manage": "Verwalten",
-        "todayNothingElseTomorrow": "Danach steht heute nichts mehr an - morgen: {{title}}"
+        "todayNothingElseTomorrow": "Danach steht heute nichts mehr an - morgen: {{title}}",
+        "weatherHighLow": "Höchstwert {{max}}°, Tiefstwert {{min}}°"
     },
     "tasks": {
         "manageCategories": "Kategorien verwalten",

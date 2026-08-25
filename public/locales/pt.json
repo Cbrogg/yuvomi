@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} tarefas",
         "memberOpenTasks_one": "{{count}} tarefa",
         "manage": "Gerir",
-        "todayNothingElseTomorrow": "Mais nada por hoje - amanhã: {{title}}"
+        "todayNothingElseTomorrow": "Mais nada por hoje - amanhã: {{title}}",
+        "weatherHighLow": "Máxima {{max}}°, mínima {{min}}°"
     },
     "tasks": {
         "manageCategories": "Gerir categorias",

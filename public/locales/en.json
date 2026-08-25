@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} tasks",
         "memberOpenTasks_one": "{{count}} task",
         "manage": "Manage",
-        "todayNothingElseTomorrow": "Nothing else today - tomorrow: {{title}}"
+        "todayNothingElseTomorrow": "Nothing else today - tomorrow: {{title}}",
+        "weatherHighLow": "High {{max}}°, low {{min}}°"
     },
     "tasks": {
         "manageCategories": "Manage categories",

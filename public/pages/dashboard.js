@@ -2685,6 +2685,53 @@ function mastheadWeatherHtml(weather) {
 }
 
 /**
+ * Wie heisst dieser Vorhersagetag?
+ *
+ * Aus dem DATUM, nie aus der Position. Die Position war die Falle (#851): der
+ * Server trennt den laufenden Tag aus `forecast` heraus, `forecast[0]` ist also
+ * morgen - hart als „Heute" beschriftet las sich die Reihe, als fehle ein Tag.
+ *
+ * Bezugsgroesse ist `weather.today.date`, der Kalendertag AM WETTERORT. Weder die
+ * Browser- noch die Haushaltszone taugt dafuer: ein Wetterort darf in einer
+ * dritten Zone liegen, und welcher Tag dort gerade laeuft, weiss nur der
+ * Provider. Fehlt die Angabe, bleibt es beim Wochentag - lieber kein „Heute" als
+ * ein falsches.
+ */
+function weatherIsToday(weather, dateKey) {
+  const ref = weather?.today?.date;
+  return Boolean(ref) && dateKey === ref;
+}
+
+function weatherDayLabel(weather, dateKey) {
+  if (weatherIsToday(weather, dateKey)) return t('common.today');
+  return new Intl.DateTimeFormat(getLocale(), { weekday: 'short' })
+    .format(new Date(`${dateKey}T12:00:00`));
+}
+
+/**
+ * Hoch und Tief des laufenden Tages, in demselben Vokabular wie die Reihe
+ * darunter (semibold Hoch, gedaempftes Tief). Sie stehen im Hauptblock, weil der
+ * Hauptblock heute IST - ohne sie trug die Karte fuer jeden Folgetag eine
+ * Spanne, fuer heute aber nur den Momentanwert (#851).
+ */
+function weatherTodayRange(weather, cls) {
+  const hi = weatherNumber(weather?.today?.temp_max);
+  const lo = weatherNumber(weather?.today?.temp_min);
+  if (hi === null || lo === null) return '';
+  // Zwei nackte Zahlen nebeneinander sagen vorgelesen nichts - die Auszeichnung
+  // traegt die Bedeutung, die das Schriftbild optisch schon hat.
+  const aria = esc(t('dashboard.weatherHighLow', { max: hi, min: lo }));
+  // `role="img"` und nicht nur `aria-label`: auf einem rollenlosen <span> mit
+  // ausschliesslich aria-hidden-Kindern haengt die Auszeichnung an nichts und
+  // wird stellenweise gar nicht angesagt (dasselbe Paar wie beim Dosen-Balken
+  // und beim Zyklus-Ring weiter oben).
+  return `<span class="${cls}" role="img" aria-label="${aria}">
+      <span class="${cls}-high" aria-hidden="true">${esc(String(hi))}°</span>
+      <span class="${cls}-low" aria-hidden="true">${esc(String(lo))}°</span>
+    </span>`;
+}
+
+/**
  * Die Tagesspanne der Verlaufszeile, normiert auf die Spanne der GANZEN
  * Vorhersage. Erst dadurch sagt der Balken etwas: eine Zeile aus fünf gleich
  * langen Balken wäre Dekoration, eine Zeile, in der der Mittwoch nach oben
@@ -2734,10 +2781,7 @@ function renderWeatherWidget(weather) {
   const spanOf = weatherSpanModel(forecast);
 
   const forecastHtml = forecast.map((d, i) => {
-    const date = new Date(d.date + 'T12:00:00');
-    const label = i === 0
-      ? t('common.today')
-      : new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(date);
+    const label = weatherDayLabel(weather, d.date);
     const extraCls = i >= 3 ? ' weather-forecast__day--extended' : '';
     // Der Balken trägt das Band der HÖCHSTtemperatur: sie ist die Zahl, nach
     // der ein Tag eingeschätzt wird ("wird es warm?"), und sie steht daneben.
@@ -2749,7 +2793,7 @@ function renderWeatherWidget(weather) {
       : '';
     return `
       <div class="weather-forecast__day${extraCls}">
-        <div class="weather-forecast__label${i === 0 ? ' weather-forecast__label--today' : ''}">${esc(label)}</div>
+        <div class="weather-forecast__label${weatherIsToday(weather, d.date) ? ' weather-forecast__label--today' : ''}">${esc(label)}</div>
         ${iconHtml(d.icon, 'weather-forecast__icon', 32, descText(d.desc))}
         <div class="weather-forecast__temps">
           <span class="weather-forecast__high">${d.temp_max}°</span>
@@ -2769,6 +2813,7 @@ function renderWeatherWidget(weather) {
         <div class="weather-widget__main">
           <div class="weather-widget__left">
             <div class="weather-widget__temp">${esc(current.temp)}${unitSymbol}</div>
+            ${weatherTodayRange(weather, 'weather-widget__range')}
             <div class="weather-widget__desc">${esc(descText(current.desc))}</div>
             <div class="weather-widget__city">${esc(city)}</div>
             <div class="weather-widget__meta">
@@ -3032,11 +3077,8 @@ function renderWallWeather(weather) {
   if (!weather?.current) return '';
   const { city, current, forecast, units } = weather;
   const desc = weatherDescText(weather, current.desc);
-  const days = (Array.isArray(forecast) ? forecast : []).slice(0, 4).map((d, i) => {
-    const date = new Date(`${d.date}T12:00:00`);
-    const label = i === 0
-      ? t('common.today')
-      : new Intl.DateTimeFormat(getLocale(), { weekday: 'short' }).format(date);
+  const days = (Array.isArray(forecast) ? forecast : []).slice(0, 4).map((d) => {
+    const label = weatherDayLabel(weather, d.date);
     return `
       <li class="wall-weather__day"${weatherToneAttr(d.icon)}>
         <span class="wall-weather__day-label">${esc(label)}</span>
@@ -3055,6 +3097,7 @@ function renderWallWeather(weather) {
         ${weatherIconHtml(weather, current.icon, 'wall-weather__icon', 64, desc)}
         <span class="wall-weather__body">
           <span class="wall-weather__temp">${esc(String(current.temp))}${weatherUnitSymbol(units)}</span>
+          ${weatherTodayRange(weather, 'wall-weather__range')}
           <span class="wall-weather__desc">${esc(desc)}${city ? ` · ${esc(city)}` : ''}</span>
         </span>
       </div>
@@ -4090,7 +4133,7 @@ export async function render(container, { user }) {
   }
 }
 
-export const __test = { buildTodayHighlights, buildTodayProgram, buildTodayCockpitModel, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate, renderWallSurface, renderWallWho, selectMetricTiles, METRIC_TILE_ORDER, PROGRAM_ROW_CAP, WALL_ROW_CAP, weatherToneKey, weatherMotionAttr, weatherTempBand, weatherSpanModel };
+export const __test = { buildTodayHighlights, buildTodayProgram, buildTodayCockpitModel, renderTodayCockpit, renderPinnedNotes, renderFamilyWidget, formatDueDate, normalizeVisibleMealTypes, renderTodayMeals, calendarEventRoute, eventOccurrenceDateKey, eventStartDate, renderWallSurface, renderWallWho, selectMetricTiles, METRIC_TILE_ORDER, PROGRAM_ROW_CAP, WALL_ROW_CAP, weatherToneKey, weatherMotionAttr, weatherTempBand, weatherSpanModel, weatherDayLabel, weatherTodayRange, renderWeatherWidget, renderWallWeather };
 
 function wireWeatherRefresh(container, onUpdated = null) {
   const refreshBtn = container.querySelector('#weather-refresh-btn');

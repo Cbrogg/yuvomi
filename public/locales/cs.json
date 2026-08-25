@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} úkolů",
         "memberOpenTasks_one": "{{count}} úkol",
         "manage": "Spravovat",
-        "todayNothingElseTomorrow": "Dnes už nic dalšího - zítra: {{title}}"
+        "todayNothingElseTomorrow": "Dnes už nic dalšího - zítra: {{title}}",
+        "weatherHighLow": "Nejvyšší {{max}}°, nejnižší {{min}}°"
     },
     "tasks": {
         "manageCategories": "Spravovat kategorie",

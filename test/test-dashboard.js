@@ -1975,6 +1975,101 @@ test('die Route zieht ihren Kalendertag lokal, nicht aus toISOString()', () => {
 });
 
 // --------------------------------------------------------
+// Wetter: welcher Tag heisst "Heute" (#851)
+// --------------------------------------------------------
+/* Ein Vorhersagetag wird an seinem DATUM benannt, nie an seiner Position.
+ *
+ * Die Position war die Falle: der Server trennt den laufenden Tag aus
+ * `forecast` heraus, `forecast[0]` ist also morgen - hart als „Heute"
+ * beschriftet las sich die Reihe, als fehle ein Tag. Auf einem Wandtablet und
+ * auf dem Handy stand derselbe Fehler zweimal, weil beide Fassungen dieselbe
+ * Zeile kopiert hatten.
+ *
+ * Bezugsgroesse ist `weather.today.date`, der Kalendertag AM WETTERORT. Fehlt
+ * er, gibt es kein „Heute" - lieber kein Label als ein falsches. */
+
+const WEATHER_FIXTURE = {
+  units: 'metric',
+  city: 'Honolulu',
+  current: { temp: 26, feels_like: 27, humidity: 70, icon: 'sun', desc: 'wmo.0', wind_speed: 8 },
+  today: { date: '2026-08-24', temp_min: 22, temp_max: 29, icon: 'sun', desc: 'wmo.0' },
+  forecast: [
+    { date: '2026-08-25', temp_min: 21, temp_max: 28, icon: 'cloud', desc: 'wmo.3' },
+    { date: '2026-08-26', temp_min: 20, temp_max: 27, icon: 'cloud-rain', desc: 'wmo.61' },
+    { date: '2026-08-27', temp_min: 22, temp_max: 30, icon: 'sun', desc: 'wmo.0' },
+  ],
+};
+
+test('Wetter: der erste Vorhersagetag heisst nicht "Heute"', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const label = __test.weatherDayLabel(WEATHER_FIXTURE, WEATHER_FIXTURE.forecast[0].date);
+  assert(label !== 'common.today', 'forecast[0] ist morgen und darf nicht "Heute" heissen');
+  assert(label === 'Di', `Wochentag erwartet, bekam: ${label}`);
+});
+
+test('Wetter: ein Tag, der wirklich heute ist, heisst "Heute"', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  assert(
+    __test.weatherDayLabel(WEATHER_FIXTURE, WEATHER_FIXTURE.today.date) === 'common.today',
+    'der laufende Tag traegt das Heute-Label',
+  );
+});
+
+test('Wetter: ohne Bezugstag gibt es kein "Heute"', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const blind = { ...WEATHER_FIXTURE, today: null };
+  for (const d of WEATHER_FIXTURE.forecast) {
+    assert(
+      __test.weatherDayLabel(blind, d.date) !== 'common.today',
+      'ohne today.date darf kein Tag geraten werden',
+    );
+  }
+});
+
+test('Wetter-Karte: die Reihe beginnt beschriftet mit morgen, nicht mit "Heute"', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const html = __test.renderWeatherWidget(WEATHER_FIXTURE);
+  const labels = [...html.matchAll(/class="weather-forecast__label[^"]*">([^<]*)</g)].map((m) => m[1]);
+  assert(labels.length === 3, `drei Vorhersagetage erwartet, bekam ${labels.length}`);
+  assert(labels[0] !== 'common.today', 'die Karte beschriftet morgen als "Heute"');
+  assert(!html.includes('weather-forecast__label--today'), 'kein Tag der Reihe ist heute');
+});
+
+test('Wetter-Wand: dieselbe Regel, nicht nur auf der Karte', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const html = __test.renderWallWeather(WEATHER_FIXTURE);
+  const labels = [...html.matchAll(/class="wall-weather__day-label">([^<]*)</g)].map((m) => m[1]);
+  assert(labels.length === 3, `drei Vorhersagetage erwartet, bekam ${labels.length}`);
+  assert(labels[0] !== 'common.today', 'die Wand beschriftet morgen als "Heute"');
+});
+
+/* Hoch und Tief des laufenden Tages: die Karte trug fuer jeden Folgetag eine
+ * Spanne, fuer heute aber nur den Momentanwert - genau die Luecke aus #851. */
+test('Wetter: der Hauptblock traegt Hoch und Tief des laufenden Tages', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const html = __test.renderWeatherWidget(WEATHER_FIXTURE);
+  assert(html.includes('weather-widget__range-high'), 'Hoechstwert fehlt im Hauptblock');
+  assert(/weather-widget__range-high"[^>]*>29°/.test(html), 'falscher Hoechstwert');
+  assert(/weather-widget__range-low"[^>]*>22°/.test(html), 'falscher Tiefstwert');
+  assert(html.includes('dashboard.weatherHighLow'), 'die Zahlenpaarung braucht eine Vorlesehilfe');
+  assert(/class="weather-widget__range" role="img"/.test(html),
+    'die Vorlesehilfe braucht eine Rolle - auf einem rollenlosen span mit aria-hidden-Kindern haengt sie an nichts');
+});
+
+test('Wetter: ohne Tageswerte bleibt die Hoch/Tief-Zeile weg statt leer zu stehen', async () => {
+  const { __test } = await import('../public/pages/dashboard.js');
+  const ohne = { ...WEATHER_FIXTURE, today: { date: '2026-08-24', temp_min: null, temp_max: null } };
+  assert(
+    !__test.renderWeatherWidget(ohne).includes('weather-widget__range'),
+    'ohne Zahlen darf die Zeile nicht erscheinen',
+  );
+  assert(
+    !__test.renderWeatherWidget({ ...WEATHER_FIXTURE, today: null }).includes('weather-widget__range'),
+    'ohne today darf die Zeile nicht erscheinen',
+  );
+});
+
+// --------------------------------------------------------
 // Ergebnis
 // --------------------------------------------------------
 await Promise.all(pendingTests);

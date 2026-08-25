@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} εργασίες",
         "memberOpenTasks_one": "{{count}} εργασία",
         "manage": "Διαχείριση",
-        "todayNothingElseTomorrow": "Τίποτα άλλο για σήμερα - αύριο: {{title}}"
+        "todayNothingElseTomorrow": "Τίποτα άλλο για σήμερα - αύριο: {{title}}",
+        "weatherHighLow": "Μέγιστη {{max}}°, ελάχιστη {{min}}°"
     },
     "tasks": {
         "manageCategories": "Διαχείριση κατηγοριών",

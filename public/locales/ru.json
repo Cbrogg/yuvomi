@@ -283,7 +283,8 @@
         "memberOpenTasks": "{{count}} задач",
         "memberOpenTasks_one": "{{count}} задача",
         "manage": "Управлять",
-        "todayNothingElseTomorrow": "Больше на сегодня ничего нет - завтра: {{title}}"
+        "todayNothingElseTomorrow": "Больше на сегодня ничего нет - завтра: {{title}}",
+        "weatherHighLow": "Максимум {{max}}°, минимум {{min}}°"
     },
     "tasks": {
         "manageCategories": "Управление категориями",
