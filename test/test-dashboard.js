@@ -404,6 +404,72 @@ test('relativeDateLabel benennt einen Zeitpunkt in der Anzeigezone', async () =>
   }
 });
 
+/* Ein DATUMS-KEY wird gelesen, ein ZEITPUNKT umgerechnet - und ein Date, das aus
+ * einem Key gebaut wurde, ist die gefaehrliche Mitte.
+ *
+ * Die erste Fassung dieses Fixes schickte alles durch `zonedDateKey()`. Fuer
+ * einen echten Instant und fuer einen Key-STRING ist das richtig - `zonedFields`
+ * liest zonenlose Strings, statt sie zu rechnen. Fuer
+ * `parseLocalDateKey('2026-08-25')` aber, also Mitternacht der BROWSER-Zone, ist
+ * es einen Tag daneben: damit war derselbe Fehler wieder da, gegen den dieser PR
+ * angetreten ist, nur ueber einen anderen Weg.
+ *
+ * Die Pflicht liegt deshalb beim AUFRUFER, und genau dort setzt dieser Test an:
+ * nicht an `relativeDateLabel` (das war nie kaputt, wenn man ihm einen String
+ * gab), sondern an den Stellen, die vorher ein Date daraus bauten. Ein Test auf
+ * die Funktion allein waere gruen und blind gewesen - gemessen, nicht vermutet. */
+test('die Termin-Auswahl "heute" folgt der Anzeigezone, nicht dem Browser', async () => {
+  const tz = await import('/utils/timezone.js');
+  const { __test } = await import('../public/pages/dashboard.js');
+  try {
+    for (const zone of ['Pacific/Honolulu', 'Pacific/Kiritimati']) {
+      tz.setDisplayTimeZone(zone);
+      const n = tz.nowFields();
+      const p2 = (x) => String(x).padStart(2, '0');
+      const today = `${n.year}-${p2(n.month)}-${p2(n.day)}`;
+      const shift = (days) => {
+        const [y, m, d] = today.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d) + days * 86400000).toISOString().slice(0, 10);
+      };
+
+      const res = __test.buildTodayHighlights({
+        events: [
+          { id: 1, title: 'Heute', start_datetime: `${today}T10:00` },
+          { id: 2, title: 'Morgen', start_datetime: `${shift(1)}T10:00` },
+          { id: 3, title: 'Gestern', start_datetime: `${shift(-1)}T10:00` },
+        ],
+      });
+      nodeAssert.equal(res.nextEvent?.title, 'Heute',
+        `${zone}: nur der Termin am heutigen Tag DER ANZEIGEZONE zaehlt, bekam: ${res.nextEvent?.title}`);
+    }
+  } finally {
+    tz.setDisplayTimeZone(null);
+  }
+});
+
+test('relativeDateLabel benennt einen Datums-Key ohne ihn umzurechnen', async () => {
+  const tz = await import('/utils/timezone.js');
+  const { __test } = await import('../public/pages/dashboard.js');
+  try {
+    for (const zone of ['Pacific/Honolulu', 'Pacific/Kiritimati']) {
+      tz.setDisplayTimeZone(zone);
+      const n = tz.nowFields();
+      const p2 = (x) => String(x).padStart(2, '0');
+      const today = `${n.year}-${p2(n.month)}-${p2(n.day)}`;
+      const shift = (days) => {
+        const [y, m, d] = today.split('-').map(Number);
+        return new Date(Date.UTC(y, m - 1, d) + days * 86400000).toISOString().slice(0, 10);
+      };
+      nodeAssert.equal(__test.relativeDateLabel(today), 'common.today', zone);
+      nodeAssert.equal(__test.relativeDateLabel(shift(1)), 'common.tomorrow', zone);
+      nodeAssert.ok(!['common.today', 'common.tomorrow'].includes(__test.relativeDateLabel(shift(3))), zone);
+      nodeAssert.equal(__test.relativeDateLabel(null), '', 'kein Wert, kein Label');
+    }
+  } finally {
+    tz.setDisplayTimeZone(null);
+  }
+});
+
 test('Tagesprogramm: Ausblick kennt die nächste fällige Aufgabe über heute hinaus', async () => {
   const { __test } = await import('../public/pages/dashboard.js');
   const todayStr = toLocalDateKey(new Date());

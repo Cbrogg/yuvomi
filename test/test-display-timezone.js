@@ -383,6 +383,31 @@ test('kein Frontend-Modul baut sich sein eigenes "jetzt" aus der Browser-Uhr', (
     'ein "jetzt" aus der Browser-Uhr statt aus der Anzeigezone - `nowFields()` bzw. `todayKey()` fragen');
 });
 
+/* `toDateString()` ist dieselbe Uhr unter anderem Namen.
+ *
+ * Sie kam beim Aufraeumen der sieben Uhren mit heraus und stand nicht im Muster
+ * darueber, weil sie keinen Getter benutzt:
+ *
+ *     const today = new Date().toDateString();
+ *     if (d.toDateString() === today) ...
+ *
+ * Das ist ein Kalendertagsvergleich in der BROWSER-Zone, und er stand an drei
+ * Stellen im Dashboard - einmal fuer „ist dieser Termin heute", einmal fuer die
+ * Auswahl der heutigen Termine, einmal im Heute/Morgen-Label. Wer Kalendertage
+ * vergleicht, vergleicht Keys: `zonedDateKey()` bzw. `todayKey()`.
+ */
+test('kein Frontend-Modul vergleicht Kalendertage ueber toDateString()', () => {
+  const offenders = [];
+  for (const s of SOURCES) {
+    if (s.rel === path.join('utils', 'timezone.js')) continue;
+    s.code.split('\n').forEach((line, i) => {
+      if (/\.toDateString\(\s*\)/.test(line)) offenders.push(`${s.rel}:${i + 1}`);
+    });
+  }
+  assert.deepEqual(offenders, [],
+    'Kalendertage ueber toDateString() verglichen - das ist die Browser-Zone, `zonedDateKey()`/`todayKey()` nehmen');
+});
+
 test('der Guard erkennt die Schreibweise, an der er vorbeigesehen hat', () => {
   // Die Gegenprobe zum Guard selbst: er ist auf eine BINDUNG gebaut, und genau
   // die hat ihm gefehlt. Ein Guard ohne diese Zeile behauptet nur, er koenne es.

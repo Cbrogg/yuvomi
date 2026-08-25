@@ -20,7 +20,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   **still open today**; and the date a new **shared expense** is pre-filled with. On a device in
   another zone every one of them could be a day out.
 
-  All seven now ask `nowFields()` / `todayKey()`. The guard reads bindings as well as expressions,
+  Two more surfaced while fixing those. `toDateString()` is the same clock under another name -
+  three places in the dashboard compared calendar days with it, and it sits outside the guard's
+  pattern because it uses no getter at all. And the sort key that decides whether the next Outlook
+  item is an event or a task read the browser's hour off a value that may or may not carry a zone.
+
+  All of them now ask `nowFields()` / `todayKey()`, or compare day keys. The guard reads bindings as well as expressions,
   and it stays a rule rather than an allowlist: `getSeconds`/`getMilliseconds` are excluded because
   they are the same in every zone, and only `utils/timezone.js` (which answers the question) and
   `theme-init.js` (which runs before any zone is known, and decides something about the device

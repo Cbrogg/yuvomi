@@ -12,7 +12,7 @@ import { esc, fmtLocation, renderMarkdownLight } from '/utils/html.js';
 // `todayKey` heisst hier schon ein Parameter (bzw. eine lokale Bindung), der den
 // Bezugstag traegt - der Import kommt deshalb unter eigenem Namen herein.
 import { toLocalDateKey, parseLocalDateKey, addLocalDays, todayKey as householdToday } from '/utils/date.js';
-import { nowFields, zonedUTCProxy, zonedDateKey } from '/utils/timezone.js';
+import { nowFields, zonedUTCProxy, zonedDateKey, zonedTimeKey } from '/utils/timezone.js';
 import { predictCycle, PHASE } from '/utils/health-cycle.js';
 import { localizeBirthdayEvent } from '/utils/birthday-event.js';
 import { countdownPhrase, countdownRank } from '/utils/countdown.js';
@@ -413,24 +413,45 @@ function mastheadDateLabel(now = new Date()) {
 // Eigene Funktion, damit Aufrufer nur den Datumsteil brauchen, ohne ein
 // zusammengesetztes „Datum, Zeit" per Komma zu zerschneiden (locale-fragil:
 // manche Locales setzen selbst ein Komma ins Datum).
-function relativeDateLabel(d) {
-  // Beide Seiten als Kalendertag der ANZEIGEZONE. `toDateString()` liest die
-  // Browser-Zone, und `d` ist hier oft ein echter Zeitpunkt (ein synchronisierter
-  // Termin etwa): ein Geraet in einer anderen Zone nannte denselben Termin dann
-  // „Heute", waehrend er im Haushalt morgen liegt (#829, Nachlese #851).
-  const day = zonedDateKey(d);
-  if (!day) return formatDate(d);
+/**
+ * „Heute"/„Morgen", sonst das Datum in Locale-Schreibweise.
+ *
+ * NIMMT EINEN DATUMS-KEY ODER EINEN ZEITPUNKT, und der Unterschied ist genau
+ * der, den utils/timezone.js fuehrt: ein Key ('2026-08-25') ist zonenlos und
+ * wird GELESEN, ein Zeitpunkt traegt seine Zone und wird UMGERECHNET.
+ *
+ * DIE PFLICHT LIEGT BEIM AUFRUFER. Ein `Date`, das jemand aus einem Key gebaut
+ * hat, ist die gefaehrliche Mitte: `parseLocalDateKey('2026-08-25')` ist
+ * Mitternacht der BROWSER-Zone und sieht damit aus wie ein Zeitpunkt, meint aber
+ * einen Kalendertag. Durch die Anzeigezone gerechnet ist es einen Tag daneben -
+ * derselbe Fehler, gegen den dieser Fix angetreten ist, nur ueber einen anderen
+ * Weg. Wer einen Key hat, gibt den KEY her und baut kein Date daraus (#851).
+ *
+ * `zonedDateKey` unterscheidet die beiden Formen selbst: einen zonenlosen String
+ * liest es, einen Zeitpunkt rechnet es um. Ein zweiter Zweig hier waere ein
+ * Duplikat dieser Regel und wuerde beim naechsten Mal auseinanderlaufen.
+ *
+ * Vorher stand hier `d.toDateString() === new Date().toDateString()` - beide
+ * Seiten in der Browser-Zone, also fuer jeden Betrachter ein anderes „heute".
+ */
+function relativeDateLabel(value) {
+  if (value === null || value === undefined || value === '') return '';
+  const day = zonedDateKey(value);
+  if (!day) return formatDate(value);
   const today = householdToday();
   if (day === today) return t('common.today');
   if (day === addLocalDays(today, 1)) return t('common.tomorrow');
-  return formatDate(d);
+  return formatDate(value);
 }
 
 function formatDateTime(isoString) {
   if (!isoString) return '';
-  const d = new Date(isoString);
-  const dateStr = relativeDateLabel(d);
-  const timeStr = formatTime(d);
+  // Der Wert geht als STRING weiter. In `start_datetime` liegen zwei Formen in
+  // einer Spalte: zonenlose Wanduhrzeit ('2026-08-21T19:00') und echte Instants
+  // ('...Z'). `new Date(...)` haette die erste in einen Zeitpunkt der
+  // Browser-Zone verwandelt; beide Formatierer unterscheiden sie selbst.
+  const dateStr = relativeDateLabel(isoString);
+  const timeStr = formatTime(isoString);
   const suffix = timeSuffix();
   return `${dateStr}, ${timeStr}${suffix ? ' ' + suffix : ''}`.trim();
 }
@@ -681,11 +702,11 @@ function buildTodayHighlights(data) {
 
   const urgentTask = tasks.find((task) => task.priority === 'urgent') ?? tasks[0] ?? null;
 
-  const today = new Date().toDateString();
+  const today = householdToday();
   const todayEvents = events.filter((e) => {
     if (!e.start_datetime) return true;
-    const d = eventStartDate(e);
-    return d ? d.toDateString() === today : true;
+    const dayKey = eventOccurrenceDateKey(e);
+    return dayKey ? dayKey === today : true;
   });
   const nextEvent = todayEvents[0] ?? null;
 
@@ -895,10 +916,13 @@ function renderUpcomingEvents(events) {
     </div>`;
   }
 
-  const today = new Date().toDateString();
+  // Der Tagesvergleich ueber KEYS, nicht ueber `toDateString()`: das las die
+  // Browser-Zone und machte „heute" zu einer Frage an das Geraet (#851).
+  const today = householdToday();
   const items = events.map((e) => {
     const d = eventStartDate(e) ?? new Date(e.start_datetime);
-    const isToday = d.toDateString() === today;
+    const dayKey = eventOccurrenceDateKey(e);
+    const isToday = dayKey === today;
     const _suffix = timeSuffix();
     const timeStr = e.all_day ? t('dashboard.allDay') : `${formatTime(d)}${_suffix ? ' ' + _suffix : ''}`.trim();
     return `
@@ -907,7 +931,7 @@ function renderUpcomingEvents(events) {
         <div class="event-item__content">
           <div class="event-item__title">${esc(e.title)}</div>
           <div class="event-item__time">
-            <span class="event-time-badge ${isToday ? 'event-time-badge--today' : ''}">${isToday ? t('common.today') : relativeDateLabel(d)}</span>
+            <span class="event-time-badge ${isToday ? 'event-time-badge--today' : ''}">${isToday ? t('common.today') : relativeDateLabel(dayKey)}</span>
             ${timeStr}
             ${e.location ? ` · ${esc(fmtLocation(e.location))}` : ''}
             ${e.cal_name ? `<span class="event-item__cal">${esc(e.cal_name)}</span>` : ''}
@@ -1201,8 +1225,7 @@ function renderFamilyWidget(users, data) {
     } else {
       const upcoming = events.find((e) => eventOccurrenceDateKey(e) > todayKey && assignedTo(e));
       if (upcoming) {
-        const start = eventStartDate(upcoming);
-        status = `${esc(relativeDateLabel(start))} · ${esc(upcoming.title)}`;
+        status = `${esc(relativeDateLabel(eventOccurrenceDateKey(upcoming)))} · ${esc(upcoming.title)}`;
       } else {
         status = esc(t('dashboard.todayFree'));
         free = true;
@@ -1948,23 +1971,30 @@ function buildTodayCockpitModel(data, cfg = [], { cap = PROGRAM_ROW_CAP } = {}) 
   if (outlookEvent || outlookTask) {
     const eventStart = outlookEvent ? eventStartDate(outlookEvent) : null;
     const eventTimed = outlookEvent && !outlookEvent.all_day && eventStart && String(outlookEvent.start_datetime).length > 10;
+    // Die Uhrzeit ueber die Anzeigezone, nicht ueber die Browser-Getter des
+    // Dates: in `start_datetime` liegen zonenlose Wanduhrzeit und echte Instants
+    // in einer Spalte, und fuer die zweite Sorte kippte der Vergleich mit
+    // `taskKey` um den Zonenoffset (#851).
     const eventKey = outlookEvent
-      ? `${eventOccurrenceDateKey(outlookEvent)}T${eventTimed ? `${String(eventStart.getHours()).padStart(2, '0')}:${String(eventStart.getMinutes()).padStart(2, '0')}` : '00:00'}`
+      ? `${eventOccurrenceDateKey(outlookEvent)}T${eventTimed ? zonedTimeKey(outlookEvent.start_datetime) : '00:00'}`
       : null;
     const taskKey = outlookTask
       ? `${outlookTask.due_date}T${outlookTask.due_time ? String(outlookTask.due_time).slice(0, 5) : '23:59'}`
       : null;
     if (eventKey && (!taskKey || eventKey <= taskKey)) {
-      const when = eventTimed ? formatDateTime(outlookEvent.start_datetime) : relativeDateLabel(eventStart);
+      const when = eventTimed
+        ? formatDateTime(outlookEvent.start_datetime)
+        : relativeDateLabel(eventOccurrenceDateKey(outlookEvent));
       outlook = {
         sub: t('dashboard.todayNextUp', { event: `${when} · ${outlookEvent.title}` }),
         route: calendarEventRoute(outlookEvent),
       };
     } else {
-      const dueDay = parseLocalDateKey(outlookTask.due_date);
-      const dueTime = outlookTask.due_time ? new Date(`${outlookTask.due_date}T${outlookTask.due_time}`) : null;
-      const when = dueTime && !Number.isNaN(dueTime.getTime())
-        ? `${relativeDateLabel(dueDay)}, ${formatTime(dueTime)}`
+      // Faelligkeit ist zonenlose Wanduhrzeit: Key und Stempel, kein Date.
+      const dueDay = String(outlookTask.due_date).slice(0, 10);
+      const dueTime = outlookTask.due_time ? String(outlookTask.due_time).slice(0, 5) : null;
+      const when = dueTime
+        ? `${relativeDateLabel(dueDay)}, ${formatTime(`${dueDay}T${dueTime}`)}`
         : relativeDateLabel(dueDay);
       outlook = {
         sub: t('dashboard.todayNextUp', { event: `${when} · ${outlookTask.title}` }),
