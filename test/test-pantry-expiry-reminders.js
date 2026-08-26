@@ -35,6 +35,19 @@ const { syncAllPantryExpiryReminders, syncPantryExpiryReminder } = await import(
 const { todayKey: householdToday } = await import('../server/utils/timezone.js');
 const db = dbmod.get();
 
+/* DIE HAUSHALTSZONE IST EINE EINSTELLUNG, KEIN UMGEBUNGSZUFALL.
+ *
+ * Mehrere Tests hier arbeiten mit festen Zeitpunkten ("28.08. um 11:00Z") und
+ * festen Ablaufdaten. Ohne diese Zeile faellt `todayKey()` auf die Zone der
+ * Maschine zurueck, und unter Pacific/Kiritimati (UTC+14) ist der 26.08. um
+ * 11:00Z schon der 27. - dieselbe Eingabe ergibt einen anderen Kalendertag,
+ * und die Zusicherungen kippen. Zweimal in diesem Branch passiert.
+ *
+ * Auf UTC gesetzt, weil die Erinnerungstermine ohnehin naiv-UTC sind; die
+ * Zonen-Empfindlichkeit des Codes pruefen die Tests, die ihren Bezugstag
+ * ausdruecklich aus `householdToday()` holen. */
+db.prepare("INSERT INTO sync_config (key, value) VALUES ('household_timezone', 'UTC') ON CONFLICT(key) DO UPDATE SET value = excluded.value").run();
+
 /** `days` Tage nach einem Datumsschluessel, reine Kalenderarithmetik in UTC. */
 function addDays(key, days) {
   const d = new Date(`${key}T00:00:00Z`);
@@ -768,7 +781,7 @@ test('vor 09:00 eingetragen meldet ein heute ablaufender Artikel noch heute', ()
   assert.equal(reminderFor(id).remind_at, '2026-08-26T09:00');
 });
 
-test('nach 09:00 eingetragen bekommt derselbe Artikel keine Vorwarnung fuer morgen', () => {
+test('nach 09:00 eingetragen meldet ein heute ablaufender Artikel gleich, nicht morgen', () => {
   const id = db.prepare(
     "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Tagesware spaet', 1, 'pcs', 'Sonstiges', ?, ?)"
   ).run('2026-08-26', A).lastInsertRowid;
@@ -776,9 +789,12 @@ test('nach 09:00 eingetragen bekommt derselbe Artikel keine Vorwarnung fuer morg
   syncPantryExpiryReminder(db, db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id),
     new Date('2026-08-26T11:00:00Z'), null, { clampToNextMorning: true });
 
-  // Der einzige klemmbare Termin waere morgen 09:00 - einen Tag NACH dem
-  // Ablauf. Das ist keine Vorwarnung, also gibt es keine.
-  assert.equal(countReminders(id), 0);
+  // Morgen waere einen Tag NACH dem Ablauf - das ist keine Vorwarnung. Also
+  // faellt die Klemmung auf den heutigen Termin zurueck, obwohl er zurueckliegt:
+  // die Meldung geht im naechsten Durchgang raus. Fuer die letzte Packung Milch
+  // ist "gleich" besser als "gar nicht" - und westlich von UTC war "gar nicht"
+  // vorher der Regelfall, weil 09:00 UTC dort mitten in der Nacht liegt.
+  assert.equal(reminderFor(id).remind_at, '2026-08-26T09:00');
 });
 
 test('ein Tap nach 09:00 loescht die faellige Meldung eines heute ablaufenden Artikels NICHT', () => {
@@ -893,8 +909,11 @@ test('ein korrigiertes MHD raeumt auch eine geklemmte Meldung ab, die dahinter l
   db.prepare("UPDATE pantry_items SET expires_on = '2026-08-28' WHERE id = ?").run(id);
   syncPantryExpiryReminder(db, load(), new Date('2026-08-28T11:00:00Z'), null, { clampToNextMorning: true });
 
-  assert.equal(countReminders(id), 0,
-    'die Funktion muss ihre eigene Zusicherung halten, nicht eine andere fuer sie');
+  // Die Zeile bleibt nicht hinter dem Ablauf stehen - sie wird auf den letzten
+  // Tag gezogen, an dem die Meldung noch etwas taugt. Dass daraus vorher keine
+  // Meldung nach dem Ablauf wurde, lag allein am DELETE des Voll-Syncs; eine
+  // Zusicherung, die eine Funktion ausspricht und eine andere einhaelt, ist keine.
+  assert.equal(reminderFor(id).remind_at, '2026-08-28T09:00');
 });
 
 test('dasselbe im Voll-Sync: eine Zeile hinter dem Ablauf bleibt nicht stehen', () => {
@@ -940,4 +959,92 @@ test('ohne Vorratsartikel mit Datum fragt der Lauf keine Rechte ab', () => {
   // einziges Mindesthaltbarkeitsdatum - rund 16.000 Statements am Tag.
   assert.equal(permissionQueries, 0);
   fresh.close();
+});
+
+test('eine geklemmte Zeile laeuft nicht in jedem Durchgang durch die Terminkorrektur', () => {
+  // GEMESSEN: der remind_at einer geklemmten Zeile kann dem gerechneten Vorlauf
+  // NIE entsprechen - die SQL-Bedingung traf sie damit minuetlich, bis zur
+  // Zustellung. Genau die Leerarbeit, gegen die der Kommentar daneben den
+  // SQL-Schnitt begruendet, und ausgerechnet fuer Frischware.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Geklemmt', 1, 'pcs', 'Sonstiges', '2026-08-29', ?)"
+  ).run(A).lastInsertRowid;
+  db.prepare("INSERT INTO reminders (entity_type, entity_id, remind_at, created_by) VALUES ('pantry_item', ?, '2026-08-27T09:00', ?)")
+    .run(id, A);
+
+  const at = new Date('2026-08-26T11:00:00Z');
+  const staleCount = () => db.prepare(`
+    SELECT COUNT(*) AS c
+    FROM reminders r JOIN pantry_items p ON p.id = r.entity_id
+    WHERE r.entity_type = 'pantry_item' AND r.pushed_at IS NULL AND r.dismissed = 0
+      AND (
+        (date(p.expires_on, '-7 days') >= ? AND date(p.expires_on, '-7 days') || 'T09:00' <> r.remind_at)
+        OR substr(r.remind_at, 1, 10) > p.expires_on
+      )
+  `).get(householdToday(db, at)).c;
+
+  syncAllPantryExpiryReminders(db, at);
+  assert.equal(staleCount(), 0, 'die geklemmte Zeile darf nach dem Lauf nicht wieder Kandidat sein');
+  assert.equal(reminderFor(id).remind_at, '2026-08-27T09:00', 'und unveraendert bleiben');
+});
+
+test('ein Artikel mit verwaistem created_by qualifiziert gar nicht erst', () => {
+  // Ohne `created_by IN (SELECT id FROM users)` beantwortete
+  // creatorLacksPantry() dieselbe Frage je nach Weg verschieden: mit
+  // denied-Set galt eine unbekannte ID als berechtigt, ohne Set als gesperrt -
+  // und der Voll-Sync brach dann am Fremdschluessel ab, inklusive der
+  // Terminkorrektur darunter.
+  //
+  // Der Fremdschluessel verhindert die Zeile im Normalbetrieb - erzeugbar ist
+  // sie nur mit abgeschalteten Fremdschluesseln, also genau in der Lage, in der
+  // eine Migration oder ein Restore laeuft (`foreignKeysOff`). Deshalb wird sie
+  // hier auch so erzeugt und nicht per Umweg.
+  db.exec('PRAGMA foreign_keys = OFF');
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Waise', 1, 'pcs', 'Sonstiges', ?, 999999)"
+  ).run(FUTURE_EXPIRY).lastInsertRowid;
+  db.exec('PRAGMA foreign_keys = ON');
+
+  assert.doesNotThrow(() => syncAllPantryExpiryReminders(db));
+  assert.equal(countReminders(id), 0);
+
+  db.prepare('DELETE FROM pantry_items WHERE id = ?').run(id);
+});
+
+// --------------------------------------------------------------------------
+// DIE ZONE, DIE DIE SUITE SONST FESTNAGELT
+//
+// Oben steht `household_timezone = UTC`, damit die festen Zeitpunkte stabil
+// sind. Genau deshalb koennte diese Suite den Befund, der die Klemmung von der
+// UTC-Wanduhr auf Kalendertage gebracht hat, nicht mehr sehen. Dieser Test
+// verschiebt die Zone bewusst und stellt sie danach zurueck.
+// --------------------------------------------------------------------------
+test('westlich von UTC bekommt ein heute ablaufender Artikel morgens eine Meldung', () => {
+  const setZone = (zone) => db.prepare(
+    "INSERT INTO sync_config (key, value) VALUES ('household_timezone', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+  ).run(zone);
+
+  setZone('America/Los_Angeles');
+  try {
+    // 08:00 Ortszeit in Los Angeles.
+    const at = new Date('2026-08-25T15:00:00Z');
+    const today = householdToday(db, at);
+    assert.equal(today, '2026-08-25', 'Bezugstag der Haushaltszone');
+
+    const id = db.prepare(
+      "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Milch LA', 1, 'l', 'Sonstiges', ?, ?)"
+    ).run(today, A).lastInsertRowid;
+
+    syncPantryExpiryReminder(db, db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id),
+      at, null, { clampToNextMorning: true });
+
+    // GEMESSEN VOR DEM FIX: gar keine Erinnerung. Die Klemmung rechnete den
+    // "naechsten Morgen" ueber setUTCHours(9) aus - in LA ist das 02:00 nachts,
+    // also um 08:00 Ortszeit laengst vorbei -, sprang auf morgen und damit
+    // hinter das MHD. Unter UTC war derselbe Fall korrekt. Genau der "was muss
+    // heute weg"-Fall, fuer den die Klemmung gebaut ist.
+    assert.equal(reminderFor(id)?.remind_at, '2026-08-25T09:00');
+  } finally {
+    setZone('UTC');
+  }
 });
