@@ -13761,3 +13761,54 @@ test('das Mehr-Blatt zeichnet erst aus dem Speicher, dann nach (#868)', () => {
   assert.ok(guarded !== -1 && bare < guarded,
     'das Zeichnen aus dem Speicher muss VOR dem Nachziehen stehen');
 });
+
+/**
+ * DIE DREI-TAGE-GRENZE STEHT AN ZWEI ENDEN UND MUSS DIESELBE SEIN (#868).
+ *
+ * Der Server zaehlt sie fuer den Startwert (`birthdaySoonCount` in
+ * routes/dashboard.js), der Browser fuer die laufende Aktualisierung
+ * (`BIRTHDAY_BADGE_DAYS` in utils/nav-badges.js). Laufen sie auseinander,
+ * springt die Zahl beim ersten Besuch der Geburtstagsseite - dieselbe Frage,
+ * zwei Antworten, und keine davon sichtbar falsch.
+ *
+ * Guard-Ebene: Wert (aus beiden Quellen gelesen).
+ */
+test('Server und Browser ziehen den Geburtstags-Schnitt beim selben Tag (#868)', () => {
+  const client = read('../public/utils/nav-badges.js');
+  const server = read('../server/routes/dashboard.js');
+
+  const c = /BIRTHDAY_BADGE_DAYS\s*=\s*(\d+)/.exec(client);
+  assert.ok(c, 'BIRTHDAY_BADGE_DAYS ist nicht mehr auffindbar');
+
+  const s = /birthdaySoonCount\s*=\s*hydrated\.filter\(\(b\) => \(b\.days_until \?\? \d+\) <= (\d+)\)/.exec(server);
+  assert.ok(s, 'der Server-Zaehler fuer nahe Geburtstage ist nicht mehr auffindbar');
+
+  assert.equal(s[1], c[1],
+    `Der Server schneidet bei ${s[1]} Tagen, der Browser bei ${c[1]}. Die Zahl `
+    + 'springt dann beim ersten Besuch der Geburtstagsseite.');
+});
+
+/**
+ * DAS AUFGABEN-BADGE HAT GENAU EINE QUELLE (#868).
+ *
+ * `state.tasks` ist die GEFILTERTE Liste der Ansicht - der Standardfilter
+ * zeigt nur `open`, das Kanban laesst den Statusfilter ganz weg, und
+ * Prioritaet, Zuweisung und Tags engen weiter ein. Daraus gezaehlt sprang die
+ * Zahl beim blossen Wechsel zwischen Liste und Kanban, ohne dass sich an den
+ * Daten etwas geaendert haette: die zweite Wahrheit, die dieser Fix
+ * eigentlich abschafft, eine Ebene tiefer.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('das Aufgabenmodul zaehlt sein Badge nicht selbst (#868)', () => {
+  const tasks = read('../public/pages/tasks.js');
+  assert.doesNotMatch(tasks, /setNavBadge\s*\(/,
+    'das Aufgabenmodul schreibt wieder direkt in den Badge-Slot - seine '
+    + 'Liste ist gefiltert und kann die Frage nicht beantworten');
+
+  const fn = /function updateOverdueBadge\(\)[\s\S]*?\n\}/.exec(tasks);
+  assert.ok(fn, 'updateOverdueBadge ist nicht mehr auffindbar');
+  assert.match(fn[0], /invalidateModuleCounts/,
+    'die Mutation meldet sich nicht mehr - die Zahl bliebe bis zum Ablauf der '
+    + 'TTL auf dem alten Stand');
+});

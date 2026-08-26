@@ -271,12 +271,15 @@ const DASHBOARD = Object.freeze({
   shoppingOpenCount: 4,
   rewards: { pending: 2 },
   health: { dosesTotal: 5, dosesTaken: 1, dosesSkipped: 1 },
+  // Die Liste ist der gedeckelte Vorrat der Kachel; der Zaehler daneben ist
+  // die ungedeckelte Wahrheit - hier absichtlich groesser als die Liste.
   birthdays: [
     { name: 'A', days_until: 0 },
     { name: 'B', days_until: 3 },
     { name: 'C', days_until: 4 },
     { name: 'D' },
   ],
+  birthdaySoonCount: 7,
 });
 
 test('die Ableitung laeuft ueberhaupt durch (#868)', () => {
@@ -321,9 +324,14 @@ test('die Zahlen der Nav-Ziele sind ANDERE als die der Kacheln (#868)', () => {
   assert.equal(navBadgeCountsFrom(DASHBOARD)['/tasks'] !== moduleCountsFrom(DASHBOARD).tasks, true);
 });
 
-test('nur die unmittelbar anstehenden Geburtstage zaehlen', () => {
-  const nav = navBadgeCountsFrom(DASHBOARD);
-  assert.equal(nav['/birthdays'], 2, 'days_until 0 und 3 zaehlen, 4 nicht, fehlend auch nicht');
+test('die Geburtstagszahl kommt aus dem SERVER-Zaehler, nicht aus der Liste', () => {
+  // `data.birthdays` ist auf fuenf geschnitten - der Vorrat der
+  // Dashboard-Kachel, keine Aussage ueber den Bestand. Wer daraus zaehlte,
+  // gaebe einem Haushalt mit sieben Geburtstagen in drei Tagen beim Start eine
+  // Fuenf und nach dem ersten Besuch der Seite eine Sieben.
+  assert.equal(navBadgeCountsFrom(DASHBOARD)['/birthdays'], 7);
+  assert.equal(navBadgeCountsFrom({ ...DASHBOARD, birthdaySoonCount: undefined })['/birthdays'], 0,
+    'ohne Zaehler KEIN Ersatz aus der gedeckelten Liste - lieber kein Badge als ein falsches');
 });
 
 test('auch die Nav-Zahlen ertragen eine leere Antwort', () => {

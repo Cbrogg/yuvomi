@@ -225,10 +225,11 @@ export function moduleCountsFrom(data, { isAdmin = false, shoppingVisible = fals
 export function navBadgeCountsFrom(data) {
   return {
     '/tasks': data?.overdueTaskCount ?? 0,
-    // Die Liste ist auf fuenf gedeckelt (der Vorrat der Kachel), die Zahl also
-    // auch. Fuer ein Badge, das ohnehin bei „99+" endet, ist das kein Verlust:
-    // fuenf Geburtstage in drei Tagen sagen dasselbe wie sechs.
-    '/birthdays': (data?.birthdays ?? [])
-      .filter((b) => (b.days_until ?? 9999) <= BIRTHDAY_BADGE_DAYS).length,
+    /* AUS DEM EIGENEN ZAEHLER, NICHT AUS DER LISTE. `data.birthdays` ist auf
+     * fuenf geschnitten - das ist der Vorrat der Dashboard-Kachel, keine
+     * Aussage ueber den Bestand. Wer daraus zaehlte, gaebe einem Haushalt mit
+     * sieben Geburtstagen in drei Tagen beim Start eine Fuenf und nach dem
+     * ersten Besuch der Seite eine Sieben. */
+    '/birthdays': data?.birthdaySoonCount ?? 0,
   };
 }

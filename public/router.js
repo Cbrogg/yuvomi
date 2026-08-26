@@ -1131,6 +1131,35 @@ function primeNavBadges(data) {
   setNavBadge('/birthdays', counts['/birthdays']);
 }
 
+/**
+ * Ein Modul hat etwas geaendert, das gezaehlt wird.
+ *
+ * DIE ZAHL GEHOERT DEM SERVER, und deshalb steht hier eine Entwertung und
+ * keine Rechnung. Das Aufgabenmodul koennte sie gar nicht selbst fuehren:
+ * `state.tasks` ist eine GEFILTERTE Liste (der Standardfilter zeigt nur
+ * offene, das Kanban laesst den Statusfilter ganz weg), waehrend
+ * `overdueTaskCount` haushaltweit und ungefiltert zaehlt. Beide in denselben
+ * Badge-Slot zu schreiben liess die Zahl beim blossen Wechsel zwischen Liste
+ * und Kanban springen - die zweite Wahrheit, die dieser Fix eigentlich
+ * abschaffen sollte, eine Ebene tiefer.
+ *
+ * Nebenbei erledigt das die Zeitzonenfrage: `overdueTaskCount` rechnet mit der
+ * Haushaltszone, eine Client-Rechnung mit `todayKey()` im Automatikmodus mit
+ * der des Browsers. Zwei Zonen, zwei Tage, zwei Zahlen.
+ *
+ * GEBUENDELT, weil Mutationen in Serien kommen (Mehrfachauswahl, schnelles
+ * Abhaken): sonst loeste jeder Haken einen eigenen Abruf aus.
+ */
+let _moduleCountsRefreshTimer = null;
+function invalidateModuleCounts() {
+  _moduleCountsAt = 0;
+  if (_moduleCountsRefreshTimer) clearTimeout(_moduleCountsRefreshTimer);
+  _moduleCountsRefreshTimer = setTimeout(() => {
+    _moduleCountsRefreshTimer = null;
+    refreshModuleCounts();
+  }, 300);
+}
+
 async function refreshModuleCounts() {
   if (Date.now() - _moduleCountsAt < MODULE_COUNTS_TTL) return false;
   /* EINE LAUFENDE ANFRAGE UEBERLEBT DAS ZURUECKSETZEN SONST.
@@ -1366,9 +1395,19 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
       _navBuiltForUserId = currentUser.id;
       // Nebenläufig und still: der Hinweis darf das erste Rendern nicht aufhalten.
       checkForUpdate();
-      // Und die Zahlen an den Nav-Zielen, aus demselben Abruf, der ohnehin die
-      // Kachel-Zaehlstaende fuellt (#868). Ebenso still: ohne Antwort bleibt
-      // die Navigation ohne Badges - das war bis hierher der Normalfall.
+      /* Und die Zahlen an den Nav-Zielen (#868).
+       *
+       * ERST AUS DEM SPEICHER, dann nachziehen - aus demselben Grund wie beim
+       * Mehr-Blatt: `refreshModuleCounts()` kehrt innerhalb seiner TTL sofort
+       * zurueck, ohne zu zeichnen. Die Shell wird aber auch INNERHALB dieser
+       * Minute neu gebaut - `/reset-password`, `/forgot-password` und `/join`
+       * sind ohne Auth erreichbar und raeumen sie ab, auch wenn man angemeldet
+       * ist. Ohne diese Zeile kaeme die Navigation danach ohne Badges zurueck:
+       * der gemeldete Fehler, nur ueber einen schmaleren Weg.
+       *
+       * Das Nachziehen bleibt still: ohne Antwort bleibt die Navigation ohne
+       * Badges - das war bis hierher der Normalfall. */
+      applyNavBadges();
       refreshModuleCounts();
     } else if (currentUser && _navBuiltForUserId !== currentUser.id) {
       // Shell besteht bereits, aber der Nutzer hat gewechselt → Nav mit den
@@ -1377,6 +1416,7 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
       _navBuiltForUserId = currentUser.id;
       // Die Zahlen gehoeren dem Mitglied, nicht dem Geraet: `forgetSessionState`
       // hat sie geleert, hier kommen die des neuen Mitglieds (#868).
+      applyNavBadges();
       refreshModuleCounts();
     }
 
@@ -4283,6 +4323,9 @@ window.yuvomi = {
   setMobileNavOrder,
   refreshThirdPartyModules,
   isModuleDisabled,
+  // Ein Modul hat etwas geaendert, das an einem Nav-Ziel gezaehlt wird (#868).
+  // Begruendung an `invalidateModuleCounts`.
+  invalidateModuleCounts,
   applyTheme: (value) => {
     if (value === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');

@@ -26,7 +26,6 @@ import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
 import { isSoloHousehold } from '/utils/household.js';
 import { todayKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
-import { setNavBadge } from '/utils/nav-badges.js';
 import { nowFields, zonedDateKey, zonedUTCProxy } from '/utils/timezone.js';
 import { isNavModuleReadOnly } from '/permissions.js';
 
@@ -3609,32 +3608,27 @@ function renderFilters(container) {
 }
 
 /**
- * DIE REGEL, NACH DER DAS BADGE ZAEHLT - und die einzige Stelle, an der sie
- * im Browser steht.
+ * DIESES MODUL KANN DIE ZAHL NICHT SELBST FUEHREN - und tut es deshalb nicht
+ * mehr (#868).
  *
- * Ein Badge zählt, was wartet. Eine abgelegte Aufgabe wartet nicht - sie
- * erschiene sonst im Kanban und unter aktivem Archiv-Chip als offene Schuld
- * (#688), obwohl kein Weg von der Zahl zu ihr führt.
+ * Das Badge beantwortet „wie viele Aufgaben im Haushalt sind ueberfaellig".
+ * `state.tasks` beantwortet eine andere Frage: es ist die GEFILTERTE Liste
+ * dieser Ansicht. Der Standardfilter zeigt nur `open` (schliesst also
+ * „In Bearbeitung" aus), das Kanban laesst den Statusfilter ganz weg, und
+ * Priorität, Zuweisung und Tags engen zusaetzlich ein. Aus dieser Liste
+ * gezaehlt sprang die Zahl beim blossen Wechsel zwischen Liste und Kanban -
+ * ohne dass sich an den Daten etwas geaendert haette.
  *
- * `todayKey()` UND NICHT `new Date().setHours(0,0,0,0)`: „ueberfaellig" ist
- * eine Aussage ueber den KALENDERTAG des Haushalts, und der ist nicht der des
- * Browsers. Ein Geraet in einer anderen Zone zaehlte sonst abends eine Aufgabe
- * mit, die hier erst morgen faellig wird - und der Server, der dieselbe Zahl
- * fuer den Start liefert (`/dashboard`, `overdueTaskCount`), rechnet mit der
- * Haushaltszone. Zwei Zahlen fuer dieselbe Frage waeren genau die zweite
- * Wahrheit, die dieser Fix abschafft.
+ * Neben der Filterfrage stand dieselbe Zahl auch in zwei ZONEN: der Server
+ * rechnet `overdueTaskCount` in der Haushaltszone, eine Client-Rechnung mit
+ * `todayKey()` im Automatikmodus in der des Browsers.
+ *
+ * Also: der Server zaehlt, das Modul meldet nur, dass sich etwas geaendert
+ * hat. Der Preis ist ein Roundtrip statt einer sofort sinkenden Zahl - eine
+ * falsche Zahl ist teurer.
  */
-export function countOverdueTasks(tasks) {
-  const today = todayKey();
-  return tasks.filter((task) => {
-    if (!task.due_date || task.status === 'done' || isArchived(task)) return false;
-    return String(task.due_date).slice(0, 10) < today;
-  }).length;
-}
-
 function updateOverdueBadge() {
-  setNavBadge('/tasks', countOverdueTasks(state.tasks),
-    (count) => (count > 0 ? t('tasks.navLabelOverdue', { count }) : t('tasks.title')));
+  window.yuvomi?.invalidateModuleCounts?.();
 }
 
 // --------------------------------------------------------
