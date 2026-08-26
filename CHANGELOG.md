@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.45.0] - 2026-08-26
+
 ### Added
 
 - **Ein Vorratsartikel meldet sich, bevor sein Mindesthaltbarkeitsdatum erreicht ist** (#811). Der
@@ -51,25 +53,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Der Nachlauf über den Bestand zieht dagegen nichts nach vorne: sonst käme am ersten Morgen nach
   dem Update jede bald ablaufende Zeile des Vorrats auf einmal, für die niemand etwas getan hat.
 
-### Fixed
-
-- **Eine Erinnerung verrät nicht mehr, was ihr Modul verschweigt.** `/api/v1/reminders` liefert
-  Titel aus sechs Modulen - Aufgaben, Kalender, Abos, Inventar, Inventar-Fristen und seit dieser
-  Version dem Vorrat -, sein Pfad wird aber komplett dem Kalender zugeordnet. Ein API-Token mit nur
-  `calendar:read` konnte damit über die fällige Erinnerung den Namen eines Abos oder eines
-  Inventar-Gegenstands lesen, `calendar:write` konnte die Meldung wegwischen, und einem Mitglied,
-  dem ein Modul entzogen ist, ging es genauso: der Zugriffs-Guard fragte nach dem Kalender und liess
-  alles andere durch. Die Route sortiert jetzt selbst aus, für beide Rechtearten. Das war schon vor
-  dieser Version so, für fünf Herkünfte - deshalb steht hier eine Regel über alle und keine Ausnahme
-  für die neue.
-
-- **Die Übernahme aus der Einkaufsliste prüft das Mindesthaltbarkeitsdatum jetzt gegen den
-  Kalender.** Sie sah bisher nur nach der Form, ein `2027-02-30` kam durch. Das blieb folgenlos,
-  solange niemand mit dem Datum rechnete - eine unsinnige Zeile im Vorrat, mehr nicht. Beide
-  Prüfungen sind jetzt dieselbe Funktion, die auch das Formular benutzt. Der Artikel kommt trotzdem
-  im Vorrat an, nur ohne Datum: er selbst ist in Ordnung, kaputt ist allein das MHD - und ihn ganz
-  zu verwerfen hiesse, dass jemand den Joghurt abhakt, Übernehmen drückt und der Joghurt fehlt.
-
 ### Changed
 
 - **Eine Vorrats-Erinnerung lässt sich nicht von Hand setzen oder löschen.** `POST`, `PUT` und beide
@@ -90,6 +73,31 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   jetzt einmal; die beiden Module behalten ihre sprechenden Namen als Fassade. Kein Verhalten
   ändert sich, die Termine bleiben auf die Sekunde dieselben.
 
+### Fixed
+
+- **Die Übernahme aus der Einkaufsliste prüft das Mindesthaltbarkeitsdatum jetzt gegen den
+  Kalender.** Sie sah bisher nur nach der Form, ein `2027-02-30` kam durch. Das blieb folgenlos,
+  solange niemand mit dem Datum rechnete - eine unsinnige Zeile im Vorrat, mehr nicht. Beide
+  Prüfungen sind jetzt dieselbe Funktion, die auch das Formular benutzt. Der Artikel kommt trotzdem
+  im Vorrat an, nur ohne Datum: er selbst ist in Ordnung, kaputt ist allein das MHD - und ihn ganz
+  zu verwerfen hiesse, dass jemand den Joghurt abhakt, Übernehmen drückt und der Joghurt fehlt.
+
+### Security
+
+- **Eine Erinnerung verrät nicht mehr, was ihr Modul verschweigt.** `/api/v1/reminders` liefert
+  Titel aus sechs Modulen - Aufgaben, Kalender, Abos, Inventar, Inventar-Fristen und seit dieser
+  Version dem Vorrat -, sein Pfad wird aber komplett dem Kalender zugeordnet. Ein API-Token mit nur
+  `calendar:read` konnte damit über die fällige Erinnerung den Namen eines Abos oder eines
+  Inventar-Gegenstands lesen, `calendar:write` konnte die Meldung wegwischen, und einem Mitglied,
+  dem ein Modul entzogen ist, ging es genauso: der Zugriffs-Guard fragte nach dem Kalender und liess
+  alles andere durch. Die Route sortiert jetzt selbst aus, für beide Rechtearten. Das war schon vor
+  dieser Version so, für fünf Herkünfte - deshalb steht hier eine Regel über alle und keine Ausnahme
+  für die neue.
+
+  **Für Drittmodule** (MODULES.md): ein gescoptes Token bekommt aus `/reminders/pending` nur noch
+  die Herkünfte, deren Modul es lesen darf, und auf den typbezogenen Wegen eine 403 statt einer
+  Antwort. Wer bisher mit einem Kalender-Token mitgelesen hat, braucht den Scope des Moduls, um das
+  es geht.
 
 ## [2.44.0] - 2026-08-25
 

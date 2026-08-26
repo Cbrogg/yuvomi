@@ -515,6 +515,34 @@ dates are two rows, which keeps the model flat instead of nesting batches under 
 Expiry and stock status are derived in the client, not stored: "expired" depends on the user's local
 calendar day, and the server reasons in UTC. The threshold for "expiring soon" is seven days.
 
+**Best-before notification (#811, v2.45.0).** A `pantry_item` reminder is created for every item
+that carries an `expires_on`, has a `created_by` who may see the pantry, and holds a quantity above
+zero. The lead time is the same seven days that turn the row yellow - two numbers for one question
+would put the notification on a day when nothing is marked; a guard in `test/test-frontend-audit.js`
+keeps both definitions together, and the same guard covers the inventory warranty threshold. There
+is no per-item lead time on purpose: an inventory deadline is maintained one at a time, a pantry is
+bulk goods.
+
+The date itself is the switch - salt and rice stay silent without one. An empty pack does not
+notify: the chip may show "expiring soon" at quantity 0 because a list is passive, but a
+notification interrupts, and there is nothing left to save. Refilling brings the reminder back,
+because every write path goes through `syncPantryExpiryReminder()`.
+
+**Fresh produce is the main case here, not the exception.** Milk and yoghurt usually have fewer
+than seven days left when bought, so their lead time has already passed at entry. Discarding such a
+reminder - which is what inventory warranties do, where it only happens for a back-dated appliance -
+would silence the feature for exactly the items it exists for. On a write the reminder is therefore
+**clamped** to the next 09:00 that still falls on or before the best-before date, computed in
+calendar days of the household time zone; what has already expired does not notify at all.
+
+The notification run reconciles the whole pantry once per pass (`syncAllPantryExpiryReminders()`):
+stock that predates the feature was never saved through the app and would otherwise never notify.
+That pass only **adds and clears** - it never replaces a delivered or dismissed row, and it does not
+clamp, so an upgrade cannot fire every soon-expiring item at once on the first morning.
+
+`pantry_item` reminders are **derived, not entered**: `POST`, `PUT` and both `DELETE` paths reject
+them with 400 (see the Reminders section), because the run would recreate them within a minute.
+
 ### Calendar Events
 | Column | Type | Constraint |
 |--------|------|-----------|
@@ -1339,9 +1367,11 @@ the row stays.
 Calendar events support **multiple reminders** (e.g. "15 minutes before" *and* "1 day before").
 Each reminder is an independent row and is delivered separately by the notification scheduler.
 Every delivery carries the linked entity's title as the notification body (task title, event title,
-or subscription name), so the reminder is identifiable without opening the app; the fallback text
-only applies once the linked entity has been deleted. Subscription reminders additionally carry the
-amount and the renewal date, as `Name - 12.99 EUR - 2026-08-03`. That line is deliberately data
+subscription name, inventory item, `item · label` for a tracked date, pantry item), so the reminder
+is identifiable without opening the app; the fallback text only applies once the linked entity has
+been deleted. Some origins add the date the reminder is about: subscription reminders carry amount
+and renewal date as `Name - 12.99 EUR - 2026-08-03`, warranty reminders the warranty end, tracked
+dates and pantry items their date as `Name - 2026-09-01`. That line is deliberately data
 only, with no sentence around it: the notification is assembled on the server, which has no way to
 know the **recipient's** language, since locale, date and number formats live in the client's
 local storage. The household data language (#631, #632) does not close this gap — it governs what the
