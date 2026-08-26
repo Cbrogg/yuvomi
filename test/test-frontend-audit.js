@@ -13675,6 +13675,108 @@ test('ein Teilschritt lässt sich korrigieren und entfernen, nicht nur abhaken (
 });
 
 /**
+ * EINE KNOPFZEILE SAGT, OB SIE UMBRICHT (#872).
+ *
+ * Der gemeldete Fehler war nicht kosmetisch, und er entsteht nicht durch
+ * Quetschen: ein Flex-Item traegt `min-width: auto` und schrumpft nicht unter
+ * seine Inhaltsbreite. Stattdessen waechst die ZEILE ueber den Container
+ * hinaus - rechtsbuendig also nach LINKS -, und das Panel schneidet mit
+ * `overflow: clip` ab, was heraussteht. Gemessen an der Aufgaben-Detailansicht
+ * auf 390px: der Löschen-Knopf sass bei x = -11, das Panel beginnt bei x = 12,
+ * aus „Löschen" wurde sichtbar „öschen". Ohne Ellipse, ohne Scrollbalken -
+ * nur ein Wort, das falsch anfaengt. Getroffen haette es jede Fusszeile mit
+ * drei Knoepfen in einer laengeren Locale.
+ *
+ * DIE REGEL VERLANGT EINE ENTSCHEIDUNG, KEINEN BESTIMMTEN WERT. Wo ein
+ * Umbruch falsch waere (zwei Icon-Knoepfe in einer Rasterspalte), steht
+ * `flex-wrap: nowrap` ausdruecklich da. Das unterscheidet eine getroffene
+ * Entscheidung von einem Versaeumnis - und nur Letzteres ist der Bug.
+ *
+ * ALS REGEL UND NICHT ALS ALLOWLIST: er sucht die FORM (rechtsbuendige
+ * Flex-Zeile, deren Name sie als Fuss- oder Aktionszeile ausweist), nicht die
+ * neun Selektoren, die es heute gibt. Beim ersten Lauf fand er in genau
+ * dieser Form acht weitere Zeilen mit demselben Mangel; eine Liste haette nur
+ * die eine gemeldete Stelle gedeckt.
+ *
+ * Guard-Ebene: Form (aus dem Stylesheet gelesen).
+ */
+test('jede rechtsbuendige Knopfzeile sagt, ob sie umbricht (#872)', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const offenders = [];
+  let seenRows = 0;
+
+  /* JE SELEKTOR GESAMMELT, NICHT JE REGEL - so, wie die Kaskade es sieht.
+   *
+   * Die erste Fassung urteilte ueber die EINZELNE Regel und war damit blind
+   * fuer jede Zeile, deren Deklarationen verteilt stehen: `display: flex` aus
+   * einer geteilten Kopf-/Fusszeilen-Regel, `justify-content` dreissig Zeilen
+   * spaeter aus einer eigenen. Genau so gebaut sind
+   * `.budget-inline-modal__footer` und `.doc-attach-picker__footer` - zwei
+   * echte Verstoesse, die der Guard nicht sah. Gefunden hat sie die Review,
+   * nicht er. */
+  const declarations = new Map();
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
+      // Gruppenselektoren aufspalten: `.a, .b { display: flex }` gibt beiden
+      // dieselbe Deklaration, und nur einzeln laesst sich das zusammenlegen.
+      for (const one of selector.split(',').map((x) => x.trim()).filter(Boolean)) {
+        const key = `${file}${at.length ? ` [${at.join(' ')}]` : ''}: ${one}`;
+        declarations.set(key, (declarations.get(key) ?? '') + body);
+      }
+    }
+  }
+
+  for (const [key, body] of declarations) {
+    if (!/(footer|actions)\b/.test(key)) continue;
+    if (!/display\s*:\s*(inline-)?flex/.test(body)) continue;
+    if (!/justify-content\s*:\s*(flex-)?end/.test(body)) continue;
+    seenRows += 1;
+    if (/flex-wrap\s*:/.test(body) || /\bflex-flow\s*:/.test(body)) continue;
+    offenders.push(key);
+  }
+
+  // Ohne diese Zusicherung waere der Guard gruen, sobald der Scanner die
+  // Stylesheets nicht mehr faende - eine leere Liste ist keine Zusicherung.
+  assert.ok(seenRows >= 9,
+    `Nur ${seenRows} rechtsbuendige Knopfzeilen gefunden - der Scanner findet `
+    + 'public/styles/ nicht mehr, statt nichts zu beanstanden.');
+
+  assert.deepEqual(offenders.sort(), [],
+    'Diese Knopfzeile sagt nicht, was bei Platzmangel passieren soll. Ohne '
+    + '`flex-wrap` waechst sie ueber ihren Container hinaus - rechtsbuendig also '
+    + 'nach links -, und was heraussteht, schneidet der Rahmen ab (#872). '
+    + 'Setze `flex-wrap: wrap` - oder `nowrap` mit einer '
+    + `Begruendung, wenn der Umbruch hier falsch waere.\n${offenders.join('\n')}`);
+});
+
+/**
+ * Der Umbruch der ZEILE reicht nicht, wenn EIN Knopf allein zu breit ist.
+ *
+ * Genau dann kann die Zeile nicht mehr umbrechen, und der abgeschnittene Text
+ * aus #872 stuende wieder da - seltener, aber unveraendert falsch. Deshalb
+ * geben die beiden kanonischen Modal-Knopfzeilen ihren Knoepfen das Recht,
+ * INNEN umzubrechen, und nehmen damit das `white-space: nowrap` von `.btn`
+ * fuer diesen einen Ort zurueck.
+ */
+test('in den Modal-Knopfzeilen darf der Knopftext umbrechen (#872)', () => {
+  const css = read('../public/styles/layout.css');
+
+  /* Und die verschachtelte Aktionsgruppe bricht selbst um. Fuer die Fusszeile
+   * ist sie EIN Flex-Item; ohne eigenen Umbruch laeuft sie als Ganzes ueber
+   * den Rand, und der Umbruch der Fusszeile hilft nichts mehr. Gebaut ist das
+   * so im Kalender, in den Budget-Plaenen und in den Kontakten. */
+  const gruppe = [...eachRule(css)].find((r) => r.selector.trim() === '.modal-panel__footer > div');
+  assert.ok(gruppe, '.modal-panel__footer > div fehlt - eine Aktionsgruppe laeuft wieder als Ganzes ueber');
+  assert.match(gruppe.body, /flex-wrap\s*:\s*wrap/);
+  for (const selector of ['.modal-panel__footer .btn', '.modal-actions .btn']) {
+    const rule = [...eachRule(css)].find((r) => r.selector.trim() === selector);
+    assert.ok(rule, `${selector} fehlt - ein einzelner zu breiter Knopf wird wieder abgeschnitten.`);
+    assert.match(rule.body, /white-space\s*:\s*normal/,
+      `${selector} nimmt das nowrap von .btn nicht zurueck.`);
+  }
+});
+
+/**
  * JEDES OVERLAY MELDET SICH AN DER ZURUECK-GESTE AN (#871).
  *
  * Der gemeldete Fehler war, dass die Zurueck-Geste ueber einem offenen Dialog

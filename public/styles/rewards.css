@@ -167,7 +167,9 @@
  * nehmen, solange er läuft. */
 .rw-standing__points strong.rw-countup--active { color: var(--color-accent); }
 .rw-standing__progress { display: flex; flex-direction: column; gap: var(--space-2); min-width: 0; }
-.rw-standing__actions { display: flex; justify-content: flex-end; }
+/* Umbruch statt Quetschen - Begruendung an `.modal-panel__footer`
+ * (layout.css, #872). */
+.rw-standing__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; }
 
 /* --------------------------------------------------------
    Eltern-Ersteinrichtung
