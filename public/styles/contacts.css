@@ -517,8 +517,12 @@ html:has(.contacts-page.is-selecting) {
   margin-top: var(--space-4);
 }
 
+/* Eine Aktionsgruppe IN der Fusszeile ist selbst eine Knopfzeile und braucht
+ * dieselbe Erlaubnis (#872): fuer die Fusszeile ist sie EIN Flex-Item, also
+ * unteilbar - ohne eigenen Umbruch laeuft sie als Ganzes ueber. */
 .contact-modal__footer-actions {
   display: flex;
+  flex-wrap: wrap;
   gap: var(--space-3);
 }
 
@@ -670,6 +674,9 @@ html:has(.contacts-page.is-selecting) {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  /* Umbruch statt Quetschen - Begruendung an `.modal-panel__footer`
+   * (layout.css, #872). */
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-4);
 }

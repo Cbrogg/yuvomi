@@ -2052,7 +2052,9 @@ button.cycle-cal__day:not(:disabled):hover { background: var(--color-surface-2);
 /* display erst wenn sichtbar - sonst überschreibt der Flex das UA-[hidden]. */
 .cycle-bulk__confirm:not([hidden]) { display: flex; }
 .cycle-bulk__question { color: var(--color-text-primary); }
-.cycle-bulk__actions { display: flex; justify-content: flex-end; gap: var(--space-2); }
+/* Umbruch statt Quetschen - Begruendung an `.modal-panel__footer`
+ * (layout.css, #872). */
+.cycle-bulk__actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: var(--space-2); }
 
 @media (max-width: 640px) {
   .cycle-hero { flex-direction: column; }
