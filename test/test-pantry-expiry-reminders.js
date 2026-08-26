@@ -1048,3 +1048,23 @@ test('westlich von UTC bekommt ein heute ablaufender Artikel morgens eine Meldun
     setZone('UTC');
   }
 });
+
+test('ohne Handlung raeumt ein verstrichener Vorlauf eine bestehende Zeile ab', () => {
+  // Der Voll-Sync reicht solche Artikel heute nicht herein (die missing-Abfrage
+  // schliesst Zeilen mit Erinnerung aus). Ein `return` ohne Abraeumen waere
+  // trotzdem eine Falle fuer den naechsten, der die Funktion anders aufruft:
+  // die Zeile bliebe auf einem Termin stehen, den niemand mehr fuer richtig
+  // haelt.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Direktaufruf', 1, 'pcs', 'Sonstiges', '2026-08-29', ?)"
+  ).run(A).lastInsertRowid;
+  db.prepare("INSERT INTO reminders (entity_type, entity_id, remind_at, created_by) VALUES ('pantry_item', ?, '2026-08-27T09:00', ?)")
+    .run(id, A);
+
+  // MHD 29.08. -> Vorlauf 22.08., am 26.08. also verstrichen. Ohne
+  // clampToNextMorning gibt es keinen Ersatztermin.
+  syncPantryExpiryReminder(db, db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id),
+    new Date('2026-08-26T11:00:00Z'));
+
+  assert.equal(countReminders(id), 0);
+});

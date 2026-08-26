@@ -209,7 +209,15 @@ export function syncPantryExpiryReminder(
      * vorbei ist: er geht dann in diesem Durchgang raus, und das ist richtig -
      * die Aussage "läuft in sieben Tagen ab" gilt heute noch. Was WIRKLICH
      * zurückliegt (der Frischware-Fall), bleibt draussen. */
-    if (remindAt.slice(0, 10) < today) return;
+    if (remindAt.slice(0, 10) < today) {
+      // Ohne Handlung im Rücken wird hier nichts nachgeholt - aber eine
+      // bestehende Zeile bleibt auch nicht einfach liegen, nur weil sie heute
+      // nicht mehr anzulegen wäre. Der Aufrufer (der Voll-Sync) reicht solche
+      // Artikel derzeit gar nicht herein; ein `return` ohne `drop()` wäre eine
+      // Falle für den nächsten, der die Funktion anders aufruft.
+      if (existing) drop();
+      return;
+    }
     if (existing?.remind_at === remindAt) return;
   }
 
