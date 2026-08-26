@@ -2780,7 +2780,7 @@
         "colorOption": "Kolor {{color}}",
         "iconPick": "Wybierz obraz",
         "iconClear": "Usuń obraz",
-        "iconHint": "Bez obrazu na wybranym kolorze widnieje pierwsza litera.",
+        "iconHint": "Wybierz wbudowaną ikonę albo własny obraz. Bez żadnego z nich na wybranym kolorze widnieje pierwsza litera.",
         "iconTypeError": "Wybierz obraz PNG, JPEG lub WebP.",
         "iconReadError": "Nie udało się odczytać obrazu.",
         "iconTooLarge": "Obraz jest za duży.",
@@ -2796,7 +2796,9 @@
         "saved": "Skrót zapisany",
         "deleted": "Skrót usunięty",
         "loadError": "Nie udało się wczytać skrótów.",
-        "orderError": "Nie udało się zapisać kolejności."
+        "orderError": "Nie udało się zapisać kolejności.",
+        "iconSymbol": "Wybierz ikonę",
+        "iconChoose": "Wybierz ikonę lub obraz"
     },
     "documents": {
         "title": "Dokumenty",
@@ -4429,5 +4431,14 @@
         "recipes": "Przepis",
         "shopping": "Artykuł",
         "splitExpenses": "Wydatek"
+    },
+    "iconPicker": {
+        "title": "Wybierz ikonę",
+        "searchLabel": "Szukaj ikony",
+        "searchPlaceholder": "Szukaj po angielsku, np. film",
+        "resultsLabel": "Ikony",
+        "noResults": "Nie znaleziono ikony.",
+        "clear": "Bez ikony",
+        "unavailable": "Ikony są teraz niedostępne."
     }
 }

@@ -2768,7 +2768,7 @@
         "colorOption": "Màu {{color}}",
         "iconPick": "Chọn hình ảnh",
         "iconClear": "Xóa hình ảnh",
-        "iconHint": "Không có hình thì chữ cái đầu hiện trên màu đã chọn.",
+        "iconHint": "Chọn một biểu tượng có sẵn hoặc hình ảnh của bạn. Không có cả hai thì chữ cái đầu hiện trên màu đã chọn.",
         "iconTypeError": "Vui lòng chọn hình PNG, JPEG hoặc WebP.",
         "iconReadError": "Không đọc được hình ảnh.",
         "iconTooLarge": "Hình ảnh quá lớn.",
@@ -2784,7 +2784,9 @@
         "saved": "Đã lưu liên kết nhanh",
         "deleted": "Đã xóa liên kết nhanh",
         "loadError": "Không tải được các liên kết nhanh.",
-        "orderError": "Không lưu được thứ tự."
+        "orderError": "Không lưu được thứ tự.",
+        "iconSymbol": "Chọn biểu tượng",
+        "iconChoose": "Chọn biểu tượng hoặc hình ảnh"
     },
     "emptyHint": {
         "tasks": "Chạm vào + để tạo nhiệm vụ đầu tiên của bạn. Vuốt thẻ sang trái để hoàn thành, sang phải để xem.",
@@ -4429,5 +4431,14 @@
         "recipes": "Công thức",
         "shopping": "Mục",
         "splitExpenses": "Chi phí"
+    },
+    "iconPicker": {
+        "title": "Chọn biểu tượng",
+        "searchLabel": "Tìm biểu tượng",
+        "searchPlaceholder": "Tìm bằng tiếng Anh, ví dụ film",
+        "resultsLabel": "Biểu tượng",
+        "noResults": "Không tìm thấy biểu tượng.",
+        "clear": "Không có biểu tượng",
+        "unavailable": "Hiện chưa dùng được biểu tượng."
     }
 }

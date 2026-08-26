@@ -2925,7 +2925,7 @@
         "colorOption": "Färg {{color}}",
         "iconPick": "Välj bild",
         "iconClear": "Ta bort bild",
-        "iconHint": "Utan bild visas första bokstaven på den valda färgen.",
+        "iconHint": "Välj en inbyggd ikon eller en egen bild. Utan någon av dem visas första bokstaven på den valda färgen.",
         "iconTypeError": "Välj en PNG-, JPEG- eller WebP-bild.",
         "iconReadError": "Bilden kunde inte läsas.",
         "iconTooLarge": "Bilden är för stor.",
@@ -2941,7 +2941,9 @@
         "saved": "Snabblänk sparad",
         "deleted": "Snabblänk borttagen",
         "loadError": "Snabblänkarna kunde inte laddas.",
-        "orderError": "Ordningen kunde inte sparas."
+        "orderError": "Ordningen kunde inte sparas.",
+        "iconSymbol": "Välj ikon",
+        "iconChoose": "Välj ikon eller bild"
     },
     "housekeeping": {
         "title": "Städning",
@@ -4429,5 +4431,14 @@
         "recipes": "Recept",
         "shopping": "Objekt",
         "splitExpenses": "Utgift"
+    },
+    "iconPicker": {
+        "title": "Välj ikon",
+        "searchLabel": "Sök ikon",
+        "searchPlaceholder": "Sök på engelska, t.ex. film",
+        "resultsLabel": "Ikoner",
+        "noResults": "Ingen ikon hittades.",
+        "clear": "Ingen ikon",
+        "unavailable": "Ikonerna är inte tillgängliga just nu."
     }
 }

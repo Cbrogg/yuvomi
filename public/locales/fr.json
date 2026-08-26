@@ -2925,7 +2925,7 @@
         "colorOption": "Couleur {{color}}",
         "iconPick": "Choisir une image",
         "iconClear": "Retirer l'image",
-        "iconHint": "Sans image, la première lettre s'affiche sur la couleur choisie.",
+        "iconHint": "Choisissez une icône intégrée ou votre propre image. Sans l'une ni l'autre, la première lettre s'affiche sur la couleur choisie.",
         "iconTypeError": "Veuillez choisir une image PNG, JPEG ou WebP.",
         "iconReadError": "L'image n'a pas pu être lue.",
         "iconTooLarge": "L'image est trop volumineuse.",
@@ -2941,7 +2941,9 @@
         "saved": "Accès rapide enregistré",
         "deleted": "Accès rapide supprimé",
         "loadError": "Impossible de charger les accès rapides.",
-        "orderError": "Impossible d'enregistrer l'ordre."
+        "orderError": "Impossible d'enregistrer l'ordre.",
+        "iconSymbol": "Choisir une icône",
+        "iconChoose": "Choisir une icône ou une image"
     },
     "housekeeping": {
         "title": "Ménage",
@@ -4429,5 +4431,14 @@
         "recipes": "Recette",
         "shopping": "Article",
         "splitExpenses": "Dépense"
+    },
+    "iconPicker": {
+        "title": "Choisir une icône",
+        "searchLabel": "Rechercher une icône",
+        "searchPlaceholder": "Cherchez en anglais, p. ex. film",
+        "resultsLabel": "Icônes",
+        "noResults": "Aucune icône trouvée.",
+        "clear": "Aucune icône",
+        "unavailable": "Les icônes sont indisponibles pour le moment."
     }
 }

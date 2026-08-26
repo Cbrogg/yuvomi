@@ -2768,7 +2768,7 @@
         "colorOption": "{{color}} szín",
         "iconPick": "Kép választása",
         "iconClear": "Kép eltávolítása",
-        "iconHint": "Kép nélkül a kezdőbetű látszik a választott színen.",
+        "iconHint": "Válasszon beépített ikont vagy saját képet. Egyik nélkül a kezdőbetű látszik a választott színen.",
         "iconTypeError": "Válasszon PNG-, JPEG- vagy WebP-képet.",
         "iconReadError": "A képet nem sikerült beolvasni.",
         "iconTooLarge": "A kép túl nagy.",
@@ -2784,7 +2784,9 @@
         "saved": "Gyorslink mentve",
         "deleted": "Gyorslink törölve",
         "loadError": "A gyorslinkeket nem sikerült betölteni.",
-        "orderError": "A sorrendet nem sikerült menteni."
+        "orderError": "A sorrendet nem sikerült menteni.",
+        "iconSymbol": "Ikon választása",
+        "iconChoose": "Ikon vagy kép választása"
     },
     "emptyHint": {
         "tasks": "Érintse meg a + gombot az első feladat létrehozásához. Húzza a kártyát balra a kész állapothoz, jobbra a megtekintéshez.",
@@ -4429,5 +4431,14 @@
         "recipes": "Recept",
         "shopping": "Elem",
         "splitExpenses": "Kiadás"
+    },
+    "iconPicker": {
+        "title": "Ikon választása",
+        "searchLabel": "Ikon keresése",
+        "searchPlaceholder": "Keressen angolul, pl. film",
+        "resultsLabel": "Ikonok",
+        "noResults": "Nincs találat.",
+        "clear": "Nincs ikon",
+        "unavailable": "Az ikonok jelenleg nem érhetők el."
     }
 }

@@ -32,6 +32,7 @@ import { exitWallMode, isWallActive, syncWallMode } from '/utils/wall-mode.js';
 import { rememberLayoutHint, layoutHintSizes, layoutHintQuery } from '/utils/dashboard-layout-hint.js';
 import { emptyHintHTML } from '/utils/empty-state.js';
 import { quickLinkHost } from '/utils/quick-link-url.js';
+import { hasIcon } from '/utils/lucide-icons.js';
 import { prefersInkText } from '/utils/contrast.js';
 import { openQuickLinksManager } from '/components/quick-links-manager.js';
 import { attachOverlay } from '/utils/overlay-history.js';
@@ -1219,9 +1220,21 @@ function quickLinkMonogram(name) {
 function renderQuickLinkTile(s) {
   const name = String(s.name ?? '');
   const host = quickLinkHost(s.url);
-  const face = s.icon_data
-    ? `<img src="${esc(s.icon_data)}" alt="" loading="lazy">`
-    : `<span class="quick-link-tile__monogram" aria-hidden="true">${esc(quickLinkMonogram(name))}</span>`;
+  // Bild, dann Symbol, dann Buchstabe - dieselbe Rangfolge wie im Verwaltungs-
+  // dialog (components/quick-links-manager.js), wo auch ihre Begründung steht.
+  //
+  // `hasIcon()` UND NICHT NUR `s.icon_name`: ein `data-lucide` mit einem Namen,
+  // den dieser Lucide-Stand nicht kennt, wird nicht ersetzt und bleibt als
+  // leeres Element stehen - die Kachel hätte dann gar kein Gesicht. Gefragt,
+  // ob es das Symbol gibt, fällt sie stattdessen auf ihren Buchstaben zurück.
+  let face;
+  if (s.icon_data) {
+    face = `<img src="${esc(s.icon_data)}" alt="" loading="lazy">`;
+  } else if (s.icon_name && hasIcon(s.icon_name)) {
+    face = `<i data-lucide="${esc(s.icon_name)}" aria-hidden="true"></i>`;
+  } else {
+    face = `<span class="quick-link-tile__monogram" aria-hidden="true">${esc(quickLinkMonogram(name))}</span>`;
+  }
   // WEISS AUF EINER FREI GEWAEHLTEN FARBE IST NICHT IMMER LESBAR - dieselbe
   // Messung, die die Avatar-Initialen einmal gekostet hat (utils/contrast.js).
   // CSS kann das nicht entscheiden: die Farbe kommt aus der Datenbank.

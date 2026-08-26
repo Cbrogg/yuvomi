@@ -2925,7 +2925,7 @@
         "colorOption": "色 {{color}}",
         "iconPick": "画像を選ぶ",
         "iconClear": "画像を外す",
-        "iconHint": "画像がない場合は、選んだ色の上に頭文字が表示されます。",
+        "iconHint": "内蔵アイコンか自分の画像を選べます。どちらもない場合は、選んだ色の上に頭文字が表示されます。",
         "iconTypeError": "PNG、JPEG、WebP の画像を選んでください。",
         "iconReadError": "画像を読み取れませんでした。",
         "iconTooLarge": "画像が大きすぎます。",
@@ -2941,7 +2941,9 @@
         "saved": "クイックリンクを保存しました",
         "deleted": "クイックリンクを削除しました",
         "loadError": "クイックリンクを読み込めませんでした。",
-        "orderError": "並び順を保存できませんでした。"
+        "orderError": "並び順を保存できませんでした。",
+        "iconSymbol": "アイコンを選ぶ",
+        "iconChoose": "アイコンまたは画像を選ぶ"
     },
     "housekeeping": {
         "title": "家事",
@@ -4429,5 +4431,14 @@
         "recipes": "レシピ",
         "shopping": "商品",
         "splitExpenses": "支出"
+    },
+    "iconPicker": {
+        "title": "アイコンを選ぶ",
+        "searchLabel": "アイコンを検索",
+        "searchPlaceholder": "英語で検索します。例: film",
+        "resultsLabel": "アイコン",
+        "noResults": "アイコンが見つかりません。",
+        "clear": "アイコンなし",
+        "unavailable": "現在アイコンを利用できません。"
     }
 }

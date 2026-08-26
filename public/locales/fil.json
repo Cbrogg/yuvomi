@@ -2780,7 +2780,7 @@
         "colorOption": "Kulay {{color}}",
         "iconPick": "Pumili ng larawan",
         "iconClear": "Alisin ang larawan",
-        "iconHint": "Kapag walang larawan, ang unang titik ang lalabas sa napiling kulay.",
+        "iconHint": "Pumili ng built-in na icon o sarili mong larawan. Kapag wala ang dalawa, ang unang titik ang lalabas sa napiling kulay.",
         "iconTypeError": "Pumili ng larawang PNG, JPEG o WebP.",
         "iconReadError": "Hindi mabasa ang larawan.",
         "iconTooLarge": "Masyadong malaki ang larawan.",
@@ -2796,7 +2796,9 @@
         "saved": "Na-save ang mabilisang link",
         "deleted": "Nabura ang mabilisang link",
         "loadError": "Hindi ma-load ang mga mabilisang link.",
-        "orderError": "Hindi ma-save ang pagkakasunod-sunod."
+        "orderError": "Hindi ma-save ang pagkakasunod-sunod.",
+        "iconSymbol": "Pumili ng icon",
+        "iconChoose": "Pumili ng icon o larawan"
     },
     "documents": {
         "title": "Mga Dokumento",
@@ -4429,5 +4431,14 @@
         "recipes": "Resipe",
         "shopping": "Item",
         "splitExpenses": "Gastos"
+    },
+    "iconPicker": {
+        "title": "Pumili ng icon",
+        "searchLabel": "Maghanap ng icon",
+        "searchPlaceholder": "Maghanap sa Ingles, hal. film",
+        "resultsLabel": "Mga icon",
+        "noResults": "Walang nahanap na icon.",
+        "clear": "Walang icon",
+        "unavailable": "Hindi available ang mga icon ngayon."
     }
 }

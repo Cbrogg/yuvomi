@@ -61,6 +61,7 @@ const APP_SHELL = [
   '/styles/user-multi-select.css',
   '/styles/datepicker.css',
   '/styles/category-manager.css',
+  '/styles/icon-picker.css',
   '/styles/document-attach.css',
   '/styles/auth.css',
   '/styles/reminders.css',
@@ -226,7 +227,9 @@ const PAGE_MODULES = [
   '/pages/split-expenses.js',
   '/pages/subscriptions.js',
   '/components/category-manager.js',
+  '/components/icon-picker.js',
   '/components/tag-manager.js',
+  '/utils/lucide-icons.js',
   '/utils/sortable.js',
   '/vendor/sortablejs/sortable.esm.min.js',
   // libphonenumber-js: lazy im Kontaktmodul, aber vorab gecacht → Telefon-
