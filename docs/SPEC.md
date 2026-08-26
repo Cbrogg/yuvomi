@@ -615,6 +615,8 @@ Excluded single occurrences of a recurring series (EXDATE, migration v85). One r
 
 **Finite recurrences via `COUNT` (#513):** a series may end after a fixed number of occurrences (`COUNT=N`) instead of on a date (`UNTIL`) — the two are mutually exclusive. `COUNT` counts from the series start and **includes** excluded occurrences (RFC 5545: the limit applies to the recurrence set *before* `EXDATE` removal), so `COUNT=10` with one excluded date yields nine visible instances. The event dialog exposes this as an *Ends: Never / On date / After N occurrences* selector (calendar only — tasks are completion-driven and keep Never / On date). A one-time ICS import preserves `COUNT` on the stored rule and records the file's `EXDATE` lines as exceptions, so a finite Google/Apple export stays finite instead of becoming an endless series; ICS subscriptions honour `COUNT` and `EXDATE` the same way when expanding the feed.
 
+**`COUNT` is enforced by whoever knows the series start (#877).** `nextOccurrence()` is stateless and cannot know which occurrence it is producing, so the limit is applied by the callers that hold the start: the expansion (`expandRecurringEvents`, which counts from DTSTART) and, since v2.45.x, `nextOccurrenceAfter(..., { seriesStart })`. Without the second one the key-dates tile counted a finite series forever and even named a date in the future. It is deliberately an argument rather than an assumption: `nextDueAfterCompletion()` passes the due date of the instance just ticked off, not the series start, and counting from there would make a series grow with every completion. For monthly and yearly series starting after the 28th the limit is not applied - such a series does not run on a fixed grid (June 31st does not exist, so it slides and then drifts), and a limit set too early would cut off occurrences that still exist. Catching a long-running series up to today jumps in interval steps rather than counting one by one, with the same after-the-28th exception; before that, a daily series older than roughly three years ran out of steps and vanished from the tile.
+
 ### Calendar defaults for new events (per-user)
 Three per-user preferences prefill the new-event dialog (stored in `sync_config` under a per-user key, like `module_order`):
 - **`calendar_default_reminders`** — a list of reminder offsets (minutes before start, subset of the reminder presets, max 5) that new events receive automatically.
@@ -1602,13 +1604,36 @@ Custom folders for organizing family documents (migration v37). The housekeeping
 
 | Column | Type | Constraint |
 |--------|------|-----------|
-| name | TEXT | NOT NULL UNIQUE (display label only since v157) |
+| name | TEXT | NOT NULL, unique **per sibling row** since v164 (display label only since v157) |
+| parent_id | INTEGER | nullable, FK → this table (ON DELETE CASCADE, migration v164, #785) - NULL = root level |
 | module_key | TEXT | nullable, UNIQUE where set (migration v157) - `budget`, `tasks`, `splitExpenses`, `inventory`, `housekeeping`, `calendarItems` |
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
 | created_at | TEXT | ISO 8601 |
 | updated_at | TEXT | ISO 8601 |
 
 `family_documents.folder_id` references this table (ON DELETE SET NULL, nullable).
+
+**Folders nest since migration v164 (#785).** The uniqueness of `name` moved with it: it was global
+until then, which is the wrong assurance for a tree - "Invoices" under "Car" and "Invoices" under
+"Apartment" are two folders. The index is now `UNIQUE(COALESCE(parent_id, 0), name)`; `COALESCE`
+rather than a plain `UNIQUE(parent_id, name)`, because SQLite treats each NULL in a UNIQUE as
+distinct and would allow any number of same-named root folders - no assurance on exactly the level
+that had one before. The migration cannot fail on existing data, and that is a derivation rather
+than a hope: every carried-over row gets `parent_id NULL`, so `COALESCE(parent_id, 0)` is 0 for all
+of them and the new index checks precisely the condition the old global UNIQUE checked. It is
+deliberately **not** `COLLATE NOCASE` - that would be stricter than before and could break on a
+household holding "Auto" next to "auto".
+
+Nesting is capped at **five** levels, and the depth check counts the *height of the moved subtree*,
+not just the folder itself: a three-level branch does not fit under level three. A folder cannot be
+moved into its own descendant - without that check the branch cuts itself off the tree, unreachable
+but still there. Both rules, plus "which folders lie beneath this one", live once in
+`public/utils/folder-tree.js` and are used by the sidebar and the route alike (see the isomorphic
+allowlist in `test/test-layer-boundary.js`); two formulations would produce a count on the left that
+does not match the list on the right, with neither half looking wrong.
+
+`module_key` is unaffected by nesting: it carries the identity of a module's system folder, not its
+position, so such a folder may be moved without the six modules losing their filing place.
 
 **`module_key` carries the identity of a module's system folder, `name` is a label (migration v157).**
 Until then the folder was looked up by its translated name, which the client sent in its own
@@ -2364,13 +2389,16 @@ Primary key: `(subject_type, subject_id, resource_type, resource_key)`.
 | name | TEXT | NOT NULL - what the tile is called; also the source of its monogram when no picture is set |
 | url | TEXT | NOT NULL - normalised `http`/`https` address (see below) |
 | icon_data | TEXT | nullable - the tile picture as a data URL (`image/png\|jpeg\|webp`), capped at **128 KB** |
-| color | TEXT | nullable - HEX; the ground the monogram sits on |
+| icon_name | TEXT | nullable (migration v163, #873) - the Lucide name of a built-in symbol (`film`, `server`). Validated by FORM only (`[a-z0-9-]`, max 48), never against a name list: the server does not know the Lucide inventory and a list of 1743 names would be a second truth that goes stale on the next update. An unknown name breaks nothing - the tile falls back to its monogram |
+| color | TEXT | nullable - HEX; the ground the monogram or symbol sits on |
 | visibility | TEXT | NOT NULL DEFAULT `all` - `all` \| `private` |
 | created_by | INTEGER | FK → Users |
 | position | INTEGER | NOT NULL DEFAULT 0 - household-wide order, dragged rather than sorted |
 | created_at / updated_at | TEXT | ISO 8601 |
 
 A household may hold at most **24** quick links.
+
+**Three faces, in this order: picture, symbol, letter (#873).** Whoever uploaded a picture made the more laborious choice, so it wins over a symbol that may still sit in the same row. The order lives in the read path, not in the schema - a CHECK allowing only one of the two columns would be stricter than needed and would turn every switch between faces into two writes instead of one. A symbol costs the length of its name instead of the 20-40 KB of a data URL, stays sharp, takes the tile colour and follows the light/dark switch.
 
 **A row, not a module (#469).** The thread ran twice over the question of whether this becomes a
 bookmark library, and #759 was closed in favour of the small version four people had converged on:
@@ -2738,7 +2766,7 @@ Upload and manage family files with per-document access control.
 - CRUD: name, description, category, file upload (PDF, images, text, Office documents; up to `MAX_UPLOAD_MB` per file, default 5 MB)
 - **Upload dialog (v1.35.0):** the file comes first — it is the object of the action and supplies the name. The name field is optional and falls back to the file name; the category defaults to "other" rather than the first list entry. The file input carries the server's `allowed_mime_types` as `accept` and its `max_file_size` as the client-side limit, so hint text and actual acceptance cannot drift apart. Visibility sits openly in the form (it is the module's core promise), while description and status stay behind "more settings"
 - **Multi-file upload (v1.35.0):** several files can be picked or dropped at once. Each becomes its own document with its file name as the title, sharing the chosen category, folder, and visibility; the submit button reports "uploading n of m" while they are processed
-- **Folder browser:** documents can be organized into custom folders; a sidebar lists all folders plus "Alle Dokumente" and "Kein Ordner". The first row is the neutral state of a filter, not an overview of folders, and it is named for what it selects: it carries a document count, and calling it "Alle Ordner" next to that count read as a number of folders (v2.8.2, #757). Folders are flat - `family_document_folders` has no `parent_id` - so the section heading names the axis ("Ordner") rather than promising navigation. Custom folders can be created, renamed, and deleted (via a per-folder overflow menu); deleting a folder keeps its documents (their folder link is cleared). New uploads are pre-assigned to the currently selected folder. Six modules file their receipts in a system folder of their own (Budget, Tasks, Shared expenses, Inventory, Housekeeping, calendar attachments); since v157 that folder is identified by `family_document_folders.module_key`, not by its translated name, so two members with different languages file into the SAME folder and renaming either the folder or its translation no longer creates a second one. The name is a label and may be changed freely. The housekeeping folder is auto-created when the first housekeeping worker is added
+- **Folder browser:** documents can be organized into custom folders; a sidebar lists all folders plus "Alle Dokumente" and "Kein Ordner". The first row is the neutral state of a filter, not an overview of folders, and it is named for what it selects: it carries a document count, and calling it "Alle Ordner" next to that count read as a number of folders (v2.8.2, #757). **Folders nest (migration v164, #785).** They were flat until then, and the request was to hang them under the categories - which does not work, because the two axes are independent: a folder "Apartment" holds documents categorised `home`, `insurance` and `legal` at the same time, so under a category it would stand three times or carry a membership that does not exist. The hierarchy therefore sits where it belongs - `family_document_folders.parent_id`, capped at **five** levels (where the indentation stops leaving room for the name on a phone) - and the category stays a cross-cutting label on the document. `name` lost its global UNIQUE in the same migration and is now unique per sibling row (`COALESCE(parent_id, 0), name`): "Invoices" under "Car" and under "Apartment" are two folders. `COALESCE` and not a plain `UNIQUE(parent_id, name)`, because SQLite treats each NULL in a UNIQUE as distinct and would allow any number of same-named root folders. Selecting a folder shows the documents of its whole subtree, and the count beside it answers the same question - the rule for that lives once, in `public/utils/folder-tree.js`, and is used by both the sidebar and the route. Custom folders can be created, renamed, and deleted (via a per-folder overflow menu); deleting a folder keeps its documents (their folder link is cleared) but takes its whole subtree with it (`ON DELETE CASCADE` on `parent_id`, v164) - the confirmation names how many subfolders go along, because the sidebar only shows the collapsed root. New uploads are pre-assigned to the currently selected folder. Six modules file their receipts in a system folder of their own (Budget, Tasks, Shared expenses, Inventory, Housekeeping, calendar attachments); since v157 that folder is identified by `family_document_folders.module_key`, not by its translated name, so two members with different languages file into the SAME folder and renaming either the folder or its translation no longer creates a second one. The name is a label and may be changed freely. The housekeeping folder is auto-created when the first housekeeping worker is added
 - **Grid / list view** toggle; view mode persisted in localStorage. The list view carries date and file size as their own columns, so switching from grid to list adds information rather than dropping it
 - **Sorting (v1.35.0):** last modified (default, matching the server's `updated_at DESC`), name, or size; the choice is persisted in localStorage
 - **Category tags:** 14 predefined categories (medical, school, identity, insurance, finance, home, vehicle, legal, travel, pets, warranty, taxes, work, other)

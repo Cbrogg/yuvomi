@@ -7,6 +7,84 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.46.0] - 2026-08-26
+
+### Added
+
+- **A quick link can wear a built-in symbol instead of an uploaded picture** (#873). A tile had two
+  faces - an image you upload, or the first letter of its name on the colour you picked. Whoever
+  wanted neither had no third option, and the request said so plainly: *"It's just an icon and as
+  heavy self-hoster I don't want to search and fetch icons from somewhere, I would like to have it
+  just built-in Yuvomi."*
+
+  **The supply was already in the repo.** Yuvomi vendors the full Lucide set (1743 symbols) and
+  draws every button in the app with it; what was missing was not the icons but a way to pick one.
+  A symbol now costs the length of its name instead of the 20-40 KB of a data URL, it stays sharp,
+  it takes the tile colour, and it follows the light/dark switch - none of which a raster upload
+  does. The picker opens from the tile preview, starts with suggestions for the usual self-hosted
+  categories, and searches the whole set from there. The search runs over English identifiers
+  (`film`, `server`), and the placeholder says so rather than letting someone type "kalender" and
+  find nothing.
+
+  **Two other routes were considered and rejected**, and the reasoning lives in the code so the
+  next person finds it. Bundling a set of service logos would be a low double-digit megabyte
+  increase for a row that holds at most 24 tiles, with a licence situation per brand and a manual
+  update path that does not scale to a few thousand files - and the one service someone is looking
+  for could still be missing. Fetching the site's favicon on demand can only be done by the server
+  (a browser may display a cross-origin image but not read it), and **any household member can
+  create a quick link** while those links point into the home network by design: a server that any
+  member can aim at any internal address is a network-scanning tool. If you want the real brand
+  logo, the image upload is unchanged.
+
+- **Document folders can live inside document folders** (#785). The module carried two flat axes
+  side by side - categories as chips on top, folders as a list in the sidebar - and nothing showed
+  how they relate, because they do not: a folder holds documents of several categories at once.
+  The sidebar is now a real tree with a path above the list, folders can be nested, moved and
+  created inside one another, and categories stay what they always were: a label on the document
+  that filters across the whole tree.
+
+  **A folder now shows what lies beneath it.** Opening "Apartment" while the twelve documents sit
+  in "Apartment/Rent" used to show an empty view; the count next to the folder answers the same
+  question the view does. Deleting a folder still costs no document - they fall back to "no
+  folder", as they always have - but the confirmation now names how many subfolders go with it,
+  because the sidebar only shows the collapsed root. Nesting is capped at five levels, which is
+  where the indentation stops leaving room for the name on a phone.
+
+### Fixed
+
+- **The overdue-tasks badge is there right after signing in** (#868). It only appeared once you had
+  opened the module it belonged to. That was not a display glitch but the construction: three
+  modules each rebuilt the same badge markup from *their own* state, so a module that had never
+  rendered had no state and therefore no badge - and rebuilding the navigation (language switch,
+  module toggle, account change) threw the badges away until the next render. A badge is now a
+  remembered value that the navigation repaints, with one place that draws it. The count comes from
+  the overview response at startup and from the module itself once it has its list, so ticking a
+  task off still lowers the number immediately instead of after a round trip.
+
+- **Going back closes the dialog instead of changing the page underneath it** (#871). With a dialog
+  open, the back gesture navigated away and left the dialog standing - on a phone the swipe from
+  the left is the back button, so the most common way out was the one that broke the state. Every
+  modal overlay in the app now registers with the back gesture, including the native `<dialog>`
+  elements that carry no `aria-modal` attribute of their own, and the router asks the open overlays
+  before it navigates.
+
+- **A recurring key date that has run out disappears - and one that is still running stays** (#877).
+  Two faults in the same place, pulling in opposite directions. A repeat set to "ends after N times"
+  was never actually limited here: a three-time monthly series from January 2025 was still counting
+  in August 2026, and worse, it named a date in the *future*. In the other direction, catching a
+  long-running series up to today gave up after a fixed number of steps - a daily series started in
+  2023, or a weekly one from 2005, vanished from the tile even though the appointment happens today.
+  Catching up now jumps in interval steps instead of counting one by one, and "ends after N times"
+  is enforced.
+
+  **The seven-day grace period is unchanged and stays deliberate.** A countdown that stops exactly
+  on impact leaves you alone in the one moment you set it for - the day before it says "tomorrow",
+  the day after it would say nothing, and nobody tells you that you missed it.
+
+- **A right-aligned button row wraps instead of squeezing its buttons** (#872). Without a wrap rule
+  the row grew past its container - right-aligned, so it grew to the left - and whatever stuck out
+  was clipped by the frame.
+
 ## [2.45.0] - 2026-08-26
 
 ### Added
