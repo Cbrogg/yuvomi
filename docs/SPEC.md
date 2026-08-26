@@ -1312,16 +1312,29 @@ Planned/estimated budget (Budget → Plan). A **steady monthly plan**: one amoun
 
 ### Reminders
 
-Per-user reminders attached to tasks, calendar events, subscriptions, or inventory items.
+Per-user reminders attached to tasks, calendar events, subscriptions, inventory items, inventory tracked dates, or pantry items.
 
 | Column | Type | Constraint |
 |--------|------|-----------|
-| entity_type | TEXT | `task`, `event`, `subscription`, `inventory_item`, or `inventory_tracked_date`, NOT NULL |
+| entity_type | TEXT | `task`, `event`, `subscription`, `inventory_item`, `inventory_tracked_date`, or `pantry_item`, NOT NULL |
 | entity_id | INTEGER | Entity identifier, NOT NULL |
 | remind_at | TEXT | ISO 8601 datetime, NOT NULL |
 | dismissed | INTEGER | 0/1, default 0 |
 | pushed_at | TEXT | ISO 8601 datetime, nullable — set once all active notification targets have been sent, skipped, or exhausted, so the reminder is not processed indefinitely |
 | created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+
+All types except `pantry_item` can be set and deleted through `POST`/`PUT`/`DELETE
+/api/v1/reminders`. Four of them are **derived** - their module recreates the reminder whenever the
+underlying object is written (renewal date, warranty end, inventory deadline, best-before date) - but
+only the pantry is additionally rebuilt on **every notification run**. A hand-set `pantry_item`
+reminder is therefore gone within a minute and a deleted one is back, so all four write paths
+(`POST`, `PUT`, `DELETE /:id`, `DELETE` by filter) answer 400 for it; for the other three derived types a hand-set date survives until the next change to
+their object, which is a half-life you can work with, and closing them would break a published
+`/api/v1` surface for no reason.
+
+Reading and **dismissing** (`PATCH /:id/dismiss`) stay open for all six - the reminder toast has to
+show a derived notification and let the user wave it away, and dismissing holds precisely because
+the row stays.
 
 Calendar events support **multiple reminders** (e.g. "15 minutes before" *and* "1 day before").
 Each reminder is an independent row and is delivered separately by the notification scheduler.

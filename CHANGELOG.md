@@ -7,6 +7,90 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Ein Vorratsartikel meldet sich, bevor sein Mindesthaltbarkeitsdatum erreicht ist** (#811). Der
+  Vorrat kennt das Datum seit #596 und hat es nie angekündigt: Erinnerungen hingen an einer Liste
+  von Herkünften (`task`, `event`, `subscription`, `inventory_item`, `inventory_tracked_date`), und
+  der Vorrat stand nicht darin. Das war die einzige fehlende Zeile - kein neuer Mechanismus, die
+  vierte Anwendung eines bereits dreifach vorhandenen.
+
+  **Das Datum selbst ist der Schalter.** Es gibt nichts abzuwählen: wer bei Salz und Reis kein MHD
+  einträgt, hört nichts, und wer eines einträgt, wird erinnert. Dasselbe Prinzip wie Kaufdatum plus
+  Garantiemonate am Inventar-Gegenstand.
+
+  **Der Vorlauf ist die Schwelle, die die Zeile ohnehin gelb färbt** - sieben Tage, dieselbe Zahl
+  wie der Chip "läuft bald ab". Ein eigener Vorlauf je Artikel wäre die Alternative gewesen und die
+  falsche: eine Frist am Inventar wird einzeln gepflegt, ein Vorrat ist Massenware, und ein Feld,
+  das niemand pro Joghurt pflegt, ist ein halb gefülltes Feld. Zwei Zahlen für dieselbe Frage wären
+  außerdem zwei Wahrheiten - die Meldung käme an einem Tag, an dem in der Liste nichts markiert ist.
+  Ein Guard hält beide Definitionen jetzt zusammen; er deckt auch die Garantiefrist im Inventar,
+  deren Kommentar die Gleichheit seit jeher behauptet, ohne dass sie jemand geprüft hätte.
+
+  **Eine leere Packung meldet nicht.** Der Chip zeigt "läuft bald ab" auch bei Menge 0, und das ist
+  dort richtig - eine Liste ist passiv, man sieht sie, wenn man hinsieht. Eine Meldung unterbricht,
+  und für Verbrauchtes gibt es nichts mehr zu retten. Wer nachkauft, bekommt die Erinnerung
+  zurück: jeder Schreibweg, auch der ±-Stepper und die Übernahme aus der Einkaufsliste, führt durch
+  dieselbe Stelle.
+
+  **Der Bestand zieht nach, nicht erst beim nächsten Anfassen.** Der Vorrat, der schon vor diesem
+  Update im Regal stand, wurde nie gespeichert - ohne einen Nachlauf hätte genau das unberührte Glas
+  hinten im Regal nie gemeldet, also der Fall, für den die Frage überhaupt gestellt wurde. Der
+  Benachrichtigungslauf ergänzt deshalb fehlende Erinnerungen und räumt gegenstandslose ab. Was
+  schon zugestellt oder weggewischt wurde, lässt er in Ruhe: sonst käme dieselbe Meldung bei jedem
+  Durchgang wieder.
+
+  **Frisch gekaufte Ware ist hier der Hauptfall, nicht der Ausreisser.** Milch, Joghurt und Salat
+  haben beim Einkauf fast immer weniger als sieben Tage - ihr Vorlauf liegt beim Eintragen schon
+  hinter uns. Die Regel aus dem Inventar hätte sie ersatzlos verworfen: der Chip färbte sich gelb,
+  und die Meldung, für die dieses Feature gebaut ist, wäre für genau diese Artikel nie gekommen.
+  Beim Eintragen wird der Termin deshalb auf den nächsten Morgen gezogen statt fallengelassen - eine
+  Ablaufwarnung ist eine Morgenfrage ("was muss heute weg"), kein Alarm eine Minute nach dem
+  Eintippen. Was die Frist schon gerissen hat, meldet nicht mehr; das sagt der Chip "abgelaufen".
+
+  Der Nachlauf über den Bestand zieht dagegen nichts nach vorne: sonst käme am ersten Morgen nach
+  dem Update jede bald ablaufende Zeile des Vorrats auf einmal, für die niemand etwas getan hat.
+
+### Fixed
+
+- **Eine Erinnerung verrät nicht mehr, was ihr Modul verschweigt.** `/api/v1/reminders` liefert
+  Titel aus sechs Modulen - Aufgaben, Kalender, Abos, Inventar, Inventar-Fristen und seit dieser
+  Version dem Vorrat -, sein Pfad wird aber komplett dem Kalender zugeordnet. Ein API-Token mit nur
+  `calendar:read` konnte damit über die fällige Erinnerung den Namen eines Abos oder eines
+  Inventar-Gegenstands lesen, `calendar:write` konnte die Meldung wegwischen, und einem Mitglied,
+  dem ein Modul entzogen ist, ging es genauso: der Zugriffs-Guard fragte nach dem Kalender und liess
+  alles andere durch. Die Route sortiert jetzt selbst aus, für beide Rechtearten. Das war schon vor
+  dieser Version so, für fünf Herkünfte - deshalb steht hier eine Regel über alle und keine Ausnahme
+  für die neue.
+
+- **Die Übernahme aus der Einkaufsliste prüft das Mindesthaltbarkeitsdatum jetzt gegen den
+  Kalender.** Sie sah bisher nur nach der Form, ein `2027-02-30` kam durch. Das blieb folgenlos,
+  solange niemand mit dem Datum rechnete - eine unsinnige Zeile im Vorrat, mehr nicht. Beide
+  Prüfungen sind jetzt dieselbe Funktion, die auch das Formular benutzt. Der Artikel kommt trotzdem
+  im Vorrat an, nur ohne Datum: er selbst ist in Ordnung, kaputt ist allein das MHD - und ihn ganz
+  zu verwerfen hiesse, dass jemand den Joghurt abhakt, Übernehmen drückt und der Joghurt fehlt.
+
+### Changed
+
+- **Eine Vorrats-Erinnerung lässt sich nicht von Hand setzen oder löschen.** `POST`, `PUT` und beide
+  `DELETE`-Wege auf `/api/v1/reminders` antworten für `pantry_item` mit 400. Der Grund ist, dass es
+  nie gehalten hätte: der Benachrichtigungslauf stellt diese Erinnerungen in jedem Durchgang wieder
+  her, ein eigener Termin wäre binnen einer Minute weg und eine gelöschte Zeile wieder da - ohne
+  dass irgendwo gestanden hätte, warum. Ein ehrliches 400 sagt es sofort. **Verwerfen**
+  (`PATCH /:id/dismiss`) ist der Weg, der hält, weil die Zeile dabei bestehen bleibt.
+
+  Abo-, Garantie- und Fristen-Erinnerungen bleiben bewusst setzbar, obwohl auch sie abgeleitet sind:
+  dort schreibt nur das jeweilige Modul beim Speichern, ein handgesetzter Termin hält also bis zur
+  nächsten Änderung des Abos oder Geräts. Das ist eine Halbwertszeit, mit der man arbeiten kann -
+  und kein Anlass, eine zugesagte Schnittstelle rückwirkend zu schliessen.
+
+- **Der Vorlauf einer Erinnerung wird nur noch an einer Stelle gerechnet.** Dieselben vier Zeilen
+  ("N Tage vor diesem Datum, morgens, ohne Zeitzonen-Suffix") standen zweimal im Baum - einmal für
+  Abos, einmal für Garantien. Mit dem Vorrat wäre es die dritte Kopie geworden, also gibt es sie
+  jetzt einmal; die beiden Module behalten ihre sprechenden Namen als Fassade. Kein Verhalten
+  ändert sich, die Termine bleiben auf die Sekunde dieselben.
+
+
 ## [2.44.0] - 2026-08-25
 
 ### Added
