@@ -2886,7 +2886,18 @@
         "budgetFolder": "Чеки",
         "splitExpensesFolder": "Спільні витрати",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Завдання"
+        "tasksFolder": "Завдання",
+        "newSubfolder": "Нова підпапка",
+        "moveFolder": "Перемістити папку",
+        "moveFolderTo": "Перемістити «{{name}}» до",
+        "folderMovedToast": "Папку переміщено",
+        "folderParentLabel": "Батьківська папка",
+        "folderRootLevel": "Верхній рівень",
+        "folderPathLabel": "Шлях до папки",
+        "folderExpand": "Розгорнути «{{name}}»",
+        "folderCollapse": "Згорнути «{{name}}»",
+        "deleteFolderSubtreeDetail": "Вкладені {{count}} підпапок теж буде видалено. Документи залишаться і будуть доступні через фільтр документів без папки.",
+        "deleteFolderSubtreeDetail_one": "Вкладену підпапку теж буде видалено. Документи залишаться і будуть доступні через фільтр документів без папки."
     },
     "shortcuts": {
         "goKitchen": "Кухня",

@@ -2943,7 +2943,18 @@
         "budgetFolder": "Bonnen",
         "splitExpensesFolder": "Gedeelde uitgaven",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Taken"
+        "tasksFolder": "Taken",
+        "newSubfolder": "Nieuwe submap",
+        "moveFolder": "Map verplaatsen",
+        "moveFolderTo": "„{{name}}\" verplaatsen naar",
+        "folderMovedToast": "Map verplaatst",
+        "folderParentLabel": "Bovenliggende map",
+        "folderRootLevel": "Hoogste niveau",
+        "folderPathLabel": "Mappad",
+        "folderExpand": "„{{name}}\" uitklappen",
+        "folderCollapse": "„{{name}}\" inklappen",
+        "deleteFolderSubtreeDetail": "De {{count}} submappen erin worden ook verwijderd. De documenten blijven bestaan en zijn bereikbaar via het filter voor documenten zonder map.",
+        "deleteFolderSubtreeDetail_one": "De submap erin wordt ook verwijderd. De documenten blijven bestaan en zijn bereikbaar via het filter voor documenten zonder map."
     },
     "housekeeping": {
         "title": "Huishouden",

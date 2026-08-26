@@ -2886,7 +2886,18 @@
         "budgetFolder": "Чеки",
         "splitExpensesFolder": "Общие расходы",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Задачи"
+        "tasksFolder": "Задачи",
+        "newSubfolder": "Новая подпапка",
+        "moveFolder": "Переместить папку",
+        "moveFolderTo": "Переместить «{{name}}» в",
+        "folderMovedToast": "Папка перемещена",
+        "folderParentLabel": "Родительская папка",
+        "folderRootLevel": "Верхний уровень",
+        "folderPathLabel": "Путь к папке",
+        "folderExpand": "Развернуть «{{name}}»",
+        "folderCollapse": "Свернуть «{{name}}»",
+        "deleteFolderSubtreeDetail": "Вложенные {{count}} подпапок тоже будут удалены. Документы останутся и будут доступны через фильтр документов без папки.",
+        "deleteFolderSubtreeDetail_one": "Вложенная подпапка тоже будет удалена. Документы останутся и будут доступны через фильтр документов без папки."
     },
     "shortcuts": {
         "goKitchen": "Кухня",

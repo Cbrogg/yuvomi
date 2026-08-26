@@ -10,6 +10,7 @@ import { createLogger } from '../logger.js';
 import { str, collectErrors, id as validateId, MAX_TEXT, MAX_TITLE } from '../middleware/validate.js';
 import { documentVisibleSql } from '../services/document-access.js';
 import { ensureModuleFolder, isModuleFolderKey } from '../services/document-folders.js';
+import { subtreeIds, folderMoveIssue, MAX_FOLDER_DEPTH } from '../../public/utils/folder-tree.js';
 import { getAdapter as defaultGetDmsAdapter } from '../services/dms/index.js';
 import { getStatus as getGoogleDriveStatus } from '../services/google-drive-storage.js';
 import {
@@ -474,113 +475,34 @@ router.get('/meta/options', (req, res) => {
 });
 
 /**
- * So tief darf der Baum werden (#785).
+ * Die Ordner, ueber die eine Baumfrage laeuft.
  *
- * NICHT AUS VORSICHT, SONDERN AUS DER OBERFLAECHE HERAUS. Jede Ebene ruecken
- * die Zeilen in der Seitenleiste ein; die Leiste ist auf dem Telefon rund
- * 280px breit, und ab der sechsten Einrueckung bleibt fuer den Namen weniger
- * Platz als fuer den Rand davor. Eine Ablage, die tiefer will, will in
- * Wahrheit andere Namen.
+ * DIE GANZE LISTE UND KEINE TEILABFRAGE: die geteilten Regeln
+ * (public/utils/folder-tree.js) rechnen auf einer Liste, nicht auf einer
+ * Verbindung - das ist der Preis dafuer, dass Browser und Server dieselbe
+ * Regel benutzen statt zweier, die auseinanderlaufen. Er ist klein: die Tiefe
+ * ist auf fuenf begrenzt, und ein Haushalt fuehrt Dutzende Ordner, nicht
+ * Tausende.
  */
-const MAX_FOLDER_DEPTH = 5;
-
-/**
- * Die Kette von der Wurzel bis zu diesem Ordner, Wurzel zuerst.
- *
- * MIT EIGENER ABBRUCHGRENZE, obwohl der Baum keine Zyklen haben kann: die
- * Zusicherung dafuer ist `assertMovable()` unten, und sie steht auf einer
- * anderen Seite dieses Aufrufs. Liefe hier je ein Zyklus ein - durch einen
- * Fehler dort, durch einen Schreibzugriff an der API vorbei -, waere die Folge
- * eine Endlosschleife im Server und nicht eine falsche Zeile in der Antwort.
- *
- * @returns {Array<{id: number, name: string}>}
- */
-function folderPath(database, folderId) {
-  const stmt = database.prepare('SELECT id, name, parent_id FROM family_document_folders WHERE id = ?');
-  const chain = [];
-  let current = folderId;
-  for (let hops = 0; current != null && hops <= MAX_FOLDER_DEPTH + 1; hops += 1) {
-    const row = stmt.get(current);
-    if (!row) break;
-    chain.unshift({ id: row.id, name: row.name });
-    current = row.parent_id;
-  }
-  return chain;
+function allFolders() {
+  return db.get().prepare('SELECT id, name, parent_id FROM family_document_folders').all();
 }
 
-/**
- * Darf `folderId` unter `parentId` haengen?
- *
- * Drei Absagen, und die erste ist die, die ohne Pruefung eine Tabelle
- * zerlegt: einen Ordner in seinen eigenen Nachfahren zu schieben schneidet
- * den ganzen Teilbaum vom Rest ab. Er waere in keiner Ansicht mehr
- * erreichbar, aber weiter da - ein Ring aus Zeilen, den nur ein
- * Datenbankwerkzeug wieder aufmacht.
- *
- * @returns {string|null} Fehlermeldung, oder null wenn erlaubt
- */
-function folderMoveError(database, folderId, parentId) {
-  if (parentId == null) return null;
-  if (folderId != null && parentId === folderId) return 'A folder cannot be inside itself.';
-
-  const parent = database.prepare('SELECT id FROM family_document_folders WHERE id = ?').get(parentId);
-  if (!parent) return 'Parent folder not found.';
-
-  if (folderId != null) {
-    // Liegt der neue Elternteil unter dem Ordner, den wir gerade verschieben?
-    const chain = folderPath(database, parentId);
-    if (chain.some((entry) => entry.id === folderId)) return 'A folder cannot be moved into its own subfolder.';
-  }
-
-  const parentDepth = folderPath(database, parentId).length;
-  const subtreeDepth = folderId == null ? 1 : subtreeHeight(database, folderId);
-  if (parentDepth + subtreeDepth > MAX_FOLDER_DEPTH) {
-    return `Folders can be nested at most ${MAX_FOLDER_DEPTH} levels deep.`;
-  }
-  return null;
-}
+/** Die Absage der Baumpruefung als Satz, den jemand lesen kann. */
+const MOVE_ISSUE_MESSAGES = {
+  'self':           'A folder cannot be inside itself.',
+  'descendant':     'A folder cannot be moved into its own subfolder.',
+  'missing-parent': 'Parent folder not found.',
+  'too-deep':       `Folders can be nested at most ${MAX_FOLDER_DEPTH} levels deep.`,
+};
 
 /**
- * Wie viele Ebenen der Teilbaum unter (und mit) diesem Ordner hoch ist.
- *
- * GEZAEHLT WIRD DER GANZE TEILBAUM, nicht nur der Ordner selbst: wer einen
- * dreistufigen Zweig zwei Ebenen tief einhaengt, hat fuenf - die Grenze muss
- * das mitzaehlen, sonst haelt sie nur beim Verschieben einzelner Blaetter.
+ * Darf dieser Ordner dorthin? Gibt die Meldung, oder null.
+ * @returns {string|null}
  */
-function subtreeHeight(database, folderId) {
-  const children = database.prepare('SELECT id FROM family_document_folders WHERE parent_id = ?').all(folderId);
-  if (!children.length) return 1;
-  return 1 + Math.max(...children.map((child) => subtreeHeight(database, child.id)));
-}
-
-/**
- * Dieser Ordner und alles darunter, als Liste von ids.
- *
- * DAS IST DIE ANTWORT AUF "WAS LIEGT IN DIESEM ORDNER". In einer flachen
- * Ablage waren Ordner und Filter dasselbe: ein Ordner zeigte genau die
- * Dokumente mit seiner id. In einem Baum ist das die falsche Antwort - wer
- * "Wohnung" oeffnet und darunter "Wohnung/Miete" mit zwoelf Dokumenten hat,
- * bekaeme eine leere Ansicht und muesste raten, wo die Dokumente sind.
- *
- * Breitensuche mit gesehenen ids statt Rekursion: die Tiefe ist zwar auf
- * MAX_FOLDER_DEPTH begrenzt, aber diese Funktion laeuft auch ueber Daten, die
- * aelter sind als diese Grenze.
- *
- * @returns {number[]} immer mindestens `[folderId]`
- */
-function folderSubtreeIds(database, folderId) {
-  const childrenOf = database.prepare('SELECT id FROM family_document_folders WHERE parent_id = ?');
-  const seen = new Set([folderId]);
-  const queue = [folderId];
-  while (queue.length) {
-    const current = queue.shift();
-    for (const child of childrenOf.all(current)) {
-      if (seen.has(child.id)) continue;
-      seen.add(child.id);
-      queue.push(child.id);
-    }
-  }
-  return [...seen];
+function folderMoveError(folderId, parentId) {
+  const issue = folderMoveIssue(allFolders(), folderId, parentId);
+  return issue ? MOVE_ISSUE_MESSAGES[issue] : null;
 }
 
 /**
@@ -626,7 +548,7 @@ router.post('/folders', (req, res) => {
     const vParent = parentId(req.body.parent_id);
     if (vParent.error) return res.status(400).json({ error: vParent.error, code: 400 });
 
-    const moveError = folderMoveError(db.get(), null, vParent.value);
+    const moveError = folderMoveError(null, vParent.value);
     if (moveError) return res.status(400).json({ error: moveError, code: 400 });
 
     const result = db.get().prepare('INSERT INTO family_document_folders (name, parent_id, created_by) VALUES (?, ?, ?)')
@@ -669,7 +591,7 @@ router.put('/folders/:id', (req, res) => {
     if (req.body.parent_id !== undefined) {
       const vParent = parentId(req.body.parent_id);
       if (vParent.error) return res.status(400).json({ error: vParent.error, code: 400 });
-      const moveError = folderMoveError(db.get(), id, vParent.value);
+      const moveError = folderMoveError(id, vParent.value);
       if (moveError) return res.status(400).json({ error: moveError, code: 400 });
       parent = vParent.value;
     }
@@ -705,7 +627,7 @@ router.delete('/folders/:id', (req, res) => {
     // DIE DOKUMENTE BLEIBEN, unveraendert seit dieser Route: folder_id traegt
     // ON DELETE SET NULL, sie landen unter "ohne Ordner". Kein Loeschen in
     // diesem Modul kostet ein Dokument.
-    const subtree = folderSubtreeIds(db.get(), id);
+    const subtree = [...subtreeIds(allFolders(), id)];
     const affected = db.get()
       .prepare(`SELECT COUNT(*) AS n FROM family_documents WHERE folder_id IN (${subtree.map((_v, i) => `@f${i}`).join(',')})`)
       .get(Object.fromEntries(subtree.map((value, i) => [`f${i}`, value]))).n;
@@ -742,7 +664,7 @@ router.get('/', (req, res) => {
     let subtree = null;
     if (folderId != null && Number.isInteger(folderId) && folderId > 0) {
       const exists = db.get().prepare('SELECT id FROM family_document_folders WHERE id = ?').get(folderId);
-      subtree = exists ? folderSubtreeIds(db.get(), folderId) : [folderId];
+      subtree = exists ? [...subtreeIds(allFolders(), folderId)] : [folderId];
     }
 
     /* Benannte Platzhalter auch fuer die Liste: die uebrige Abfrage laeuft

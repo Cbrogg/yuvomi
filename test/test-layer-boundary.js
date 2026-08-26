@@ -75,6 +75,16 @@ const SHARED_ISOMORPHIC = new Set([
   // 409 abgewiesen - oder, schlimmer, eine Zeile ohne Kaestchen laesst sich
   // ueber die Route umschreiben. Reine Textfunktionen, kein DOM, kein Node.
   'public/utils/markdown-checklist.js',
+  // #785: Was ein Ordnerbaum bedeutet - was liegt unter einem Ordner, wo liegt
+  // er selbst, und darf er dorthin. Die Seitenleiste zaehlt damit ihre
+  // Dokumente je Ordner, die Route filtert damit ihre Abfrage. Zwei Fassungen
+  // ergaeben die unangenehmste Sorte Fehler: eine Zahl links, die nicht zur
+  // Liste rechts passt, ohne dass eine von beiden falsch aussieht. Dass beide
+  // Seiten "auch die Unterordner" gleich beantworten, ist die ganze Aussage
+  // des Baums - und die Zyklus- und Tiefengrenze darf gar nicht erst zweimal
+  // formuliert sein: die eine Fassung ist die Grenze, die andere waere ein
+  // Vorschlag. Reine Funktionen ueber eine Ordnerliste, kein DOM, kein Node.
+  'public/utils/folder-tree.js',
 ]);
 
 const SOURCE_EXT = /\.(js|mjs)$/;

@@ -2943,7 +2943,18 @@
         "budgetFolder": "Receipts",
         "splitExpensesFolder": "Shared expenses",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Tasks"
+        "tasksFolder": "Tasks",
+        "newSubfolder": "New subfolder",
+        "moveFolder": "Move folder",
+        "moveFolderTo": "Move \"{{name}}\" to",
+        "folderMovedToast": "Folder moved",
+        "folderParentLabel": "Parent folder",
+        "folderRootLevel": "Top level",
+        "folderPathLabel": "Folder path",
+        "folderExpand": "Expand \"{{name}}\"",
+        "folderCollapse": "Collapse \"{{name}}\"",
+        "deleteFolderSubtreeDetail": "The {{count}} subfolders inside will be deleted too. The documents remain and stay reachable through the filter for documents without a folder.",
+        "deleteFolderSubtreeDetail_one": "The subfolder inside will be deleted too. The documents remain and stay reachable through the filter for documents without a folder."
     },
     "housekeeping": {
         "title": "Housekeeping",

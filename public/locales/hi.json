@@ -2886,7 +2886,18 @@
         "budgetFolder": "रसीदें",
         "splitExpensesFolder": "साझा खर्च",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "कार्य"
+        "tasksFolder": "कार्य",
+        "newSubfolder": "नया उप-फ़ोल्डर",
+        "moveFolder": "फ़ोल्डर ले जाएँ",
+        "moveFolderTo": "„{{name}}\" को यहाँ ले जाएँ",
+        "folderMovedToast": "फ़ोल्डर ले जाया गया",
+        "folderParentLabel": "मूल फ़ोल्डर",
+        "folderRootLevel": "सबसे ऊपरी स्तर",
+        "folderPathLabel": "फ़ोल्डर पथ",
+        "folderExpand": "„{{name}}\" खोलें",
+        "folderCollapse": "„{{name}}\" बंद करें",
+        "deleteFolderSubtreeDetail": "इसमें मौजूद {{count}} उप-फ़ोल्डर भी हट जाएँगे। दस्तावेज़ बने रहते हैं और बिना फ़ोल्डर वाले दस्तावेज़ों के फ़िल्टर से मिल जाते हैं।",
+        "deleteFolderSubtreeDetail_one": "इसमें मौजूद उप-फ़ोल्डर भी हट जाएगा। दस्तावेज़ बने रहते हैं और बिना फ़ोल्डर वाले दस्तावेज़ों के फ़िल्टर से मिल जाते हैं।"
     },
     "shortcuts": {
         "goKitchen": "रसोई",

@@ -2886,7 +2886,18 @@
         "budgetFolder": "Justificatifs",
         "splitExpensesFolder": "Dépenses partagées",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Tâches"
+        "tasksFolder": "Tâches",
+        "newSubfolder": "Nouveau sous-dossier",
+        "moveFolder": "Déplacer le dossier",
+        "moveFolderTo": "Déplacer « {{name}} » vers",
+        "folderMovedToast": "Dossier déplacé",
+        "folderParentLabel": "Dossier parent",
+        "folderRootLevel": "Niveau supérieur",
+        "folderPathLabel": "Chemin du dossier",
+        "folderExpand": "Déplier « {{name}} »",
+        "folderCollapse": "Replier « {{name}} »",
+        "deleteFolderSubtreeDetail": "Les {{count}} sous-dossiers qu’il contient seront également supprimés. Les documents restent et sont accessibles via le filtre des documents sans dossier.",
+        "deleteFolderSubtreeDetail_one": "Le sous-dossier qu’il contient sera également supprimé. Les documents restent et sont accessibles via le filtre des documents sans dossier."
     },
     "shortcuts": {
         "goKitchen": "Cuisine",

@@ -2943,7 +2943,18 @@
         "budgetFolder": "رسیدها",
         "splitExpensesFolder": "هزینه‌های مشترک",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "کارها"
+        "tasksFolder": "کارها",
+        "newSubfolder": "زیرپوشه جدید",
+        "moveFolder": "انتقال پوشه",
+        "moveFolderTo": "انتقال «{{name}}» به",
+        "folderMovedToast": "پوشه منتقل شد",
+        "folderParentLabel": "پوشه والد",
+        "folderRootLevel": "بالاترین سطح",
+        "folderPathLabel": "مسیر پوشه",
+        "folderExpand": "باز کردن «{{name}}»",
+        "folderCollapse": "بستن «{{name}}»",
+        "deleteFolderSubtreeDetail": "{{count}} زیرپوشه داخل آن هم حذف می‌شوند. سندها باقی می‌مانند و از طریق فیلتر سندهای بدون پوشه در دسترس‌اند.",
+        "deleteFolderSubtreeDetail_one": "زیرپوشه داخل آن هم حذف می‌شود. سندها باقی می‌مانند و از طریق فیلتر سندهای بدون پوشه در دسترس‌اند."
     },
     "userMultiSelect": {
         "nobody": "- هیچ‌کس -",
