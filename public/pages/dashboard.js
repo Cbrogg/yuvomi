@@ -3723,6 +3723,14 @@ export async function render(container, { user }) {
       api.get('/preferences').catch(() => ({ data: {} })),
     ]);
     data         = dashRes;
+    /* Die Zahlen an den Nav-Zielen und Modulkacheln kommen aus derselben
+     * Antwort (#868). Sie hier hereinzureichen spart die zweite Aggregation,
+     * die der Shell-Aufbau sonst beim Anmelden anstiess - `layoutHintQuery`
+     * schraenkt sie allerdings ein, und eine eingeschraenkte Zahl ist eine
+     * andere Zahl, also nimmt der Speicher sie nur ungefiltert an. */
+    window.yuvomi?.primeModuleCountsFrom?.(dashRes, {
+      filtered: layoutHintQuery('/dashboard') !== '/dashboard',
+    });
     // Geburtstags-Termine tragen serverseitig einen sprachneutralen Titel
     // („Birthday: <Name>"); anhand von birthday_name in die aktive Sprache
     // übersetzen (Issue #524).

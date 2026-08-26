@@ -13949,3 +13949,167 @@ test('die Registrierung des Modal-Systems folgt dem Zustand (#871)', () => {
       + 'stimmt der Eintrag nicht mehr mit dem ueberein, was zu sehen ist');
   }
 });
+
+/**
+ * DIE ZAHL AM NAV-ZIEL WIRD AN EINER STELLE GEZEICHNET (#868).
+ *
+ * Gemeldet war, dass das Badge mit den ueberfaelligen Aufgaben nach dem
+ * Anmelden fehlt. Der Grund war die Bauart: drei Module (Aufgaben,
+ * Geburtstage, Inventar) bauten dasselbe Badge-DOM je einzeln nach - zwanzig
+ * Zeilen, die den Icon-Wrapper nachruesten und die Zahl anhaengen - und sie
+ * taten es aus IHREM Zustand heraus. Ein Modul, das nie gerendert wurde, hat
+ * keinen Zustand; also gab es kein Badge. Dieselbe Bauart liess das Badge
+ * auch bei jedem `rebuildNavigation()` verschwinden.
+ *
+ * DER GUARD SCHUETZT DIE EINE STELLE, nicht die drei Aufrufer: wer eine
+ * `.nav-badge` ausserhalb von `utils/nav-badges.js` baut, baut die Bauart
+ * wieder auf, aus der der Fehler kam - und erbt weder den Icon-Wrapper noch
+ * die Deckelung noch den Zugaenglichkeitsnamen.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('nur EINE Stelle baut die Zahl am Nav-Ziel (#868)', () => {
+  const OWNER = '../public/utils/nav-badges.js';
+  const offenders = [];
+
+  for (const file of walkJsFiles('../public/')) {
+    if (file === OWNER || file.includes('/vendor/')) continue;
+    const src = withoutBlockComments(read(file));
+    // Ein Badge BAUEN heisst: die Klasse einem erzeugten Knoten geben.
+    if (/className\s*=\s*['"]nav-badge['"]|classList\.add\(\s*['"]nav-badge['"]/.test(src)) {
+      offenders.push(file);
+    }
+  }
+
+  assert.deepEqual(offenders.sort(), [],
+    'Diese Datei baut ihr Nav-Badge selbst. Genau daraus entstand #868: das '
+    + 'Badge haengt dann am Zustand eines Moduls, das beim Anmelden noch gar '
+    + 'nicht gerendert wurde, und faellt bei jedem Neuaufbau der Navigation '
+    + `weg. Benutze setNavBadge() aus /utils/nav-badges.js.\n${offenders.join('\n')}`);
+});
+
+/**
+ * Und der Router zeichnet sie nach jedem Neuaufbau der Navigation nach.
+ *
+ * Ohne diesen Aufruf traegt der Speicher die Zahlen zwar, aber niemand malt
+ * sie hin - der zweite Teil von #868 waere zurueck, und zwar still.
+ */
+test('rebuildNavigation zeichnet die Nav-Zahlen nach (#868)', () => {
+  const router = read('../public/router.js');
+  const fn = /function rebuildNavigation\([\s\S]*?\n\}/.exec(router);
+  assert.ok(fn, 'rebuildNavigation() ist nicht mehr auffindbar');
+  assert.match(fn[0], /applyNavBadges\(\)/,
+    'nach dem Neuaufbau der Navigation fehlen die Zahlen an den Nav-Zielen');
+
+  // Und die Startwerte kommen aus der Antwort, die ohnehin geholt wird.
+  assert.match(router, /function primeNavBadges\(/,
+    'die Startwerte aus /dashboard fehlen - das Badge erschiene wieder erst '
+    + 'nach dem ersten Besuch des Moduls');
+  assert.match(router, /_moduleCountsAt = Date\.now\(\);\s*\n\s*primeNavBadges\(res\)/,
+    'primeNavBadges haengt nicht an der /dashboard-Antwort');
+});
+
+/**
+ * DAS MEHR-BLATT ZEICHNET ZUERST AUS DEM SPEICHER (#868).
+ *
+ * Ein Folgefehler des Fixes selbst, den erst eine Review fand: seit der
+ * Shell-Aufbau die Zaehlstaende holt (fuer die Nav-Badges), stempelt er auch
+ * deren TTL. Beim ersten Oeffnen des Mehr-Blattes innerhalb der naechsten 60
+ * Sekunden gab `refreshModuleCounts()` deshalb `false` zurueck („nichts
+ * Neues"), und die Wache darunter uebersprang das Zeichnen - die Kacheln
+ * blieben leer, obwohl die Zahlen im Speicher lagen.
+ *
+ * Also derselbe Fehler wie der gemeldete, nur eine Ebene versetzt: eine Zahl,
+ * die da ist, aber nicht gezeigt wird.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('das Mehr-Blatt zeichnet erst aus dem Speicher, dann nach (#868)', () => {
+  const router = read('../public/router.js');
+  const fn = /function openSheet\(\)[\s\S]*?\n  \}/.exec(router);
+  assert.ok(fn, 'openSheet() ist nicht mehr auffindbar');
+
+  const bare = fn[0].indexOf('paintMoreSheetBadges(sheet);');
+  const guarded = fn[0].indexOf('if (fresh');
+  assert.ok(bare !== -1,
+    'das Blatt zeichnet die schon bekannten Zahlen nicht - innerhalb der TTL '
+    + 'bleiben die Kacheln leer, obwohl die Zahlen im Speicher liegen');
+  assert.ok(guarded !== -1 && bare < guarded,
+    'das Zeichnen aus dem Speicher muss VOR dem Nachziehen stehen');
+});
+
+/**
+ * DIE DREI-TAGE-GRENZE STEHT AN ZWEI ENDEN UND MUSS DIESELBE SEIN (#868).
+ *
+ * Der Server zaehlt sie fuer den Startwert (`birthdaySoonCount` in
+ * routes/dashboard.js), der Browser fuer die laufende Aktualisierung
+ * (`BIRTHDAY_BADGE_DAYS` in utils/nav-badges.js). Laufen sie auseinander,
+ * springt die Zahl beim ersten Besuch der Geburtstagsseite - dieselbe Frage,
+ * zwei Antworten, und keine davon sichtbar falsch.
+ *
+ * Guard-Ebene: Wert (aus beiden Quellen gelesen).
+ */
+test('Server und Browser ziehen den Geburtstags-Schnitt beim selben Tag (#868)', () => {
+  const client = read('../public/utils/nav-badges.js');
+  const server = read('../server/routes/dashboard.js');
+
+  const c = /BIRTHDAY_BADGE_DAYS\s*=\s*(\d+)/.exec(client);
+  assert.ok(c, 'BIRTHDAY_BADGE_DAYS ist nicht mehr auffindbar');
+
+  const s = /birthdaySoonCount\s*=\s*hydrated\.filter\(\(b\) => \(b\.days_until \?\? \d+\) <= (\d+)\)/.exec(server);
+  assert.ok(s, 'der Server-Zaehler fuer nahe Geburtstage ist nicht mehr auffindbar');
+
+  assert.equal(s[1], c[1],
+    `Der Server schneidet bei ${s[1]} Tagen, der Browser bei ${c[1]}. Die Zahl `
+    + 'springt dann beim ersten Besuch der Geburtstagsseite.');
+});
+
+/**
+ * DAS AUFGABEN-BADGE HAT GENAU EINE QUELLE (#868).
+ *
+ * `state.tasks` ist die GEFILTERTE Liste der Ansicht - der Standardfilter
+ * zeigt nur `open`, das Kanban laesst den Statusfilter ganz weg, und
+ * Prioritaet, Zuweisung und Tags engen weiter ein. Daraus gezaehlt sprang die
+ * Zahl beim blossen Wechsel zwischen Liste und Kanban, ohne dass sich an den
+ * Daten etwas geaendert haette: die zweite Wahrheit, die dieser Fix
+ * eigentlich abschafft, eine Ebene tiefer.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('das Aufgabenmodul zaehlt sein Badge nicht selbst (#868)', () => {
+  const tasks = read('../public/pages/tasks.js');
+  assert.doesNotMatch(tasks, /setNavBadge\s*\(/,
+    'das Aufgabenmodul schreibt wieder direkt in den Badge-Slot - seine '
+    + 'Liste ist gefiltert und kann die Frage nicht beantworten');
+});
+
+/**
+ * UND DIE MELDUNG HAENGT AM SCHREIBEN, NICHT AM ZEICHNEN (#868).
+ *
+ * Eine erste Fassung meldete aus `updateOverdueBadge()`, und das ruft jedes
+ * `renderTaskList()` - also auch jeder Tastenanschlag in der Suche, jeder
+ * Filter- und jeder Ansichtswechsel. Jede Tipppause laenger als der
+ * Entprellzeitraum stiess damit eine vollstaendige Dashboard-Aggregation an,
+ * ohne dass sich an den gezaehlten Daten irgendetwas geaendert haette.
+ *
+ * Sie steht deshalb in der API-Schicht, die ohnehin jeder Schreibvorgang
+ * durchlaeuft - eine Stelle statt siebzehn Schreibpfaden allein im
+ * Aufgabenmodul, von denen der achtzehnte vergessen wuerde.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('die Zaehler-Meldung haengt am Schreiben, nicht am Rendern (#868)', () => {
+  const api = read('../public/api.js');
+  const fn = /function notifyCountedMutation\(path\)[\s\S]*?\n\}/.exec(api);
+  assert.ok(fn, 'notifyCountedMutation ist nicht mehr auffindbar');
+  assert.match(fn[0], /invalidateModuleCounts/,
+    'die Meldung erreicht den Zaehlstand nicht');
+  assert.match(api, /if \(stateChanging\) notifyCountedMutation\(path\);/,
+    'sie haengt nicht mehr am schreibenden Request');
+
+  // Und die Render-Pfade melden NICHT mehr.
+  const tasks = read('../public/pages/tasks.js');
+  assert.doesNotMatch(tasks, /invalidateModuleCounts/,
+    'das Aufgabenmodul meldet wieder selbst - dann haengt die Meldung am '
+    + 'Rendern und feuert bei jedem Tastenanschlag in der Suche');
+});

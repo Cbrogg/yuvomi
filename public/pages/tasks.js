@@ -2765,7 +2765,6 @@ function renderKanban(container) {
       container.querySelector('[data-page-search-clear]')?.setAttribute('hidden', '');
       renderTaskList(container);
     });
-    updateOverdueBadge();
     return;
   }
 
@@ -2797,7 +2796,6 @@ function renderKanban(container) {
   if (window.lucide) window.lucide.createIcons({ el: listEl });
   wireKanbanDrag(container);
   wireKanbanTouch(container);
-  updateOverdueBadge();
 }
 
 function wireKanbanDrag(container) {
@@ -3337,7 +3335,6 @@ function renderTaskList(container) {
   listEl.insertAdjacentHTML('beforeend', renderTaskGroups(filteredTasks(), state.groupMode));
   if (window.lucide) window.lucide.createIcons({ el: listEl });
   stagger(listEl.querySelectorAll('.swipe-row, .kanban-card'));
-  updateOverdueBadge();
   updateBulkActionsBar(container);
   wireSwipeGestures(container);
   maybeShowSwipeHint(container);
@@ -3607,45 +3604,23 @@ function renderFilters(container) {
   wireFilterChips(container);
 }
 
-function updateOverdueBadge() {
-  // Ein Badge zählt, was wartet. Eine abgelegte Aufgabe wartet nicht - sie
-  // erschiene sonst im Kanban und unter aktivem Archiv-Chip als offene Schuld
-  // (#688), obwohl kein Weg von der Zahl zu ihr führt.
-  const overdue = state.tasks.filter((t) => {
-    if (!t.due_date || t.status === 'done' || isArchived(t)) return false;
-    return new Date(t.due_date) < new Date().setHours(0, 0, 0, 0);
-  }).length;
-
-  document.querySelectorAll('[data-route="/tasks"] .nav-badge').forEach((el) => el.remove());
-  document.querySelectorAll('[data-route="/tasks"]').forEach((navItem) => {
-    const baseLabel = t('tasks.title');
-    navItem.setAttribute('aria-label', overdue > 0
-      ? t('tasks.navLabelOverdue', { count: overdue })
-      : baseLabel
-    );
-  });
-  if (overdue > 0) {
-    document.querySelectorAll('[data-route="/tasks"]').forEach((navItem) => {
-      let anchor = navItem.querySelector('.nav-item__icon-wrap');
-      if (!anchor) {
-        const icon = navItem.querySelector('.nav-item__icon');
-        anchor = document.createElement('span');
-        anchor.className = 'nav-item__icon-wrap';
-        if (icon) {
-          icon.replaceWith(anchor);
-          anchor.appendChild(icon);
-        } else {
-          navItem.prepend(anchor);
-        }
-      }
-      const badge = document.createElement('span');
-      badge.className = 'nav-badge';
-      badge.setAttribute('aria-hidden', 'true');
-      badge.textContent = String(overdue);
-      anchor.appendChild(badge);
-    });
-  }
-}
+/* DIESES MODUL FUEHRT DIE ZAHL NICHT MEHR (#868).
+ *
+ * Das Badge beantwortet „wie viele Aufgaben im Haushalt sind ueberfaellig".
+ * `state.tasks` beantwortet eine andere Frage: es ist die GEFILTERTE Liste
+ * dieser Ansicht. Der Standardfilter zeigt nur `open` (schliesst also
+ * „In Bearbeitung" aus), das Kanban laesst den Statusfilter ganz weg, und
+ * Priorität, Zuweisung und Tags engen zusaetzlich ein. Aus dieser Liste
+ * gezaehlt sprang die Zahl beim blossen Wechsel zwischen Liste und Kanban -
+ * ohne dass sich an den Daten etwas geaendert haette. Dieselbe Zahl stand
+ * ausserdem in zwei ZONEN: der Server rechnet in der Haushaltszone, eine
+ * Client-Rechnung im Automatikmodus in der des Browsers.
+ *
+ * Der Server zaehlt also, und dass sich etwas geaendert hat, meldet nicht
+ * dieses Modul, sondern die API-Schicht (`notifyCountedMutation` in api.js) -
+ * eine Stelle statt siebzehn Schreibpfaden allein hier. Es gibt deshalb keine
+ * `updateOverdueBadge()` mehr; sie hing am RENDERN und feuerte bei jedem
+ * Tastenanschlag in der Suche. */
 
 // --------------------------------------------------------
 // Swipe-Gesten (Mobil: links = erledigt, rechts = bearbeiten)
