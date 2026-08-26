@@ -80,20 +80,35 @@ let instanceSeq = 0;
  * Die „Navigation" ist eine Liste von Nav-Eintraegen; `rebuild()` ersetzt sie
  * durch frische, genau wie `replaceChildren()` es im Router tut.
  */
-async function freshModule(routes = ['/tasks']) {
+async function freshModule(routes = ['/tasks'], pageRoutes = []) {
   let navItems = routes.map(makeNavItem);
-  globalThis.document = {
-    createElement: makeEl,
+  // Seiteninhalt mit derselben Route, ABSICHTLICH ausserhalb der Navigation -
+  // Widget-Kacheln, Cockpit-Karten und FAB-Kurzwahlen tragen `data-route`
+  // genauso. Sie duerfen kein Badge abbekommen.
+  let pageItems = pageRoutes.map(makeNavItem);
+
+  const scope = {
     querySelectorAll(sel) {
       const match = /^\[data-route="([^"]+)"\]$/.exec(sel);
       if (!match) return [];
       return navItems.filter((item) => item.route === match[1]);
     },
   };
+  globalThis.document = {
+    createElement: makeEl,
+    querySelectorAll(sel) {
+      // Der Modul-Selektor fragt zuerst nach den Nav-Containern.
+      if (sel === '.nav-sidebar, .nav-bottom') return [scope];
+      const match = /^\[data-route="([^"]+)"\]$/.exec(sel);
+      if (!match) return [];
+      return [...navItems, ...pageItems].filter((item) => item.route === match[1]);
+    },
+  };
   const mod = await import(`../public/utils/nav-badges.js?instance=${++instanceSeq}`);
   return {
     ...mod,
     rebuild() { navItems = routes.map(makeNavItem); },
+    pageItem(index = 0) { return pageItems[index]; },
     badgeText(route) {
       const item = navItems.find((n) => n.route === route);
       return item?.querySelectorAll('.nav-badge')[0]?.textContent ?? null;
@@ -313,4 +328,25 @@ test('nur die unmittelbar anstehenden Geburtstage zaehlen', () => {
 
 test('auch die Nav-Zahlen ertragen eine leere Antwort', () => {
   assert.deepEqual(navBadgeCountsFrom(undefined), { '/tasks': 0, '/birthdays': 0 });
+});
+
+test('nur die Navigation bekommt die Zahl, nicht jeder Link mit dieser Route', async () => {
+  // `data-route` ist app-weit der Weg, einem beliebigen Element eine Route zu
+  // geben. Ein Selektor ueber das ganze Dokument haengte die Zahl in die SEITE:
+  // gemessen bekam der Aufgaben-Knopf im FAB-Menue eine Icon-Huelle samt Badge,
+  // und sein Name wurde mit „Aufgaben, 3 ueberfaellig" ueberschrieben.
+  const nav = await freshModule(['/tasks'], ['/tasks', '/tasks']);
+  nav.setNavBadge('/tasks', 3, (count) => `Aufgaben, ${count} ueberfaellig`);
+
+  assert.equal(nav.badgeText('/tasks'), '3', 'das Nav-Ziel traegt die Zahl');
+
+  for (const index of [0, 1]) {
+    const fremd = nav.pageItem(index);
+    assert.equal(fremd.querySelectorAll('.nav-badge').length, 0,
+      'ein Element ausserhalb der Navigation bekommt kein Nav-Badge');
+    assert.equal(fremd.querySelectorAll('.nav-item__icon-wrap').length, 0,
+      'und auch keine fremde Icon-Huelle in sein Layout');
+    assert.equal(fremd.getAttribute('aria-label'), null,
+      'und sein Name bleibt seiner');
+  }
 });

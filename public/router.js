@@ -2690,10 +2690,20 @@ function initMoreSheet(container, openSearch) {
     currentMoreBtn().setAttribute('aria-expanded', 'true');
     sheet.querySelector('#more-sheet-search, [data-route]')?.focus();
     if (window.lucide) window.lucide.createIcons({ el: sheet });
-    // Zählstände nachziehen, ohne das Öffnen zu verzögern: das Sheet steht
-    // sofort, die Badges kommen, sobald die Antwort da ist. Beim zweiten Öffnen
-    // innerhalb der TTL passiert gar nichts - das Sheet ist eine Navigation,
-    // kein Monitor.
+    /* ZUERST AUS DEM SPEICHER, DANN NACHZIEHEN.
+     *
+     * Der Speicher ist beim Oeffnen in der Regel schon warm: seit #868 holt
+     * ihn der Shell-Aufbau, weil die Nav-Badges daran haengen. Ohne die erste
+     * Zeile faenden die Kacheln davon nichts - `refreshModuleCounts()` gaebe
+     * innerhalb seiner TTL `false` zurueck („nichts Neues"), und die Wache
+     * darunter uebersprang das Zeichnen. Die Kacheln blieben dann bis zu 60
+     * Sekunden nach dem Anmelden leer, obwohl die Zahlen im Speicher lagen -
+     * derselbe Fehler, den dieser Fix fuer die Nav-Badges behebt, nur eine
+     * Ebene versetzt.
+     *
+     * Das Nachziehen bleibt: das Sheet steht sofort, frische Zahlen kommen,
+     * sobald die Antwort da ist. */
+    paintMoreSheetBadges(sheet);
     refreshModuleCounts().then((fresh) => {
       if (fresh && sheet.getAttribute('aria-hidden') !== 'true') paintMoreSheetBadges(sheet);
     });

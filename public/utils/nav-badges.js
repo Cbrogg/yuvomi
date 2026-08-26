@@ -81,9 +81,31 @@ function iconWrap(navItem) {
   return wrap;
 }
 
+/**
+ * NUR DIE NAVIGATION, NICHT JEDER LINK MIT DIESER ROUTE.
+ *
+ * `data-route` ist app-weit der Weg, einem beliebigen Element eine Route zu
+ * geben - Widget-Kacheln, Cockpit-Karten, Kurzwahl-Knoepfe im FAB-Menue tragen
+ * es genauso wie die Nav-Ziele. Ein Selektor ueber das ganze Dokument haengte
+ * die Zahl also in die Seite hinein: gemessen bekam der Aufgaben-Knopf im
+ * FAB-Menue eine Icon-Huelle samt Badge, und sein Name wurde mit „Aufgaben, 3
+ * ueberfaellig" ueberschrieben.
+ *
+ * Nach CONTAINER und nicht nach Item-Klasse: „in der Navigation" ist die
+ * Aussage, und sie ueberlebt eine Umbenennung von `.nav-item`. Das Mehr-Blatt
+ * steht bewusst NICHT dabei - seine Kacheln fuehren ihre eigenen Zaehler
+ * (`.more-item__badge`, siehe `paintMoreSheetBadges` im Router), und die
+ * beantworten eine andere Frage.
+ */
+const NAV_SCOPES = '.nav-sidebar, .nav-bottom';
+
+function navTargets(route) {
+  return [...document.querySelectorAll(NAV_SCOPES)]
+    .flatMap((scope) => [...scope.querySelectorAll(`[data-route="${route}"]`)]);
+}
+
 function paint(route, entry) {
-  const targets = document.querySelectorAll(`[data-route="${route}"]`);
-  targets.forEach((navItem) => {
+  navTargets(route).forEach((navItem) => {
     navItem.querySelectorAll('.nav-badge').forEach((el) => el.remove());
 
     const label = entry?.label?.(entry.count ?? 0);

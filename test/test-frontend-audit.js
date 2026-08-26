@@ -13732,3 +13732,32 @@ test('rebuildNavigation zeichnet die Nav-Zahlen nach (#868)', () => {
   assert.match(router, /_moduleCountsAt = Date\.now\(\);\s*\n\s*primeNavBadges\(res\)/,
     'primeNavBadges haengt nicht an der /dashboard-Antwort');
 });
+
+/**
+ * DAS MEHR-BLATT ZEICHNET ZUERST AUS DEM SPEICHER (#868).
+ *
+ * Ein Folgefehler des Fixes selbst, den erst eine Review fand: seit der
+ * Shell-Aufbau die Zaehlstaende holt (fuer die Nav-Badges), stempelt er auch
+ * deren TTL. Beim ersten Oeffnen des Mehr-Blattes innerhalb der naechsten 60
+ * Sekunden gab `refreshModuleCounts()` deshalb `false` zurueck („nichts
+ * Neues"), und die Wache darunter uebersprang das Zeichnen - die Kacheln
+ * blieben leer, obwohl die Zahlen im Speicher lagen.
+ *
+ * Also derselbe Fehler wie der gemeldete, nur eine Ebene versetzt: eine Zahl,
+ * die da ist, aber nicht gezeigt wird.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('das Mehr-Blatt zeichnet erst aus dem Speicher, dann nach (#868)', () => {
+  const router = read('../public/router.js');
+  const fn = /function openSheet\(\)[\s\S]*?\n  \}/.exec(router);
+  assert.ok(fn, 'openSheet() ist nicht mehr auffindbar');
+
+  const bare = fn[0].indexOf('paintMoreSheetBadges(sheet);');
+  const guarded = fn[0].indexOf('if (fresh');
+  assert.ok(bare !== -1,
+    'das Blatt zeichnet die schon bekannten Zahlen nicht - innerhalb der TTL '
+    + 'bleiben die Kacheln leer, obwohl die Zahlen im Speicher liegen');
+  assert.ok(guarded !== -1 && bare < guarded,
+    'das Zeichnen aus dem Speicher muss VOR dem Nachziehen stehen');
+});
