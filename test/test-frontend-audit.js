@@ -13705,15 +13705,34 @@ test('jede rechtsbuendige Knopfzeile sagt, ob sie umbricht (#872)', () => {
   const offenders = [];
   let seenRows = 0;
 
+  /* JE SELEKTOR GESAMMELT, NICHT JE REGEL - so, wie die Kaskade es sieht.
+   *
+   * Die erste Fassung urteilte ueber die EINZELNE Regel und war damit blind
+   * fuer jede Zeile, deren Deklarationen verteilt stehen: `display: flex` aus
+   * einer geteilten Kopf-/Fusszeilen-Regel, `justify-content` dreissig Zeilen
+   * spaeter aus einer eigenen. Genau so gebaut sind
+   * `.budget-inline-modal__footer` und `.doc-attach-picker__footer` - zwei
+   * echte Verstoesse, die der Guard nicht sah. Gefunden hat sie die Review,
+   * nicht er. */
+  const declarations = new Map();
   for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
     for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
-      if (!/(footer|actions)\b/.test(selector)) continue;
-      if (!/display\s*:\s*(inline-)?flex/.test(body)) continue;
-      if (!/justify-content\s*:\s*(flex-)?end/.test(body)) continue;
-      seenRows += 1;
-      if (/flex-wrap\s*:/.test(body) || /\bflex-flow\s*:/.test(body)) continue;
-      offenders.push(`${file}${at.length ? ` [${at.join(' ')}]` : ''}: ${selector}`);
+      // Gruppenselektoren aufspalten: `.a, .b { display: flex }` gibt beiden
+      // dieselbe Deklaration, und nur einzeln laesst sich das zusammenlegen.
+      for (const one of selector.split(',').map((x) => x.trim()).filter(Boolean)) {
+        const key = `${file}${at.length ? ` [${at.join(' ')}]` : ''}: ${one}`;
+        declarations.set(key, (declarations.get(key) ?? '') + body);
+      }
     }
+  }
+
+  for (const [key, body] of declarations) {
+    if (!/(footer|actions)\b/.test(key)) continue;
+    if (!/display\s*:\s*(inline-)?flex/.test(body)) continue;
+    if (!/justify-content\s*:\s*(flex-)?end/.test(body)) continue;
+    seenRows += 1;
+    if (/flex-wrap\s*:/.test(body) || /\bflex-flow\s*:/.test(body)) continue;
+    offenders.push(key);
   }
 
   // Ohne diese Zusicherung waere der Guard gruen, sobald der Scanner die
@@ -13741,7 +13760,15 @@ test('jede rechtsbuendige Knopfzeile sagt, ob sie umbricht (#872)', () => {
  */
 test('in den Modal-Knopfzeilen darf der Knopftext umbrechen (#872)', () => {
   const css = read('../public/styles/layout.css');
-  for (const selector of ['.modal-panel__footer > .btn', '.modal-actions > .btn']) {
+
+  /* Und die verschachtelte Aktionsgruppe bricht selbst um. Fuer die Fusszeile
+   * ist sie EIN Flex-Item; ohne eigenen Umbruch laeuft sie als Ganzes ueber
+   * den Rand, und der Umbruch der Fusszeile hilft nichts mehr. Gebaut ist das
+   * so im Kalender, in den Budget-Plaenen und in den Kontakten. */
+  const gruppe = [...eachRule(css)].find((r) => r.selector.trim() === '.modal-panel__footer > div');
+  assert.ok(gruppe, '.modal-panel__footer > div fehlt - eine Aktionsgruppe laeuft wieder als Ganzes ueber');
+  assert.match(gruppe.body, /flex-wrap\s*:\s*wrap/);
+  for (const selector of ['.modal-panel__footer .btn', '.modal-actions .btn']) {
     const rule = [...eachRule(css)].find((r) => r.selector.trim() === selector);
     assert.ok(rule, `${selector} fehlt - ein einzelner zu breiter Knopf wird wieder abgeschnitten.`);
     assert.match(rule.body, /white-space\s*:\s*normal/,

@@ -3980,7 +3980,7 @@ p.field-hint--warn[hidden] {
   gap: var(--space-2);
 }
 
-.modal-actions > .btn {
+.modal-actions .btn {
   white-space: normal;
 }
 
@@ -4039,8 +4039,19 @@ p.field-hint--warn[hidden] {
   border-top: 1px solid var(--color-border-subtle);
 }
 
-.modal-panel__footer > .btn {
+/* JEDER Knopf in der Fusszeile, nicht nur das direkte Kind: mehrere Module
+ * legen Abbrechen/Speichern in eine eigene Flex-Gruppe (Kalender, Budget-Plaene,
+ * Kontakte), und deren Knoepfe traegen dasselbe `nowrap`. */
+.modal-panel__footer .btn {
   white-space: normal;
+}
+
+/* Und die Gruppe selbst darf umbrechen. Fuer die Fusszeile ist sie EIN
+ * Flex-Item und damit unteilbar - ohne diese Zeile laeuft sie als Ganzes ueber
+ * den Rand, und der Umbruch der Fusszeile hilft nichts mehr. `flex-wrap` an
+ * einem Nicht-Flex-Kind ist folgenlos, deshalb reicht der schlichte Selektor. */
+.modal-panel__footer > div {
+  flex-wrap: wrap;
 }
 
 /* Fußzeile INNERHALB des scrollenden Bodys (kein direktes Panel-Kind): dort
