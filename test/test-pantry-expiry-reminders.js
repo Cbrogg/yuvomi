@@ -843,3 +843,35 @@ test('der Voll-Sync loescht die faellige Meldung eines heute ablaufenden Artikel
   assert.equal(reminderFor(id)?.remind_at, '2026-08-26T09:00',
     'die faellige Zeile darf der Lauf nicht abraeumen, bevor sie zugestellt ist');
 });
+
+test('eine offene Meldung eines LAENGST abgelaufenen Artikels geht nicht doch noch raus', () => {
+  // Der stale-Block hatte die Ablauf-Frage nicht: eine nie zugestellte Meldung
+  // eines vor drei Tagen abgelaufenen Artikels ueberlebte den Lauf, weil sie
+  // "schon so frueh wie moeglich" stand - und ging im selben Durchgang raus.
+  // Die Regel steht jetzt in der gemeinsamen Bedingung, wo beide Zweige sie
+  // sehen.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Vergessen', 1, 'pcs', 'Sonstiges', '2026-08-23', ?)"
+  ).run(A).lastInsertRowid;
+  db.prepare("INSERT INTO reminders (entity_type, entity_id, remind_at, created_by) VALUES ('pantry_item', ?, '2026-08-16T09:00', ?)")
+    .run(id, A);
+
+  syncAllPantryExpiryReminders(db, new Date('2026-08-26T10:00:00Z'));
+  assert.equal(countReminders(id), 0);
+});
+
+test('der Grobschnitt misst denselben Tag wie der Riegel', () => {
+  // ZWEI RASTER, EIN TAG. Der SQL-Grobschnitt band den UTC-Tag, der JS-Riegel
+  // prueft gegen die Haushaltszone. Westlich von UTC fiel ein Artikel, dessen
+  // Vorwarntag genau der heutige Haushaltstag ist, im einen Lauf am SQL-Schnitt
+  // und im naechsten am JS-Riegel durch - nie eine Erinnerung.
+  const at = new Date('2026-08-26T03:00:00Z');
+  const household = householdToday(db, at);
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Rasterfall', 1, 'pcs', 'Sonstiges', ?, ?)"
+  ).run(addDays(household, EXPIRY_SOON_DAYS), A).lastInsertRowid;
+
+  syncAllPantryExpiryReminders(db, at);
+  assert.equal(countReminders(id), 1);
+  assert.equal(reminderFor(id).remind_at, `${household}T09:00`);
+});

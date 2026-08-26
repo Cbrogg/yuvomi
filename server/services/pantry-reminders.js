@@ -334,11 +334,26 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
   // heraus, statt in jedem Lauf erneut in die Rechnung zu geraten und dieselbe
   // Warnung zu schreiben - bei einem Lauf je Minute wären das ~1440 Zeilen
   // Lograuschen am Tag, für einen Artikel, an dem sich nichts ändert.
+  // `today` in der HAUSHALTSZONE, nicht in UTC: derselbe Bezugstag, mit dem
+  // syncPantryExpiryReminder() rechnet. Mit `iso(now).slice(0,10)` liefen die
+  // beiden westlich von UTC auseinander - ein Artikel, dessen Vorwarntag genau
+  // der heutige Haushaltstag ist, fiel im einen Lauf am SQL-Schnitt und im
+  // naechsten am JS-Riegel durch und bekam nie eine Erinnerung.
+  const today = todayKey(database, now);
+
+  /* "SCHON ABGELAUFEN" GEHOERT IN DIE BEDINGUNG, NICHT IN JEDEN ZWEIG EINZELN.
+   *
+   * Sie stand nur in syncPantryExpiryReminder(), und der stale-Block hatte sie
+   * nicht: eine offene, nie zugestellte Meldung eines vor drei Tagen
+   * abgelaufenen Artikels ueberlebte den Lauf und ging im selben Durchgang
+   * raus. Hier gilt sie fuer beide Zweige - der DELETE unten raeumt solche
+   * Zeilen ab, und in die missing-Menge kommen sie gar nicht erst. */
   const QUALIFIES = `
-    expires_on IS NOT NULL AND date(expires_on) = expires_on
+    expires_on IS NOT NULL AND date(expires_on) = expires_on AND expires_on >= ?
     AND created_by IS NOT NULL AND quantity > 0
     ${NOT_DENIED}
   `;
+  const QUALIFIES_PARAMS = [today, ...deniedList];
 
   // GEGENSTANDSLOSES ZUERST: der Artikel ist weg, verbraucht oder hat sein
   // Datum verloren. Auch eine schon zugestellte Meldung geht dann - sie zeigt
@@ -347,7 +362,7 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
     DELETE FROM reminders
     WHERE entity_type = 'pantry_item'
       AND entity_id NOT IN (SELECT id FROM pantry_items WHERE ${QUALIFIES})
-  `).run(...deniedList);
+  `).run(...QUALIFIES_PARAMS);
 
   // Fehlende ergänzen. Artikel mit bestehender Zeile stehen gar nicht erst in
   // der Ergebnismenge.
@@ -364,7 +379,7 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
     WHERE ${QUALIFIES}
       AND date(expires_on, ?) >= date(?)
       AND id NOT IN (SELECT entity_id FROM reminders WHERE entity_type = 'pantry_item')
-  `).all(...deniedList, `-${EXPIRY_REMINDER_OFFSET_DAYS} days`, iso(now).slice(0, 10));
+  `).all(...QUALIFIES_PARAMS, `-${EXPIRY_REMINDER_OFFSET_DAYS} days`, today);
 
   for (const item of missing) syncPantryExpiryReminder(database, item, now, access);
 
@@ -426,7 +441,8 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
       const soonest = nextMorning(now);
       // BESTEHENDE ZEILE ZUERST, wie im Router: eine Meldung, die schon so
       // frueh wie moeglich steht, darf dieser Lauf nicht wegen der Ablauffrage
-      // loeschen - sie ist genau die, die heute rausgehen soll.
+      // loeschen - sie ist genau die, die heute rausgehen soll. Dass der Artikel
+      // ueberhaupt noch laeuft, hat der DELETE-Zweig oben schon sichergestellt.
       if (row.remind_at <= soonest) continue;
       if (soonest.slice(0, 10) > row.expires_on) { discard.run(row.id); continue; }
       retime.run(soonest, row.id);
@@ -436,7 +452,3 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
   }
 }
 
-/** ISO-Zeitstempel, gleiche Form wie in server/services/notifications.js. */
-function iso(date) {
-  return new Date(date).toISOString();
-}
