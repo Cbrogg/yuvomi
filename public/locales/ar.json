@@ -884,7 +884,16 @@
         "recurringScopeHintSeries": "يؤثر على السلسلة بأكملها.",
         "detailWhen": "الوقت",
         "detailCalendar": "التقويم",
-        "colorCurrent": "اللون الحالي"
+        "colorCurrent": "اللون الحالي",
+        "deleteExternalSeriesTitle": "حذف السلسلة بأكملها؟",
+        "deleteExternalSeriesDetail": "\"{{title}}\" يأتي من تقويم متزامن. لا يمكن استثناء الأحداث الفردية هناك - سيتم حذف السلسلة بأكملها بكل تكراراتها.",
+        "deleteExternalSeriesConfirm": "حذف السلسلة",
+        "deleteBirthdayEventTitle": "حذف حدث عيد الميلاد؟",
+        "deleteBirthdayEventDetail": "\"{{title}}\" نسخة من إدخال عيد ميلاد. سيختفي الحدث، لكن المزامنة التالية ستعيد إنشاءه - لا يمكن إزالته نهائيًا إلا عبر عيد الميلاد نفسه.",
+        "deleteBirthdayEventConfirm": "حذف على أي حال",
+        "deleteSubscribedSeriesTitle": "حذف السلسلة المشتركة؟",
+        "deleteSubscribedSeriesDetail": "\"{{title}}\" يأتي من تقويم مشترَك. لا يمكن لـ Yuvomi حذف أي شيء هناك - ستختفي السلسلة حتى المزامنة التالية فقط؛ لإزالتها نهائيًا، ألغِ الاشتراك في التقويم.",
+        "deleteSubscribedSeriesConfirm": "حذف على أي حال"
     },
     "notes": {
         "title": "لوحة الملاحظات",

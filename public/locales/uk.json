@@ -884,7 +884,16 @@
         "recurringScopeHintSeries": "Стосується всієї серії.",
         "detailWhen": "Час",
         "detailCalendar": "Календар",
-        "colorCurrent": "Поточний колір"
+        "colorCurrent": "Поточний колір",
+        "deleteExternalSeriesTitle": "Видалити всю серію?",
+        "deleteExternalSeriesDetail": "«{{title}}» походить із синхронізованого календаря. Окремі події там виключити неможливо - буде видалено всю серію з усіма її повтореннями.",
+        "deleteExternalSeriesConfirm": "Видалити серію",
+        "deleteBirthdayEventTitle": "Видалити подію дня народження?",
+        "deleteBirthdayEventDetail": "«{{title}}» - це відображення запису про день народження. Подія зникне, але наступна синхронізація створить її знову: остаточно видалити її можна лише через сам день народження.",
+        "deleteBirthdayEventConfirm": "Усе одно видалити",
+        "deleteSubscribedSeriesTitle": "Видалити серію з підписки?",
+        "deleteSubscribedSeriesDetail": "«{{title}}» походить із календаря за підпискою. Yuvomi не може нічого видалити в джерелі - серія зникне лише до наступної синхронізації; щоб прибрати її назавжди, скасуйте підписку.",
+        "deleteSubscribedSeriesConfirm": "Усе одно видалити"
     },
     "notes": {
         "title": "Нотатки",

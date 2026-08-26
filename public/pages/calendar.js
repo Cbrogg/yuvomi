@@ -6,7 +6,7 @@
 
 import { api } from '/api.js';
 import { renderRRuleFields, bindRRuleEvents, getRRuleValues, recurrenceRow } from '/rrule-ui.js';
-import { openModal as openSharedModal, closeModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
+import { openModal as openSharedModal, closeModal, confirmModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
 import { attachOverlay } from '/utils/overlay-history.js';
 import { openDetailView, visibilityRow, assignedRow } from '/components/detail-view.js';
 import { stagger, wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
@@ -15,7 +15,8 @@ import { esc, fmtLocation } from '/utils/html.js';
 import { shiftEndDateKey, isEndBeforeStart, weekStartIndex, weekdayOrder,
          monthPeriodKeys, startOfLocalWeekKey, addLocalDays, defaultDateInPeriod,
          isWeekendKey } from '/utils/date.js';
-import { truncateRuleBefore, shiftSeriesStart, shiftEndForStart } from '/utils/recurrence-scope.js';
+import { truncateRuleBefore, shiftSeriesStart, shiftEndForStart,
+         isLocalRecurringSeries, isExternalRecurringSeries } from '/utils/recurrence-scope.js';
 import { getReadableTextColor } from '/utils/color.js';
 import { refresh as refreshReminders } from '/reminders.js';
 import { parseRemindAtAsUtc } from '/utils/reminder-offset.js';
@@ -3867,17 +3868,6 @@ async function deleteEvent(id) {
 }
 
 /**
- * True für rein lokale, nicht extern synchronisierte Serien. Nur diese erhalten die
- * Scope-Auswahl (#489/#532); Google/Apple/CalDAV/ICS-Serien würden beim nächsten Sync
- * wiederkehren und bleiben deshalb „ganze Serie".
- */
-function isLocalRecurringSeries(event) {
-  return !!event?.recurrence_rule
-    && (event.external_source ?? 'local') === 'local'
-    && !event.calendar_ref_id && !event.subscription_id;
-}
-
-/**
  * Gemeinsame Scope-Auswahl für Serientermine (#532): identisches Control für
  * „Bearbeiten" und „Löschen". Select (App-weites Formular-Vokabular) mit Default
  * „Nur diesen Termin" (least-destructive) plus dynamischem Reichweiten-Hinweis,
@@ -3922,10 +3912,77 @@ function getRecurringScope(root, prefix) {
 
 /**
  * Einstiegspunkt für das Löschen (#489/#532). Lokale Serien fragen „nur dieser
- * Termin" / „dieser und folgende" / „ganze Serie"; alles andere (Einzeltermine,
- * externe Serien) wird direkt gelöscht.
+ * Termin" / „dieser und folgende" / „ganze Serie"; Einzeltermine werden direkt
+ * gelöscht (der Undo-Toast trägt die Rücknahme).
+ *
+ * Externe Serien können die Auswahl nicht anbieten: Yuvomi kann eine Serie, die
+ * einem anderen Kalender gehört, nicht lokal aufteilen - ein ausgenommenes
+ * Vorkommen käme beim nächsten Sync zurück. Gelöscht wird deshalb die ganze
+ * Serie. Das ist richtig, aber es wortlos zu tun war es nicht: wer im Monat auf
+ * einen Termin tippt und löscht, sieht ohne Vorwarnung alle Vorkommen
+ * verschwinden (#880). Die Rückfrage benennt die Reichweite, statt sie
+ * anzubieten - ein Dialog mit nur einer wählbaren Antwort wäre eine Attrappe.
  */
+/**
+ * Die Rückfrage für eine Serie, die einem anderen Kalender gehört (#880).
+ *
+ * Drei Fälle, drei verschiedene Wahrheiten - und eine Zusage, die nicht hält,
+ * ist schlimmer als gar keine, denn sie ist der einzige Grund, überhaupt zu
+ * fragen:
+ *
+ * - Ein Geburtstagstermin ist das Abbild seines Geburtstags, nicht sein
+ *   Original: `syncBirthdayCalendarEvent` legt ihn beim nächsten Abgleich neu
+ *   an und lädt ihn wieder hoch (server/services/birthdays.js).
+ * - Ein Termin aus einem ICS-Abo ist doppelt unlöschbar: `OUTBOUND_SOURCES`
+ *   kennt kein `ics`, es wird also nichts an der Quelle gelöscht, und der
+ *   nächste Aboabruf legt ihn wieder an (kein Tombstone in ics-subscription.js).
+ * - Bei Google, CalDAV und Apple greift die Löschung meistens bis zur Quelle
+ *   durch - aber eben nur meistens: `acceptsOutbound` verlangt eine schreibende
+ *   Verbindung, und ein Google-Konto im Nur-Lesen-Modus oder ein entferntes
+ *   CalDAV-Konto hat keine. Der Dialog sagt deshalb NICHT mehr, dass die Serie
+ *   auch im Quellkalender fällt; er sagt, was Yuvomi garantieren kann - dass
+ *   alle Vorkommen fallen, nicht nur das angetippte. Das ist die Warnung, um
+ *   die es hier geht. Alles Weitere wüsste erst der Server, und dafür eine
+ *   Auskunft durch die Leseroute zu ziehen, wäre für eine Textnuance ein zu
+ *   hoher Preis (heisser Pfad, expandierte Serien).
+ *
+ * Die drei Aufrufe stehen ausgeschrieben statt über einen zusammengesetzten
+ * Schlüssel: `jeder als gefaehrlich markierte Dialog nennt seine Folgen`
+ * (test-frontend-audit.js) liest den Schlüssel aus dem Aufruf und wäre an einem
+ * `t(`${prefix}Detail`)` erblindet - bei einem Dialog, dessen ganzer Zweck es
+ * ist, seine Folgen zu benennen, ist das der falsche Handel.
+ *
+ * `birthday_name` ist der etablierte Marker; die Leseroute hängt ihn nur an
+ * Termine, die zu einem Geburtstag gehören.
+ */
+function confirmExternalSeriesDelete(event) {
+  const title = event.title;
+  if (event.birthday_name) {
+    return confirmModal(t('calendar.deleteBirthdayEventTitle'), {
+      detail:       t('calendar.deleteBirthdayEventDetail', { title }),
+      confirmLabel: t('calendar.deleteBirthdayEventConfirm'),
+      danger:       true,
+    });
+  }
+  if (event.subscription_id) {
+    return confirmModal(t('calendar.deleteSubscribedSeriesTitle'), {
+      detail:       t('calendar.deleteSubscribedSeriesDetail', { title }),
+      confirmLabel: t('calendar.deleteSubscribedSeriesConfirm'),
+      danger:       true,
+    });
+  }
+  return confirmModal(t('calendar.deleteExternalSeriesTitle'), {
+    detail:       t('calendar.deleteExternalSeriesDetail', { title }),
+    confirmLabel: t('calendar.deleteExternalSeriesConfirm'),
+    danger:       true,
+  });
+}
+
 async function requestDeleteEvent(event) {
+  if (isExternalRecurringSeries(event)) {
+    if (await confirmExternalSeriesDelete(event)) await deleteEvent(event.id);
+    return;
+  }
   if (!isLocalRecurringSeries(event)) {
     await deleteEvent(event.id);
     return;
