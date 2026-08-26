@@ -6,6 +6,7 @@ import { t, formatDate, parseDateInput, isDateInputValid } from '/i18n.js';
 import { esc } from '/utils/html.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { todayKey } from '/utils/date.js';
+import { setNavBadge, BIRTHDAY_BADGE_DAYS } from '/utils/nav-badges.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { findPageFab } from '/utils/fab.js';
 // Alias: dieses Modul fuehrt selbst eine `emptyStateHtml()`, die den Renderer
@@ -145,25 +146,17 @@ async function loadData() {
   updateBirthdayBadge();
 }
 
+/**
+ * Wie viele Geburtstage stehen unmittelbar an? `days_until` rechnet der Server
+ * (`hydrateBirthday`), hier wird nur der Schnitt gezogen - deshalb liefert
+ * dieselbe Regel auch fuer den Startwert aus `/dashboard` dieselbe Zahl.
+ */
+export function countBirthdaysSoon(birthdays) {
+  return birthdays.filter((b) => (b.days_until ?? 9999) <= BIRTHDAY_BADGE_DAYS).length;
+}
+
 function updateBirthdayBadge() {
-  const soon = state.birthdays.filter((b) => (b.days_until ?? 9999) <= 3).length;
-  document.querySelectorAll('[data-route="/birthdays"] .nav-badge').forEach((el) => el.remove());
-  if (!soon) return;
-  document.querySelectorAll('[data-route="/birthdays"]').forEach((navItem) => {
-    let anchor = navItem.querySelector('.nav-item__icon-wrap');
-    if (!anchor) {
-      const icon = navItem.querySelector('.nav-item__icon');
-      anchor = document.createElement('span');
-      anchor.className = 'nav-item__icon-wrap';
-      if (icon) { icon.replaceWith(anchor); anchor.appendChild(icon); }
-      else navItem.prepend(anchor);
-    }
-    const badge = document.createElement('span');
-    badge.className = 'nav-badge';
-    badge.setAttribute('aria-hidden', 'true');
-    badge.textContent = String(soon);
-    anchor.appendChild(badge);
-  });
+  setNavBadge('/birthdays', countBirthdaysSoon(state.birthdays));
 }
 
 function birthdayItemHtml(birthday) {

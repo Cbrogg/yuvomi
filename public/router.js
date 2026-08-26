@@ -24,6 +24,10 @@ import { getLastHealthRoute, HEALTH_ROUTES } from '/utils/health-tabs.js';
 import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import {
+  applyNavBadges, setNavBadge, resetNavBadges,
+  moduleCountsFrom, navBadgeCountsFrom,
+} from '/utils/nav-badges.js';
 import { isNewerVersion, displayVersion } from '/utils/version.js';
 import { setMaxUploadBytes } from '/utils/upload-limit.js';
 import { syncWallMode } from '/utils/wall-mode.js';
@@ -1076,35 +1080,6 @@ let _moduleCountsAt = 0;
 let _moduleCountsGen = 0;
 const MODULE_COUNTS_TTL = 60_000;
 
-function moduleCountsFrom(data) {
-  const openDoses = Math.max(0, (data?.health?.dosesTotal ?? 0) - (data?.health?.dosesTaken ?? 0) - (data?.health?.dosesSkipped ?? 0));
-  const counts = {
-    tasks: data?.openTaskCount ?? 0,
-    shopping: data?.shoppingOpenCount ?? 0,
-    /* NUR FUER ELTERN. `rewards.pending` zaehlt serverseitig JEDE offene Anfrage
-     * des Haushalts, waehrend die Belohnungsseite einem Nicht-Admin nur die
-     * EIGENEN zeigt: hat ein Geschwister eine offene Anfrage und man selbst
-     * keine, warb das Badge mit Arbeit, hinter der nichts stand (Codex-Review
-     * zu PR #754). Eine mitgliedseigene Zahl gaebe es nur mit einem neuen Feld
-     * in der Nutzlast; bis dahin ist keine Zahl richtiger als eine falsche. */
-    rewards: isAdmin() ? (data?.rewards?.pending ?? 0) : 0,
-    health: openDoses,
-  };
-  /* Die Küche ist im mobilen Menü EIN Ziel für vier Module; was dort wartet,
-   * ist der Einkaufszettel.
-   *
-   * NUR WENN DER EINKAUF DIESEM MITGLIED AUCH OFFENSTEHT. Die Kachel ist die
-   * einzige, die einen FREMDEN Modulzähler tragen kann - die anderen erscheinen
-   * gar nicht erst, wenn ihr Modul fehlt, diese hier bleibt stehen, solange
-   * eines der vier da ist. Der Server zählt `shoppingOpenCount` ungefiltert über
-   * den ganzen Haushalt (`routes/dashboard.js`), also warb die Kachel mit
-   * Arbeit in einem Modul, das sich nicht öffnen lässt, und führte beim Antippen
-   * nach Mahlzeiten (Codex-Review zu PR #754). `navItems()` ist bereits nach
-   * Zugang gefiltert und damit die richtige Quelle für die Frage. */
-  const einkaufOffen = navItems().some((item) => item.module === 'shopping');
-  counts.kitchen = einkaufOffen ? counts.shopping : 0;
-  return counts;
-}
 
 /**
  * Die Zaehlstaende gehoeren der SITZUNG, nicht dem Geraet.
@@ -1125,6 +1100,37 @@ function resetModuleCounts() {
   _moduleCountsGen += 1;
 }
 
+/**
+ * DIE ZAHLEN AM NAV-ZIEL, BEVOR DAS MODUL GELADEN WURDE (#868).
+ *
+ * Gemeldet war: nach dem Anmelden fehlt das Badge mit den ueberfaelligen
+ * Aufgaben, es erscheint erst nach einem Besuch der Aufgaben. Der Grund lag
+ * nicht in der Anzeige, sondern in der Quelle - die Zahl kam aus dem Zustand
+ * eines Moduls, das noch gar nicht gerendert war.
+ *
+ * SIE STAND DIE GANZE ZEIT IM PAYLOAD. `/dashboard` liefert
+ * `overdueTaskCount` seit jeher (es ist die Zweitzeile der Aufgaben-Kachel),
+ * und die Geburtstagsliste traegt ihr `days_until` mit. Es brauchte also
+ * keinen neuen Endpunkt, sondern nur, dass jemand hinsieht.
+ *
+ * UND ZWAR HIER, weil dieselbe Antwort schon fuer die Kachel-Zaehlstaende
+ * geholt wird - ein zweiter Abruf fuer dieselben Zahlen waere die zweite
+ * Wahrheit UND der zweite Request.
+ *
+ * WAS HIER (NOCH) FEHLT, ausgesprochen statt verschwiegen: das INVENTAR. Seine
+ * Zahl ist „wie viele Gegenstaende haben eine ablaufende Frist", und die
+ * beantwortet `/dashboard` nicht - das Modul hat dort keinen Block. Sein Badge
+ * erscheint deshalb weiterhin erst nach dem ersten Besuch; es ueberlebt seit
+ * diesem Fix immerhin einen Neuaufbau der Navigation. Der saubere Weg dorthin
+ * ist ein Zaehler in der Nutzlast, nicht eine zweite Rechnung im Browser.
+ */
+function primeNavBadges(data) {
+  const counts = navBadgeCountsFrom(data);
+  setNavBadge('/tasks', counts['/tasks'],
+    (count) => (count > 0 ? t('tasks.navLabelOverdue', { count }) : t('tasks.title')));
+  setNavBadge('/birthdays', counts['/birthdays']);
+}
+
 async function refreshModuleCounts() {
   if (Date.now() - _moduleCountsAt < MODULE_COUNTS_TTL) return false;
   /* EINE LAUFENDE ANFRAGE UEBERLEBT DAS ZURUECKSETZEN SONST.
@@ -1139,12 +1145,27 @@ async function refreshModuleCounts() {
   try {
     const res = await api.get('/dashboard');
     if (gen !== _moduleCountsGen) return false;
-    _moduleCounts = moduleCountsFrom(res);
+    _moduleCounts = moduleCountsFrom(res, {
+      isAdmin: currentUser?.role === 'admin',
+      // `navItems()` ist bereits nach Zugang gefiltert und damit die richtige
+      // Quelle fuer die Frage, ob der Einkauf diesem Mitglied offensteht.
+      shoppingVisible: navItems().some((item) => item.module === 'shopping'),
+    });
     _moduleCountsAt = Date.now();
+    primeNavBadges(res);
     return true;
-  } catch {
-    // Kein Netz, keine Sitzung, Serverfehler: das Sheet bleibt ohne Badges
-    // benutzbar. Ein Fehler an dieser Stelle darf die Navigation nicht stören.
+  } catch (err) {
+    /* Kein Netz, keine Sitzung, Serverfehler: das Sheet bleibt ohne Badges
+     * benutzbar. Ein Fehler an dieser Stelle darf die Navigation nicht stören.
+     *
+     * ABER ER DARF AUCH NICHT SPURLOS SEIN. Dieser Block schluckte bis #868
+     * einen ReferenceError mit: `moduleCountsFrom()` rief ein `isAdmin()`, das
+     * es in dieser Datei nie gab (es lebt modul-lokal in pages/rewards.js).
+     * Der Aufruf warf also bei JEDEM Durchlauf, seit die Zeile 2026 dazukam -
+     * die Zaehlstaende der Modulkacheln waren nie da, und niemand sah es, weil
+     * ein leeres Sheet genauso aussieht wie eines ohne wartende Arbeit.
+     * Ein Programmierfehler ist keine Netzstoerung; er gehoert in die Konsole. */
+    console.error('[Router] Zählstände konnten nicht geladen werden:', err);
     return false;
   }
 }
@@ -1345,11 +1366,18 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
       _navBuiltForUserId = currentUser.id;
       // Nebenläufig und still: der Hinweis darf das erste Rendern nicht aufhalten.
       checkForUpdate();
+      // Und die Zahlen an den Nav-Zielen, aus demselben Abruf, der ohnehin die
+      // Kachel-Zaehlstaende fuellt (#868). Ebenso still: ohne Antwort bleibt
+      // die Navigation ohne Badges - das war bis hierher der Normalfall.
+      refreshModuleCounts();
     } else if (currentUser && _navBuiltForUserId !== currentUser.id) {
       // Shell besteht bereits, aber der Nutzer hat gewechselt → Nav mit den
       // Modul-Rechten des aktuellen Nutzers neu aufbauen (#467).
       rebuildNavigation();
       _navBuiltForUserId = currentUser.id;
+      // Die Zahlen gehoeren dem Mitglied, nicht dem Geraet: `forgetSessionState`
+      // hat sie geleert, hier kommen die des neuen Mitglieds (#868).
+      refreshModuleCounts();
     }
 
     const content = document.getElementById('main-content') || app;
@@ -3943,6 +3971,8 @@ function forgetSessionState() {
   forgetScrollPositions();
   // Und die Zählstände der Modulkacheln aus demselben Grund.
   resetModuleCounts();
+  // Ebenso die Zahlen an den Nav-Zielen (#868).
+  resetNavBadges();
   stopThirdPartyModulePolling();
   stopReminders();
   stopPush();
@@ -4028,6 +4058,11 @@ function rebuildNavigation({ updateLabels = true } = {}) {
   // Die Einstiege zum Änderungsverlauf sind gerade neu entstanden - ein noch
   // offener Hinweis muss ihnen folgen, sonst fällt er beim Sprachwechsel weg.
   applyUpdateBadge();
+  // Aus demselben Grund die Zahlen an den Nav-Zielen: `replaceChildren()` oben
+  // hat sie mit weggeworfen, und bis #868 kamen sie erst wieder, wenn das
+  // zugehoerige Modul erneut rendert - nach einem Sprachwechsel also womoeglich
+  // nie.
+  applyNavBadges();
 }
 
 // Sprache geändert: Navigation und aktuelle Seite gemeinsam neu rendern.

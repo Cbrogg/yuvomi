@@ -26,6 +26,7 @@ import '/components/tag-manager.js';
 import { findPageFab } from '/utils/fab.js';
 import { isSoloHousehold } from '/utils/household.js';
 import { todayKey, parseLocalDateKey, addLocalDays } from '/utils/date.js';
+import { setNavBadge } from '/utils/nav-badges.js';
 import { nowFields, zonedDateKey, zonedUTCProxy } from '/utils/timezone.js';
 import { isNavModuleReadOnly } from '/permissions.js';
 
@@ -3607,44 +3608,33 @@ function renderFilters(container) {
   wireFilterChips(container);
 }
 
-function updateOverdueBadge() {
-  // Ein Badge zählt, was wartet. Eine abgelegte Aufgabe wartet nicht - sie
-  // erschiene sonst im Kanban und unter aktivem Archiv-Chip als offene Schuld
-  // (#688), obwohl kein Weg von der Zahl zu ihr führt.
-  const overdue = state.tasks.filter((t) => {
-    if (!t.due_date || t.status === 'done' || isArchived(t)) return false;
-    return new Date(t.due_date) < new Date().setHours(0, 0, 0, 0);
+/**
+ * DIE REGEL, NACH DER DAS BADGE ZAEHLT - und die einzige Stelle, an der sie
+ * im Browser steht.
+ *
+ * Ein Badge zählt, was wartet. Eine abgelegte Aufgabe wartet nicht - sie
+ * erschiene sonst im Kanban und unter aktivem Archiv-Chip als offene Schuld
+ * (#688), obwohl kein Weg von der Zahl zu ihr führt.
+ *
+ * `todayKey()` UND NICHT `new Date().setHours(0,0,0,0)`: „ueberfaellig" ist
+ * eine Aussage ueber den KALENDERTAG des Haushalts, und der ist nicht der des
+ * Browsers. Ein Geraet in einer anderen Zone zaehlte sonst abends eine Aufgabe
+ * mit, die hier erst morgen faellig wird - und der Server, der dieselbe Zahl
+ * fuer den Start liefert (`/dashboard`, `overdueTaskCount`), rechnet mit der
+ * Haushaltszone. Zwei Zahlen fuer dieselbe Frage waeren genau die zweite
+ * Wahrheit, die dieser Fix abschafft.
+ */
+export function countOverdueTasks(tasks) {
+  const today = todayKey();
+  return tasks.filter((task) => {
+    if (!task.due_date || task.status === 'done' || isArchived(task)) return false;
+    return String(task.due_date).slice(0, 10) < today;
   }).length;
+}
 
-  document.querySelectorAll('[data-route="/tasks"] .nav-badge').forEach((el) => el.remove());
-  document.querySelectorAll('[data-route="/tasks"]').forEach((navItem) => {
-    const baseLabel = t('tasks.title');
-    navItem.setAttribute('aria-label', overdue > 0
-      ? t('tasks.navLabelOverdue', { count: overdue })
-      : baseLabel
-    );
-  });
-  if (overdue > 0) {
-    document.querySelectorAll('[data-route="/tasks"]').forEach((navItem) => {
-      let anchor = navItem.querySelector('.nav-item__icon-wrap');
-      if (!anchor) {
-        const icon = navItem.querySelector('.nav-item__icon');
-        anchor = document.createElement('span');
-        anchor.className = 'nav-item__icon-wrap';
-        if (icon) {
-          icon.replaceWith(anchor);
-          anchor.appendChild(icon);
-        } else {
-          navItem.prepend(anchor);
-        }
-      }
-      const badge = document.createElement('span');
-      badge.className = 'nav-badge';
-      badge.setAttribute('aria-hidden', 'true');
-      badge.textContent = String(overdue);
-      anchor.appendChild(badge);
-    });
-  }
+function updateOverdueBadge() {
+  setNavBadge('/tasks', countOverdueTasks(state.tasks),
+    (count) => (count > 0 ? t('tasks.navLabelOverdue', { count }) : t('tasks.title')));
 }
 
 // --------------------------------------------------------

@@ -28,6 +28,7 @@ import { renderDocumentAttachField, bindDocumentAttachField } from '/components/
 import { warrantyStatus, hasUpcomingDeadline, dateStatus, countUpcomingDeadlines } from '/utils/inventory-warranty.js';
 import { openDetailView } from '/components/detail-view.js';
 import { wireScrollFade } from '/utils/ux.js';
+import { setNavBadge } from '/utils/nav-badges.js';
 
 let _container = null;
 let _search = null;
@@ -263,37 +264,8 @@ function computeMetrics(items) {
  * geladenen Item-Liste berechnet, keine eigene Abfrage.
  */
 function updateAttentionBadge() {
-  const needsAttention = countUpcomingDeadlines(state.items);
-
-  document.querySelectorAll('[data-route="/inventory"] .nav-badge').forEach((el) => el.remove());
-  document.querySelectorAll('[data-route="/inventory"]').forEach((navItem) => {
-    const baseLabel = t('nav.inventory');
-    navItem.setAttribute('aria-label', needsAttention > 0
-      ? t('inventory.navLabelAttention', { count: needsAttention })
-      : baseLabel
-    );
-  });
-  if (needsAttention > 0) {
-    document.querySelectorAll('[data-route="/inventory"]').forEach((navItem) => {
-      let anchor = navItem.querySelector('.nav-item__icon-wrap');
-      if (!anchor) {
-        const icon = navItem.querySelector('.nav-item__icon');
-        anchor = document.createElement('span');
-        anchor.className = 'nav-item__icon-wrap';
-        if (icon) {
-          icon.replaceWith(anchor);
-          anchor.appendChild(icon);
-        } else {
-          navItem.prepend(anchor);
-        }
-      }
-      const badge = document.createElement('span');
-      badge.className = 'nav-badge';
-      badge.setAttribute('aria-hidden', 'true');
-      badge.textContent = String(needsAttention);
-      anchor.appendChild(badge);
-    });
-  }
+  setNavBadge('/inventory', countUpcomingDeadlines(state.items),
+    (count) => (count > 0 ? t('inventory.navLabelAttention', { count }) : t('nav.inventory')));
 }
 
 function renderMetrics() {

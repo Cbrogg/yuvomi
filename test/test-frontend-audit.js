@@ -13673,3 +13673,62 @@ test('ein Teilschritt lässt sich korrigieren und entfernen, nicht nur abhaken (
   assert.ok(block, '.subtask-item__action fehlt');
   assert.match(block[1], /min-height:\s*var\(--target-base\)/);
 });
+
+/**
+ * DIE ZAHL AM NAV-ZIEL WIRD AN EINER STELLE GEZEICHNET (#868).
+ *
+ * Gemeldet war, dass das Badge mit den ueberfaelligen Aufgaben nach dem
+ * Anmelden fehlt. Der Grund war die Bauart: drei Module (Aufgaben,
+ * Geburtstage, Inventar) bauten dasselbe Badge-DOM je einzeln nach - zwanzig
+ * Zeilen, die den Icon-Wrapper nachruesten und die Zahl anhaengen - und sie
+ * taten es aus IHREM Zustand heraus. Ein Modul, das nie gerendert wurde, hat
+ * keinen Zustand; also gab es kein Badge. Dieselbe Bauart liess das Badge
+ * auch bei jedem `rebuildNavigation()` verschwinden.
+ *
+ * DER GUARD SCHUETZT DIE EINE STELLE, nicht die drei Aufrufer: wer eine
+ * `.nav-badge` ausserhalb von `utils/nav-badges.js` baut, baut die Bauart
+ * wieder auf, aus der der Fehler kam - und erbt weder den Icon-Wrapper noch
+ * die Deckelung noch den Zugaenglichkeitsnamen.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('nur EINE Stelle baut die Zahl am Nav-Ziel (#868)', () => {
+  const OWNER = '../public/utils/nav-badges.js';
+  const offenders = [];
+
+  for (const file of walkJsFiles('../public/')) {
+    if (file === OWNER || file.includes('/vendor/')) continue;
+    const src = withoutBlockComments(read(file));
+    // Ein Badge BAUEN heisst: die Klasse einem erzeugten Knoten geben.
+    if (/className\s*=\s*['"]nav-badge['"]|classList\.add\(\s*['"]nav-badge['"]/.test(src)) {
+      offenders.push(file);
+    }
+  }
+
+  assert.deepEqual(offenders.sort(), [],
+    'Diese Datei baut ihr Nav-Badge selbst. Genau daraus entstand #868: das '
+    + 'Badge haengt dann am Zustand eines Moduls, das beim Anmelden noch gar '
+    + 'nicht gerendert wurde, und faellt bei jedem Neuaufbau der Navigation '
+    + `weg. Benutze setNavBadge() aus /utils/nav-badges.js.\n${offenders.join('\n')}`);
+});
+
+/**
+ * Und der Router zeichnet sie nach jedem Neuaufbau der Navigation nach.
+ *
+ * Ohne diesen Aufruf traegt der Speicher die Zahlen zwar, aber niemand malt
+ * sie hin - der zweite Teil von #868 waere zurueck, und zwar still.
+ */
+test('rebuildNavigation zeichnet die Nav-Zahlen nach (#868)', () => {
+  const router = read('../public/router.js');
+  const fn = /function rebuildNavigation\([\s\S]*?\n\}/.exec(router);
+  assert.ok(fn, 'rebuildNavigation() ist nicht mehr auffindbar');
+  assert.match(fn[0], /applyNavBadges\(\)/,
+    'nach dem Neuaufbau der Navigation fehlen die Zahlen an den Nav-Zielen');
+
+  // Und die Startwerte kommen aus der Antwort, die ohnehin geholt wird.
+  assert.match(router, /function primeNavBadges\(/,
+    'die Startwerte aus /dashboard fehlen - das Badge erschiene wieder erst '
+    + 'nach dem ersten Besuch des Moduls');
+  assert.match(router, /_moduleCountsAt = Date\.now\(\);\s*\n\s*primeNavBadges\(res\)/,
+    'primeNavBadges haengt nicht an der /dashboard-Antwort');
+});
