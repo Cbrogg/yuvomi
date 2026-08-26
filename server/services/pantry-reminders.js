@@ -167,8 +167,16 @@ export function syncPantryExpiryReminder(database, item, now = new Date(), acces
        *
        * `<=` statt `===`: die bestehende Zeile ist gut, solange sie nicht
        * SPÄTER meldet als der frühestmögliche Zeitpunkt. Sie ist genau dann
-       * falsch, wenn ein vorgezogenes MHD sie überholt hat. */
-      if (existing && existing.remind_at <= soonest) return;
+       * falsch, wenn ein vorgezogenes MHD sie überholt hat.
+       *
+       * UND SIE MUSS SELBST VOR DEM ABLAUF LIEGEN. Ohne diese zweite Hälfte
+       * sprang der Kurzschluss über die Ablauf-Frage hinweg: ein auf morgen
+       * geklemmter Termin blieb stehen, nachdem das MHD auf heute korrigiert
+       * wurde. Dass daraus keine Meldung nach dem Ablauf wurde, lag allein am
+       * DELETE des Voll-Syncs - eine Zusicherung, die diese Funktion oben
+       * ausspricht und eine andere einhält, ist keine. */
+      if (existing && existing.remind_at <= soonest
+          && existing.remind_at.slice(0, 10) <= item.expires_on) return;
 
       // Eine NEUE Zeile käme dagegen nach dem Ablauf - das wäre keine Warnung.
       if (soonest.slice(0, 10) > item.expires_on) {
@@ -315,6 +323,22 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
     database.prepare("DELETE FROM reminders WHERE entity_type = 'pantry_item'").run();
     return;
   }
+  /* NICHTS ZU TUN HEISST NICHTS ZU FRAGEN. usersWithoutPantry() loest die
+   * Rechte JEDES Mitglieds auf, zwei Abfragen je Person - in einem
+   * Fuenf-Personen-Haushalt rund 16.000 Statements am Tag, auch wenn im Vorrat
+   * kein einziger Artikel ein MHD traegt. Dieselbe Kostenklasse, gegen die die
+   * SQL-Vorfilter weiter unten begruendet sind.
+   *
+   * Beide Seiten muessen leer sein: ohne Artikel mit Datum gibt es nichts
+   * anzulegen, ohne bestehende Zeilen nichts abzuraeumen. */
+  const anyCandidate = database.prepare(
+    'SELECT 1 FROM pantry_items WHERE expires_on IS NOT NULL LIMIT 1'
+  ).get();
+  const anyReminder = database.prepare(
+    "SELECT 1 FROM reminders WHERE entity_type = 'pantry_item' LIMIT 1"
+  ).get();
+  if (!anyCandidate && !anyReminder) return;
+
   const denied = usersWithoutPantry(database);
   // Der Zugriffs-Kontext EINMAL je Lauf: die haushaltweite Abschaltung steht
   // zwei Zeilen weiter oben schon fest, und ohne sie hier durchzureichen fragte
@@ -443,7 +467,7 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
       // frueh wie moeglich steht, darf dieser Lauf nicht wegen der Ablauffrage
       // loeschen - sie ist genau die, die heute rausgehen soll. Dass der Artikel
       // ueberhaupt noch laeuft, hat der DELETE-Zweig oben schon sichergestellt.
-      if (row.remind_at <= soonest) continue;
+      if (row.remind_at <= soonest && row.remind_at.slice(0, 10) <= row.expires_on) continue;
       if (soonest.slice(0, 10) > row.expires_on) { discard.run(row.id); continue; }
       retime.run(soonest, row.id);
       continue;

@@ -875,3 +875,69 @@ test('der Grobschnitt misst denselben Tag wie der Riegel', () => {
   assert.equal(countReminders(id), 1);
   assert.equal(reminderFor(id).remind_at, `${household}T09:00`);
 });
+
+test('ein korrigiertes MHD raeumt auch eine geklemmte Meldung ab, die dahinter laege', () => {
+  // GEMESSEN: Artikel am 28.08. um 10:00Z mit MHD 30.08. gespeichert -> Termin
+  // auf 29.08.T09:00 geklemmt. MHD dann auf den 28.08. korrigiert: der
+  // Kurzschluss "bestehende Zeile ist frueh genug" sprang ueber die
+  // Ablauf-Frage hinweg, die Zeile blieb auf dem 29. - einen Tag NACH dem MHD.
+  // Dass daraus keine Meldung wurde, lag allein am DELETE des Voll-Syncs.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Korrektur', 1, 'pcs', 'Sonstiges', '2026-08-30', ?)"
+  ).run(A).lastInsertRowid;
+  const load = () => db.prepare('SELECT * FROM pantry_items WHERE id = ?').get(id);
+
+  syncPantryExpiryReminder(db, load(), new Date('2026-08-28T10:00:00Z'), null, { clampToNextMorning: true });
+  assert.equal(reminderFor(id).remind_at, '2026-08-29T09:00');
+
+  db.prepare("UPDATE pantry_items SET expires_on = '2026-08-28' WHERE id = ?").run(id);
+  syncPantryExpiryReminder(db, load(), new Date('2026-08-28T11:00:00Z'), null, { clampToNextMorning: true });
+
+  assert.equal(countReminders(id), 0,
+    'die Funktion muss ihre eigene Zusicherung halten, nicht eine andere fuer sie');
+});
+
+test('dasselbe im Voll-Sync: eine Zeile hinter dem Ablauf bleibt nicht stehen', () => {
+  // DER FALL MUSS GENAU DAZWISCHEN LIEGEN: die Zeile ist nicht spaeter als der
+  // fruehestmoegliche Termin (der Kurzschluss greift also), aber SPAETER als
+  // das MHD. Eine Zeile weiter hinten liefe ohnehin in die Terminkorrektur -
+  // deshalb war die erste Fassung dieses Tests gruen, egal wie der Code lief.
+  //
+  // Artikel laeuft HEUTE ab, Meldung steht auf morgen, und morgen 09:00 ist
+  // wegen der Uhrzeit auch der fruehestmoegliche Termin.
+  const id = db.prepare(
+    "INSERT INTO pantry_items (name, quantity, unit, category, expires_on, created_by) VALUES ('Korrektur Lauf', 1, 'pcs', 'Sonstiges', '2026-08-28', ?)"
+  ).run(A).lastInsertRowid;
+  db.prepare("INSERT INTO reminders (entity_type, entity_id, remind_at, created_by) VALUES ('pantry_item', ?, '2026-08-29T09:00', ?)")
+    .run(id, A);
+
+  syncAllPantryExpiryReminders(db, new Date('2026-08-28T11:00:00Z'));
+
+  const after = reminderFor(id);
+  assert.ok(!after || after.remind_at.slice(0, 10) <= '2026-08-28',
+    'eine Meldung nach dem Ablaufdatum ist keine Meldung');
+});
+
+test('ohne Vorratsartikel mit Datum fragt der Lauf keine Rechte ab', () => {
+  const fresh = new (db.constructor)(':memory:');
+  fresh.exec(`
+    CREATE TABLE users (id INTEGER PRIMARY KEY AUTOINCREMENT, role TEXT, family_role TEXT);
+    CREATE TABLE sync_config (key TEXT PRIMARY KEY, value TEXT);
+    CREATE TABLE access_permissions (subject_type TEXT, subject_id TEXT, resource_type TEXT, resource_key TEXT, access TEXT);
+    CREATE TABLE pantry_items (id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, quantity REAL DEFAULT 1, expires_on TEXT, created_by INTEGER);
+    CREATE TABLE reminders (id INTEGER PRIMARY KEY AUTOINCREMENT, entity_type TEXT, entity_id INTEGER, remind_at TEXT, dismissed INTEGER DEFAULT 0, pushed_at TEXT, created_by INTEGER);
+    INSERT INTO users (role) VALUES ('member'), ('member'), ('member'), ('member'), ('member');
+    INSERT INTO pantry_items (name, quantity) VALUES ('Salz', 1), ('Reis', 2);
+  `);
+
+  let permissionQueries = 0;
+  const orig = fresh.prepare.bind(fresh);
+  fresh.prepare = (sql) => { if (String(sql).includes('access_permissions')) permissionQueries += 1; return orig(sql); };
+
+  syncAllPantryExpiryReminders(fresh, new Date('2026-08-26T10:00:00Z'));
+
+  // Zwei Abfragen je Mitglied, einmal je Minute, fuer einen Vorrat ohne ein
+  // einziges Mindesthaltbarkeitsdatum - rund 16.000 Statements am Tag.
+  assert.equal(permissionQueries, 0);
+  fresh.close();
+});
