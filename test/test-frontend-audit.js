@@ -13805,10 +13805,35 @@ test('das Aufgabenmodul zaehlt sein Badge nicht selbst (#868)', () => {
   assert.doesNotMatch(tasks, /setNavBadge\s*\(/,
     'das Aufgabenmodul schreibt wieder direkt in den Badge-Slot - seine '
     + 'Liste ist gefiltert und kann die Frage nicht beantworten');
+});
 
-  const fn = /function updateOverdueBadge\(\)[\s\S]*?\n\}/.exec(tasks);
-  assert.ok(fn, 'updateOverdueBadge ist nicht mehr auffindbar');
+/**
+ * UND DIE MELDUNG HAENGT AM SCHREIBEN, NICHT AM ZEICHNEN (#868).
+ *
+ * Eine erste Fassung meldete aus `updateOverdueBadge()`, und das ruft jedes
+ * `renderTaskList()` - also auch jeder Tastenanschlag in der Suche, jeder
+ * Filter- und jeder Ansichtswechsel. Jede Tipppause laenger als der
+ * Entprellzeitraum stiess damit eine vollstaendige Dashboard-Aggregation an,
+ * ohne dass sich an den gezaehlten Daten irgendetwas geaendert haette.
+ *
+ * Sie steht deshalb in der API-Schicht, die ohnehin jeder Schreibvorgang
+ * durchlaeuft - eine Stelle statt siebzehn Schreibpfaden allein im
+ * Aufgabenmodul, von denen der achtzehnte vergessen wuerde.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('die Zaehler-Meldung haengt am Schreiben, nicht am Rendern (#868)', () => {
+  const api = read('../public/api.js');
+  const fn = /function notifyCountedMutation\(path\)[\s\S]*?\n\}/.exec(api);
+  assert.ok(fn, 'notifyCountedMutation ist nicht mehr auffindbar');
   assert.match(fn[0], /invalidateModuleCounts/,
-    'die Mutation meldet sich nicht mehr - die Zahl bliebe bis zum Ablauf der '
-    + 'TTL auf dem alten Stand');
+    'die Meldung erreicht den Zaehlstand nicht');
+  assert.match(api, /if \(stateChanging\) notifyCountedMutation\(path\);/,
+    'sie haengt nicht mehr am schreibenden Request');
+
+  // Und die Render-Pfade melden NICHT mehr.
+  const tasks = read('../public/pages/tasks.js');
+  assert.doesNotMatch(tasks, /invalidateModuleCounts/,
+    'das Aufgabenmodul meldet wieder selbst - dann haengt die Meldung am '
+    + 'Rendern und feuert bei jedem Tastenanschlag in der Suche');
 });

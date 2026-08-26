@@ -149,6 +149,11 @@ export function applyNavBadges() {
   for (const [route, entry] of badges) paint(route, entry);
 }
 
+/** Welche Routen gerade eine gemerkte Zahl tragen. */
+export function navBadgeRoutes() {
+  return [...badges.keys()];
+}
+
 /**
  * Sitzungsende. Die Zahlen gehoeren der SITZUNG, nicht dem Geraet - dieselbe
  * Ueberlegung wie bei den Zaehlstaenden der Modulkacheln im Router: sonst

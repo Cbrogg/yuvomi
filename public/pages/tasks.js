@@ -2765,7 +2765,6 @@ function renderKanban(container) {
       container.querySelector('[data-page-search-clear]')?.setAttribute('hidden', '');
       renderTaskList(container);
     });
-    updateOverdueBadge();
     return;
   }
 
@@ -2797,7 +2796,6 @@ function renderKanban(container) {
   if (window.lucide) window.lucide.createIcons({ el: listEl });
   wireKanbanDrag(container);
   wireKanbanTouch(container);
-  updateOverdueBadge();
 }
 
 function wireKanbanDrag(container) {
@@ -3337,7 +3335,6 @@ function renderTaskList(container) {
   listEl.insertAdjacentHTML('beforeend', renderTaskGroups(filteredTasks(), state.groupMode));
   if (window.lucide) window.lucide.createIcons({ el: listEl });
   stagger(listEl.querySelectorAll('.swipe-row, .kanban-card'));
-  updateOverdueBadge();
   updateBulkActionsBar(container);
   wireSwipeGestures(container);
   maybeShowSwipeHint(container);
@@ -3607,9 +3604,7 @@ function renderFilters(container) {
   wireFilterChips(container);
 }
 
-/**
- * DIESES MODUL KANN DIE ZAHL NICHT SELBST FUEHREN - und tut es deshalb nicht
- * mehr (#868).
+/* DIESES MODUL FUEHRT DIE ZAHL NICHT MEHR (#868).
  *
  * Das Badge beantwortet „wie viele Aufgaben im Haushalt sind ueberfaellig".
  * `state.tasks` beantwortet eine andere Frage: es ist die GEFILTERTE Liste
@@ -3617,19 +3612,15 @@ function renderFilters(container) {
  * „In Bearbeitung" aus), das Kanban laesst den Statusfilter ganz weg, und
  * Priorität, Zuweisung und Tags engen zusaetzlich ein. Aus dieser Liste
  * gezaehlt sprang die Zahl beim blossen Wechsel zwischen Liste und Kanban -
- * ohne dass sich an den Daten etwas geaendert haette.
+ * ohne dass sich an den Daten etwas geaendert haette. Dieselbe Zahl stand
+ * ausserdem in zwei ZONEN: der Server rechnet in der Haushaltszone, eine
+ * Client-Rechnung im Automatikmodus in der des Browsers.
  *
- * Neben der Filterfrage stand dieselbe Zahl auch in zwei ZONEN: der Server
- * rechnet `overdueTaskCount` in der Haushaltszone, eine Client-Rechnung mit
- * `todayKey()` im Automatikmodus in der des Browsers.
- *
- * Also: der Server zaehlt, das Modul meldet nur, dass sich etwas geaendert
- * hat. Der Preis ist ein Roundtrip statt einer sofort sinkenden Zahl - eine
- * falsche Zahl ist teurer.
- */
-function updateOverdueBadge() {
-  window.yuvomi?.invalidateModuleCounts?.();
-}
+ * Der Server zaehlt also, und dass sich etwas geaendert hat, meldet nicht
+ * dieses Modul, sondern die API-Schicht (`notifyCountedMutation` in api.js) -
+ * eine Stelle statt siebzehn Schreibpfaden allein hier. Es gibt deshalb keine
+ * `updateOverdueBadge()` mehr; sie hing am RENDERN und feuerte bei jedem
+ * Tastenanschlag in der Suche. */
 
 // --------------------------------------------------------
 // Swipe-Gesten (Mobil: links = erledigt, rechts = bearbeiten)

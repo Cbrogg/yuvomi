@@ -25,7 +25,7 @@ import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import {
-  applyNavBadges, setNavBadge, resetNavBadges,
+  applyNavBadges, setNavBadge, resetNavBadges, navBadgeRoutes,
   moduleCountsFrom, navBadgeCountsFrom,
 } from '/utils/nav-badges.js';
 import { isNewerVersion, displayVersion } from '/utils/version.js';
@@ -1153,11 +1153,62 @@ function primeNavBadges(data) {
 let _moduleCountsRefreshTimer = null;
 function invalidateModuleCounts() {
   _moduleCountsAt = 0;
+  /* DIE GENERATION MUSS MIT, sonst frisst eine noch laufende Antwort die
+   * Entwertung. Sie stammt von VOR der Aenderung, kaeme aber danach an, setzte
+   * ihren alten Stand in den Speicher und stempelte `_moduleCountsAt` neu -
+   * der entprellte Abruf 300 ms spaeter liefe dann in die TTL-Sperre, und die
+   * Zahl bliebe bis zu einer Minute auf dem Stand vor der Aenderung stehen.
+   * Also genau in der Serie schneller Haken, fuer die diese Funktion da ist.
+   * `resetModuleCounts()` direkt darueber tut aus demselben Grund dasselbe. */
+  _moduleCountsGen += 1;
   if (_moduleCountsRefreshTimer) clearTimeout(_moduleCountsRefreshTimer);
   _moduleCountsRefreshTimer = setTimeout(() => {
     _moduleCountsRefreshTimer = null;
     refreshModuleCounts();
   }, 300);
+}
+
+/**
+ * Die Uebersichtsseite hat ihre `/dashboard`-Antwort schon - der Speicher
+ * nimmt sie, statt sie ein zweites Mal zu holen.
+ *
+ * Beim Anmelden faellt der Weg auf `/`, und dort holten bis dahin ZWEI Stellen
+ * dieselbe teure Aggregation: der Shell-Aufbau fuer die Zahlen und die Seite
+ * fuer ihre Kacheln. Der Server rechnet dabei ein Dutzend Abfragen doppelt.
+ *
+ * Die Seite fragt gefiltert (`layoutHintQuery`), die Zahlen brauchen das nicht
+ * - sie zaehlen, was wartet, nicht was die Kachel zeigt. Fuer `openTaskCount`
+ * und `overdueTaskCount` macht die Widget-Einschraenkung sehr wohl einen
+ * Unterschied (`test:task-scope` haelt genau das fest), und deshalb gilt: nur
+ * eine UNGEFILTERTE Antwort darf den Speicher fuellen. Kommt sie gefiltert,
+ * bleibt es beim eigenen Abruf.
+ */
+function primeModuleCountsFrom(data, { filtered = false } = {}) {
+  if (filtered || !data) return;
+  _moduleCounts = moduleCountsFrom(data, {
+    isAdmin: currentUser?.role === 'admin',
+    shoppingVisible: navItems().some((item) => item.module === 'shopping'),
+  });
+  _moduleCountsAt = Date.now();
+  primeNavBadges(data);
+}
+
+/**
+ * Auf der Uebersicht holt die SEITE dieselbe Antwort - der Shell-Aufbau tritt
+ * ihr zurueck.
+ *
+ * Beide starteten sonst gleichzeitig, und der Server rechnete ein Dutzend
+ * Abfragen zweimal. Ein Aufschub waere ein Rennen; die Route ist die Antwort,
+ * denn nur `/` traegt die Uebersichtsseite.
+ *
+ * DER RUECKFALL BLEIBT, weil zwei Faelle die Seite nicht liefern lassen: eine
+ * gefilterte Abfrage (gesetzte Widget-Optionen - eine eingeschraenkte Zahl ist
+ * eine andere Zahl) und ein Fehlschlag ihrer Anfrage. Beide erkennt man
+ * daran, dass der Speicher danach immer noch leer ist.
+ */
+function refreshModuleCountsUnlessPageProvides(path) {
+  if (path !== '/') { refreshModuleCounts(); return; }
+  setTimeout(() => { if (!_moduleCountsAt) refreshModuleCounts(); }, 1500);
 }
 
 async function refreshModuleCounts() {
@@ -1408,7 +1459,7 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
        * Das Nachziehen bleibt still: ohne Antwort bleibt die Navigation ohne
        * Badges - das war bis hierher der Normalfall. */
       applyNavBadges();
-      refreshModuleCounts();
+      refreshModuleCountsUnlessPageProvides(route.path);
     } else if (currentUser && _navBuiltForUserId !== currentUser.id) {
       // Shell besteht bereits, aber der Nutzer hat gewechselt → Nav mit den
       // Modul-Rechten des aktuellen Nutzers neu aufbauen (#467).
@@ -1417,7 +1468,7 @@ async function renderPage(route, previousPath = null, scrollTarget = 0) {
       // Die Zahlen gehoeren dem Mitglied, nicht dem Geraet: `forgetSessionState`
       // hat sie geleert, hier kommen die des neuen Mitglieds (#868).
       applyNavBadges();
-      refreshModuleCounts();
+      refreshModuleCountsUnlessPageProvides(route.path);
     }
 
     const content = document.getElementById('main-content') || app;
@@ -4042,6 +4093,22 @@ window.addEventListener('auth:expired', () => {
 
 // Navigation komplett neu rendern (z.B. nach Sprach- oder Modul-Toggle-Änderung).
 // Behält Bottom-Bar-Buttons (Kitchen, More) und More-Sheet-Handle/Suche bei.
+/**
+ * Ein Ziel ist aus der Navigation verschwunden (Modul abgeschaltet oder
+ * ausgeblendet): seine Zahl geht mit.
+ *
+ * Sonst lebt sie beim Wiedereinschalten wieder auf - und fuer das Inventar
+ * heilt sich das nicht von selbst, weil `/dashboard` fuer dieses Modul keinen
+ * Zaehler liefert: der alte Stand stuende dort, bis jemand die Seite besucht.
+ */
+function dropBadgesForRemovedRoutes() {
+  for (const route of navBadgeRoutes()) {
+    if (!document.querySelector(`.nav-sidebar [data-route="${route}"], .nav-bottom [data-route="${route}"]`)) {
+      setNavBadge(route, 0);
+    }
+  }
+}
+
 function rebuildNavigation({ updateLabels = true } = {}) {
   const skipLink     = document.querySelector('.sr-only[href="#main-content"]');
   const navSidebar   = document.querySelector('.nav-sidebar');
@@ -4113,6 +4180,8 @@ function rebuildNavigation({ updateLabels = true } = {}) {
   // zugehoerige Modul erneut rendert - nach einem Sprachwechsel also womoeglich
   // nie.
   applyNavBadges();
+  // Und was gerade aus der Navigation gefallen ist, verliert seine Zahl.
+  dropBadgesForRemovedRoutes();
 }
 
 // Sprache geändert: Navigation und aktuelle Seite gemeinsam neu rendern.
@@ -4326,6 +4395,9 @@ window.yuvomi = {
   // Ein Modul hat etwas geaendert, das an einem Nav-Ziel gezaehlt wird (#868).
   // Begruendung an `invalidateModuleCounts`.
   invalidateModuleCounts,
+  // Die Uebersichtsseite reicht ihre `/dashboard`-Antwort herein, statt sie ein
+  // zweites Mal holen zu lassen. Begruendung an `primeModuleCountsFrom`.
+  primeModuleCountsFrom,
   applyTheme: (value) => {
     if (value === 'dark') {
       document.documentElement.setAttribute('data-theme', 'dark');
