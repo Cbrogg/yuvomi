@@ -117,7 +117,7 @@ npm run test:modules        # Third-Party-Modul-Registry: Manifest-Validierung, 
 npm run test:budget-categories-routes   # Budget-Kategorien-Routen: CRUD Kategorien/Subkategorien, 409-Dubletten (NOCASE), in-use/letzte-Sperren, reorder, lokalisierte Leseliste
 npm run test:reminders
 npm run test:multi-reminders   # multiple reminders per calendar event: GET /reminders/all, PUT /reminders replace-set (#436)
-npm run test:reminders-routes  # Reminders-Routen: HTTP-Schicht gegen den echten Router
+npm run test:reminders-routes  # Reminders-Routen: HTTP-Schicht gegen den echten Router; dazu die MISCHSTELLEN-Regel: der Router-Pfad löst auf `calendar` auf, seine Zeilen stammen aus sechs Modulen - `/pending` filtert nach lesbaren Herkünften (Token-Scopes UND `access_permissions`), die typbezogenen Wege antworten 403, und ein Aufrufer ohne jeden lesbaren Scope bekommt eine leere Liste statt eines SQL-Fehlers
 npm run test:reminder-offset   # reminder remind_at offset calculation
 npm run test:push           # Web Push: VAPID resolution, subscribe/unsubscribe routes, delivery, scheduler
 npm run test:email          # SMTP-Service: config/env resolution, masking, sendMail/sendTest, admin routes

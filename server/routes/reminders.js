@@ -9,6 +9,8 @@ import express from 'express';
 import * as db from '../db.js';
 import * as v from '../middleware/validate.js';
 import { syncAllBirthdayReminders } from '../services/birthdays.js';
+import { deniedModules } from '../permissions.js';
+import { tokenAllows } from '../scopes.js';
 
 const log    = createLogger('Reminders');
 const router = express.Router();
@@ -36,6 +38,56 @@ const VALID_ENTITY_TYPES = ['task', 'event', 'subscription', 'inventory_item', '
  */
 const DERIVED_ENTITY_TYPES = ['pantry_item'];
 
+/* DIESER ROUTER IST EINE MISCHSTELLE, UND SEIN PFAD SAGT DAS NICHT.
+ *
+ * `/api/v1/reminders` löst über `moduleForPath()` auf `calendar` auf - der
+ * Router teilt sich das Scope-Modul mit Kalender und Geburtstagen (scopes.js).
+ * Die Zeilen, die er ausliefert, stammen aber aus SECHS Modulen: er nennt
+ * Aufgabentitel, Abo-Namen, Inventar-Gegenstände und seit #811 auch
+ * Vorratsartikel.
+ *
+ * Damit reichte ein Token mit `calendar:read`, um über `/reminders/pending` den
+ * Namen eines Vorratsartikels zu lesen, und `calendar:write`, um die Meldung zu
+ * verwerfen - ohne je einen `pantry`- oder `budget`-Scope zu besitzen. Dasselbe
+ * gilt für ein Mitglied, dem ein Modul per `access_permissions` entzogen ist:
+ * der Pfad-Guard in server/index.js fragt nach `calendar` und lässt es durch.
+ *
+ * Genau die Lage, für die es `deniedModules()` gibt (siehe dessen Kommentarkopf
+ * zu /dashboard): wo ein Endpunkt Inhalte aus mehreren Modulen trägt, muss das
+ * Aussortieren in der Route passieren. Eine Rechteregel darf nicht in einer
+ * Middleware wohnen.
+ *
+ * Der Befund kam aus der PR-Review zu #811 und ist älter als dieses Feature -
+ * er betraf fünf Herkünfte, bevor die sechste dazukam. Deshalb steht hier eine
+ * Karte über alle und keine Ausnahme für die neue.
+ */
+const ORIGIN_MODULE = Object.freeze({
+  task:                   'tasks',
+  event:                  'calendar',
+  subscription:           'budget',
+  inventory_item:         'inventory',
+  inventory_tracked_date: 'inventory',
+  pantry_item:            'pantry',
+});
+
+/**
+ * Darf dieser Aufrufer eine Erinnerung dieser Herkunft sehen bzw. anfassen?
+ * Beide Achsen, wie überall: Token-Scopes (Allowlist) und Mitgliedsrechte
+ * (Denylist).
+ */
+function mayTouchOrigin(req, entityType, access = 'read') {
+  const moduleKey = ORIGIN_MODULE[entityType];
+  // Eine unbekannte Herkunft ist keine, die dieser Router ausliefern soll.
+  if (!moduleKey) return false;
+  if (deniedModules(req.sessionModuleAccess).has(moduleKey)) return false;
+  return tokenAllows(req.authScopes, moduleKey, access);
+}
+
+/** Die Herkünfte, die dieser Aufrufer lesen darf - als SQL-taugliche Liste. */
+function readableOrigins(req) {
+  return Object.keys(ORIGIN_MODULE).filter((type) => mayTouchOrigin(req, type, 'read'));
+}
+
 /** Herkünfte, die ein Schreibweg annehmen darf: alle ausser den abgeleiteten. */
 const SETTABLE_ENTITY_TYPES = VALID_ENTITY_TYPES.filter((t) => !DERIVED_ENTITY_TYPES.includes(t));
 
@@ -59,6 +111,11 @@ router.get('/pending', (req, res) => {
     const now    = new Date().toISOString();
     syncAllBirthdayReminders(db.get(), userId, new Date());
 
+    // Nur die Herkünfte, die dieser Aufrufer sehen darf - der Pfad-Guard fragt
+    // für den ganzen Router nach `calendar` und deckt die anderen fünf nicht.
+    const origins = readableOrigins(req);
+    if (!origins.length) return res.json({ data: [] });
+
     const rows = db.get().prepare(`
       SELECT
         r.*,
@@ -78,8 +135,9 @@ router.get('/pending', (req, res) => {
       WHERE r.created_by  = ?
         AND r.dismissed   = 0
         AND r.remind_at  <= ?
+        AND r.entity_type IN (${origins.map(() => '?').join(', ')})
       ORDER BY r.remind_at ASC
-    `).all(userId, now);
+    `).all(userId, now, ...origins);
 
     res.json({ data: rows });
   } catch (err) {
@@ -103,6 +161,9 @@ router.get('/all', (req, res) => {
 
     if (!VALID_ENTITY_TYPES.includes(entityType) || !entityId) {
       return res.status(400).json({ error: 'entity_type und entity_id sind erforderlich.', code: 400 });
+    }
+    if (!mayTouchOrigin(req, entityType)) {
+      return res.status(403).json({ error: 'You do not have access to this module.', code: 403 });
     }
 
     const rows = db.get().prepare(`
@@ -131,6 +192,9 @@ router.get('/', (req, res) => {
 
     if (!VALID_ENTITY_TYPES.includes(entityType) || !entityId) {
       return res.status(400).json({ error: 'entity_type und entity_id sind erforderlich.', code: 400 });
+    }
+    if (!mayTouchOrigin(req, entityType)) {
+      return res.status(403).json({ error: 'You do not have access to this module.', code: 403 });
     }
 
     const row = db.get().prepare(`
@@ -174,6 +238,9 @@ router.post('/', (req, res) => {
 
     if (errors.length) {
       return res.status(400).json({ error: errors.join(' '), code: 400 });
+    }
+    if (!mayTouchOrigin(req, entity_type, 'write')) {
+      return res.status(403).json({ error: 'You do not have access to this module.', code: 403 });
     }
 
     const entityId = parseInt(entity_id, 10);
@@ -220,6 +287,9 @@ router.put('/', (req, res) => {
     // für einen Artikel, statt einer.
     if (DERIVED_ENTITY_TYPES.includes(entityType)) {
       return res.status(400).json({ error: derivedTypeError(entityType), code: 400 });
+    }
+    if (!mayTouchOrigin(req, entityType, 'write')) {
+      return res.status(403).json({ error: 'You do not have access to this module.', code: 403 });
     }
     if (!Array.isArray(remindAts)) {
       return res.status(400).json({ error: 'remind_ats muss ein Array sein.', code: 400 });
@@ -285,6 +355,12 @@ router.patch('/:id/dismiss', (req, res) => {
     if (!reminder) {
       return res.status(404).json({ error: 'Erinnerung nicht gefunden.', code: 404 });
     }
+    // Verwerfen ist ein Schreibvorgang am fremden Modul: ein Token mit
+    // `calendar:write` durfte hier bis zur Review von #811 eine Vorrats- oder
+    // Abo-Meldung wegwischen, ohne den Scope dieses Moduls zu besitzen.
+    if (!mayTouchOrigin(req, reminder.entity_type, 'write')) {
+      return res.status(403).json({ error: 'You do not have access to this module.', code: 403 });
+    }
 
     db.get().prepare('UPDATE reminders SET dismissed = 1 WHERE id = ?').run(reminderId);
     res.json({ data: { id: reminderId } });
@@ -315,6 +391,9 @@ router.delete('/:id', (req, res) => {
     if (!reminder) {
       return res.status(404).json({ error: 'Erinnerung nicht gefunden.', code: 404 });
     }
+    if (!mayTouchOrigin(req, reminder.entity_type, 'write')) {
+      return res.status(403).json({ error: 'You do not have access to this module.', code: 403 });
+    }
     // Dieselbe Sperre wie beim Filter-Weg daneben: ohne sie bliebe eine
     // Hintertuer mit exakt derselben folgenlosen Wirkung.
     if (DERIVED_ENTITY_TYPES.includes(reminder.entity_type)) {
@@ -342,6 +421,9 @@ router.delete('/', (req, res) => {
 
     if (!VALID_ENTITY_TYPES.includes(entityType) || !entityId) {
       return res.status(400).json({ error: 'entity_type und entity_id sind erforderlich.', code: 400 });
+    }
+    if (!mayTouchOrigin(req, entityType, 'write')) {
+      return res.status(403).json({ error: 'You do not have access to this module.', code: 403 });
     }
     // AUCH HIER, aus demselben Grund wie bei POST und PUT - und mit derselben
     // Wirkungslosigkeit: die geloeschte Zeile legt der naechste Modul-Sync

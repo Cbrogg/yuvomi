@@ -53,6 +53,16 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **Eine Erinnerung verrät nicht mehr, was ihr Modul verschweigt.** `/api/v1/reminders` liefert
+  Titel aus sechs Modulen - Aufgaben, Kalender, Abos, Inventar, Inventar-Fristen und seit dieser
+  Version dem Vorrat -, sein Pfad wird aber komplett dem Kalender zugeordnet. Ein API-Token mit nur
+  `calendar:read` konnte damit über die fällige Erinnerung den Namen eines Abos oder eines
+  Inventar-Gegenstands lesen, `calendar:write` konnte die Meldung wegwischen, und einem Mitglied,
+  dem ein Modul entzogen ist, ging es genauso: der Zugriffs-Guard fragte nach dem Kalender und liess
+  alles andere durch. Die Route sortiert jetzt selbst aus, für beide Rechtearten. Das war schon vor
+  dieser Version so, für fünf Herkünfte - deshalb steht hier eine Regel über alle und keine Ausnahme
+  für die neue.
+
 - **Die Übernahme aus der Einkaufsliste prüft das Mindesthaltbarkeitsdatum jetzt gegen den
   Kalender.** Sie sah bisher nur nach der Form, ein `2027-02-30` kam durch. Das blieb folgenlos,
   solange niemand mit dem Datum rechnete - eine unsinnige Zeile im Vorrat, mehr nicht. Beide
