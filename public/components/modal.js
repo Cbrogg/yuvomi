@@ -22,7 +22,7 @@
 
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
-import { pushOverlay, dropOverlay, isOverlayOpen } from '/utils/overlay-history.js';
+import { pushOverlay, dropOverlay } from '/utils/overlay-history.js';
 
 let activeOverlay = null;
 let previouslyFocused = null;
@@ -57,17 +57,25 @@ let modalState = 'idle';
 let _overlayToken = null;
 
 /**
- * Der Rueckweg aus der Zurueck-Geste.
+ * Der Rueckweg aus der Zurueck-Geste - und vom Sitzungsende, das `force`
+ * setzt.
  *
- * Der Rueckgabewert entscheidet, ob die Geste verbraucht ist: `false` legt den
- * Marker neu an. Beide Faelle, die das brauchen, stehen hier zusammen -
- * abgelehntes Verwerfen (das Modal bleibt offen) und ein geschlossener
- * Bestaetigungsdialog, unter dem ein geparktes Formular wieder auftaucht.
+ * `false` heisst „das Modal steht noch", und das Register haelt seinen Eintrag
+ * dann fest. Zwei Faelle fuehren dahin, und beide erkennt man am ZUSTAND:
+ * abgelehntes Verwerfen, und ein geschlossener Bestaetigungsdialog, unter dem
+ * ein geparktes Formular wieder auftaucht. In beiden steht `modalState`
+ * danach auf 'open'.
+ *
+ * NICHT AM DOM ABLESBAR, und das ist hier bezahlt worden: eine erste Fassung
+ * fragte `document.querySelector('.modal-overlay')`. Auf Mobil - also auf
+ * genau der Plattform, um die es in #871 geht - loest `closeModal()` aber
+ * BEVOR das Overlay aus dem DOM faellt: es startet nur die Schliessanimation
+ * und raeumt erst auf `animationend` ab. Jede erfolgreiche Wischgeste galt
+ * damit 400 ms lang als „abgelehnt".
  */
-async function _closeFromBackNavigation() {
-  const closed = await closeModal();
-  if (!closed) return false;
-  return !document.querySelector('.modal-overlay');
+async function _closeFromBackNavigation({ force = false } = {}) {
+  const closed = await closeModal({ force });
+  return closed && modalState !== 'open';
 }
 
 // Overlay-Dimming: theme-color abdunkeln im Standalone-Modus
@@ -446,11 +454,14 @@ function _doClose(overlayEl) {
     activeOverlay = null;
     modalState = 'idle';
 
-    // Der Marker der Zurueck-Geste geht zurueck, sobald WIRKLICH kein Overlay
-    // mehr steht (#871). Gefragt ist das DOM und nicht `activeOverlay`: ein
-    // Bestaetigungsdialog parkt das Formular darunter, es bleibt liegen und
-    // haelt den Dialogzustand - `activeOverlay` sagt darueber nichts.
-    if (_overlayToken !== null && !document.querySelector('.modal-overlay')) {
+    /* Das Modal-System meldet sich beim Register ab (#871).
+     *
+     * HIER UND NUR HIER, weil dieser Zweig der einzige Uebergang nach 'idle'
+     * ist - also der einzige Punkt, an dem wirklich KEIN Dialog mehr steht.
+     * Ein Bestaetigungsdialog ueber einem geparkten Formular laeuft nicht
+     * durch ihn hindurch: dort setzt `_resumeSuspendedModal` den Zustand
+     * zurueck auf 'open'. */
+    if (_overlayToken !== null) {
       const token = _overlayToken;
       _overlayToken = null;
       dropOverlay(token);
@@ -639,10 +650,7 @@ export function openModal({
   // Ab jetzt faengt die Zurueck-Geste diesen Dialog ab, statt die Seite
   // darunter zu wechseln (#871). Nur der erste Dialog legt den Marker an -
   // Begruendung an `_overlayToken`.
-  // `isOverlayOpen` und nicht nur `!== null`: nach einem Sitzungsende hat das
-  // Register vergessen, was offen war, und ein Token ohne Eintrag legte hier
-  // nie wieder einen neuen an.
-  if (_overlayToken === null || !isOverlayOpen(_overlayToken)) {
+  if (_overlayToken === null) {
     _overlayToken = pushOverlay(_closeFromBackNavigation);
   }
 

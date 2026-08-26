@@ -25,8 +25,8 @@ import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import {
-  handleBackNavigation, resetOverlayHistory, isStaleOverlayMarker,
-  pushOverlay, forgetOverlay, dropOverlay, attachOverlay,
+  handleBackNavigation, closeAllOverlays, consumeOverlayMarker,
+  pushOverlay, dropOverlay, attachOverlay,
 } from '/utils/overlay-history.js';
 import { isNewerVersion, displayVersion } from '/utils/version.js';
 import { setMaxUploadBytes } from '/utils/upload-limit.js';
@@ -752,11 +752,16 @@ async function navigate(path, userOrPushState = true, pushState = true) {
     }
 
     if (pushState) {
-      // Ein Marker fuer ein Overlay, das gerade zugegangen ist, ist ein
-      // Platzhalter ohne Inhalt (#871). Die neue Seite tritt an SEINE Stelle -
-      // sonst laege zwischen zwei Seiten ein Eintrag, der auf dieselbe Adresse
-      // zeigt, und der Rueckweg braeuchte zwei Gesten fuer einen Schritt.
-      if (isStaleOverlayMarker()) history.replaceState({ path }, '', path);
+      /* EIN DIALOG UEBERLEBT KEINE NAVIGATION (#871). Er stuende sonst ueber
+       * der falschen Seite - genau der gemeldete Zustand, nur andersherum
+       * erreicht. `consumeOverlayMarker()` schliesst deshalb, was noch offen
+       * ist, und meldet zurueck, ob der aktuelle History-Eintrag unser
+       * Platzhalter war.
+       *
+       * WAR ER ES, TRITT DIE NEUE SEITE AN SEINE STELLE. Laege sie darueber,
+       * zeigte der Rueckweg zuerst auf einen Eintrag mit derselben Adresse -
+       * eine Geste, die sichtbar nichts tut. */
+      if (consumeOverlayMarker()) history.replaceState({ path }, '', path);
       else history.pushState({ path }, '', path);
     }
 
@@ -2687,20 +2692,12 @@ function initMoreSheet(container, openSearch) {
     });
   }
 
-  /**
-   * @param {{restoreFocus?: boolean}} [opts] - `restoreFocus: false` heisst an
-   *   jeder Aufrufstelle „wir navigieren gleich": der Fokus gehoert dann der
-   *   neuen Seite, nicht dem Knopf. Genau diese Faelle duerfen den
-   *   History-Marker nicht per `back()` zurueckgeben, sondern nur vergessen -
-   *   Begruendung an `forgetOverlay()`.
-   */
   function closeSheet({ restoreFocus = true } = {}) {
     if (sheet.getAttribute('aria-hidden') === 'true') return;
     if (sheetOverlayToken !== null) {
       const token = sheetOverlayToken;
       sheetOverlayToken = null;
-      if (restoreFocus) dropOverlay(token);
-      else forgetOverlay(token);
+      dropOverlay(token);
     }
     setOverlayInteractive(sheet, false);
     sheet.removeEventListener('keydown', moreSheetTrap);
@@ -2862,18 +2859,11 @@ function initSearch(container) {
     overlay.addEventListener('keydown', _searchTrapHandler);
   }
 
-  /**
-   * @param {{restoreFocus?: boolean}} [opts] - wie beim Mehr-Blatt heisst
-   *   `restoreFocus: false` „wir navigieren gleich", und genau dann darf der
-   *   History-Marker nicht per `back()` zurueckgegeben werden (#871,
-   *   Begruendung an `forgetOverlay()`).
-   */
   function closeSearch({ restoreFocus = true } = {}) {
     if (searchOverlayToken !== null) {
       const token = searchOverlayToken;
       searchOverlayToken = null;
-      if (restoreFocus) dropOverlay(token);
-      else forgetOverlay(token);
+      dropOverlay(token);
     }
     // Laufenden Debounce abbrechen: sonst feuert ein noch offener Timer nach dem
     // Schließen ins versteckte Overlay und macht eine Phantom-Live-Ansage.
@@ -4001,11 +3991,11 @@ function forgetSessionState() {
   forgetScrollPositions();
   // Und die Zählstände der Modulkacheln aus demselben Grund.
   resetModuleCounts();
-  // Das Register der Zurueck-Geste zeigt nach dem Abraeumen der Shell auf
-  // Knoten, die es nicht mehr gibt (#871). Die History bleibt bewusst
-  // unangetastet: ein Marker, den niemand mehr einloest, kostet eine Geste -
-  // ein Register auf entfernten Knoten kostet einen Fehler bei jeder.
-  resetOverlayHistory();
+  // Was noch offen steht, geht mit der Sitzung zu (#871). SCHLIESSEN und nicht
+  // nur vergessen: ein geteiltes Modal haengt an `document.body` und ueberlebt
+  // das Abraeumen der Shell - ein bloss geleertes Register liesse es ueber der
+  // Anmeldeseite stehen.
+  closeAllOverlays();
   stopThirdPartyModulePolling();
   stopReminders();
   stopPush();

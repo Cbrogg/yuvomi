@@ -2,17 +2,20 @@
  * Tests: Zurueck schliesst, was oben liegt (#871)
  * Modul: /public/utils/overlay-history.js
  *
- * WARUM EIN VERHALTENSTEST UND KEIN QUELLTEXT-GUARD: die drei Wege aus einem
- * Dialog (Zurueck-Geste, X, abgelehntes Verwerfen) unterscheiden sich nicht im
- * Code, sondern in der REIHENFOLGE, in der History-Eintraege entstehen und
- * verschwinden. Genau dort steckt der Fehler, den man einbaut - ein doppeltes
- * `history.back()`, ein Marker, der liegen bleibt, ein `popstate`, das man fuer
- * eine Nutzergeste haelt, obwohl man es selbst ausgeloest hat. Ein Test auf
- * „ruft `pushState` auf" waere gruen und blind.
+ * WARUM VERHALTENSTESTS UND KEIN QUELLTEXT-GUARD: die Wege aus einem Dialog
+ * (Zurueck-Geste, X, abgelehntes Verwerfen, Navigation, Sitzungsende)
+ * unterscheiden sich nicht im Code, sondern in der REIHENFOLGE, in der
+ * History-Eintraege entstehen und verschwinden. Genau dort steckt der Fehler,
+ * den man einbaut. Ein Test auf „ruft `pushState` auf" waere gruen und blind.
  *
- * Die History-Attrappe fuehrt deshalb einen echten Stapel und stellt
- * `popstate` genau so zu, wie der Browser es tut: `back()` wirkt nicht
- * synchron, sondern in einem spaeteren Tick.
+ * DIE ATTRAPPE FUEHRT EINEN ECHTEN STAPEL und stellt `popstate` so zu, wie der
+ * Browser es tut: `back()` wirkt NICHT synchron. Das ist keine Feinheit - an
+ * dieser Annahme scheiterte die erste Fassung des Moduls gleich viermal.
+ *
+ * `depth` wird deshalb ueberall mitgeprueft, wo ein Marker entstehen oder
+ * verschwinden soll. Eine fruehere Fassung dieser Tests prueste nur, dass NICHT
+ * navigiert wurde - und blieb gruen, waehrend ein toter Eintrag liegenblieb,
+ * der jede folgende Geste eine Runde kostete.
  */
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
@@ -28,18 +31,15 @@ function makeHistory() {
   const navigations = [];
   let onPop = null;
 
-  const fake = {
+  return {
     get state() { return entries[index]; },
-    get length() { return entries.length; },
     get depth() { return index; },
     pushState(state) {
       entries.splice(index + 1);
       entries.push(state);
       index = entries.length - 1;
     },
-    replaceState(state) {
-      entries[index] = state;
-    },
+    replaceState(state) { entries[index] = state; },
     back() {
       // Der Browser feuert `popstate` NICHT synchron. Ein Test, der das
       // annimmt, verdeckt genau die Verschraenkung, die hier gefaehrlich ist.
@@ -52,19 +52,26 @@ function makeHistory() {
     setPopHandler(fn) { onPop = fn; },
     navigations,
   };
-  return fake;
 }
 
-/**
- * Frische Modulinstanz je Test - das Register ist Modulzustand, und ein
- * Test, der den eines anderen erbt, misst nicht mehr, was er behauptet.
- */
 let instanceSeq = 0;
+let observers = [];
 
+/**
+ * Frische Modulinstanz je Test - das Register ist Modulzustand, und ein Test,
+ * der den eines anderen erbt, misst nicht mehr, was er behauptet.
+ */
 async function freshModule() {
   const history = makeHistory();
+  observers = [];
   globalThis.history = history;
   globalThis.location = { href: '/dashboard' };
+  globalThis.document = {};
+  globalThis.MutationObserver = class {
+    constructor(cb) { this.cb = cb; observers.push(this); }
+    observe() {}
+    disconnect() { this.disconnected = true; }
+  };
   const mod = await import(`../public/utils/overlay-history.js?instance=${++instanceSeq}`);
   history.setPopHandler(async (state) => {
     const handled = await mod.handleBackNavigation();
@@ -73,10 +80,12 @@ async function freshModule() {
   return { ...mod, history };
 }
 
-// Der Attrappen-`back()` laeuft in einem Microtask, `handleBackNavigation` ist
-// async - zwei Runden reichen sicher, bis beides durch ist.
+// Der Abgleich laeuft in einem Microtask, `back()` ebenso, und
+// `handleBackNavigation` ist async - ein Makrotask laesst alles davon durch.
 const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
 
+// --------------------------------------------------------
+// Der gemeldete Fall
 // --------------------------------------------------------
 
 test('die Zurueck-Geste schliesst den Dialog, statt die Seite zu wechseln', async () => {
@@ -84,7 +93,8 @@ test('die Zurueck-Geste schliesst den Dialog, statt die Seite zu wechseln', asyn
 
   let closed = 0;
   pushOverlay(() => { closed += 1; });
-  assert.equal(history.depth, 1, 'der Dialog legt einen eigenen History-Eintrag an');
+  await settle();
+  assert.equal(history.depth, 1, 'der offene Dialog haelt einen History-Eintrag');
 
   history.back();
   await settle();
@@ -102,6 +112,7 @@ test('eine zweite Zurueck-Geste wechselt dann die Seite', async () => {
   // Vorgaenger - wie im Browser, der die App dann verlaesst.
   history.pushState({ path: '/calendar' });
   pushOverlay(() => {});
+  await settle();
 
   history.back();
   await settle();
@@ -113,10 +124,91 @@ test('eine zweite Zurueck-Geste wechselt dann die Seite', async () => {
     'ohne offenen Dialog gehoert die Geste wieder dem Router');
 });
 
+// --------------------------------------------------------
+// Ein Marker fuer alle - die Fehlerklasse der ersten Fassung
+// --------------------------------------------------------
+
+test('zwei gleichzeitig offene Overlays halten EINEN Eintrag, nicht zwei', async () => {
+  const { pushOverlay, history } = await freshModule();
+  pushOverlay(() => {});
+  pushOverlay(() => {});
+  await settle();
+  assert.equal(history.depth, 1,
+    'ein Marker je Overlay hiesse: jedes verschachtelte Overlay kostet spaeter eine '
+    + 'eigene Zurueck-Geste, auch wenn es laengst zu ist');
+});
+
+test('zwei Overlays, die im selben Tick schliessen, lassen keinen Eintrag liegen', async () => {
+  // DER FEHLER DER ERSTEN FASSUNG, wortwoertlich: sie las `history.state`, um
+  // zu entscheiden, ob sie „obenauf" liegt. `history.back()` wirkt aber erst
+  // spaeter, also sah das zweite Overlay den alten Zustand, hielt sich fuer
+  // nicht-obenauf und gab seinen Marker nie zurueck.
+  const { pushOverlay, dropOverlay, history } = await freshModule();
+
+  const outer = pushOverlay(() => {});
+  const inner = pushOverlay(() => {});
+  await settle();
+
+  dropOverlay(inner);
+  dropOverlay(outer);
+  await settle();
+
+  assert.equal(history.depth, 0, 'kein toter Eintrag - genau hier lag der Fehler');
+  assert.deepEqual(history.navigations, [], 'unser eigenes back() ist keine Nutzergeste');
+});
+
+test('ein Overlay, das ein anderes mitreisst, laesst keinen Eintrag liegen', async () => {
+  // Die Belegvorschau liegt im geteilten Modal. Verknuepft man ein Dokument,
+  // schliesst das Modal - und nimmt die Vorschau mit. In der ersten Fassung
+  // blieb der Marker des Modals als toter Eintrag zurueck.
+  const { pushOverlay, dropOverlay, history } = await freshModule();
+
+  const modal = pushOverlay(() => {});
+  const preview = pushOverlay(() => {});
+  await settle();
+
+  dropOverlay(modal);    // das Modal geht zuerst - LIFO verletzt
+  dropOverlay(preview);  // und reisst die Vorschau mit
+  await settle();
+
+  assert.equal(history.depth, 0);
+  assert.deepEqual(history.navigations, []);
+});
+
+test('Blatt zu und Dialog auf im selben Tick fassen die History gar nicht an', async () => {
+  // Hilfe, Aenderungsverlauf und die Suche gehen alle aus dem Mehr-Blatt
+  // heraus auf: das Blatt schliesst, der Dialog oeffnet, beides synchron. Die
+  // erste Fassung gab hier einen Marker zurueck und legte sofort einen neuen -
+  // ein `back()` gegen ein `pushState` im selben Tick.
+  const { pushOverlay, dropOverlay, history } = await freshModule();
+
+  const sheet = pushOverlay(() => {});
+  await settle();
+  assert.equal(history.depth, 1);
+
+  let dialogClosed = 0;
+  dropOverlay(sheet);
+  pushOverlay(() => { dialogClosed += 1; });
+  await settle();
+
+  assert.equal(history.depth, 1, 'netto hat sich nichts geaendert, also passiert nichts');
+
+  history.back();
+  await settle();
+  assert.equal(dialogClosed, 1, 'die Geste schliesst den Dialog');
+  assert.deepEqual(history.navigations, [],
+    'und nicht einen toten Marker, der die Geste verschluckt');
+});
+
+// --------------------------------------------------------
+// Die einzelnen Wege hinaus
+// --------------------------------------------------------
+
 test('das X gibt seinen Marker zurueck - die naechste Geste braucht keinen Leerlauf', async () => {
   const { pushOverlay, dropOverlay, history } = await freshModule();
 
   const token = pushOverlay(() => { throw new Error('darf nicht aufgerufen werden'); });
+  await settle();
   dropOverlay(token);
   await settle();
 
@@ -126,40 +218,27 @@ test('das X gibt seinen Marker zurueck - die naechste Geste braucht keinen Leerl
     + 'der Router beim Schliessen per X');
 });
 
-test('zwei Overlays, die im selben Tick schliessen, verbrauchen beide Marker', async () => {
-  // Der Grund fuer den ZAEHLER statt eines Booleans in `pendingSelfPops`.
-  const { pushOverlay, dropOverlay, history } = await freshModule();
-
-  const outer = pushOverlay(() => {});
-  const inner = pushOverlay(() => {});
-  assert.equal(history.depth, 2);
-
-  dropOverlay(inner);
-  dropOverlay(outer);
-  await settle();
-
-  assert.deepEqual(history.navigations, [],
-    'beide back() stammen von uns; ein Boolean haette das zweite als Geste gewertet');
-});
-
 test('das obere Overlay geht zuerst zu, das untere bleibt', async () => {
   const { pushOverlay, history } = await freshModule();
 
   const order = [];
   pushOverlay(() => { order.push('unten'); });
   pushOverlay(() => { order.push('oben'); });
+  await settle();
 
   history.back();
   await settle();
   assert.deepEqual(order, ['oben'], 'die Geste meint das oberste Overlay');
+  assert.equal(history.depth, 1, 'fuer das untere liegt der Marker wieder da');
 
   history.back();
   await settle();
   assert.deepEqual(order, ['oben', 'unten']);
   assert.deepEqual(history.navigations, [], 'erst die dritte Geste gehoert dem Router');
+  assert.equal(history.depth, 0);
 });
 
-test('ein abgelehntes Schliessen bekommt seinen Marker zurueck', async () => {
+test('ein abgelehntes Schliessen behaelt seinen Marker', async () => {
   // Ungespeicherte Aenderungen, „nicht verwerfen": der Dialog bleibt offen -
   // und muss die naechste Geste wieder abfangen, statt sie aus der Seite
   // hinauslaufen zu lassen.
@@ -167,10 +246,11 @@ test('ein abgelehntes Schliessen bekommt seinen Marker zurueck', async () => {
 
   let allow = false;
   pushOverlay(() => (allow ? undefined : false));
+  await settle();
 
   history.back();
   await settle();
-  assert.equal(history.depth, 1, 'der Marker wurde neu gelegt');
+  assert.equal(history.depth, 1, 'der Marker liegt wieder da');
   assert.deepEqual(history.navigations, [], 'die Geste ist verbraucht, nicht weitergereicht');
 
   allow = true;
@@ -180,17 +260,35 @@ test('ein abgelehntes Schliessen bekommt seinen Marker zurueck', async () => {
   assert.deepEqual(history.navigations, [], 'auch der zweite Anlauf bleibt beim Dialog');
 });
 
-test('ein Overlay, das beim Navigieren schliesst, hinterlaesst keinen Zwischenschritt', async () => {
-  // Das Mehr-Blatt und die Suche schliessen sich, WEIL gleich navigiert wird.
-  // Ein `back()` liefe hier gegen das `pushState` der Navigation im selben
-  // Tick; stattdessen tritt die neue Seite an die Stelle des toten Markers.
-  const { pushOverlay, forgetOverlay, isStaleOverlayMarker, history } = await freshModule();
+test('die Zurueck-Geste fragt ohne Zwang - der Dirty-Guard darf greifen', async () => {
+  const { pushOverlay, history } = await freshModule();
+  let seen = null;
+  pushOverlay((opts) => { seen = opts; });
+  await settle();
 
-  const token = pushOverlay(() => {});
-  forgetOverlay(token);
+  history.back();
+  await settle();
+  assert.deepEqual(seen, { force: false });
+});
 
-  assert.equal(isStaleOverlayMarker(), true,
-    'der Eintrag traegt einen Marker, den das Register nicht mehr kennt');
+// --------------------------------------------------------
+// Navigation und Sitzungsende
+// --------------------------------------------------------
+
+test('eine Navigation schliesst offene Overlays und erbt ihren Eintrag', async () => {
+  // Ein Dialog ueberlebt keine Navigation - er stuende sonst ueber der
+  // falschen Seite, also wieder #871.
+  const { pushOverlay, consumeOverlayMarker, history } = await freshModule();
+
+  let forced = null;
+  pushOverlay((opts) => { forced = opts; });
+  await settle();
+
+  assert.equal(consumeOverlayMarker(), true, 'der aktuelle Eintrag war unser Platzhalter');
+  assert.deepEqual(forced, { force: true },
+    'wer navigiert, hat die Frage nach ungespeicherten Aenderungen beantwortet');
+
+  // Der Router setzt die neue Seite an DIE STELLE des Markers.
   history.replaceState({ path: '/notes' });
 
   history.back();
@@ -199,42 +297,69 @@ test('ein Overlay, das beim Navigieren schliesst, hinterlaesst keinen Zwischensc
     'EINE Geste fuehrt zurueck auf die Ausgangsseite, nicht auf einen leeren Zwischenschritt');
 });
 
-test('ein noch offener Dialog macht seinen Marker nicht zum Platzhalter', async () => {
-  const { pushOverlay, isStaleOverlayMarker } = await freshModule();
+test('ohne offenes Overlay meldet die Navigation keinen Marker', async () => {
+  const { consumeOverlayMarker } = await freshModule();
+  assert.equal(consumeOverlayMarker(), false,
+    'sonst ersetzte eine Navigation den Eintrag der Seite, von der sie kommt');
+});
+
+test('ein hakendes Overlay haelt die Navigation nicht auf', async () => {
+  const { pushOverlay, consumeOverlayMarker } = await freshModule();
+  pushOverlay(() => { throw new Error('kaputt'); });
+  await settle();
+  assert.doesNotThrow(() => consumeOverlayMarker());
+});
+
+test('das Sitzungsende schliesst, was noch steht - es vergisst es nicht nur', async () => {
+  // Ein geteiltes Modal haengt an `document.body` und ueberlebt das Abraeumen
+  // der App-Shell. Ein bloss geleertes Register liesse es ueber der
+  // Anmeldeseite stehen, und die Zurueck-Geste faende nichts mehr zu
+  // schliessen - sie navigierte darunter weg.
+  const { pushOverlay, closeAllOverlays, hasOpenOverlay } = await freshModule();
+
+  let closedWith = null;
+  pushOverlay((opts) => { closedWith = opts; });
+  await settle();
+
+  closeAllOverlays();
+  assert.deepEqual(closedWith, { force: true },
+    'beim Abmelden fragt niemand mehr nach ungespeicherten Aenderungen');
+  assert.equal(hasOpenOverlay(), false);
+});
+
+test('nach einem Sitzungsende faengt die Geste wieder Dialoge ab', async () => {
+  // Die erste Fassung merkte sich im Modal-System ein Token ueber das
+  // Sitzungsende hinaus und legte danach nie wieder einen Marker an - die
+  // Zurueck-Geste waere ab dem naechsten Login still wieder kaputt gewesen.
+  const { pushOverlay, closeAllOverlays, history } = await freshModule();
+
   pushOverlay(() => {});
-  assert.equal(isStaleOverlayMarker(), false,
-    'sonst ersetzte eine Navigation den Marker eines Dialogs, der noch steht');
+  await settle();
+  closeAllOverlays();
+
+  let closed = 0;
+  pushOverlay(() => { closed += 1; });
+  await settle();
+
+  history.back();
+  await settle();
+  assert.equal(closed, 1);
+  assert.deepEqual(history.navigations, []);
 });
 
-test('nach einem Sitzungsende legt dasselbe Overlay wieder einen Marker an', async () => {
-  // modal.js haelt EINEN Marker ueber viele Dialoge hinweg. Ohne
-  // `isOverlayOpen` bliebe sein Token nach dem Reset auf einem Wert stehen,
-  // und die Zurueck-Geste waere ab dem naechsten Login still wieder kaputt.
-  const { pushOverlay, isOverlayOpen, resetOverlayHistory } = await freshModule();
-
-  const token = pushOverlay(() => {});
-  assert.equal(isOverlayOpen(token), true);
-
-  resetOverlayHistory();
-  assert.equal(isOverlayOpen(token), false);
-});
+// --------------------------------------------------------
+// attachOverlay
+// --------------------------------------------------------
 
 test('ein Overlay meldet sich ab, wenn sein Knoten aus dem Dokument faellt', async () => {
   // `attachOverlay` faengt nicht das Schliessen ab, sondern das Verschwinden -
   // der Grund: die modul-eigenen Overlays haben drei bis fuenf Schliesswege,
   // die alle einzeln `remove()` rufen.
-  const observers = [];
-  globalThis.MutationObserver = class {
-    constructor(cb) { this.cb = cb; observers.push(this); }
-    observe() {}
-    disconnect() { this.disconnected = true; }
-  };
-  globalThis.document = {};
-
   const { attachOverlay, history } = await freshModule();
 
   const el = { isConnected: true };
   attachOverlay(el, () => { throw new Error('darf nicht aufgerufen werden'); });
+  await settle();
   assert.equal(history.depth, 1);
 
   // Irgendeiner der Schliesswege hat den Knoten entfernt.
@@ -244,5 +369,20 @@ test('ein Overlay meldet sich ab, wenn sein Knoten aus dem Dokument faellt', asy
 
   assert.equal(history.depth, 0, 'der Marker ist zurueckgegeben');
   assert.equal(observers[0].disconnected, true, 'der Beobachter laeuft nicht weiter');
+  assert.deepEqual(history.navigations, []);
+});
+
+test('die Zurueck-Geste schliesst ein angehaengtes Overlay ueber seinen Weg', async () => {
+  const { attachOverlay, history } = await freshModule();
+
+  let closed = 0;
+  const el = { isConnected: true };
+  attachOverlay(el, () => { closed += 1; el.isConnected = false; });
+  await settle();
+
+  history.back();
+  await settle();
+  assert.equal(closed, 1);
+  assert.equal(history.depth, 0);
   assert.deepEqual(history.navigations, []);
 });
