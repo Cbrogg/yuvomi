@@ -2925,7 +2925,7 @@
         "colorOption": "颜色 {{color}}",
         "iconPick": "选择图片",
         "iconClear": "移除图片",
-        "iconHint": "没有图片时，所选颜色上会显示首字母。",
+        "iconHint": "可选择内置图标或自己的图片。两者都没有时，所选颜色上会显示首字母。",
         "iconTypeError": "请选择 PNG、JPEG 或 WebP 图片。",
         "iconReadError": "无法读取图片。",
         "iconTooLarge": "图片过大。",
@@ -2941,7 +2941,9 @@
         "saved": "已保存快捷链接",
         "deleted": "已删除快捷链接",
         "loadError": "无法加载快捷链接。",
-        "orderError": "无法保存顺序。"
+        "orderError": "无法保存顺序。",
+        "iconSymbol": "选择图标",
+        "iconChoose": "选择图标或图片"
     },
     "housekeeping": {
         "title": "家务",
@@ -4429,5 +4431,14 @@
         "recipes": "食谱",
         "shopping": "商品",
         "splitExpenses": "支出"
+    },
+    "iconPicker": {
+        "title": "选择图标",
+        "searchLabel": "搜索图标",
+        "searchPlaceholder": "用英文搜索，例如 film",
+        "resultsLabel": "图标",
+        "noResults": "未找到图标。",
+        "clear": "不使用图标",
+        "unavailable": "图标暂时不可用。"
     }
 }

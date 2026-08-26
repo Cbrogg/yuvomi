@@ -2925,7 +2925,7 @@
         "colorOption": "Cor {{color}}",
         "iconPick": "Escolher imagem",
         "iconClear": "Remover imagem",
-        "iconHint": "Sem imagem, a inicial aparece sobre a cor escolhida.",
+        "iconHint": "Escolha um ícone integrado ou uma imagem sua. Sem nenhum dos dois, a inicial aparece sobre a cor escolhida.",
         "iconTypeError": "Escolha uma imagem PNG, JPEG ou WebP.",
         "iconReadError": "Não foi possível ler a imagem.",
         "iconTooLarge": "A imagem é demasiado grande.",
@@ -2941,7 +2941,9 @@
         "saved": "Atalho guardado",
         "deleted": "Atalho eliminado",
         "loadError": "Não foi possível carregar os atalhos.",
-        "orderError": "Não foi possível guardar a ordem."
+        "orderError": "Não foi possível guardar a ordem.",
+        "iconSymbol": "Escolher ícone",
+        "iconChoose": "Escolher ícone ou imagem"
     },
     "housekeeping": {
         "title": "Faxina",
@@ -4429,5 +4431,14 @@
         "recipes": "Receita",
         "shopping": "Item",
         "splitExpenses": "Despesa"
+    },
+    "iconPicker": {
+        "title": "Escolher ícone",
+        "searchLabel": "Procurar ícone",
+        "searchPlaceholder": "Procure em inglês, p. ex. film",
+        "resultsLabel": "Ícones",
+        "noResults": "Nenhum ícone encontrado.",
+        "clear": "Sem ícone",
+        "unavailable": "Os ícones não estão disponíveis neste momento."
     }
 }

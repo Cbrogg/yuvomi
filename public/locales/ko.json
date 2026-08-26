@@ -2780,7 +2780,7 @@
         "colorOption": "색상 {{color}}",
         "iconPick": "이미지 선택",
         "iconClear": "이미지 제거",
-        "iconHint": "이미지가 없으면 선택한 색 위에 첫 글자가 표시됩니다.",
+        "iconHint": "기본 제공 아이콘이나 직접 만든 이미지를 고르세요. 둘 다 없으면 선택한 색 위에 첫 글자가 표시됩니다.",
         "iconTypeError": "PNG, JPEG 또는 WebP 이미지를 선택하세요.",
         "iconReadError": "이미지를 읽지 못했습니다.",
         "iconTooLarge": "이미지가 너무 큽니다.",
@@ -2796,7 +2796,9 @@
         "saved": "바로가기를 저장했습니다",
         "deleted": "바로가기를 삭제했습니다",
         "loadError": "바로가기를 불러오지 못했습니다.",
-        "orderError": "순서를 저장하지 못했습니다."
+        "orderError": "순서를 저장하지 못했습니다.",
+        "iconSymbol": "아이콘 선택",
+        "iconChoose": "아이콘 또는 이미지 선택"
     },
     "documents": {
         "title": "문서",
@@ -4429,5 +4431,14 @@
         "recipes": "레시피",
         "shopping": "항목",
         "splitExpenses": "지출"
+    },
+    "iconPicker": {
+        "title": "아이콘 선택",
+        "searchLabel": "아이콘 검색",
+        "searchPlaceholder": "영어로 검색하세요. 예: film",
+        "resultsLabel": "아이콘",
+        "noResults": "아이콘을 찾을 수 없습니다.",
+        "clear": "아이콘 없음",
+        "unavailable": "지금은 아이콘을 사용할 수 없습니다."
     }
 }

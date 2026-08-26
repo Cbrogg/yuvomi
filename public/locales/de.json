@@ -2780,7 +2780,7 @@
         "colorOption": "Farbe {{color}}",
         "iconPick": "Bild wählen",
         "iconClear": "Bild entfernen",
-        "iconHint": "Ohne Bild steht der Anfangsbuchstabe auf der gewählten Farbe.",
+        "iconHint": "Wähle ein eingebautes Symbol oder ein eigenes Bild. Ohne beides steht der Anfangsbuchstabe auf der gewählten Farbe.",
         "iconTypeError": "Bitte ein PNG-, JPEG- oder WebP-Bild wählen.",
         "iconReadError": "Das Bild konnte nicht gelesen werden.",
         "iconTooLarge": "Das Bild ist zu groß.",
@@ -2796,7 +2796,9 @@
         "saved": "Schnellzugriff gespeichert",
         "deleted": "Schnellzugriff gelöscht",
         "loadError": "Die Schnellzugriffe konnten nicht geladen werden.",
-        "orderError": "Die Reihenfolge konnte nicht gespeichert werden."
+        "orderError": "Die Reihenfolge konnte nicht gespeichert werden.",
+        "iconSymbol": "Symbol wählen",
+        "iconChoose": "Symbol oder Bild wählen"
     },
     "documents": {
         "title": "Dokumente",
@@ -4429,5 +4431,14 @@
         "recipes": "Rezept",
         "shopping": "Artikel",
         "splitExpenses": "Ausgabe"
+    },
+    "iconPicker": {
+        "title": "Symbol wählen",
+        "searchLabel": "Symbol suchen",
+        "searchPlaceholder": "Auf Englisch suchen, z. B. film",
+        "resultsLabel": "Symbole",
+        "noResults": "Kein Symbol gefunden.",
+        "clear": "Kein Symbol",
+        "unavailable": "Die Symbole sind gerade nicht verfügbar."
     }
 }

@@ -2768,7 +2768,7 @@
         "colorOption": "Colour {{color}}",
         "iconPick": "Choose image",
         "iconClear": "Remove image",
-        "iconHint": "Without an image, the first letter sits on the chosen colour.",
+        "iconHint": "Pick a built-in icon or your own image. Without either, the first letter sits on the chosen colour.",
         "iconTypeError": "Please choose a PNG, JPEG or WebP image.",
         "iconReadError": "The image could not be read.",
         "iconTooLarge": "The image is too large.",
@@ -2784,7 +2784,9 @@
         "saved": "Quick link saved",
         "deleted": "Quick link deleted",
         "loadError": "The quick links could not be loaded.",
-        "orderError": "The order could not be saved."
+        "orderError": "The order could not be saved.",
+        "iconSymbol": "Choose icon",
+        "iconChoose": "Choose icon or image"
     },
     "emptyHint": {
         "tasks": "Tap + to create your first task. Swipe a card left to check off, right to view.",
@@ -4429,5 +4431,14 @@
         "recipes": "Recipe",
         "shopping": "Item",
         "splitExpenses": "Expense"
+    },
+    "iconPicker": {
+        "title": "Choose icon",
+        "searchLabel": "Search icons",
+        "searchPlaceholder": "Search in English, e.g. film",
+        "resultsLabel": "Icons",
+        "noResults": "No icon found.",
+        "clear": "No icon",
+        "unavailable": "Icons are unavailable right now."
     }
 }

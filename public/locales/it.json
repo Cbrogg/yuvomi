@@ -2925,7 +2925,7 @@
         "colorOption": "Colore {{color}}",
         "iconPick": "Scegli immagine",
         "iconClear": "Rimuovi immagine",
-        "iconHint": "Senza immagine, l'iniziale appare sul colore scelto.",
+        "iconHint": "Scegli un'icona integrata o un'immagine tua. Senza nessuna delle due, l'iniziale appare sul colore scelto.",
         "iconTypeError": "Scegli un'immagine PNG, JPEG o WebP.",
         "iconReadError": "Impossibile leggere l'immagine.",
         "iconTooLarge": "L'immagine è troppo grande.",
@@ -2941,7 +2941,9 @@
         "saved": "Collegamento salvato",
         "deleted": "Collegamento eliminato",
         "loadError": "Impossibile caricare i collegamenti rapidi.",
-        "orderError": "Impossibile salvare l'ordine."
+        "orderError": "Impossibile salvare l'ordine.",
+        "iconSymbol": "Scegli icona",
+        "iconChoose": "Scegli icona o immagine"
     },
     "housekeeping": {
         "title": "Pulizie",
@@ -4429,5 +4431,14 @@
         "recipes": "Ricetta",
         "shopping": "Articolo",
         "splitExpenses": "Spesa"
+    },
+    "iconPicker": {
+        "title": "Scegli icona",
+        "searchLabel": "Cerca icona",
+        "searchPlaceholder": "Cerca in inglese, es. film",
+        "resultsLabel": "Icone",
+        "noResults": "Nessuna icona trovata.",
+        "clear": "Nessuna icona",
+        "unavailable": "Le icone non sono disponibili al momento."
     }
 }

@@ -2925,7 +2925,7 @@
         "colorOption": "{{color}} rengi",
         "iconPick": "Görsel seç",
         "iconClear": "Görseli kaldır",
-        "iconHint": "Görsel yoksa seçilen rengin üzerinde baş harf görünür.",
+        "iconHint": "Yerleşik bir simge ya da kendi görselinizi seçin. İkisi de yoksa seçilen rengin üzerinde baş harf görünür.",
         "iconTypeError": "Lütfen PNG, JPEG veya WebP görsel seçin.",
         "iconReadError": "Görsel okunamadı.",
         "iconTooLarge": "Görsel çok büyük.",
@@ -2941,7 +2941,9 @@
         "saved": "Hızlı bağlantı kaydedildi",
         "deleted": "Hızlı bağlantı silindi",
         "loadError": "Hızlı bağlantılar yüklenemedi.",
-        "orderError": "Sıralama kaydedilemedi."
+        "orderError": "Sıralama kaydedilemedi.",
+        "iconSymbol": "Simge seç",
+        "iconChoose": "Simge ya da görsel seç"
     },
     "housekeeping": {
         "title": "Ev işleri",
@@ -4429,5 +4431,14 @@
         "recipes": "Tarif",
         "shopping": "Ürün",
         "splitExpenses": "Gider"
+    },
+    "iconPicker": {
+        "title": "Simge seç",
+        "searchLabel": "Simge ara",
+        "searchPlaceholder": "İngilizce arayın, örn. film",
+        "resultsLabel": "Simgeler",
+        "noResults": "Simge bulunamadı.",
+        "clear": "Simge yok",
+        "unavailable": "Simgeler şu anda kullanılamıyor."
     }
 }

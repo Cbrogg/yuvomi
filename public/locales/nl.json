@@ -2768,7 +2768,7 @@
         "colorOption": "Kleur {{color}}",
         "iconPick": "Afbeelding kiezen",
         "iconClear": "Afbeelding verwijderen",
-        "iconHint": "Zonder afbeelding staat de eerste letter op de gekozen kleur.",
+        "iconHint": "Kies een ingebouwd pictogram of een eigen afbeelding. Zonder beide staat de eerste letter op de gekozen kleur.",
         "iconTypeError": "Kies een PNG-, JPEG- of WebP-afbeelding.",
         "iconReadError": "De afbeelding kon niet worden gelezen.",
         "iconTooLarge": "De afbeelding is te groot.",
@@ -2784,7 +2784,9 @@
         "saved": "Snelkoppeling opgeslagen",
         "deleted": "Snelkoppeling verwijderd",
         "loadError": "De snelkoppelingen konden niet worden geladen.",
-        "orderError": "De volgorde kon niet worden opgeslagen."
+        "orderError": "De volgorde kon niet worden opgeslagen.",
+        "iconSymbol": "Pictogram kiezen",
+        "iconChoose": "Pictogram of afbeelding kiezen"
     },
     "emptyHint": {
         "tasks": "Tik op + om je eerste taak aan te maken. Veeg een kaart naar links om af te vinken, naar rechts om te bekijken.",
@@ -4429,5 +4431,14 @@
         "recipes": "Recept",
         "shopping": "Item",
         "splitExpenses": "Uitgave"
+    },
+    "iconPicker": {
+        "title": "Pictogram kiezen",
+        "searchLabel": "Pictogram zoeken",
+        "searchPlaceholder": "Zoek in het Engels, bijv. film",
+        "resultsLabel": "Pictogrammen",
+        "noResults": "Geen pictogram gevonden.",
+        "clear": "Geen pictogram",
+        "unavailable": "Pictogrammen zijn nu niet beschikbaar."
     }
 }

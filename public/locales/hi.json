@@ -2925,7 +2925,7 @@
         "colorOption": "रंग {{color}}",
         "iconPick": "छवि चुनें",
         "iconClear": "छवि हटाएँ",
-        "iconHint": "छवि न हो तो चुने हुए रंग पर पहला अक्षर दिखता है।",
+        "iconHint": "कोई अंतर्निहित आइकन या अपनी छवि चुनें। दोनों न हों तो चुने हुए रंग पर पहला अक्षर दिखता है।",
         "iconTypeError": "कृपया PNG, JPEG या WebP छवि चुनें।",
         "iconReadError": "छवि पढ़ी नहीं जा सकी।",
         "iconTooLarge": "छवि बहुत बड़ी है।",
@@ -2941,7 +2941,9 @@
         "saved": "त्वरित लिंक सहेजा गया",
         "deleted": "त्वरित लिंक हटाया गया",
         "loadError": "त्वरित लिंक लोड नहीं हो सके।",
-        "orderError": "क्रम सहेजा नहीं जा सका।"
+        "orderError": "क्रम सहेजा नहीं जा सका।",
+        "iconSymbol": "आइकन चुनें",
+        "iconChoose": "आइकन या छवि चुनें"
     },
     "housekeeping": {
         "title": "गृहकार्य",
@@ -4429,5 +4431,14 @@
         "recipes": "रेसिपी",
         "shopping": "आइटम",
         "splitExpenses": "व्यय"
+    },
+    "iconPicker": {
+        "title": "आइकन चुनें",
+        "searchLabel": "आइकन खोजें",
+        "searchPlaceholder": "अंग्रेज़ी में खोजें, जैसे film",
+        "resultsLabel": "आइकन",
+        "noResults": "कोई आइकन नहीं मिला।",
+        "clear": "कोई आइकन नहीं",
+        "unavailable": "आइकन अभी उपलब्ध नहीं हैं।"
     }
 }

@@ -2780,7 +2780,7 @@
         "colorOption": "Warna {{color}}",
         "iconPick": "Pilih gambar",
         "iconClear": "Hapus gambar",
-        "iconHint": "Tanpa gambar, huruf pertama tampil di atas warna pilihan.",
+        "iconHint": "Pilih ikon bawaan atau gambar Anda sendiri. Tanpa keduanya, huruf pertama tampil di atas warna pilihan.",
         "iconTypeError": "Pilih gambar PNG, JPEG, atau WebP.",
         "iconReadError": "Gambar tidak dapat dibaca.",
         "iconTooLarge": "Gambar terlalu besar.",
@@ -2796,7 +2796,9 @@
         "saved": "Tautan cepat disimpan",
         "deleted": "Tautan cepat dihapus",
         "loadError": "Tautan cepat tidak dapat dimuat.",
-        "orderError": "Urutan tidak dapat disimpan."
+        "orderError": "Urutan tidak dapat disimpan.",
+        "iconSymbol": "Pilih ikon",
+        "iconChoose": "Pilih ikon atau gambar"
     },
     "documents": {
         "title": "Dokumen",
@@ -4429,5 +4431,14 @@
         "recipes": "Resep",
         "shopping": "Item",
         "splitExpenses": "Pengeluaran"
+    },
+    "iconPicker": {
+        "title": "Pilih ikon",
+        "searchLabel": "Cari ikon",
+        "searchPlaceholder": "Cari dalam bahasa Inggris, mis. film",
+        "resultsLabel": "Ikon",
+        "noResults": "Ikon tidak ditemukan.",
+        "clear": "Tanpa ikon",
+        "unavailable": "Ikon sedang tidak tersedia."
     }
 }

@@ -2925,7 +2925,7 @@
         "colorOption": "Color {{color}}",
         "iconPick": "Elegir imagen",
         "iconClear": "Quitar imagen",
-        "iconHint": "Sin imagen, la inicial aparece sobre el color elegido.",
+        "iconHint": "Elige un icono integrado o una imagen propia. Sin ninguno de los dos, la inicial aparece sobre el color elegido.",
         "iconTypeError": "Elige una imagen PNG, JPEG o WebP.",
         "iconReadError": "No se ha podido leer la imagen.",
         "iconTooLarge": "La imagen es demasiado grande.",
@@ -2941,7 +2941,9 @@
         "saved": "Acceso rápido guardado",
         "deleted": "Acceso rápido eliminado",
         "loadError": "No se han podido cargar los accesos rápidos.",
-        "orderError": "No se ha podido guardar el orden."
+        "orderError": "No se ha podido guardar el orden.",
+        "iconSymbol": "Elegir icono",
+        "iconChoose": "Elegir icono o imagen"
     },
     "housekeeping": {
         "title": "Limpieza",
@@ -4429,5 +4431,14 @@
         "recipes": "Receta",
         "shopping": "Artículo",
         "splitExpenses": "Gasto"
+    },
+    "iconPicker": {
+        "title": "Elegir icono",
+        "searchLabel": "Buscar icono",
+        "searchPlaceholder": "Busca en inglés, p. ej. film",
+        "resultsLabel": "Iconos",
+        "noResults": "No se encontró ningún icono.",
+        "clear": "Sin icono",
+        "unavailable": "Los iconos no están disponibles ahora mismo."
     }
 }

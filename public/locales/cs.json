@@ -2594,7 +2594,7 @@
         "colorOption": "Barva {{color}}",
         "iconPick": "Vybrat obrázek",
         "iconClear": "Odebrat obrázek",
-        "iconHint": "Bez obrázku se na zvolené barvě zobrazí první písmeno.",
+        "iconHint": "Vyberte vestavěnou ikonu nebo vlastní obrázek. Bez obojího se na zvolené barvě zobrazí první písmeno.",
         "iconTypeError": "Vyberte obrázek PNG, JPEG nebo WebP.",
         "iconReadError": "Obrázek se nepodařilo načíst.",
         "iconTooLarge": "Obrázek je příliš velký.",
@@ -2610,7 +2610,9 @@
         "saved": "Rychlý odkaz uložen",
         "deleted": "Rychlý odkaz smazán",
         "loadError": "Rychlé odkazy se nepodařilo načíst.",
-        "orderError": "Pořadí se nepodařilo uložit."
+        "orderError": "Pořadí se nepodařilo uložit.",
+        "iconSymbol": "Vybrat ikonu",
+        "iconChoose": "Vybrat ikonu nebo obrázek"
     },
     "emptyHint": {
         "tasks": "Klepněte na + a vytvořte svůj první úkol. Přejetím karty doleva ji označíte za hotovou, doprava zobrazíte.",
@@ -4429,5 +4431,14 @@
         "recipes": "Recept",
         "shopping": "Položka",
         "splitExpenses": "Výdaj"
+    },
+    "iconPicker": {
+        "title": "Vybrat ikonu",
+        "searchLabel": "Hledat ikonu",
+        "searchPlaceholder": "Hledejte anglicky, např. film",
+        "resultsLabel": "Ikony",
+        "noResults": "Žádná ikona nenalezena.",
+        "clear": "Bez ikony",
+        "unavailable": "Ikony nejsou momentálně dostupné."
     }
 }
