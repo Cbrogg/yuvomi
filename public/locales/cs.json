@@ -3093,7 +3093,18 @@
         "budgetFolder": "Doklady",
         "splitExpensesFolder": "Společné výdaje",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Úkoly"
+        "tasksFolder": "Úkoly",
+        "newSubfolder": "Nová podsložka",
+        "moveFolder": "Přesunout složku",
+        "moveFolderTo": "Přesunout „{{name}}\" do",
+        "folderMovedToast": "Složka přesunuta",
+        "folderParentLabel": "Nadřazená složka",
+        "folderRootLevel": "Nejvyšší úroveň",
+        "folderPathLabel": "Cesta ke složce",
+        "folderExpand": "Rozbalit „{{name}}\"",
+        "folderCollapse": "Sbalit „{{name}}\"",
+        "deleteFolderSubtreeDetail": "Smaže se také {{count}} podsložek uvnitř. Dokumenty zůstanou a budou dostupné přes filtr pro dokumenty bez složky.",
+        "deleteFolderSubtreeDetail_one": "Smaže se také podsložka uvnitř. Dokumenty zůstanou a budou dostupné přes filtr pro dokumenty bez složky."
     },
     "reminders": {
         "sectionTitle": "Připomínka",

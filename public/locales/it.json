@@ -2886,7 +2886,18 @@
         "budgetFolder": "Ricevute",
         "splitExpensesFolder": "Spese condivise",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Attività"
+        "tasksFolder": "Attività",
+        "newSubfolder": "Nuova sottocartella",
+        "moveFolder": "Sposta cartella",
+        "moveFolderTo": "Sposta «{{name}}» in",
+        "folderMovedToast": "Cartella spostata",
+        "folderParentLabel": "Cartella superiore",
+        "folderRootLevel": "Livello principale",
+        "folderPathLabel": "Percorso della cartella",
+        "folderExpand": "Espandi «{{name}}»",
+        "folderCollapse": "Comprimi «{{name}}»",
+        "deleteFolderSubtreeDetail": "Verranno eliminate anche le {{count}} sottocartelle al suo interno. I documenti restano e sono raggiungibili tramite il filtro per i documenti senza cartella.",
+        "deleteFolderSubtreeDetail_one": "Verrà eliminata anche la sottocartella al suo interno. I documenti restano e sono raggiungibili tramite il filtro per i documenti senza cartella."
     },
     "shortcuts": {
         "goKitchen": "Cucina",

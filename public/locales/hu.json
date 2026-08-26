@@ -2943,7 +2943,18 @@
         "budgetFolder": "Bizonylatok",
         "splitExpensesFolder": "Megosztott költségek",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Feladatok"
+        "tasksFolder": "Feladatok",
+        "newSubfolder": "Új almappa",
+        "moveFolder": "Mappa áthelyezése",
+        "moveFolderTo": "„{{name}}\" áthelyezése ide",
+        "folderMovedToast": "Mappa áthelyezve",
+        "folderParentLabel": "Szülőmappa",
+        "folderRootLevel": "Legfelső szint",
+        "folderPathLabel": "Mappa útvonala",
+        "folderExpand": "„{{name}}\" kibontása",
+        "folderCollapse": "„{{name}}\" összecsukása",
+        "deleteFolderSubtreeDetail": "A benne lévő {{count}} almappa is törlődik. A dokumentumok megmaradnak, és elérhetők a mappa nélküli dokumentumok szűrőjével.",
+        "deleteFolderSubtreeDetail_one": "A benne lévő almappa is törlődik. A dokumentumok megmaradnak, és elérhetők a mappa nélküli dokumentumok szűrőjével."
     },
     "housekeeping": {
         "title": "Háztartás",

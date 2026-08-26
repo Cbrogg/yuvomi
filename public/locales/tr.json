@@ -2886,7 +2886,18 @@
         "budgetFolder": "Fişler",
         "splitExpensesFolder": "Paylaşılan giderler",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Görevler"
+        "tasksFolder": "Görevler",
+        "newSubfolder": "Yeni alt klasör",
+        "moveFolder": "Klasörü taşı",
+        "moveFolderTo": "\"{{name}}\" şuraya taşınsın",
+        "folderMovedToast": "Klasör taşındı",
+        "folderParentLabel": "Üst klasör",
+        "folderRootLevel": "En üst düzey",
+        "folderPathLabel": "Klasör yolu",
+        "folderExpand": "\"{{name}}\" genişlet",
+        "folderCollapse": "\"{{name}}\" daralt",
+        "deleteFolderSubtreeDetail": "İçindeki {{count}} alt klasör de silinir. Belgeler kalır ve klasörsüz belgeler filtresinden erişilebilir.",
+        "deleteFolderSubtreeDetail_one": "İçindeki alt klasör de silinir. Belgeler kalır ve klasörsüz belgeler filtresinden erişilebilir."
     },
     "shortcuts": {
         "goKitchen": "Mutfak",

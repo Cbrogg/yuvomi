@@ -2886,7 +2886,18 @@
         "budgetFolder": "Comprovativos",
         "splitExpensesFolder": "Despesas compartilhadas",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Tarefas"
+        "tasksFolder": "Tarefas",
+        "newSubfolder": "Nova subpasta",
+        "moveFolder": "Mover pasta",
+        "moveFolderTo": "Mover «{{name}}» para",
+        "folderMovedToast": "Pasta movida",
+        "folderParentLabel": "Pasta superior",
+        "folderRootLevel": "Nível superior",
+        "folderPathLabel": "Caminho da pasta",
+        "folderExpand": "Expandir «{{name}}»",
+        "folderCollapse": "Recolher «{{name}}»",
+        "deleteFolderSubtreeDetail": "As {{count}} subpastas lá dentro também serão eliminadas. Os documentos permanecem e continuam acessíveis pelo filtro de documentos sem pasta.",
+        "deleteFolderSubtreeDetail_one": "A subpasta lá dentro também será eliminada. Os documentos permanecem e continuam acessíveis pelo filtro de documentos sem pasta."
     },
     "shortcuts": {
         "goKitchen": "Cozinha",

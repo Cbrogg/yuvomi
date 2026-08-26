@@ -2886,7 +2886,18 @@
         "budgetFolder": "Kvitton",
         "splitExpensesFolder": "Delade utgifter",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Uppgifter"
+        "tasksFolder": "Uppgifter",
+        "newSubfolder": "Ny undermapp",
+        "moveFolder": "Flytta mapp",
+        "moveFolderTo": "Flytta ”{{name}}” till",
+        "folderMovedToast": "Mappen flyttades",
+        "folderParentLabel": "Överordnad mapp",
+        "folderRootLevel": "Översta nivån",
+        "folderPathLabel": "Sökväg till mappen",
+        "folderExpand": "Expandera ”{{name}}”",
+        "folderCollapse": "Fäll ihop ”{{name}}”",
+        "deleteFolderSubtreeDetail": "De {{count}} undermapparna i den tas också bort. Dokumenten finns kvar och nås via filtret för dokument utan mapp.",
+        "deleteFolderSubtreeDetail_one": "Undermappen i den tas också bort. Dokumenten finns kvar och nås via filtret för dokument utan mapp."
     },
     "shortcuts": {
         "goKitchen": "Kök",

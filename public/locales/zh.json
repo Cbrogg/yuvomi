@@ -2886,7 +2886,18 @@
         "budgetFolder": "凭证",
         "splitExpensesFolder": "共享支出",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "任务"
+        "tasksFolder": "任务",
+        "newSubfolder": "新建子文件夹",
+        "moveFolder": "移动文件夹",
+        "moveFolderTo": "将“{{name}}”移动到",
+        "folderMovedToast": "文件夹已移动",
+        "folderParentLabel": "上级文件夹",
+        "folderRootLevel": "最上层",
+        "folderPathLabel": "文件夹路径",
+        "folderExpand": "展开“{{name}}”",
+        "folderCollapse": "折叠“{{name}}”",
+        "deleteFolderSubtreeDetail": "其中的 {{count}} 个子文件夹也会一并删除。文档仍会保留，可通过“无文件夹的文档”筛选找到。",
+        "deleteFolderSubtreeDetail_one": "其中的子文件夹也会一并删除。文档仍会保留，可通过“无文件夹的文档”筛选找到。"
     },
     "shortcuts": {
         "goKitchen": "厨房",

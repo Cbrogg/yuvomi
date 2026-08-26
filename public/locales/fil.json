@@ -2943,7 +2943,18 @@
         "budgetFolder": "Mga Resibo",
         "splitExpensesFolder": "Mga hinating gastos",
         "inventoryFolder": "Imbentaryo",
-        "tasksFolder": "Mga gawain"
+        "tasksFolder": "Mga gawain",
+        "newSubfolder": "Bagong subfolder",
+        "moveFolder": "Ilipat ang folder",
+        "moveFolderTo": "Ilipat ang \"{{name}}\" sa",
+        "folderMovedToast": "Nailipat ang folder",
+        "folderParentLabel": "Pangunahing folder",
+        "folderRootLevel": "Pinakamataas na antas",
+        "folderPathLabel": "Landas ng folder",
+        "folderExpand": "Palawakin ang \"{{name}}\"",
+        "folderCollapse": "Itiklop ang \"{{name}}\"",
+        "deleteFolderSubtreeDetail": "Buburahin din ang {{count}} na subfolder sa loob. Mananatili ang mga dokumento at maaabot pa rin sa filter para sa mga dokumentong walang folder.",
+        "deleteFolderSubtreeDetail_one": "Buburahin din ang subfolder sa loob. Mananatili ang mga dokumento at maaabot pa rin sa filter para sa mga dokumentong walang folder."
     },
     "userMultiSelect": {
         "nobody": "- Wala -",

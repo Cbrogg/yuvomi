@@ -2886,7 +2886,18 @@
         "budgetFolder": "الإيصالات",
         "splitExpensesFolder": "المصاريف المشتركة",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "المهام"
+        "tasksFolder": "المهام",
+        "newSubfolder": "مجلد فرعي جديد",
+        "moveFolder": "نقل المجلد",
+        "moveFolderTo": "نقل «{{name}}» إلى",
+        "folderMovedToast": "تم نقل المجلد",
+        "folderParentLabel": "المجلد الأصل",
+        "folderRootLevel": "المستوى الأعلى",
+        "folderPathLabel": "مسار المجلد",
+        "folderExpand": "توسيع «{{name}}»",
+        "folderCollapse": "طي «{{name}}»",
+        "deleteFolderSubtreeDetail": "سيتم حذف {{count}} مجلدات فرعية بداخله أيضًا. تبقى المستندات ويمكن الوصول إليها عبر عامل تصفية المستندات بدون مجلد.",
+        "deleteFolderSubtreeDetail_one": "سيتم حذف المجلد الفرعي بداخله أيضًا. تبقى المستندات ويمكن الوصول إليها عبر عامل تصفية المستندات بدون مجلد."
     },
     "shortcuts": {
         "goKitchen": "المطبخ",

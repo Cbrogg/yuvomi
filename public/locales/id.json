@@ -2943,7 +2943,18 @@
         "budgetFolder": "Bukti",
         "splitExpensesFolder": "Pengeluaran Bersama",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Tugas"
+        "tasksFolder": "Tugas",
+        "newSubfolder": "Subfolder baru",
+        "moveFolder": "Pindahkan folder",
+        "moveFolderTo": "Pindahkan \"{{name}}\" ke",
+        "folderMovedToast": "Folder dipindahkan",
+        "folderParentLabel": "Folder induk",
+        "folderRootLevel": "Tingkat teratas",
+        "folderPathLabel": "Jalur folder",
+        "folderExpand": "Buka \"{{name}}\"",
+        "folderCollapse": "Tutup \"{{name}}\"",
+        "deleteFolderSubtreeDetail": "{{count}} subfolder di dalamnya juga akan dihapus. Dokumen tetap ada dan bisa dijangkau lewat filter untuk dokumen tanpa folder.",
+        "deleteFolderSubtreeDetail_one": "Subfolder di dalamnya juga akan dihapus. Dokumen tetap ada dan bisa dijangkau lewat filter untuk dokumen tanpa folder."
     },
     "userMultiSelect": {
         "nobody": "- Tidak ada -",

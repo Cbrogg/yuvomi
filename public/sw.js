@@ -111,6 +111,7 @@ const APP_SHELL = [
   '/utils/document-preview.js',
   '/utils/empty-state.js',
   '/utils/fab.js',
+  '/utils/folder-tree.js',
   '/utils/health-activity.js',
   '/utils/health-cycle.js',
   '/utils/health-labs.js',

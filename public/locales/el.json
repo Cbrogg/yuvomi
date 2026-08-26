@@ -2886,7 +2886,18 @@
         "budgetFolder": "Αποδείξεις",
         "splitExpensesFolder": "Κοινά έξοδα",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Εργασίες"
+        "tasksFolder": "Εργασίες",
+        "newSubfolder": "Νέος υποφάκελος",
+        "moveFolder": "Μετακίνηση φακέλου",
+        "moveFolderTo": "Μετακίνηση του «{{name}}» σε",
+        "folderMovedToast": "Ο φάκελος μετακινήθηκε",
+        "folderParentLabel": "Γονικός φάκελος",
+        "folderRootLevel": "Ανώτατο επίπεδο",
+        "folderPathLabel": "Διαδρομή φακέλου",
+        "folderExpand": "Ανάπτυξη «{{name}}»",
+        "folderCollapse": "Σύμπτυξη «{{name}}»",
+        "deleteFolderSubtreeDetail": "Θα διαγραφούν και οι {{count}} υποφάκελοι μέσα. Τα έγγραφα παραμένουν και είναι προσβάσιμα μέσω του φίλτρου για έγγραφα χωρίς φάκελο.",
+        "deleteFolderSubtreeDetail_one": "Θα διαγραφεί και ο υποφάκελος μέσα. Τα έγγραφα παραμένουν και είναι προσβάσιμα μέσω του φίλτρου για έγγραφα χωρίς φάκελο."
     },
     "shortcuts": {
         "goKitchen": "Κουζίνα",

@@ -2943,7 +2943,18 @@
         "budgetFolder": "Dowody",
         "splitExpensesFolder": "Wspólne wydatki",
         "inventoryFolder": "Inventory",
-        "tasksFolder": "Zadania"
+        "tasksFolder": "Zadania",
+        "newSubfolder": "Nowy podfolder",
+        "moveFolder": "Przenieś folder",
+        "moveFolderTo": "Przenieś „{{name}}\" do",
+        "folderMovedToast": "Folder przeniesiony",
+        "folderParentLabel": "Folder nadrzędny",
+        "folderRootLevel": "Najwyższy poziom",
+        "folderPathLabel": "Ścieżka folderu",
+        "folderExpand": "Rozwiń „{{name}}\"",
+        "folderCollapse": "Zwiń „{{name}}\"",
+        "deleteFolderSubtreeDetail": "Zostanie usuniętych także {{count}} podfolderów w środku. Dokumenty pozostaną i będą dostępne przez filtr dokumentów bez folderu.",
+        "deleteFolderSubtreeDetail_one": "Zostanie usunięty także podfolder w środku. Dokumenty pozostaną i będą dostępne przez filtr dokumentów bez folderu."
     },
     "userMultiSelect": {
         "nobody": "– Nikt –",
