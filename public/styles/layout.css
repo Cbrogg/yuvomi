@@ -3970,10 +3970,18 @@ p.field-hint--warn[hidden] {
   .form-advanced__chevron { transition: none; }
 }
 
+/* Dieselbe Not, dieselbe Antwort wie bei `.modal-panel__footer` weiter unten
+ * (#872): eine Knopfzeile im Modal-Rumpf quetscht ihre Knoepfe sonst genauso
+ * unter die Inhaltsbreite. Die Begruendung steht dort, damit sie EINMAL steht. */
 .modal-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.modal-actions > .btn {
+  white-space: normal;
 }
 
 /* Einleitender Hinweis-Text über gestapelten Modal-Aktionen (z. B. Scope-Wahl). */
@@ -3994,13 +4002,37 @@ p.field-hint--warn[hidden] {
   align-items: stretch;
 }
 
+/* EINE FUSSZEILE QUETSCHT KEINEN KNOPF - SIE BRICHT UM (#872).
+ *
+ * `.btn` traegt `white-space: nowrap` und keinen Schrumpfschutz. Ohne
+ * `flex-wrap` drueckte die Zeile die Knoepfe deshalb unter ihre Inhaltsbreite,
+ * und weil `.btn` seinen Inhalt zentriert, lief der Text auf BEIDEN Seiten aus
+ * dem Knopf: aus „Löschen" wurde sichtbar „öschen". Auf einem Telefon reichten
+ * dafuer schon die drei Aktionen der Aufgaben-Detailansicht (Löschen, Starten,
+ * Aufgabe archivieren).
+ *
+ * DER UMBRUCH IST DIE ANTWORT UND KEINE UEBERLAUFLEISTE. Ein „…"-Menue wie in
+ * SAP Fiori (Vorschlag des Melders) verschoebe die Grenze nur: es misst in
+ * Pixeln, was in 20 Locales unterschiedlich lang ist, und braeuchte fuer den
+ * Rest doch wieder einen Umbruch. Der Umbruch traegt jede Sprache ohne
+ * Messung, und im Sheet ist die Hoehe da.
+ *
+ * DER ZWEITE TEIL GEHOERT DAZU: bricht die ZEILE, kann ein einzelner Knopf
+ * immer noch breiter sein als das Panel (lange Locale, 200 % Zoom). Dann muss
+ * sein TEXT umbrechen duerfen - sonst steht der mittig abgeschnittene Knopf
+ * wieder da, nur seltener. */
 .modal-panel__footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border-subtle);
+}
+
+.modal-panel__footer > .btn {
+  white-space: normal;
 }
 
 /* Fußzeile INNERHALB des scrollenden Bodys (kein direktes Panel-Kind): dort

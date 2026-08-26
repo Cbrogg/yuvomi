@@ -13673,3 +13673,76 @@ test('ein Teilschritt lässt sich korrigieren und entfernen, nicht nur abhaken (
   assert.ok(block, '.subtask-item__action fehlt');
   assert.match(block[1], /min-height:\s*var\(--target-base\)/);
 });
+
+/**
+ * EINE KNOPFZEILE SAGT, OB SIE UMBRICHT (#872).
+ *
+ * Der gemeldete Fehler war nicht kosmetisch: `.btn` traegt `white-space:
+ * nowrap` und keinen Schrumpfschutz, also drueckte eine Flex-Zeile ohne
+ * `flex-wrap` ihre Knoepfe unter die Inhaltsbreite. Weil `.btn` seinen Inhalt
+ * ZENTRIERT, lief der Text danach auf beiden Seiten aus dem Knopf - aus
+ * „Löschen" wurde sichtbar „öschen", ohne Ellipse, ohne Hinweis, dass etwas
+ * fehlt. Es traf die Aufgaben-Detailansicht auf einem Telefon; getroffen
+ * haette es jede Fusszeile mit drei Knoepfen in einer laengeren Locale.
+ *
+ * DIE REGEL VERLANGT EINE ENTSCHEIDUNG, KEINEN BESTIMMTEN WERT. Wo ein
+ * Umbruch falsch waere (zwei Icon-Knoepfe in einer Rasterspalte), steht
+ * `flex-wrap: nowrap` ausdruecklich da. Das unterscheidet eine getroffene
+ * Entscheidung von einem Versaeumnis - und nur Letzteres ist der Bug.
+ *
+ * ALS REGEL UND NICHT ALS ALLOWLIST: er sucht die FORM (rechtsbuendige
+ * Flex-Zeile, deren Name sie als Fuss- oder Aktionszeile ausweist), nicht die
+ * neun Selektoren, die es heute gibt. Beim ersten Lauf fand er in genau
+ * dieser Form acht weitere Zeilen mit demselben Mangel; eine Liste haette nur
+ * die eine gemeldete Stelle gedeckt.
+ *
+ * Guard-Ebene: Form (aus dem Stylesheet gelesen).
+ */
+test('jede rechtsbuendige Knopfzeile sagt, ob sie umbricht (#872)', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const offenders = [];
+  let seenRows = 0;
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
+      if (!/(footer|actions)\b/.test(selector)) continue;
+      if (!/display\s*:\s*(inline-)?flex/.test(body)) continue;
+      if (!/justify-content\s*:\s*(flex-)?end/.test(body)) continue;
+      seenRows += 1;
+      if (/flex-wrap\s*:/.test(body) || /\bflex-flow\s*:/.test(body)) continue;
+      offenders.push(`${file}${at.length ? ` [${at.join(' ')}]` : ''}: ${selector}`);
+    }
+  }
+
+  // Ohne diese Zusicherung waere der Guard gruen, sobald der Scanner die
+  // Stylesheets nicht mehr faende - eine leere Liste ist keine Zusicherung.
+  assert.ok(seenRows >= 9,
+    `Nur ${seenRows} rechtsbuendige Knopfzeilen gefunden - der Scanner findet `
+    + 'public/styles/ nicht mehr, statt nichts zu beanstanden.');
+
+  assert.deepEqual(offenders.sort(), [],
+    'Diese Knopfzeile sagt nicht, was bei Platzmangel passieren soll. Ohne '
+    + '`flex-wrap` quetscht sie ihre Knoepfe unter die Inhaltsbreite, und weil '
+    + '`.btn` zentriert und nicht umbricht, wird der Text beidseitig '
+    + 'abgeschnitten (#872). Setze `flex-wrap: wrap` - oder `nowrap` mit einer '
+    + `Begruendung, wenn der Umbruch hier falsch waere.\n${offenders.join('\n')}`);
+});
+
+/**
+ * Der Umbruch der ZEILE reicht nicht, wenn EIN Knopf allein zu breit ist.
+ *
+ * Genau dann kann die Zeile nicht mehr umbrechen, und der abgeschnittene Text
+ * aus #872 stuende wieder da - seltener, aber unveraendert falsch. Deshalb
+ * geben die beiden kanonischen Modal-Knopfzeilen ihren Knoepfen das Recht,
+ * INNEN umzubrechen, und nehmen damit das `white-space: nowrap` von `.btn`
+ * fuer diesen einen Ort zurueck.
+ */
+test('in den Modal-Knopfzeilen darf der Knopftext umbrechen (#872)', () => {
+  const css = read('../public/styles/layout.css');
+  for (const selector of ['.modal-panel__footer > .btn', '.modal-actions > .btn']) {
+    const rule = [...eachRule(css)].find((r) => r.selector.trim() === selector);
+    assert.ok(rule, `${selector} fehlt - ein einzelner zu breiter Knopf wird wieder abgeschnitten.`);
+    assert.match(rule.body, /white-space\s*:\s*normal/,
+      `${selector} nimmt das nowrap von .btn nicht zurueck.`);
+  }
+});
