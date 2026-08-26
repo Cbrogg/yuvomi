@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.47.0] - 2026-08-27
+
+### Fixed
+
+- **A calendar event's object name no longer decides whether it arrives** (#883). A CalDAV event was
+  never picked up: no error, no warning, the sync reported success with an unchanged event count. The
+  report pointed at the iCal parser - `DURATION` instead of `DTEND`, a `TZID` without an inline
+  `VTIMEZONE`. The parser handles both, and the reproduction from the report now ships as a test so
+  the false trail does not come back.
+
+  **The cause sat one layer above it.** tsdav filters the hrefs of a `calendar-query` response on
+  `.ics` in the path by default, but the extension is pure convention - RFC 4791 prescribes no name
+  for the object resource, and a server may assign its own. Stalwart does exactly that for everything
+  created over JMAP (`NZtPkIOMoK`), while objects written by a CalDAV `PUT` keep the client-chosen
+  `<uid>.ics`. In the same calendar part of the events synced and part did not - and because the
+  filtered-out ones were never fetched, no log line could mention them. The two conspicuous
+  properties and the object name all come from the same JMAP origin; that is what the diagnosis
+  tripped over.
+
+  Yuvomi now uses the rule tsdav itself applies on the CardDAV side - let everything through except
+  the collection itself - and applies it at the **client** rather than at the call sites, since five
+  places fetch calendar objects and a sixth would lose the rule again. Two files that were building
+  their own CalDAV client turned up in the process and are now held by a guard. The same filter also
+  covers the outbound path, where the same objects were being dropped a second time.
+
+  **Per-event visibility comes with it**, as the report asked: anything the parser discards is now
+  reported with its UID and the reason instead of being swallowed. A skipped event was
+  indistinguishable from one the server never sent, and that is precisely what made this impossible
+  to diagnose from the outside.
+
+- **Deleting a series from a synced calendar says so first** (#880). Tapping one occurrence in the
+  month view and pressing delete made every occurrence disappear without a word. The scope was right
+  - Yuvomi cannot split a series that belongs to another calendar, an excluded occurrence would come
+  back on the next sync - but doing it silently was not.
+
+  A foreign series now asks first, and the question **names** the reach rather than offering a choice;
+  a dialog with only one selectable answer would be a prop. The wording follows what actually
+  happens, because a promise that does not hold is worse than none: a **birthday event** mirrors a
+  birthday entry and is recreated on the next run, so it points at the birthday itself; an **ICS
+  subscription** event cannot be deleted at the source at all and returns with the next fetch;
+  everything else is told that the whole series falls, with all its occurrences. Single events are
+  unchanged - the undo toast carries those.
+
+- **The module head is one row again on desktop** (#882). Tasks, Contacts, Budget and Birthdays broke
+  their head onto two rows, the Calendar in its week, day and agenda views. The rule that pulls the
+  end of the head row back to the reading measure did it with a margin on the last slot - and a
+  margin counts towards the flex container's *line occupancy* while never yielding. Measured at
+  1960px: the actions slot claimed 406px of content plus 560px of margin out of a 1280px row, leaving
+  315px for seal, title and search where they needed 441px. The wrap was arithmetically unavoidable
+  rather than content-dependent.
+
+  That offset is now a shrinkable slot, and from 1024px up a head no longer wraps: flex splits rows by
+  the *hypothetical* sizes, i.e. before anything has shrunk, so the head broke while yielding slots
+  stood right next to it. The page title is the last to give way, being the only one that cannot come
+  back. The Calendar's layer chips give up their label before the head wraps, but never their tap
+  target - until now, how many layers you had switched on decided how many rows your calendar head
+  had. At exactly 1024px the head still wraps, and deliberately so: the sidebar leaves it 740px of
+  inner width, of which the reading measure alone claims 720px.
+
+
 ## [2.46.0] - 2026-08-26
 
 ### Added
