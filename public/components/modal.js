@@ -22,6 +22,7 @@
 
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
+import { pushOverlay, dropOverlay, isOverlayOpen } from '/utils/overlay-history.js';
 
 let activeOverlay = null;
 let previouslyFocused = null;
@@ -38,6 +39,36 @@ let _modalFormSeq = 0;
 //   confirming - „Änderungen verwerfen?"-Dialog liegt über einem dirty Modal
 //   closing    - Schließ-Animation/Cleanup läuft (blockt erneutes Schließen)
 let modalState = 'idle';
+
+/**
+ * DAS MODAL-SYSTEM HAELT GENAU EINEN EINTRAG IN DER ZURUECK-GESTE (#871),
+ * nicht einen je geoeffnetem Dialog.
+ *
+ * Es stapelt per Konstruktion nicht: `openModal()` schliesst ein vorheriges
+ * Modal, und `confirmModal()` PARKT das darunter liegende, statt es zu
+ * schliessen. Aus Sicht des Nutzers ist also durchgehend „ein Dialog offen" -
+ * und das ist genau die Ebene, die eine Zurueck-Geste meint.
+ *
+ * Ein Marker je Dialog haette zwei Fehler: der Wechsel Modal→Modal wuerde
+ * einen `history.back()` gegen ein `pushState()` im selben Tick fuehren
+ * (Reihenfolge nicht zugesichert), und ein Zurueck ueber einem
+ * Bestaetigungsdialog verbrauchte den Marker des Formulars darunter mit.
+ */
+let _overlayToken = null;
+
+/**
+ * Der Rueckweg aus der Zurueck-Geste.
+ *
+ * Der Rueckgabewert entscheidet, ob die Geste verbraucht ist: `false` legt den
+ * Marker neu an. Beide Faelle, die das brauchen, stehen hier zusammen -
+ * abgelehntes Verwerfen (das Modal bleibt offen) und ein geschlossener
+ * Bestaetigungsdialog, unter dem ein geparktes Formular wieder auftaucht.
+ */
+async function _closeFromBackNavigation() {
+  const closed = await closeModal();
+  if (!closed) return false;
+  return !document.querySelector('.modal-overlay');
+}
 
 // Overlay-Dimming: theme-color abdunkeln im Standalone-Modus
 const OVERLAY_THEME_COLOR = '#1A1A1A';
@@ -415,6 +446,16 @@ function _doClose(overlayEl) {
     activeOverlay = null;
     modalState = 'idle';
 
+    // Der Marker der Zurueck-Geste geht zurueck, sobald WIRKLICH kein Overlay
+    // mehr steht (#871). Gefragt ist das DOM und nicht `activeOverlay`: ein
+    // Bestaetigungsdialog parkt das Formular darunter, es bleibt liegen und
+    // haelt den Dialogzustand - `activeOverlay` sagt darueber nichts.
+    if (_overlayToken !== null && !document.querySelector('.modal-overlay')) {
+      const token = _overlayToken;
+      _overlayToken = null;
+      dropOverlay(token);
+    }
+
     // Scroll-Lock aufheben
     document.body.style.overflow = '';
 
@@ -595,6 +636,16 @@ export function openModal({
     _wireSheetSwipe(panel);
   }
 
+  // Ab jetzt faengt die Zurueck-Geste diesen Dialog ab, statt die Seite
+  // darunter zu wechseln (#871). Nur der erste Dialog legt den Marker an -
+  // Begruendung an `_overlayToken`.
+  // `isOverlayOpen` und nicht nur `!== null`: nach einem Sitzungsende hat das
+  // Register vergessen, was offen war, und ein Token ohne Eintrag legte hier
+  // nie wieder einen neuen an.
+  if (_overlayToken === null || !isOverlayOpen(_overlayToken)) {
+    _overlayToken = pushOverlay(_closeFromBackNavigation);
+  }
+
   // Overlay-Click schließt Modal
   activeOverlay.addEventListener('click', (e) => {
     if (e.target === activeOverlay) closeModal();
@@ -651,10 +702,17 @@ export function openModal({
 // closeModal
 // --------------------------------------------------------
 
+/**
+ * @returns {Promise<boolean>} ob der Dialog wirklich zugeht. `false` heisst
+ *   ausschliesslich: der Nutzer hat das Verwerfen ungespeicherter Aenderungen
+ *   abgelehnt, das Modal bleibt offen. Die Zurueck-Geste braucht diese
+ *   Unterscheidung (#871) - ohne sie verloere ein abgelehntes Schliessen den
+ *   History-Marker, und die naechste Geste fuehre aus der Seite heraus.
+ */
 export async function closeModal({ force = false } = {}) {
   // Bereits im Schließ-Lauf? Erneute Aufrufe (z.B. schnelles Doppel-Schließen,
-  // Hardware-Back) ignorieren.
-  if (!activeOverlay || modalState === 'closing') return;
+  // Hardware-Back) ignorieren - der Dialog geht ohnehin zu, also `true`.
+  if (!activeOverlay || modalState === 'closing') return true;
 
   if (!force) {
     const panel = activeOverlay.querySelector('.modal-panel');
@@ -672,7 +730,7 @@ export async function closeModal({ force = false } = {}) {
         // Verwerfen abgebrochen → dirty Modal exakt wiederherstellen, samt
         // Fokus auf dem Element, das den Dialog ausgelöst hat.
         _resumeSuspendedModal(suspended);
-        return;
+        return false;
       }
 
       // Verwerfen bestätigt → dirty Modal wieder aktiv, regulär abräumen.
@@ -719,10 +777,11 @@ export async function closeModal({ force = false } = {}) {
       clearTimeout(fallback);
       _doClose(capturedOverlay);
     }, { once: true });
-    return;
+    return true;
   }
 
   _doClose(capturedOverlay);
+  return true;
 }
 
 // --------------------------------------------------------

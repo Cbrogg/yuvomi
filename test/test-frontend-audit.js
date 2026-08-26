@@ -13673,3 +13673,81 @@ test('ein Teilschritt lässt sich korrigieren und entfernen, nicht nur abhaken (
   assert.ok(block, '.subtask-item__action fehlt');
   assert.match(block[1], /min-height:\s*var\(--target-base\)/);
 });
+
+/**
+ * JEDES OVERLAY MELDET SICH AN DER ZURUECK-GESTE AN (#871).
+ *
+ * Der gemeldete Fehler war, dass die Zurueck-Geste ueber einem offenen Dialog
+ * die SEITE wechselte und den Dialog stehen liess - im Hintergrund landete man
+ * auf der Uebersicht, davor hing weiter der Termin. Auf dem Telefon ist die
+ * Wischgeste von links der Zurueck-Knopf, also war das die einzige Geste, die
+ * den Zustand kaputt statt kleiner machte.
+ *
+ * DIESE APP HAT NICHT EINEN DIALOG. Neben dem geteilten Modal-System stehen
+ * neun eigene Overlays (Mehr-Blatt, Suche, Hilfe, Icon-Picker, Belegpicker,
+ * Belegvorschau, Buchungspicker, Logopicker, Onboarding, Budget-Inline). Ein
+ * Fix nur im Modal-System haette den gemeldeten Fall geschlossen und die
+ * anderen offen gelassen - und die zehnte Stelle waere wieder eine neue.
+ *
+ * DIE REGEL IST DIE VOLLSTAENDIGKEIT, NICHT DIE LISTE: wer ein Overlay
+ * aufmacht (`aria-modal="true"`), meldet es an. Geprueft wird je Datei, dass
+ * mindestens so viele Anmeldungen wie modale Overlays darin stehen.
+ *
+ * WAS ER NICHT SIEHT, ausgesprochen: er zaehlt je DATEI. Ein zweites Overlay
+ * in einer Datei, die schon eine Anmeldung hat, faellt ihm auf; ein Overlay,
+ * das seinen `aria-modal`-Wert aus einer Variablen setzt, nicht.
+ *
+ * Guard-Ebene: Vollstaendigkeit (aus dem Quelltext gezaehlt).
+ */
+test('jedes modale Overlay meldet sich an der Zurueck-Geste an (#871)', () => {
+  // `aria-modal` als Attribut im Markup ODER als setAttribute-Aufruf - beide
+  // Schreibweisen erzeugen dasselbe gerenderte Overlay.
+  const OPENS_OVERLAY = /aria-modal["']?\s*[,:=]\s*["']?true/g;
+  const REGISTERS = /\b(attachOverlay|pushOverlay)\s*\(/g;
+
+  const offenders = [];
+  let seenOverlays = 0;
+
+  for (const file of walkJsFiles('../public/')) {
+    if (file.includes('/vendor/')) continue;
+    const src = withoutBlockComments(read(file));
+    const opens = (src.match(OPENS_OVERLAY) ?? []).length;
+    if (!opens) continue;
+    seenOverlays += opens;
+    const registers = (src.match(REGISTERS) ?? []).length;
+    if (registers < opens) {
+      offenders.push(`${file}: ${opens} modale Overlays, nur ${registers} Anmeldungen`);
+    }
+  }
+
+  // Ohne diese Zusicherung waere der Guard gruen, sobald die Muster nicht mehr
+  // greifen - eine leere Liste ist keine Zusicherung.
+  assert.ok(seenOverlays >= 10,
+    `Nur ${seenOverlays} modale Overlays gefunden - das Muster greift nicht mehr, `
+    + 'statt nichts zu beanstanden.');
+
+  assert.deepEqual(offenders.sort(), [],
+    'Dieses Overlay faengt die Zurueck-Geste nicht ab. Sie wechselt dann die Seite '
+    + 'darunter und laesst das Overlay stehen (#871) - auf dem Telefon ist das die '
+    + 'Wischgeste von links, also der haeufigste Weg hinaus. Melde es mit '
+    + '`attachOverlay(el, close)` aus /utils/overlay-history.js an; `pushOverlay` '
+    + `nur, wenn das Overlay einen eigenen Lebenszyklus fuehrt.\n${offenders.join('\n')}`);
+});
+
+/**
+ * Und der Router fragt auch wirklich, bevor er navigiert.
+ *
+ * Die Registrierung allein reicht nicht: ohne diesen Handler stuende das
+ * ganze Register da und die Geste liefe weiter an ihm vorbei. Der Test haelt
+ * die EINE Zeile fest, an der die Frage haengt.
+ */
+test('der popstate-Handler fragt zuerst die offenen Overlays (#871)', () => {
+  const router = read('../public/router.js');
+  const handler = /window\.addEventListener\('popstate'[\s\S]*?\n\}\);/.exec(router);
+  assert.ok(handler, 'der popstate-Handler ist nicht mehr auffindbar');
+  assert.match(handler[0], /handleBackNavigation\(\)/,
+    'der Handler fragt die offenen Overlays nicht - die Geste wechselt wieder die Seite');
+  assert.match(handler[0], /if \(!handled\) navigate\(/,
+    'der Handler navigiert unabhaengig von der Antwort - dann bleibt der Dialog '
+    + 'stehen UND die Seite wechselt, also genau der gemeldete Zustand');
+});

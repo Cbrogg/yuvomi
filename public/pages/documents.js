@@ -12,6 +12,7 @@ import { stagger, wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import { renderPageSearch, wirePageSearch } from '/utils/page-search.js';
 import { previewKind } from '/utils/document-preview.js';
+import { attachOverlay } from '/utils/overlay-history.js';
 import { findPageFab } from '/utils/fab.js';
 // Im Solo-Haushalt hat „Wer darf das sehen" genau eine Antwort - gefragt wird
 // dann nicht (utils/household.js). Das Feld bleibt im DOM und behaelt seinen
@@ -1816,6 +1817,9 @@ function openDmsPreview({ item, src, canOpen, onLink }) {
     layer.remove();
     opener?.focus?.();
   };
+  // Wie bei Escape gilt fuer die Zurueck-Geste: sie schliesst zuerst die
+  // Vorschau, nicht die Auswahl darunter (#871).
+  attachOverlay(layer, dismiss);
   // Capture-Phase: das Modal schließt auf Escape über einen Listener am document.
   // Hier wird das Ereignis abgefangen, damit Escape zuerst nur die Vorschau
   // schließt und nicht gleich die ganze Auswahl wegräumt.

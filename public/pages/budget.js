@@ -28,6 +28,7 @@ import { appendCurrencyOptions } from '/settings/currency.js';
 import '/components/category-manager.js';
 import { findPageFab } from '/utils/fab.js';
 import { emptyStateHTML, mountLoadError } from '/utils/empty-state.js';
+import { attachOverlay } from '/utils/overlay-history.js';
 
 // --------------------------------------------------------
 // Konstanten
@@ -2437,6 +2438,9 @@ function requestNameInPanel(panel, { title, label, placeholder }) {
       if (opener?.isConnected) opener.focus();
       resolve(value);
     };
+    // Liegt ueber einem offenen Modal - die Zurueck-Geste meint zuerst ihn
+    // (#871). Leerer Wert heisst: abgebrochen.
+    attachOverlay(overlay, () => cleanup(''));
     overlay.querySelectorAll('[data-action="inline-cancel"]').forEach((btn) => {
       btn.addEventListener('click', () => cleanup(''));
     });

@@ -24,6 +24,10 @@ import { getLastHealthRoute, HEALTH_ROUTES } from '/utils/health-tabs.js';
 import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
+import {
+  handleBackNavigation, resetOverlayHistory, isStaleOverlayMarker,
+  pushOverlay, forgetOverlay, dropOverlay, attachOverlay,
+} from '/utils/overlay-history.js';
 import { isNewerVersion, displayVersion } from '/utils/version.js';
 import { setMaxUploadBytes } from '/utils/upload-limit.js';
 import { syncWallMode } from '/utils/wall-mode.js';
@@ -748,7 +752,12 @@ async function navigate(path, userOrPushState = true, pushState = true) {
     }
 
     if (pushState) {
-      history.pushState({ path }, '', path);
+      // Ein Marker fuer ein Overlay, das gerade zugegangen ist, ist ein
+      // Platzhalter ohne Inhalt (#871). Die neue Seite tritt an SEINE Stelle -
+      // sonst laege zwischen zwei Seiten ein Eintrag, der auf dieselbe Adresse
+      // zeigt, und der Rueckweg braeuchte zwei Gesten fuer einen Schritt.
+      if (isStaleOverlayMarker()) history.replaceState({ path }, '', path);
+      else history.pushState({ path }, '', path);
     }
 
     // Soft-Navigation innerhalb desselben Moduls (z. B. Settings-Blatt → Blatt
@@ -2363,6 +2372,9 @@ function showHelpModal() {
 
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
+  // Die Zurueck-Geste schliesst auch diesen Dialog (#871). `attachOverlay`
+  // statt `pushOverlay`, weil er auf drei Wegen per `remove()` verschwindet.
+  attachOverlay(overlay, () => overlay.remove());
   if (window.lucide) window.lucide.createIcons({ el: panel });
 }
 
@@ -2654,8 +2666,12 @@ function initMoreSheet(container, openSearch) {
   const moreSheetTrap = createFocusTrap(sheet);
   const currentMoreBtn = () => container.querySelector('#more-btn') || moreBtn;
 
+  // Der Marker der Zurueck-Geste, solange das Blatt offen ist (#871).
+  let sheetOverlayToken = null;
+
   function openSheet() {
     lastFocusedBeforeSheet = document.activeElement;
+    sheetOverlayToken = pushOverlay(() => closeSheet());
     setOverlayInteractive(sheet, true);
     sheet.addEventListener('keydown', moreSheetTrap);
     backdrop.classList.add('more-backdrop--visible');
@@ -2671,8 +2687,21 @@ function initMoreSheet(container, openSearch) {
     });
   }
 
+  /**
+   * @param {{restoreFocus?: boolean}} [opts] - `restoreFocus: false` heisst an
+   *   jeder Aufrufstelle „wir navigieren gleich": der Fokus gehoert dann der
+   *   neuen Seite, nicht dem Knopf. Genau diese Faelle duerfen den
+   *   History-Marker nicht per `back()` zurueckgeben, sondern nur vergessen -
+   *   Begruendung an `forgetOverlay()`.
+   */
   function closeSheet({ restoreFocus = true } = {}) {
     if (sheet.getAttribute('aria-hidden') === 'true') return;
+    if (sheetOverlayToken !== null) {
+      const token = sheetOverlayToken;
+      sheetOverlayToken = null;
+      if (restoreFocus) dropOverlay(token);
+      else forgetOverlay(token);
+    }
     setOverlayInteractive(sheet, false);
     sheet.removeEventListener('keydown', moreSheetTrap);
     backdrop.classList.remove('more-backdrop--visible');
@@ -2804,7 +2833,7 @@ function initSearch(container) {
       label.textContent = t(scope.labelKey);
       btn.append(seal, label);
       btn.addEventListener('click', () => {
-        closeSearch();
+        closeSearch({ restoreFocus: false });
         navigate(scope.route);
       });
       list.appendChild(btn);
@@ -2816,9 +2845,13 @@ function initSearch(container) {
     window.lucide?.createIcons({ el: results });
   }
 
+  // Der Marker der Zurueck-Geste, solange die Suche offen ist (#871).
+  let searchOverlayToken = null;
+
   function openSearch() {
     if (window._closeMoreSheet) window._closeMoreSheet({ restoreFocus: false });
     lastFocusedBeforeSearch = document.activeElement;
+    if (searchOverlayToken === null) searchOverlayToken = pushOverlay(() => closeSearch());
     setOverlayInteractive(overlay, true);
     overlay.classList.add('search-overlay--visible');
     if (!input.value.trim()) renderSearchHint();
@@ -2829,7 +2862,19 @@ function initSearch(container) {
     overlay.addEventListener('keydown', _searchTrapHandler);
   }
 
+  /**
+   * @param {{restoreFocus?: boolean}} [opts] - wie beim Mehr-Blatt heisst
+   *   `restoreFocus: false` „wir navigieren gleich", und genau dann darf der
+   *   History-Marker nicht per `back()` zurueckgegeben werden (#871,
+   *   Begruendung an `forgetOverlay()`).
+   */
   function closeSearch({ restoreFocus = true } = {}) {
+    if (searchOverlayToken !== null) {
+      const token = searchOverlayToken;
+      searchOverlayToken = null;
+      if (restoreFocus) dropOverlay(token);
+      else forgetOverlay(token);
+    }
     // Laufenden Debounce abbrechen: sonst feuert ein noch offener Timer nach dem
     // Schließen ins versteckte Overlay und macht eine Phantom-Live-Ansage.
     clearTimeout(searchTimer);
@@ -2889,7 +2934,7 @@ function initSearch(container) {
       setStatus(t('search.loading'));
       try {
         const data = await api.get(`/search?q=${encodeURIComponent(q)}`);
-        const count = renderSearchResults(results, data, closeSearch);
+        const count = renderSearchResults(results, data, () => closeSearch({ restoreFocus: false }));
         results.setAttribute('aria-busy', 'false');
         setStatus(
           count === 0 ? t('search.noResults')
@@ -3906,8 +3951,21 @@ if ('serviceWorker' in navigator) {
 }
 
 // Browser zurück/vor
+//
+// EIN OFFENER DIALOG FAENGT DIE GESTE AB (#871). Auf dem Telefon ist die
+// Wischgeste von links der Zurueck-Knopf, und ueber einem offenen Dialog meint
+// sie den Dialog, nicht die Seite darunter. Vorher tat die App beides falsch
+// herum: sie navigierte im Hintergrund und liess den Dialog stehen.
+//
+// Der Handler ist async, der Listener bleibt es nicht: `navigate()` darf erst
+// laufen, wenn feststeht, dass die Geste NICHT fuer einen Dialog war - der
+// Weg aus einem Formular mit ungespeicherten Aenderungen fragt zurueck und
+// beantwortet die Frage erst danach.
 window.addEventListener('popstate', (e) => {
-  navigate(e.state?.path || location.pathname, false);
+  const target = e.state?.path || location.pathname;
+  handleBackNavigation().then((handled) => {
+    if (!handled) navigate(target, false);
+  });
 });
 
 /* ES GIBT ZWEI ABGAENGE, UND SIE TEILEN SICH KEINEN CODE.
@@ -3943,6 +4001,11 @@ function forgetSessionState() {
   forgetScrollPositions();
   // Und die Zählstände der Modulkacheln aus demselben Grund.
   resetModuleCounts();
+  // Das Register der Zurueck-Geste zeigt nach dem Abraeumen der Shell auf
+  // Knoten, die es nicht mehr gibt (#871). Die History bleibt bewusst
+  // unangetastet: ein Marker, den niemand mehr einloest, kostet eine Geste -
+  // ein Register auf entfernten Knoten kostet einen Fehler bei jeder.
+  resetOverlayHistory();
   stopThirdPartyModulePolling();
   stopReminders();
   stopPush();
