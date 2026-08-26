@@ -27,15 +27,13 @@ const REMINDER_TIME = '09:00';
  */
 export const REMINDER_TIME_SUFFIX = `T${REMINDER_TIME}`;
 
-/**
- * Und dieselbe Tageszeit als Zahlenpaar, für Aufrufer, die damit RECHNEN müssen
- * (etwa "der nächste Termin, der noch bevorsteht"). Aus derselben Konstante
- * abgeleitet: ein hart getipptes `setUTCHours(9, 0)` neben einem angestempelten
- * `T09:00` sind zwei Uhrzeiten, die beim ersten Ändern auseinanderfallen - und
- * zwar so, dass ein Termin in der Vergangenheit entsteht und sofort rausgeht.
- */
-const [REMINDER_HOUR, REMINDER_MINUTE] = REMINDER_TIME.split(':').map(Number);
-export { REMINDER_HOUR, REMINDER_MINUTE };
+/* HIER STAND EINMAL EIN ZAHLENPAAR (`REMINDER_HOUR`/`REMINDER_MINUTE`), für
+ * Aufrufer, die mit der Tageszeit RECHNEN mussten - `setUTCHours(9, 0)`, um den
+ * "nächsten Morgen" zu finden. Es ist entfallen, weil genau diese Rechnung der
+ * Fehler war: sie mass an der UTC-Wanduhr, während alles daneben in
+ * Kalendertagen der Haushaltszone denkt. Wer den nächsten Termin sucht, hängt
+ * das Suffix an einen Datumsschlüssel und vergleicht mit
+ * `reminderIsInThePast()` - dann gibt es nur eine Uhrzeit und nur eine Uhr. */
 
 function dateKey(date) {
   return [

@@ -18,9 +18,7 @@
  * Wiederherstellen aus dem Backup oder ein Eingriff von Hand den Bestand ändert.
  */
 
-import {
-  reminderDateBefore, reminderIsInThePast, REMINDER_TIME_SUFFIX, REMINDER_HOUR, REMINDER_MINUTE,
-} from '../utils/reminder-schedule.js';
+import { reminderDateBefore, reminderIsInThePast, REMINDER_TIME_SUFFIX } from '../utils/reminder-schedule.js';
 import { todayKey } from '../utils/timezone.js';
 import { resolvePermissions } from '../permissions.js';
 import { createLogger } from '../logger.js';
@@ -279,17 +277,11 @@ function pantryDisabled(database) {
 }
 
 /**
- * Empfänger, denen der Vorrat entzogen ist (`access_permissions`, #467) - die
- * zweite Achse neben der haushaltweiten Abschaltung, dieselbe Trennung wie in
- * getCountdowns(). Einmal je Lauf aufgelöst statt einmal je Artikel: ein
- * Haushalt hat eine Handvoll Mitglieder und womöglich hunderte Gläser.
- */
-/**
- * Fehlt AUSGERECHNET DIESEM Empfänger der Vorrat? Der Einzelweg fragte über
- * usersWithPantry() die Rechte aller Mitglieder auf, um eine einzige Antwort
- * zu bekommen - in einem Sechs-Personen-Haushalt ein Dutzend Abfragen je Tap
- * auf den ±-Stepper. `allowed` ist weiterhin der Batch-Weg für den Voll-Sync und
- * den Einkaufs-Import, die die Frage ohnehin für viele Zeilen stellen.
+ * Fehlt AUSGERECHNET DIESEM Empfänger der Vorrat? Der Einzelweg löste über
+ * usersWithPantry() die Rechte aller Mitglieder auf, um eine einzige Antwort zu
+ * bekommen - in einem Sechs-Personen-Haushalt ein Dutzend Abfragen je Tap auf
+ * den ±-Stepper. `allowed` ist der Batch-Weg für den Voll-Sync und den
+ * Einkaufs-Import, die die Frage ohnehin für viele Zeilen stellen.
  */
 function creatorLacksPantry(database, userId, allowed = null) {
   // ALLOWLIST STATT DENYLIST, und das ist kein Geschmack: eine Denylist
@@ -315,7 +307,13 @@ export function resolvePantryAccess(database) {
   return { disabled, allowed: disabled ? new Set() : usersWithPantry(database) };
 }
 
-export function usersWithPantry(database) {
+/**
+ * Die Empfänger, die den Vorrat sehen dürfen (`access_permissions`, #467) - die
+ * zweite Achse neben der haushaltweiten Abschaltung, dieselbe Trennung wie in
+ * getCountdowns(). Nicht exportiert: wer die Rechte braucht, will beide Achsen,
+ * und die bündelt resolvePantryAccess().
+ */
+function usersWithPantry(database) {
   const users = database.prepare('SELECT id, role, family_role FROM users').all();
   const allowed = new Set();
   for (const user of users) {
@@ -493,7 +491,6 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
   );
 
   const retime = database.prepare('UPDATE reminders SET remind_at = ? WHERE id = ?');
-  const discard = database.prepare('DELETE FROM reminders WHERE id = ?');
   for (const row of stale) {
     let target;
     try {
@@ -530,7 +527,10 @@ export function syncAllPantryExpiryReminders(database, now = new Date()) {
       // loeschen - sie ist genau die, die heute rausgehen soll. Dass der Artikel
       // ueberhaupt noch laeuft, hat der DELETE-Zweig oben schon sichergestellt.
       if (row.remind_at <= soonest && row.remind_at.slice(0, 10) <= row.expires_on) continue;
-      if (soonest.slice(0, 10) > row.expires_on) { discard.run(row.id); continue; }
+      // Ein Termin hinter dem MHD kann hier nicht entstehen: earliestUseful-
+      // Reminder() faellt auf den heutigen Tag zurueck, und dass der Artikel
+      // heute noch laeuft, hat der DELETE oben sichergestellt. Dieselbe Lage
+      // wie im Router, wo derselbe Zweig aus demselben Grund fehlt.
       retime.run(soonest, row.id);
       continue;
     }
