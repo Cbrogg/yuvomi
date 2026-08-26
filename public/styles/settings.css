@@ -3030,6 +3030,10 @@
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  /* Umbruch statt Quetschen - Begruendung an `.modal-panel__footer`
+   * (layout.css, #872). Die Schmalregel weiter unten setzt ihn nicht mehr,
+   * sie gibt der Statuszeile dort nur noch ihre eigene Zeile. */
+  flex-wrap: wrap;
   gap: var(--space-3);
   margin-top: var(--space-5);
   padding: var(--space-3) 0;
@@ -3123,10 +3127,10 @@
     text-align: center;
   }
 
-  /* Zwei Buttons plus Statuszeile passen bei 390px nicht nebeneinander; ohne
-     Umbruch schob der Status unter die Aktionsleiste. */
-  .perm-actions { flex-wrap: wrap; }
-
+  /* Zwei Buttons plus Statuszeile passen bei 390px nicht nebeneinander. Die
+     ERLAUBNIS zum Umbruch steht seit #872 in der Basisregel und gilt in jeder
+     Breite; hier bleibt nur der GRUND: die Statuszeile nimmt sich eine eigene
+     Zeile, statt sich zwischen die Knoepfe zu draengen. */
   .perm-actions__status {
     flex-basis: 100%;
     margin-right: 0;

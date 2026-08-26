@@ -2018,6 +2018,9 @@ svg.weather-forecast__icon {
   gap: var(--space-3);
   width: 100%;
   justify-content: flex-end;
+  /* Umbruch statt Quetschen - Begruendung an `.modal-panel__footer`
+   * (layout.css, #872). */
+  flex-wrap: wrap;
   margin-top: var(--space-2);
 }
 

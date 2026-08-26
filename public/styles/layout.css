@@ -3970,10 +3970,18 @@ p.field-hint--warn[hidden] {
   .form-advanced__chevron { transition: none; }
 }
 
+/* Dieselbe Not, dieselbe Antwort wie bei `.modal-panel__footer` weiter unten
+ * (#872): eine Knopfzeile im Modal-Rumpf laeuft sonst genauso ueber ihren
+ * Container hinaus. Die Begruendung steht dort, damit sie EINMAL steht. */
 .modal-actions {
   display: flex;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--space-2);
+}
+
+.modal-actions .btn {
+  white-space: normal;
 }
 
 /* Einleitender Hinweis-Text über gestapelten Modal-Aktionen (z. B. Scope-Wahl). */
@@ -3994,13 +4002,56 @@ p.field-hint--warn[hidden] {
   align-items: stretch;
 }
 
+/* EINE FUSSZEILE LAEUFT NICHT UEBER - SIE BRICHT UM (#872).
+ *
+ * WAS GENAU PASSIERTE, gemessen an der Aufgaben-Detailansicht auf 390px
+ * Telefonbreite: die drei Aktionen (Löschen · Starten · Aufgabe archivieren)
+ * brauchen zusammen rund 440px, die Fusszeile hat 364. Gequetscht werden die
+ * Knoepfe dabei NICHT - ein Flex-Item traegt `min-width: auto` und schrumpft
+ * deshalb nicht unter seine Inhaltsbreite. Stattdessen waechst die ZEILE ueber
+ * den Container hinaus, und weil sie rechtsbuendig ausgerichtet ist, tut sie
+ * das nach LINKS. Das Panel traegt `overflow: clip`, also faellt dort ab, was
+ * heraussteht: der Löschen-Knopf sass bei x = -11, das Panel beginnt bei
+ * x = 12 - dreiundzwanzig Pixel fehlten, und aus „Löschen" wurde sichtbar
+ * „öschen".
+ *
+ * Ein abgeschnittener Knopf sagt nicht, dass er abgeschnitten ist. Es gibt
+ * keine Ellipse, keinen Scrollbalken - nur ein Wort, das falsch anfaengt.
+ *
+ * DER UMBRUCH IST DIE ANTWORT UND KEINE UEBERLAUFLEISTE. Ein „…"-Menue wie in
+ * SAP Fiori (Vorschlag des Melders) verschoebe die Grenze nur: es misst in
+ * Pixeln, was in 20 Locales unterschiedlich lang ist, und braeuchte fuer den
+ * Rest doch wieder einen Umbruch. Der Umbruch traegt jede Sprache ohne
+ * Messung, und im Sheet ist die Hoehe da.
+ *
+ * DER ZWEITE TEIL GEHOERT DAZU: bricht die ZEILE, kann ein EINZELNER Knopf
+ * immer noch breiter sein als das Panel (lange Locale, 200 % Zoom). Dann hat
+ * die Zeile nichts mehr umzubrechen, und der Ueberlauf ist zurueck - also muss
+ * der Knopf INNEN umbrechen duerfen. Das nimmt das `white-space: nowrap` von
+ * `.btn` fuer genau diesen Ort zurueck. */
 .modal-panel__footer {
   display: flex;
   align-items: center;
   justify-content: flex-end;
+  flex-wrap: wrap;
   gap: var(--space-3);
   padding: var(--space-3) var(--space-4);
   border-top: 1px solid var(--color-border-subtle);
+}
+
+/* JEDER Knopf in der Fusszeile, nicht nur das direkte Kind: mehrere Module
+ * legen Abbrechen/Speichern in eine eigene Flex-Gruppe (Kalender, Budget-Plaene,
+ * Kontakte), und deren Knoepfe traegen dasselbe `nowrap`. */
+.modal-panel__footer .btn {
+  white-space: normal;
+}
+
+/* Und die Gruppe selbst darf umbrechen. Fuer die Fusszeile ist sie EIN
+ * Flex-Item und damit unteilbar - ohne diese Zeile laeuft sie als Ganzes ueber
+ * den Rand, und der Umbruch der Fusszeile hilft nichts mehr. `flex-wrap` an
+ * einem Nicht-Flex-Kind ist folgenlos, deshalb reicht der schlichte Selektor. */
+.modal-panel__footer > div {
+  flex-wrap: wrap;
 }
 
 /* Fußzeile INNERHALB des scrollenden Bodys (kein direktes Panel-Kind): dort
