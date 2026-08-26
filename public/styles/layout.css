@@ -3971,8 +3971,8 @@ p.field-hint--warn[hidden] {
 }
 
 /* Dieselbe Not, dieselbe Antwort wie bei `.modal-panel__footer` weiter unten
- * (#872): eine Knopfzeile im Modal-Rumpf quetscht ihre Knoepfe sonst genauso
- * unter die Inhaltsbreite. Die Begruendung steht dort, damit sie EINMAL steht. */
+ * (#872): eine Knopfzeile im Modal-Rumpf laeuft sonst genauso ueber ihren
+ * Container hinaus. Die Begruendung steht dort, damit sie EINMAL steht. */
 .modal-actions {
   display: flex;
   justify-content: flex-end;
@@ -4002,14 +4002,21 @@ p.field-hint--warn[hidden] {
   align-items: stretch;
 }
 
-/* EINE FUSSZEILE QUETSCHT KEINEN KNOPF - SIE BRICHT UM (#872).
+/* EINE FUSSZEILE LAEUFT NICHT UEBER - SIE BRICHT UM (#872).
  *
- * `.btn` traegt `white-space: nowrap` und keinen Schrumpfschutz. Ohne
- * `flex-wrap` drueckte die Zeile die Knoepfe deshalb unter ihre Inhaltsbreite,
- * und weil `.btn` seinen Inhalt zentriert, lief der Text auf BEIDEN Seiten aus
- * dem Knopf: aus „Löschen" wurde sichtbar „öschen". Auf einem Telefon reichten
- * dafuer schon die drei Aktionen der Aufgaben-Detailansicht (Löschen, Starten,
- * Aufgabe archivieren).
+ * WAS GENAU PASSIERTE, gemessen an der Aufgaben-Detailansicht auf 390px
+ * Telefonbreite: die drei Aktionen (Löschen · Starten · Aufgabe archivieren)
+ * brauchen zusammen rund 440px, die Fusszeile hat 364. Gequetscht werden die
+ * Knoepfe dabei NICHT - ein Flex-Item traegt `min-width: auto` und schrumpft
+ * deshalb nicht unter seine Inhaltsbreite. Stattdessen waechst die ZEILE ueber
+ * den Container hinaus, und weil sie rechtsbuendig ausgerichtet ist, tut sie
+ * das nach LINKS. Das Panel traegt `overflow: clip`, also faellt dort ab, was
+ * heraussteht: der Löschen-Knopf sass bei x = -11, das Panel beginnt bei
+ * x = 12 - dreiundzwanzig Pixel fehlten, und aus „Löschen" wurde sichtbar
+ * „öschen".
+ *
+ * Ein abgeschnittener Knopf sagt nicht, dass er abgeschnitten ist. Es gibt
+ * keine Ellipse, keinen Scrollbalken - nur ein Wort, das falsch anfaengt.
  *
  * DER UMBRUCH IST DIE ANTWORT UND KEINE UEBERLAUFLEISTE. Ein „…"-Menue wie in
  * SAP Fiori (Vorschlag des Melders) verschoebe die Grenze nur: es misst in
@@ -4017,10 +4024,11 @@ p.field-hint--warn[hidden] {
  * Rest doch wieder einen Umbruch. Der Umbruch traegt jede Sprache ohne
  * Messung, und im Sheet ist die Hoehe da.
  *
- * DER ZWEITE TEIL GEHOERT DAZU: bricht die ZEILE, kann ein einzelner Knopf
- * immer noch breiter sein als das Panel (lange Locale, 200 % Zoom). Dann muss
- * sein TEXT umbrechen duerfen - sonst steht der mittig abgeschnittene Knopf
- * wieder da, nur seltener. */
+ * DER ZWEITE TEIL GEHOERT DAZU: bricht die ZEILE, kann ein EINZELNER Knopf
+ * immer noch breiter sein als das Panel (lange Locale, 200 % Zoom). Dann hat
+ * die Zeile nichts mehr umzubrechen, und der Ueberlauf ist zurueck - also muss
+ * der Knopf INNEN umbrechen duerfen. Das nimmt das `white-space: nowrap` von
+ * `.btn` fuer genau diesen Ort zurueck. */
 .modal-panel__footer {
   display: flex;
   align-items: center;

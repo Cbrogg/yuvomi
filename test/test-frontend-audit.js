@@ -13677,13 +13677,15 @@ test('ein Teilschritt lässt sich korrigieren und entfernen, nicht nur abhaken (
 /**
  * EINE KNOPFZEILE SAGT, OB SIE UMBRICHT (#872).
  *
- * Der gemeldete Fehler war nicht kosmetisch: `.btn` traegt `white-space:
- * nowrap` und keinen Schrumpfschutz, also drueckte eine Flex-Zeile ohne
- * `flex-wrap` ihre Knoepfe unter die Inhaltsbreite. Weil `.btn` seinen Inhalt
- * ZENTRIERT, lief der Text danach auf beiden Seiten aus dem Knopf - aus
- * „Löschen" wurde sichtbar „öschen", ohne Ellipse, ohne Hinweis, dass etwas
- * fehlt. Es traf die Aufgaben-Detailansicht auf einem Telefon; getroffen
- * haette es jede Fusszeile mit drei Knoepfen in einer laengeren Locale.
+ * Der gemeldete Fehler war nicht kosmetisch, und er entsteht nicht durch
+ * Quetschen: ein Flex-Item traegt `min-width: auto` und schrumpft nicht unter
+ * seine Inhaltsbreite. Stattdessen waechst die ZEILE ueber den Container
+ * hinaus - rechtsbuendig also nach LINKS -, und das Panel schneidet mit
+ * `overflow: clip` ab, was heraussteht. Gemessen an der Aufgaben-Detailansicht
+ * auf 390px: der Löschen-Knopf sass bei x = -11, das Panel beginnt bei x = 12,
+ * aus „Löschen" wurde sichtbar „öschen". Ohne Ellipse, ohne Scrollbalken -
+ * nur ein Wort, das falsch anfaengt. Getroffen haette es jede Fusszeile mit
+ * drei Knoepfen in einer laengeren Locale.
  *
  * DIE REGEL VERLANGT EINE ENTSCHEIDUNG, KEINEN BESTIMMTEN WERT. Wo ein
  * Umbruch falsch waere (zwei Icon-Knoepfe in einer Rasterspalte), steht
@@ -13722,9 +13724,9 @@ test('jede rechtsbuendige Knopfzeile sagt, ob sie umbricht (#872)', () => {
 
   assert.deepEqual(offenders.sort(), [],
     'Diese Knopfzeile sagt nicht, was bei Platzmangel passieren soll. Ohne '
-    + '`flex-wrap` quetscht sie ihre Knoepfe unter die Inhaltsbreite, und weil '
-    + '`.btn` zentriert und nicht umbricht, wird der Text beidseitig '
-    + 'abgeschnitten (#872). Setze `flex-wrap: wrap` - oder `nowrap` mit einer '
+    + '`flex-wrap` waechst sie ueber ihren Container hinaus - rechtsbuendig also '
+    + 'nach links -, und was heraussteht, schneidet der Rahmen ab (#872). '
+    + 'Setze `flex-wrap: wrap` - oder `nowrap` mit einer '
     + `Begruendung, wenn der Umbruch hier falsch waere.\n${offenders.join('\n')}`);
 });
 
