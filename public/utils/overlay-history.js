@@ -90,6 +90,22 @@ let pendingSelfPops = 0;
 
 let syncScheduled = false;
 
+/* Laeuft gerade ein `close()`, das noch antwortet?
+ *
+ * Es kann BELIEBIG LANGE dauern: `closeModal()` fragt bei ungespeicherten
+ * Aenderungen zurueck und wartet auf den Menschen. In diesem Fenster ist der
+ * Marker schon verbraucht und das Register schon leer - eine zweite
+ * Zurueck-Geste (zweiter Wisch, wiederholtes Hardware-Back) faende also
+ * „nichts offen" und liesse den Router hinter dem sichtbar offenen
+ * Verwerfen-Dialog wegnavigieren. Genau der Zustand aus #871, nur in diesem
+ * Zeitfenster.
+ *
+ * Die zweite Geste gehoert dem Dialog, der gerade fragt. Sie wird geschluckt,
+ * nicht nachgeholt: was danach passiert, entscheidet die Antwort auf die
+ * Rueckfrage, und `syncMarker()` legt den Marker danach neu an, falls noch
+ * etwas steht. */
+let closing = false;
+
 function historyState() {
   return typeof history === 'undefined' ? null : history.state;
 }
@@ -183,6 +199,8 @@ export async function handleBackNavigation() {
     pendingSelfPops -= 1;
     return true;
   }
+  // Eine zweite Geste, waehrend die erste noch fragt - Begruendung an `closing`.
+  if (closing) return true;
   /* Ohne Marker war die Geste nicht fuer uns. Das ist die genauere Frage als
    * „ist etwas offen?": ein Overlay kann bereits im Register stehen, waehrend
    * sein Marker noch im ausstehenden Abgleich haengt - dann gehoert die Geste
@@ -196,9 +214,14 @@ export async function handleBackNavigation() {
   const entry = stack.pop();
   if (!entry) return false;
 
-  const result = await entry.close({ force: false });
-  if (result === false) stack.push(entry);
-  else entry.detach?.();
+  closing = true;
+  try {
+    const result = await entry.close({ force: false });
+    if (result === false) stack.push(entry);
+    else entry.detach?.();
+  } finally {
+    closing = false;
+  }
 
   // Liegt darunter noch etwas - oder ist der Dialog offen geblieben -, legt
   // der Abgleich den Marker gleich wieder an.

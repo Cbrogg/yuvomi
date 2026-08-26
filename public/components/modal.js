@@ -74,6 +74,24 @@ let _overlayToken = null;
  * damit 400 ms lang als „abgelehnt".
  */
 async function _closeFromBackNavigation({ force = false } = {}) {
+  /* SITZUNGSENDE UND NAVIGATION RAEUMEN ALLES WEG, nicht nur den obersten
+   * Kasten.
+   *
+   * Das Modal-System fuehrt EINEN Registereintrag fuer beliebig viele
+   * gestapelte Zustaende: ein Bestaetigungsdialog PARKT das Formular darunter,
+   * statt es zu schliessen. Ein `closeModal({force:true})` erwischt also nur
+   * den Dialog - und der laufende Bestaetigungs-Ablauf holte danach das
+   * geparkte Formular zurueck, jetzt aber ueber der Anmeldeseite und ohne
+   * Registrierung. Wieder #871, nur mit abgelaufener Sitzung davor.
+   *
+   * `force` heisst: es fragt niemand mehr, und es kommt nichts zurueck. Also
+   * fallen auch die geparkten Kaesten, und zwar direkt aus dem DOM - sie sind
+   * `inert` und haben keinen eigenen Schliessweg mehr. */
+  if (force) {
+    const closed = await closeModal({ force: true });
+    document.querySelectorAll('.modal-overlay').forEach((el) => el.remove());
+    return closed;
+  }
   const closed = await closeModal({ force });
   return closed && modalState !== 'open';
 }
@@ -454,14 +472,24 @@ function _doClose(overlayEl) {
     activeOverlay = null;
     modalState = 'idle';
 
-    /* Das Modal-System meldet sich beim Register ab (#871).
+    /* Das Modal-System meldet sich beim Register ab (#871) - aber nur, wenn
+     * wirklich KEIN Modal mehr steht.
      *
-     * HIER UND NUR HIER, weil dieser Zweig der einzige Uebergang nach 'idle'
-     * ist - also der einzige Punkt, an dem wirklich KEIN Dialog mehr steht.
-     * Ein Bestaetigungsdialog ueber einem geparkten Formular laeuft nicht
-     * durch ihn hindurch: dort setzt `_resumeSuspendedModal` den Zustand
-     * zurueck auf 'open'. */
-    if (_overlayToken !== null) {
+     * GEFRAGT IST DAS DOM, NICHT `activeOverlay`. Ein Bestaetigungsdialog
+     * ueber einem geparkten Formular laeuft sehr wohl durch diesen Zweig:
+     * `activeOverlay === target` ist fuer IHN wahr, und
+     * `_resumeSuspendedModal` holt das Formular erst DANACH zurueck. Ohne die
+     * Frage ans DOM gab dieser Zweig also den Marker des Formulars zurueck,
+     * und die naechste Zurueck-Geste navigierte hinter dem sichtbar offenen
+     * Formular weg - der Zustand aus #871, ausgeloest von jeder der rund
+     * dreissig `confirmOverModal`-Stellen. Live nachgestellt an der
+     * Kategorie-Verwaltung.
+     *
+     * Hier ist die DOM-Frage auch zulaessig, anders als in
+     * `_closeFromBackNavigation`: `target.remove()` steht schon oben in dieser
+     * Funktion, das DOM ist also auf dem aktuellen Stand. Das geparkte
+     * Formular liegt als `.modal-overlay` darin - inert, aber vorhanden. */
+    if (_overlayToken !== null && !document.querySelector('.modal-overlay')) {
       const token = _overlayToken;
       _overlayToken = null;
       dropOverlay(token);

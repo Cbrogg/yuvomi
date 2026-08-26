@@ -13700,9 +13700,15 @@ test('ein Teilschritt lässt sich korrigieren und entfernen, nicht nur abhaken (
  * Guard-Ebene: Vollstaendigkeit (aus dem Quelltext gezaehlt).
  */
 test('jedes modale Overlay meldet sich an der Zurueck-Geste an (#871)', () => {
-  // `aria-modal` als Attribut im Markup ODER als setAttribute-Aufruf - beide
-  // Schreibweisen erzeugen dasselbe gerenderte Overlay.
-  const OPENS_OVERLAY = /aria-modal["']?\s*[,:=]\s*["']?true/g;
+  /* Ein Overlay AUFMACHEN heisst hier zweierlei, und die zweite Form hat der
+   * Guard zuerst uebersehen:
+   *   1. `aria-modal="true"` an einem selbstgebauten Kasten,
+   *   2. `showModal()` an einem nativen `<dialog>`. Es traegt kein Attribut -
+   *      das setzt der Browser implizit -, ist aber genauso modal und liegt in
+   *      der Top-Layer sogar DARUEBER. Der Bildzuschnitt (utils/avatar-crop.js)
+   *      ist so gebaut und oeffnet ueber geteilten Modals; ohne Anmeldung nahm
+   *      die Zurueck-Geste den Eintrag des Modals darunter. */
+  const OPENS_OVERLAY = /aria-modal["']?\s*[,:=]\s*["']?true|\.showModal\s*\(/g;
   const REGISTERS = /\b(attachOverlay|pushOverlay)\s*\(/g;
 
   const offenders = [];
@@ -13722,7 +13728,7 @@ test('jedes modale Overlay meldet sich an der Zurueck-Geste an (#871)', () => {
 
   // Ohne diese Zusicherung waere der Guard gruen, sobald die Muster nicht mehr
   // greifen - eine leere Liste ist keine Zusicherung.
-  assert.ok(seenOverlays >= 10,
+  assert.ok(seenOverlays >= 11,
     `Nur ${seenOverlays} modale Overlays gefunden - das Muster greift nicht mehr, `
     + 'statt nichts zu beanstanden.');
 
@@ -13750,4 +13756,28 @@ test('der popstate-Handler fragt zuerst die offenen Overlays (#871)', () => {
   assert.match(handler[0], /if \(!handled\) navigate\(/,
     'der Handler navigiert unabhaengig von der Antwort - dann bleibt der Dialog '
     + 'stehen UND die Seite wechselt, also genau der gemeldete Zustand');
+});
+
+/**
+ * EIN ERZWUNGENES SCHLIESSEN RAEUMT AUCH DIE GEPARKTEN KAESTEN WEG (#871).
+ *
+ * Das Modal-System fuehrt EINEN Registereintrag fuer beliebig viele
+ * gestapelte Zustaende: ein Bestaetigungsdialog PARKT das Formular darunter,
+ * statt es zu schliessen (`_suspendActiveModal`). Ein `closeModal({force})`
+ * erwischt deshalb nur den obersten Kasten - und der laufende
+ * Bestaetigungs-Ablauf holt danach das geparkte Formular zurueck, bei
+ * Sitzungsende also ueber die Anmeldeseite und ohne Registrierung. Wieder der
+ * Zustand aus #871, nur mit abgelaufener Sitzung davor.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('erzwungenes Schliessen raeumt auch geparkte Modals weg (#871)', () => {
+  const modal = read('../public/components/modal.js');
+  const fn = /async function _closeFromBackNavigation\([\s\S]*?\n\}/.exec(modal);
+  assert.ok(fn, '_closeFromBackNavigation ist nicht mehr auffindbar');
+  assert.match(fn[0], /if \(force\)/,
+    'der Zwangspfad ist nicht vom normalen unterschieden - dann bleibt ein '
+    + 'geparktes Formular ueber der Anmeldeseite stehen');
+  assert.match(fn[0], /querySelectorAll\('\.modal-overlay'\)[\s\S]{0,80}remove\(\)/,
+    'der Zwangspfad entfernt die geparkten Kaesten nicht');
 });

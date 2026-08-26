@@ -386,3 +386,56 @@ test('die Zurueck-Geste schliesst ein angehaengtes Overlay ueber seinen Weg', as
   assert.equal(history.depth, 0);
   assert.deepEqual(history.navigations, []);
 });
+
+test('eine zweite Geste waehrend einer laufenden Rueckfrage geht nicht an den Router', async () => {
+  // `closeModal()` fragt bei ungespeicherten Aenderungen zurueck und wartet
+  // auf den Menschen - beliebig lange. In diesem Fenster ist der Marker schon
+  // verbraucht und das Register schon leer. Ohne Sperre faende eine zweite
+  // Wischgeste „nichts offen" und liesse den Router hinter dem sichtbar
+  // offenen Verwerfen-Dialog wegnavigieren: der Zustand aus #871, nur in
+  // diesem Zeitfenster.
+  const { pushOverlay, history } = await freshModule();
+
+  // Eine echte Seite unter dem Dialog - sonst hat die zweite Geste im Stapel
+  // gar kein Ziel, und der Test bliebe gruen, auch ohne Sperre. (Gemessen:
+  // ohne diese Zeile faellt die Gegenprobe nicht.)
+  history.pushState({ path: '/calendar' });
+
+  let antwort;
+  const gefragt = new Promise((resolve) => { antwort = resolve; });
+  pushOverlay(() => gefragt);
+  await settle();
+
+  history.back();          // erste Geste: die Rueckfrage geht auf
+  await settle();
+  assert.deepEqual(history.navigations, []);
+
+  history.back();          // zweite Geste, waehrend noch gefragt wird
+  await settle();
+  assert.deepEqual(history.navigations, [],
+    'die zweite Geste gehoert dem Dialog, der gerade fragt - nicht dem Router');
+
+  antwort(undefined);      // „verwerfen"
+  await settle();
+  assert.deepEqual(history.navigations, []);
+});
+
+test('ein abgelehntes Schliessen bekommt seinen Marker auch nach einer zweiten Geste', async () => {
+  const { pushOverlay, history } = await freshModule();
+  history.pushState({ path: '/calendar' });
+
+  let antwort;
+  const gefragt = new Promise((resolve) => { antwort = resolve; });
+  pushOverlay(() => gefragt);
+  await settle();
+
+  history.back();
+  await settle();
+  history.back();
+  await settle();
+
+  antwort(false);          // „nicht verwerfen" - der Dialog bleibt offen
+  await settle();
+  assert.equal(history.depth, 1, 'der Marker liegt wieder da');
+  assert.deepEqual(history.navigations, []);
+});
