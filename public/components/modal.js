@@ -22,7 +22,7 @@
 
 import { t } from '/i18n.js';
 import { esc } from '/utils/html.js';
-import { pushOverlay, dropOverlay } from '/utils/overlay-history.js';
+import { pushOverlay, dropOverlay, isOverlayOpen } from '/utils/overlay-history.js';
 
 let activeOverlay = null;
 let previouslyFocused = null;
@@ -73,27 +73,78 @@ let _overlayToken = null;
  * und raeumt erst auf `animationend` ab. Jede erfolgreiche Wischgeste galt
  * damit 400 ms lang als „abgelehnt".
  */
-async function _closeFromBackNavigation({ force = false } = {}) {
-  /* SITZUNGSENDE UND NAVIGATION RAEUMEN ALLES WEG, nicht nur den obersten
-   * Kasten.
-   *
-   * Das Modal-System fuehrt EINEN Registereintrag fuer beliebig viele
-   * gestapelte Zustaende: ein Bestaetigungsdialog PARKT das Formular darunter,
-   * statt es zu schliessen. Ein `closeModal({force:true})` erwischt also nur
-   * den Dialog - und der laufende Bestaetigungs-Ablauf holte danach das
-   * geparkte Formular zurueck, jetzt aber ueber der Anmeldeseite und ohne
-   * Registrierung. Wieder #871, nur mit abgelaufener Sitzung davor.
-   *
-   * `force` heisst: es fragt niemand mehr, und es kommt nichts zurueck. Also
-   * fallen auch die geparkten Kaesten, und zwar direkt aus dem DOM - sie sind
-   * `inert` und haben keinen eigenen Schliessweg mehr. */
-  if (force) {
-    const closed = await closeModal({ force: true });
-    document.querySelectorAll('.modal-overlay').forEach((el) => el.remove());
-    return closed;
+/**
+ * DER EINTRAG FOLGT DEM ZUSTAND, NICHT DEM EREIGNIS (#871).
+ *
+ * Das war die Lehre aus drei Anlaeufen. Der Token wurde erst beim Oeffnen
+ * gesetzt und beim Schliessen zurueckgegeben, und beide Stellen mussten
+ * wissen, ob unter dem Kasten, der gerade zugeht, noch einer liegt. Sie
+ * konnten es nicht zuverlaessig wissen:
+ *
+ *   - Ein Bestaetigungsdialog PARKT das Formular darunter. Fuer `_doClose` ist
+ *     er `activeOverlay`, also gab dieser Zweig den Token des FORMULARS
+ *     zurueck - und `_resumeSuspendedModal` holte es danach ohne Registrierung
+ *     wieder hervor.
+ *   - Der Bestaetigungs-Ablauf laeuft in einer eigenen, nicht abgewarteten
+ *     Kette. Wer direkt nach `closeModal()` fragt, ob noch etwas offen ist,
+ *     fragt zu frueh - `modalState` steht dann auf 'idle' oder 'closing', und
+ *     das gleich folgende Formular sah aus wie nichts.
+ *
+ * Eine Zustandsfrage kennt diese Reihenfolgen nicht: liegt ein
+ * `.modal-overlay` im Dokument, ist ein Dialog offen, sonst nicht. Ein
+ * geparktes Formular liegt darin - `inert`, aber vorhanden -, ein
+ * schliessendes auf Mobil auch noch, und beides ist richtig so: solange es zu
+ * sehen ist, gehoert ihm die Zurueck-Geste.
+ *
+ * Aufgerufen nach JEDEM Uebergang. Das Register gleicht seinen History-Marker
+ * ohnehin verzoegert ab, also heben sich Zwischenzustaende innerhalb eines
+ * Ticks gegenseitig auf, statt zwei History-Operationen auszuloesen.
+ */
+function _syncOverlayRegistration() {
+  const open = Boolean(document.querySelector('.modal-overlay'));
+  if (open) {
+    /* `isOverlayOpen` und nicht nur `!== null`: `handleBackNavigation()` nimmt
+     * den Eintrag aus dem Register, BEVOR es schliessen laesst. Wer danach nur
+     * fragt, ob er einen Token HAT, haelt sich fuer angemeldet und ist es
+     * nicht - genau so verlor ein wieder hervorgeholtes Formular seinen
+     * Anspruch auf die naechste Geste, und der Router navigierte dahinter weg.
+     * Live nachgestellt an der Kategorie-Verwaltung. */
+    if (_overlayToken === null || !isOverlayOpen(_overlayToken)) {
+      _overlayToken = pushOverlay(_closeFromBackNavigation);
+    }
+    return;
   }
-  const closed = await closeModal({ force });
-  return closed && modalState !== 'open';
+  if (_overlayToken !== null) {
+    const token = _overlayToken;
+    _overlayToken = null;
+    dropOverlay(token);
+  }
+}
+
+/**
+ * Der Rueckweg aus der Zurueck-Geste und aus dem Zwang (Sitzungsende,
+ * Navigation).
+ *
+ * Gibt IMMER `true`: ob danach noch etwas steht, meldet nicht diese Antwort,
+ * sondern `_syncOverlayRegistration()` - und zwar dann, wenn es wirklich
+ * feststeht. Bleibt das Formular offen (abgelehntes Verwerfen) oder taucht ein
+ * geparktes wieder auf, meldet es sich von selbst neu an.
+ *
+ * `force` heisst: es fragt niemand mehr, und es kommt nichts zurueck. Ein
+ * `closeModal({force:true})` erwischt aber nur den OBERSTEN Kasten, und der
+ * laufende Bestaetigungs-Ablauf holte danach sein geparktes Formular hervor -
+ * ueber der Anmeldeseite, mit Scroll-Sperre und einem Escape-Handler auf einem
+ * entfernten Knoten. Deshalb fallen hier auch die geparkten Kaesten; sie sind
+ * `inert` und haben keinen eigenen Schliessweg mehr. `_resumeSuspendedModal`
+ * erkennt an ihrem entfernten Knoten, dass es nichts mehr zurueckzuholen gibt.
+ */
+async function _closeFromBackNavigation({ force = false } = {}) {
+  await closeModal({ force });
+  if (force) {
+    document.querySelectorAll('.modal-overlay').forEach((el) => el.remove());
+  }
+  _syncOverlayRegistration();
+  return true;
 }
 
 // Overlay-Dimming: theme-color abdunkeln im Standalone-Modus
@@ -398,6 +449,19 @@ function _suspendActiveModal() {
 
 // Dialog beendet, Modal darunter lebt weiter → exakt wiederherstellen.
 function _resumeSuspendedModal({ overlay, id, title, titleId, snapshot, restoreFocus, trigger }) {
+  /* ES GIBT NICHTS ZURUECKZUHOLEN, WENN DER KNOTEN WEG IST (#871).
+   *
+   * Sitzungsende und echte Navigation raeumen alle Kaesten aus dem Dokument,
+   * auch die geparkten - der Bestaetigungs-Ablauf darueber laeuft aber in
+   * einer eigenen Kette weiter und kam kurz darauf hier an. Er setzte dann
+   * `activeOverlay` auf einen entfernten Knoten, `modalState` auf 'open' und
+   * die Scroll-Sperre auf die naechste Seite: die Anmeldeseite blieb
+   * unscrollbar, mit einem Escape-Handler auf einem Phantom, und heilte erst,
+   * wenn irgendwo das naechste Modal aufging. */
+  if (!overlay.isConnected) {
+    _syncOverlayRegistration();
+    return;
+  }
   if (id) overlay.id = id;
   if (title && titleId) title.id = titleId;
   // Vor dem Setzen des Fokus: ein inertes Element nimmt keinen an.
@@ -411,6 +475,10 @@ function _resumeSuspendedModal({ overlay, id, title, titleId, snapshot, restoreF
   // erneute Anmelden reagiert das wiederhergestellte Modal nicht mehr auf Esc.
   document.removeEventListener('keydown', onEscape);
   document.addEventListener('keydown', onEscape);
+  // Das Formular ist wieder da - und damit auch sein Anspruch auf die
+  // Zurueck-Geste (#871). Hat der Bestaetigungsdialog den Eintrag beim
+  // Schliessen mitgenommen, kommt er hier zurueck.
+  _syncOverlayRegistration();
   if (window.yuvomi?.setThemeColor) {
     window.yuvomi.setThemeColor(OVERLAY_THEME_COLOR, OVERLAY_THEME_COLOR);
   }
@@ -472,28 +540,9 @@ function _doClose(overlayEl) {
     activeOverlay = null;
     modalState = 'idle';
 
-    /* Das Modal-System meldet sich beim Register ab (#871) - aber nur, wenn
-     * wirklich KEIN Modal mehr steht.
-     *
-     * GEFRAGT IST DAS DOM, NICHT `activeOverlay`. Ein Bestaetigungsdialog
-     * ueber einem geparkten Formular laeuft sehr wohl durch diesen Zweig:
-     * `activeOverlay === target` ist fuer IHN wahr, und
-     * `_resumeSuspendedModal` holt das Formular erst DANACH zurueck. Ohne die
-     * Frage ans DOM gab dieser Zweig also den Marker des Formulars zurueck,
-     * und die naechste Zurueck-Geste navigierte hinter dem sichtbar offenen
-     * Formular weg - der Zustand aus #871, ausgeloest von jeder der rund
-     * dreissig `confirmOverModal`-Stellen. Live nachgestellt an der
-     * Kategorie-Verwaltung.
-     *
-     * Hier ist die DOM-Frage auch zulaessig, anders als in
-     * `_closeFromBackNavigation`: `target.remove()` steht schon oben in dieser
-     * Funktion, das DOM ist also auf dem aktuellen Stand. Das geparkte
-     * Formular liegt als `.modal-overlay` darin - inert, aber vorhanden. */
-    if (_overlayToken !== null && !document.querySelector('.modal-overlay')) {
-      const token = _overlayToken;
-      _overlayToken = null;
-      dropOverlay(token);
-    }
+    // Und der Registereintrag folgt dem neuen Zustand (#871). `target.remove()`
+    // steht schon oben, das DOM ist also aktuell.
+    _syncOverlayRegistration();
 
     // Scroll-Lock aufheben
     document.body.style.overflow = '';
@@ -676,11 +725,8 @@ export function openModal({
   }
 
   // Ab jetzt faengt die Zurueck-Geste diesen Dialog ab, statt die Seite
-  // darunter zu wechseln (#871). Nur der erste Dialog legt den Marker an -
-  // Begruendung an `_overlayToken`.
-  if (_overlayToken === null) {
-    _overlayToken = pushOverlay(_closeFromBackNavigation);
-  }
+  // darunter zu wechseln (#871).
+  _syncOverlayRegistration();
 
   // Overlay-Click schließt Modal
   activeOverlay.addEventListener('click', (e) => {

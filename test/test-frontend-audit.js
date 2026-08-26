@@ -13780,4 +13780,70 @@ test('erzwungenes Schliessen raeumt auch geparkte Modals weg (#871)', () => {
     + 'geparktes Formular ueber der Anmeldeseite stehen');
   assert.match(fn[0], /querySelectorAll\('\.modal-overlay'\)[\s\S]{0,80}remove\(\)/,
     'der Zwangspfad entfernt die geparkten Kaesten nicht');
+
+  /* UND DAS ZURUECKHOLEN ERKENNT DEN ENTFERNTEN KNOTEN. Der
+   * Bestaetigungs-Ablauf laeuft in einer eigenen Kette weiter und kam nach dem
+   * Zwangsraeumen hier an: er setzte `activeOverlay` auf ein Phantom,
+   * `modalState` auf 'open' und die Scroll-Sperre auf die naechste Seite. Die
+   * Anmeldeseite blieb unscrollbar, bis irgendwo das naechste Modal aufging. */
+  const resume = /function _resumeSuspendedModal\([\s\S]*?\n\}/.exec(modal);
+  assert.ok(resume, '_resumeSuspendedModal ist nicht mehr auffindbar');
+  assert.match(resume[0], /if \(!overlay\.isConnected\)[\s\S]{0,120}return;/,
+    'ein zwangsweise entfernter Kasten wird wieder „zurueckgeholt" - Scroll-Sperre '
+    + 'und Escape-Handler bleiben dann auf einem Phantom haengen');
+});
+
+/**
+ * DER REGISTEREINTRAG FOLGT DEM ZUSTAND, NICHT DEM EREIGNIS (#871).
+ *
+ * Drei Anlaeufe scheiterten daran, den Eintrag an Oeffnen und Schliessen zu
+ * haengen: beide Stellen mussten wissen, ob unter dem Kasten, der gerade
+ * zugeht, noch einer liegt, und konnten es nicht. Ein Bestaetigungsdialog ist
+ * fuer `_doClose` das aktive Overlay, obwohl er das Formular darunter nur
+ * PARKT - der Zweig gab also dessen Eintrag zurueck, und das gleich folgende
+ * `_resumeSuspendedModal` holte es ohne Registrierung hervor. Wer direkt nach
+ * `closeModal()` fragt, fragt ausserdem zu frueh: der Bestaetigungs-Ablauf
+ * laeuft in einer eigenen, nicht abgewarteten Kette.
+ *
+ * Eine Zustandsfrage kennt diese Reihenfolgen nicht.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('die Registrierung des Modal-Systems folgt dem Zustand (#871)', () => {
+  const modal = read('../public/components/modal.js');
+  const fn = /function _syncOverlayRegistration\(\)[\s\S]*?\n\}/.exec(modal);
+  assert.ok(fn, '_syncOverlayRegistration ist nicht mehr auffindbar');
+  assert.match(fn[0], /querySelector\('\.modal-overlay'\)/,
+    'die Registrierung fragt nicht mehr den Zustand ab');
+  /* UND SIE FRAGT DAS REGISTER, nicht nur den eigenen Token.
+   * `handleBackNavigation()` nimmt den Eintrag heraus, BEVOR es schliessen
+   * laesst - wer danach nur prueft, ob er einen Token HAT, haelt sich fuer
+   * angemeldet und ist es nicht. Genau so verlor ein wieder hervorgeholtes
+   * Formular seinen Anspruch auf die naechste Geste. */
+  assert.match(fn[0], /isOverlayOpen\(_overlayToken\)/,
+    'die Registrierung prueft nicht, ob ihr Token ueberhaupt noch im Register '
+    + 'steht - ein wieder hervorgeholtes Formular meldet sich dann nie neu an');
+
+  /* Jeder Uebergang zieht sie nach - Oeffnen, endgueltiges Schliessen und das
+   * Zurueckholen eines geparkten Formulars.
+   *
+   * Der Ausschnitt laeuft vom Funktionskopf bis zum naechsten auf Spaltenrand
+   * beginnenden Kopf, NICHT ueber eine Klammerbilanz per Regex: `openModal`
+   * enthaelt mehrere innere Bloecke, und ein `[\s\S]*?\n\}` endete am
+   * ersten von ihnen - der Guard war damit rot, obwohl die Zeile dastand. */
+  const abschnitt = (name) => {
+    const start = modal.indexOf(`function ${name}(`);
+    if (start === -1) return null;
+    const rest = modal.slice(start);
+    const ende = rest.slice(1).search(/\n(?:export )?(?:async )?function |\n\/\*\*/);
+    return ende === -1 ? rest : rest.slice(0, ende + 1);
+  };
+
+  for (const name of ['openModal', '_doClose', '_resumeSuspendedModal']) {
+    const block = abschnitt(name);
+    assert.ok(block, `${name} ist nicht mehr auffindbar`);
+    assert.match(block, /_syncOverlayRegistration\(\)/,
+      `${name} zieht die Registrierung nicht nach - nach diesem Uebergang `
+      + 'stimmt der Eintrag nicht mehr mit dem ueberein, was zu sehen ist');
+  }
 });

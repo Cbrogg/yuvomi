@@ -25,28 +25,47 @@ import assert from 'node:assert/strict';
 // --------------------------------------------------------
 
 function makeHistory() {
-  const entries = [{ path: '/dashboard' }];
+  /* Die Attrappe fuehrt eine ADRESSE je Eintrag, nicht nur einen Zustand.
+   *
+   * Eine fruehere Fassung hielt `location.href` konstant, und genau das machte
+   * sie blind: eine geschluckte Zweitgeste bewegt den Browser trotzdem, die
+   * Adresse zeigte danach eine andere Seite als der Bildschirm - und kein Test
+   * konnte es sehen. `forward()` gehoert aus demselben Grund dazu. */
+  const entries = [{ state: { path: '/dashboard' }, href: '/dashboard' }];
   let index = 0;
   // Was der Router tun WUERDE, wenn die Geste nicht fuer einen Dialog war.
   const navigations = [];
   let onPop = null;
 
+  const emit = () => onPop?.(entries[index].state);
+
   return {
-    get state() { return entries[index]; },
+    get state() { return entries[index].state; },
     get depth() { return index; },
-    pushState(state) {
+    get href() { return entries[index].href; },
+    get forwardLength() { return entries.length - 1 - index; },
+    pushState(state, _title, href) {
       entries.splice(index + 1);
-      entries.push(state);
+      entries.push({ state, href: href ?? entries[index].href });
       index = entries.length - 1;
     },
-    replaceState(state) { entries[index] = state; },
+    replaceState(state, _title, href) {
+      entries[index] = { state, href: href ?? entries[index].href };
+    },
     back() {
       // Der Browser feuert `popstate` NICHT synchron. Ein Test, der das
       // annimmt, verdeckt genau die Verschraenkung, die hier gefaehrlich ist.
       queueMicrotask(() => {
         if (index === 0) return;
         index -= 1;
-        onPop?.(entries[index]);
+        emit();
+      });
+    },
+    forward() {
+      queueMicrotask(() => {
+        if (index >= entries.length - 1) return;
+        index += 1;
+        emit();
       });
     },
     setPopHandler(fn) { onPop = fn; },
@@ -65,7 +84,7 @@ async function freshModule() {
   const history = makeHistory();
   observers = [];
   globalThis.history = history;
-  globalThis.location = { href: '/dashboard' };
+  globalThis.location = { get href() { return history.href; } };
   globalThis.document = {};
   globalThis.MutationObserver = class {
     constructor(cb) { this.cb = cb; observers.push(this); }
@@ -436,6 +455,76 @@ test('ein abgelehntes Schliessen bekommt seinen Marker auch nach einer zweiten G
 
   antwort(false);          // „nicht verwerfen" - der Dialog bleibt offen
   await settle();
-  assert.equal(history.depth, 1, 'der Marker liegt wieder da');
+  // Die Aussage ist der MARKER, nicht eine bestimmte Tiefe: der Dialog steht
+  // noch, also muss die naechste Geste wieder bei ihm ankommen.
+  assert.equal(history.state?.overlay, true, 'der Marker liegt wieder da');
+  assert.equal(history.href, '/dashboard',
+    'und auf der Adresse, auf der der Dialog steht - die zurueckgenommene '
+    + 'Zweitgeste darf sie nicht verschoben haben');
   assert.deepEqual(history.navigations, []);
+});
+
+test('die zurueckgenommene Zweitgeste laesst die Adresse stehen', async () => {
+  // Das Schlucken allein reicht nicht: der Browser IST zurueckgegangen, und
+  // ein blosses „nicht rendern" liesse die Adresse auf der vorigen Seite
+  // stehen, waehrend der Dialog der aktuellen zu sehen ist. Der naechste
+  // `pushState` haette dann obendrein den echten Vorwaertszweig abgeschnitten.
+  const { pushOverlay, history } = await freshModule();
+  history.pushState({ path: '/calendar' }, '', '/calendar');
+
+  let antwort;
+  const gefragt = new Promise((resolve) => { antwort = resolve; });
+  pushOverlay(() => gefragt);
+  await settle();
+  const adresseMitDialog = history.href;
+
+  history.back();          // erste Geste: die Rueckfrage geht auf
+  await settle();
+  history.back();          // zweite Geste, waehrend noch gefragt wird
+  await settle();
+
+  assert.equal(history.href, adresseMitDialog,
+    'die Adresse ist mitgewandert - der Bildschirm zeigt eine andere Seite als die Leiste');
+
+  antwort(undefined);
+  await settle();
+  assert.deepEqual(history.navigations, []);
+});
+
+test('das Sitzungsende laesst seinen Marker fuer die Anmeldeseite liegen', async () => {
+  // Auf `closeAllOverlays()` folgt `navigate('/login')`, und die soll den
+  // Marker ERBEN (`replaceState`). Wer ihn schon verbraucht, laesst die
+  // Navigation einen Eintrag daruebersetzen: Zurueck von der Anmeldeseite
+  // landet dann auf dem toten Marker der geschuetzten Route, wird wieder nach
+  // `/login` umgeleitet - und die Geste ist verpufft, wiederholbar.
+  const { pushOverlay, closeAllOverlays, consumeOverlayMarker } = await freshModule();
+
+  pushOverlay(() => {});
+  await settle();
+
+  closeAllOverlays();
+  assert.equal(consumeOverlayMarker(), true,
+    'die folgende Navigation findet keinen Marker zum Erben');
+});
+
+test('ein herausgenommener Eintrag gilt nicht mehr als angemeldet', async () => {
+  // `handleBackNavigation()` nimmt den Eintrag aus dem Register, BEVOR es
+  // schliessen laesst. Wer danach nur fragt, ob er einen Token HAT, haelt sich
+  // fuer angemeldet und ist es nicht - genau so verlor ein wieder
+  // hervorgeholtes Formular (Bestaetigungsdialog darueber, Zurueck-Geste)
+  // seinen Anspruch auf die naechste Geste, und der Router navigierte dahinter
+  // weg. Das Modal-System fragt deshalb `isOverlayOpen(token)`.
+  const { pushOverlay, isOverlayOpen, history } = await freshModule();
+
+  let gesehen = null;
+  const token = pushOverlay(() => { gesehen = isOverlayOpen(token); });
+  await settle();
+  assert.equal(isOverlayOpen(token), true, 'vor der Geste ist er angemeldet');
+
+  history.back();
+  await settle();
+  assert.equal(gesehen, false,
+    'waehrend des Schliessens ist er es nicht mehr - wer hier "ja" liest, '
+    + 'meldet sich nie wieder an');
+  assert.equal(isOverlayOpen(token), false);
 });

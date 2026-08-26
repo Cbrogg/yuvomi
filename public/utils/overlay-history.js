@@ -199,8 +199,19 @@ export async function handleBackNavigation() {
     pendingSelfPops -= 1;
     return true;
   }
-  // Eine zweite Geste, waehrend die erste noch fragt - Begruendung an `closing`.
-  if (closing) return true;
+  /* Eine zweite Geste, waehrend die erste noch fragt - Begruendung an
+   * `closing`. SIE WIRD ZURUECKGENOMMEN, nicht nur verschluckt: der Browser
+   * ist bereits einen Eintrag zurueckgegangen, und ein blosses `return true`
+   * unterdrueckt nur das Rendern. Die Adresse zeigte danach eine andere Seite
+   * als der Bildschirm, und der naechste `pushState` haette den echten
+   * Vorwaertszweig abgeschnitten. `forward()` stellt beides wieder her - und
+   * ist, wie das `back()` im Abgleich, ein eigener Schritt und keine
+   * Nutzergeste. */
+  if (closing) {
+    pendingSelfPops += 1;
+    history.forward();
+    return true;
+  }
   /* Ohne Marker war die Geste nicht fuer uns. Das ist die genauere Frage als
    * „ist etwas offen?": ein Overlay kann bereits im Register stehen, waehrend
    * sein Marker noch im ausstehenden Abgleich haengt - dann gehoert die Geste
@@ -272,10 +283,36 @@ export function consumeOverlayMarker() {
  * bei jeder folgenden.
  */
 export function closeAllOverlays() {
-  consumeOverlayMarker();
+  const open = stack.splice(0);
+  for (const entry of open.reverse()) {
+    entry.detach?.();
+    try { entry.close({ force: true }); } catch { /* darf das Abmelden nicht aufhalten */ }
+  }
+  /* `markerActive` BLEIBT STEHEN, anders als bei `consumeOverlayMarker()`.
+   *
+   * Auf das Sitzungsende folgt eine Navigation nach `/login`, und die soll den
+   * Marker ERBEN (`replaceState`). Wer ihn hier schon verbraucht, laesst sie
+   * einen neuen Eintrag daruebersetzen: Zurueck von der Anmeldeseite landet
+   * dann auf dem toten Marker der geschuetzten Route, wird nach `/login`
+   * umgeleitet und die Geste ist verpufft - wiederholbar, also eine Falle
+   * statt eines Wegs. */
 }
 
-/** Steht gerade ein Overlay im Register? */
+/**
+ * Steht DIESER Marker noch im Register?
+ *
+ * Wer seinen Token ueber mehrere Zustaende haelt - das Modal-System tut das,
+ * weil ein Bestaetigungsdialog das Formular darunter parkt -, muss das fragen
+ * koennen. `handleBackNavigation()` nimmt den Eintrag heraus, BEVOR es
+ * schliesst; wer danach nur „habe ich einen Token?" fragt, haelt sich fuer
+ * angemeldet und ist es nicht. Genau so verlor ein wieder hervorgeholtes
+ * Formular seinen Anspruch auf die naechste Geste.
+ */
+export function isOverlayOpen(token) {
+  return stack.some((entry) => entry.token === token);
+}
+
+/** Steht gerade irgendein Overlay im Register? */
 export function hasOpenOverlay() {
   return stack.length > 0;
 }
