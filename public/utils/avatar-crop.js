@@ -1,4 +1,5 @@
 import { t } from '/i18n.js';
+import { attachOverlay } from '/utils/overlay-history.js';
 
 const CANVAS_SIZE = 288;
 const CROP_SIZE = 240;
@@ -272,6 +273,21 @@ export function openCropDialog(imageDataUrl) {
       const dialog = buildDialog(img, resolve);
       document.body.appendChild(dialog);
       dialog.showModal();
+      /* AUCH EIN NATIVES `<dialog>` MELDET SICH AN (#871).
+       *
+       * Es traegt kein `aria-modal`-Attribut - das setzt der Browser bei
+       * `showModal()` implizit -, ist aber genauso modal wie die selbstgebauten
+       * Overlays und liegt in der Top-Layer DARUEBER. Ohne Anmeldung nahm die
+       * Zurueck-Geste den Eintrag des geteilten Modals darunter (Schnellzugriffe,
+       * Haushaltshilfe): das Formular ging zu oder fragte nach ungespeicherten
+       * Aenderungen, waehrend der Zuschnitt unveraendert obenauf stehen blieb.
+       *
+       * Zurueck heisst hier „abgebrochen", wie das X und wie Escape - der
+       * `cancel`-Weg ist derselbe. */
+      attachOverlay(dialog, () => {
+        dialog.remove();
+        resolve(null);
+      });
     };
     img.onerror = () => resolve(null);
     img.src = imageDataUrl;

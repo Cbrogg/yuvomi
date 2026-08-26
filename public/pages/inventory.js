@@ -28,6 +28,7 @@ import { renderDocumentAttachField, bindDocumentAttachField } from '/components/
 import { warrantyStatus, hasUpcomingDeadline, dateStatus, countUpcomingDeadlines } from '/utils/inventory-warranty.js';
 import { openDetailView } from '/components/detail-view.js';
 import { wireScrollFade } from '/utils/ux.js';
+import { attachOverlay } from '/utils/overlay-history.js';
 import { setNavBadge } from '/utils/nav-badges.js';
 
 let _container = null;
@@ -909,6 +910,9 @@ function openBookingPicker(panel, { initialMonth, includeRole = false } = {}) {
       if (opener?.isConnected) opener.focus();
       resolve(result);
     };
+    // Liegt ueber einem offenen Modal - die Zurueck-Geste meint zuerst ihn
+    // (#871). Ohne Auswahl heisst zu: abgebrochen.
+    attachOverlay(overlay, () => close(null));
 
     const renderList = () => {
       monthEl.textContent = formatMonthLabel(month);

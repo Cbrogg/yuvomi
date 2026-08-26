@@ -25,6 +25,10 @@ import { activityType } from '/utils/health-activity.js';
 import { buildHelpRows } from '/utils/help.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
 import {
+  handleBackNavigation, closeAllOverlays, consumeOverlayMarker,
+  pushOverlay, dropOverlay, attachOverlay,
+} from '/utils/overlay-history.js';
+import {
   applyNavBadges, setNavBadge, resetNavBadges, navBadgeRoutes,
   moduleCountsFrom, navBadgeCountsFrom,
 } from '/utils/nav-badges.js';
@@ -752,7 +756,17 @@ async function navigate(path, userOrPushState = true, pushState = true) {
     }
 
     if (pushState) {
-      history.pushState({ path }, '', path);
+      /* EIN DIALOG UEBERLEBT KEINE NAVIGATION (#871). Er stuende sonst ueber
+       * der falschen Seite - genau der gemeldete Zustand, nur andersherum
+       * erreicht. `consumeOverlayMarker()` schliesst deshalb, was noch offen
+       * ist, und meldet zurueck, ob der aktuelle History-Eintrag unser
+       * Platzhalter war.
+       *
+       * WAR ER ES, TRITT DIE NEUE SEITE AN SEINE STELLE. Laege sie darueber,
+       * zeigte der Rueckweg zuerst auf einen Eintrag mit derselben Adresse -
+       * eine Geste, die sichtbar nichts tut. */
+      if (consumeOverlayMarker()) history.replaceState({ path }, '', path);
+      else history.pushState({ path }, '', path);
     }
 
     // Soft-Navigation innerhalb desselben Moduls (z. B. Settings-Blatt → Blatt
@@ -2482,6 +2496,9 @@ function showHelpModal() {
 
   overlay.appendChild(panel);
   document.body.appendChild(overlay);
+  // Die Zurueck-Geste schliesst auch diesen Dialog (#871). `attachOverlay`
+  // statt `pushOverlay`, weil er auf drei Wegen per `remove()` verschwindet.
+  attachOverlay(overlay, () => overlay.remove());
   if (window.lucide) window.lucide.createIcons({ el: panel });
 }
 
@@ -2773,8 +2790,12 @@ function initMoreSheet(container, openSearch) {
   const moreSheetTrap = createFocusTrap(sheet);
   const currentMoreBtn = () => container.querySelector('#more-btn') || moreBtn;
 
+  // Der Marker der Zurueck-Geste, solange das Blatt offen ist (#871).
+  let sheetOverlayToken = null;
+
   function openSheet() {
     lastFocusedBeforeSheet = document.activeElement;
+    sheetOverlayToken = pushOverlay(() => closeSheet());
     setOverlayInteractive(sheet, true);
     sheet.addEventListener('keydown', moreSheetTrap);
     backdrop.classList.add('more-backdrop--visible');
@@ -2802,6 +2823,11 @@ function initMoreSheet(container, openSearch) {
 
   function closeSheet({ restoreFocus = true } = {}) {
     if (sheet.getAttribute('aria-hidden') === 'true') return;
+    if (sheetOverlayToken !== null) {
+      const token = sheetOverlayToken;
+      sheetOverlayToken = null;
+      dropOverlay(token);
+    }
     setOverlayInteractive(sheet, false);
     sheet.removeEventListener('keydown', moreSheetTrap);
     backdrop.classList.remove('more-backdrop--visible');
@@ -2933,7 +2959,7 @@ function initSearch(container) {
       label.textContent = t(scope.labelKey);
       btn.append(seal, label);
       btn.addEventListener('click', () => {
-        closeSearch();
+        closeSearch({ restoreFocus: false });
         navigate(scope.route);
       });
       list.appendChild(btn);
@@ -2945,9 +2971,13 @@ function initSearch(container) {
     window.lucide?.createIcons({ el: results });
   }
 
+  // Der Marker der Zurueck-Geste, solange die Suche offen ist (#871).
+  let searchOverlayToken = null;
+
   function openSearch() {
     if (window._closeMoreSheet) window._closeMoreSheet({ restoreFocus: false });
     lastFocusedBeforeSearch = document.activeElement;
+    if (searchOverlayToken === null) searchOverlayToken = pushOverlay(() => closeSearch());
     setOverlayInteractive(overlay, true);
     overlay.classList.add('search-overlay--visible');
     if (!input.value.trim()) renderSearchHint();
@@ -2959,6 +2989,11 @@ function initSearch(container) {
   }
 
   function closeSearch({ restoreFocus = true } = {}) {
+    if (searchOverlayToken !== null) {
+      const token = searchOverlayToken;
+      searchOverlayToken = null;
+      dropOverlay(token);
+    }
     // Laufenden Debounce abbrechen: sonst feuert ein noch offener Timer nach dem
     // Schließen ins versteckte Overlay und macht eine Phantom-Live-Ansage.
     clearTimeout(searchTimer);
@@ -3018,7 +3053,7 @@ function initSearch(container) {
       setStatus(t('search.loading'));
       try {
         const data = await api.get(`/search?q=${encodeURIComponent(q)}`);
-        const count = renderSearchResults(results, data, closeSearch);
+        const count = renderSearchResults(results, data, () => closeSearch({ restoreFocus: false }));
         results.setAttribute('aria-busy', 'false');
         setStatus(
           count === 0 ? t('search.noResults')
@@ -4035,8 +4070,21 @@ if ('serviceWorker' in navigator) {
 }
 
 // Browser zurück/vor
+//
+// EIN OFFENER DIALOG FAENGT DIE GESTE AB (#871). Auf dem Telefon ist die
+// Wischgeste von links der Zurueck-Knopf, und ueber einem offenen Dialog meint
+// sie den Dialog, nicht die Seite darunter. Vorher tat die App beides falsch
+// herum: sie navigierte im Hintergrund und liess den Dialog stehen.
+//
+// Der Handler ist async, der Listener bleibt es nicht: `navigate()` darf erst
+// laufen, wenn feststeht, dass die Geste NICHT fuer einen Dialog war - der
+// Weg aus einem Formular mit ungespeicherten Aenderungen fragt zurueck und
+// beantwortet die Frage erst danach.
 window.addEventListener('popstate', (e) => {
-  navigate(e.state?.path || location.pathname, false);
+  const target = e.state?.path || location.pathname;
+  handleBackNavigation().then((handled) => {
+    if (!handled) navigate(target, false);
+  });
 });
 
 /* ES GIBT ZWEI ABGAENGE, UND SIE TEILEN SICH KEINEN CODE.
@@ -4074,6 +4122,11 @@ function forgetSessionState() {
   resetModuleCounts();
   // Ebenso die Zahlen an den Nav-Zielen (#868).
   resetNavBadges();
+  // Was noch offen steht, geht mit der Sitzung zu (#871). SCHLIESSEN und nicht
+  // nur vergessen: ein geteiltes Modal haengt an `document.body` und ueberlebt
+  // das Abraeumen der Shell - ein bloss geleertes Register liesse es ueber der
+  // Anmeldeseite stehen.
+  closeAllOverlays();
   stopThirdPartyModulePolling();
   stopReminders();
   stopPush();

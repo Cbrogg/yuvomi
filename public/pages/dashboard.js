@@ -34,6 +34,7 @@ import { emptyHintHTML } from '/utils/empty-state.js';
 import { quickLinkHost } from '/utils/quick-link-url.js';
 import { prefersInkText } from '/utils/contrast.js';
 import { openQuickLinksManager } from '/components/quick-links-manager.js';
+import { attachOverlay } from '/utils/overlay-history.js';
 
 // Hält den AbortController des aktuellen FAB-Listeners - wird bei jedem render() erneuert.
 let _fabController = null;
@@ -217,6 +218,9 @@ function showOnboarding(appContainer, onDone) {
 
   renderStep();
   appContainer.appendChild(overlay);
+  // Die Zurueck-Geste beendet die Einfuehrung, statt hinter ihr zu navigieren
+  // (#871). `finish()` ist der EINE Weg hinaus und merkt sich das auch.
+  attachOverlay(overlay, finish);
 }
 
 // Einmaliger, zurückhaltender Hinweis auf den „Anpassen"-Einstieg: Da vier Widgets

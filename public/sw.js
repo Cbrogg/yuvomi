@@ -131,6 +131,7 @@ const APP_SHELL = [
   '/utils/metric-card.js',
   '/utils/money.js',
   '/utils/nav-badges.js',
+  '/utils/overlay-history.js',
   '/utils/page-search.js',
   '/utils/pantry-locations.js',
   '/utils/pantry-status.js',

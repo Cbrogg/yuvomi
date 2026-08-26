@@ -7,6 +7,7 @@
 import { api } from '/api.js';
 import { renderRRuleFields, bindRRuleEvents, getRRuleValues, recurrenceRow } from '/rrule-ui.js';
 import { openModal as openSharedModal, closeModal, advancedSection, wireBlurValidation, reportFieldError } from '/components/modal.js';
+import { attachOverlay } from '/utils/overlay-history.js';
 import { openDetailView, visibilityRow, assignedRow } from '/components/detail-view.js';
 import { stagger, wireScrollFade, scheduleUndoableDelete } from '/utils/ux.js';
 import { t, formatDate as formatPreferredDate, formatDayMonth, formatTime, timeSuffix, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
@@ -376,6 +377,9 @@ function openIconPickerDialog(selectedIcon, onSelect, onClose = () => {}) {
     document.removeEventListener('keydown', onKeydown);
     onClose();
   }
+  // Die Zurueck-Geste schliesst zuerst diesen Picker, nicht das Formular
+  // darunter (#871).
+  attachOverlay(overlay, close);
   function onKeydown(e) {
     if (e.key === 'Escape') close();
   }

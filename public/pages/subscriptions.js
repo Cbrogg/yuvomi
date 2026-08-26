@@ -19,6 +19,7 @@ import { todayKey } from '/utils/date.js';
 import { CURRENCY_CODES } from '/utils/currency-codes.js';
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { formatMoney, amountPlaceholder, amountStep, applyAmountFormat, amountIsSavable, smallestUnitLabel } from '/utils/money.js';
+import { attachOverlay } from '/utils/overlay-history.js';
 
 let state = {
   subscriptions: [],
@@ -1234,6 +1235,8 @@ function openLogoPickerModal(panel, initialQuery, onSelect) {
   const input = overlay.querySelector('#subscription-logo-search-input');
   let options = [];
   const close = () => overlay.remove();
+  // Der Picker liegt ueber dem Abo-Formular; die Zurueck-Geste meint ihn (#871).
+  attachOverlay(overlay, close);
   const search = async () => {
     const query = input.value.trim();
     if (!query) return;

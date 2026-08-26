@@ -13777,6 +13777,180 @@ test('in den Modal-Knopfzeilen darf der Knopftext umbrechen (#872)', () => {
 });
 
 /**
+ * JEDES OVERLAY MELDET SICH AN DER ZURUECK-GESTE AN (#871).
+ *
+ * Der gemeldete Fehler war, dass die Zurueck-Geste ueber einem offenen Dialog
+ * die SEITE wechselte und den Dialog stehen liess - im Hintergrund landete man
+ * auf der Uebersicht, davor hing weiter der Termin. Auf dem Telefon ist die
+ * Wischgeste von links der Zurueck-Knopf, also war das die einzige Geste, die
+ * den Zustand kaputt statt kleiner machte.
+ *
+ * DIESE APP HAT NICHT EINEN DIALOG. Neben dem geteilten Modal-System stehen
+ * neun eigene Overlays (Mehr-Blatt, Suche, Hilfe, Icon-Picker, Belegpicker,
+ * Belegvorschau, Buchungspicker, Logopicker, Onboarding, Budget-Inline). Ein
+ * Fix nur im Modal-System haette den gemeldeten Fall geschlossen und die
+ * anderen offen gelassen - und die zehnte Stelle waere wieder eine neue.
+ *
+ * DIE REGEL IST DIE VOLLSTAENDIGKEIT, NICHT DIE LISTE: wer ein Overlay
+ * aufmacht (`aria-modal="true"`), meldet es an. Geprueft wird je Datei, dass
+ * mindestens so viele Anmeldungen wie modale Overlays darin stehen.
+ *
+ * WAS ER NICHT SIEHT, ausgesprochen: er zaehlt je DATEI. Ein zweites Overlay
+ * in einer Datei, die schon eine Anmeldung hat, faellt ihm auf; ein Overlay,
+ * das seinen `aria-modal`-Wert aus einer Variablen setzt, nicht.
+ *
+ * Guard-Ebene: Vollstaendigkeit (aus dem Quelltext gezaehlt).
+ */
+test('jedes modale Overlay meldet sich an der Zurueck-Geste an (#871)', () => {
+  /* Ein Overlay AUFMACHEN heisst hier zweierlei, und die zweite Form hat der
+   * Guard zuerst uebersehen:
+   *   1. `aria-modal="true"` an einem selbstgebauten Kasten,
+   *   2. `showModal()` an einem nativen `<dialog>`. Es traegt kein Attribut -
+   *      das setzt der Browser implizit -, ist aber genauso modal und liegt in
+   *      der Top-Layer sogar DARUEBER. Der Bildzuschnitt (utils/avatar-crop.js)
+   *      ist so gebaut und oeffnet ueber geteilten Modals; ohne Anmeldung nahm
+   *      die Zurueck-Geste den Eintrag des Modals darunter. */
+  const OPENS_OVERLAY = /aria-modal["']?\s*[,:=]\s*["']?true|\.showModal\s*\(/g;
+  const REGISTERS = /\b(attachOverlay|pushOverlay)\s*\(/g;
+
+  const offenders = [];
+  let seenOverlays = 0;
+
+  for (const file of walkJsFiles('../public/')) {
+    if (file.includes('/vendor/')) continue;
+    const src = withoutBlockComments(read(file));
+    const opens = (src.match(OPENS_OVERLAY) ?? []).length;
+    if (!opens) continue;
+    seenOverlays += opens;
+    const registers = (src.match(REGISTERS) ?? []).length;
+    if (registers < opens) {
+      offenders.push(`${file}: ${opens} modale Overlays, nur ${registers} Anmeldungen`);
+    }
+  }
+
+  // Ohne diese Zusicherung waere der Guard gruen, sobald die Muster nicht mehr
+  // greifen - eine leere Liste ist keine Zusicherung.
+  assert.ok(seenOverlays >= 11,
+    `Nur ${seenOverlays} modale Overlays gefunden - das Muster greift nicht mehr, `
+    + 'statt nichts zu beanstanden.');
+
+  assert.deepEqual(offenders.sort(), [],
+    'Dieses Overlay faengt die Zurueck-Geste nicht ab. Sie wechselt dann die Seite '
+    + 'darunter und laesst das Overlay stehen (#871) - auf dem Telefon ist das die '
+    + 'Wischgeste von links, also der haeufigste Weg hinaus. Melde es mit '
+    + '`attachOverlay(el, close)` aus /utils/overlay-history.js an; `pushOverlay` '
+    + `nur, wenn das Overlay einen eigenen Lebenszyklus fuehrt.\n${offenders.join('\n')}`);
+});
+
+/**
+ * Und der Router fragt auch wirklich, bevor er navigiert.
+ *
+ * Die Registrierung allein reicht nicht: ohne diesen Handler stuende das
+ * ganze Register da und die Geste liefe weiter an ihm vorbei. Der Test haelt
+ * die EINE Zeile fest, an der die Frage haengt.
+ */
+test('der popstate-Handler fragt zuerst die offenen Overlays (#871)', () => {
+  const router = read('../public/router.js');
+  const handler = /window\.addEventListener\('popstate'[\s\S]*?\n\}\);/.exec(router);
+  assert.ok(handler, 'der popstate-Handler ist nicht mehr auffindbar');
+  assert.match(handler[0], /handleBackNavigation\(\)/,
+    'der Handler fragt die offenen Overlays nicht - die Geste wechselt wieder die Seite');
+  assert.match(handler[0], /if \(!handled\) navigate\(/,
+    'der Handler navigiert unabhaengig von der Antwort - dann bleibt der Dialog '
+    + 'stehen UND die Seite wechselt, also genau der gemeldete Zustand');
+});
+
+/**
+ * EIN ERZWUNGENES SCHLIESSEN RAEUMT AUCH DIE GEPARKTEN KAESTEN WEG (#871).
+ *
+ * Das Modal-System fuehrt EINEN Registereintrag fuer beliebig viele
+ * gestapelte Zustaende: ein Bestaetigungsdialog PARKT das Formular darunter,
+ * statt es zu schliessen (`_suspendActiveModal`). Ein `closeModal({force})`
+ * erwischt deshalb nur den obersten Kasten - und der laufende
+ * Bestaetigungs-Ablauf holt danach das geparkte Formular zurueck, bei
+ * Sitzungsende also ueber die Anmeldeseite und ohne Registrierung. Wieder der
+ * Zustand aus #871, nur mit abgelaufener Sitzung davor.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('erzwungenes Schliessen raeumt auch geparkte Modals weg (#871)', () => {
+  const modal = read('../public/components/modal.js');
+  const fn = /async function _closeFromBackNavigation\([\s\S]*?\n\}/.exec(modal);
+  assert.ok(fn, '_closeFromBackNavigation ist nicht mehr auffindbar');
+  assert.match(fn[0], /if \(force\)/,
+    'der Zwangspfad ist nicht vom normalen unterschieden - dann bleibt ein '
+    + 'geparktes Formular ueber der Anmeldeseite stehen');
+  assert.match(fn[0], /querySelectorAll\('\.modal-overlay'\)[\s\S]{0,80}remove\(\)/,
+    'der Zwangspfad entfernt die geparkten Kaesten nicht');
+
+  /* UND DAS ZURUECKHOLEN ERKENNT DEN ENTFERNTEN KNOTEN. Der
+   * Bestaetigungs-Ablauf laeuft in einer eigenen Kette weiter und kam nach dem
+   * Zwangsraeumen hier an: er setzte `activeOverlay` auf ein Phantom,
+   * `modalState` auf 'open' und die Scroll-Sperre auf die naechste Seite. Die
+   * Anmeldeseite blieb unscrollbar, bis irgendwo das naechste Modal aufging. */
+  const resume = /function _resumeSuspendedModal\([\s\S]*?\n\}/.exec(modal);
+  assert.ok(resume, '_resumeSuspendedModal ist nicht mehr auffindbar');
+  assert.match(resume[0], /if \(!overlay\.isConnected\)[\s\S]{0,120}return;/,
+    'ein zwangsweise entfernter Kasten wird wieder „zurueckgeholt" - Scroll-Sperre '
+    + 'und Escape-Handler bleiben dann auf einem Phantom haengen');
+});
+
+/**
+ * DER REGISTEREINTRAG FOLGT DEM ZUSTAND, NICHT DEM EREIGNIS (#871).
+ *
+ * Drei Anlaeufe scheiterten daran, den Eintrag an Oeffnen und Schliessen zu
+ * haengen: beide Stellen mussten wissen, ob unter dem Kasten, der gerade
+ * zugeht, noch einer liegt, und konnten es nicht. Ein Bestaetigungsdialog ist
+ * fuer `_doClose` das aktive Overlay, obwohl er das Formular darunter nur
+ * PARKT - der Zweig gab also dessen Eintrag zurueck, und das gleich folgende
+ * `_resumeSuspendedModal` holte es ohne Registrierung hervor. Wer direkt nach
+ * `closeModal()` fragt, fragt ausserdem zu frueh: der Bestaetigungs-Ablauf
+ * laeuft in einer eigenen, nicht abgewarteten Kette.
+ *
+ * Eine Zustandsfrage kennt diese Reihenfolgen nicht.
+ *
+ * Guard-Ebene: Struktur (aus dem Quelltext gelesen).
+ */
+test('die Registrierung des Modal-Systems folgt dem Zustand (#871)', () => {
+  const modal = read('../public/components/modal.js');
+  const fn = /function _syncOverlayRegistration\(\)[\s\S]*?\n\}/.exec(modal);
+  assert.ok(fn, '_syncOverlayRegistration ist nicht mehr auffindbar');
+  assert.match(fn[0], /querySelector\('\.modal-overlay'\)/,
+    'die Registrierung fragt nicht mehr den Zustand ab');
+  /* UND SIE FRAGT DAS REGISTER, nicht nur den eigenen Token.
+   * `handleBackNavigation()` nimmt den Eintrag heraus, BEVOR es schliessen
+   * laesst - wer danach nur prueft, ob er einen Token HAT, haelt sich fuer
+   * angemeldet und ist es nicht. Genau so verlor ein wieder hervorgeholtes
+   * Formular seinen Anspruch auf die naechste Geste. */
+  assert.match(fn[0], /isOverlayOpen\(_overlayToken\)/,
+    'die Registrierung prueft nicht, ob ihr Token ueberhaupt noch im Register '
+    + 'steht - ein wieder hervorgeholtes Formular meldet sich dann nie neu an');
+
+  /* Jeder Uebergang zieht sie nach - Oeffnen, endgueltiges Schliessen und das
+   * Zurueckholen eines geparkten Formulars.
+   *
+   * Der Ausschnitt laeuft vom Funktionskopf bis zum naechsten auf Spaltenrand
+   * beginnenden Kopf, NICHT ueber eine Klammerbilanz per Regex: `openModal`
+   * enthaelt mehrere innere Bloecke, und ein `[\s\S]*?\n\}` endete am
+   * ersten von ihnen - der Guard war damit rot, obwohl die Zeile dastand. */
+  const abschnitt = (name) => {
+    const start = modal.indexOf(`function ${name}(`);
+    if (start === -1) return null;
+    const rest = modal.slice(start);
+    const ende = rest.slice(1).search(/\n(?:export )?(?:async )?function |\n\/\*\*/);
+    return ende === -1 ? rest : rest.slice(0, ende + 1);
+  };
+
+  for (const name of ['openModal', '_doClose', '_resumeSuspendedModal']) {
+    const block = abschnitt(name);
+    assert.ok(block, `${name} ist nicht mehr auffindbar`);
+    assert.match(block, /_syncOverlayRegistration\(\)/,
+      `${name} zieht die Registrierung nicht nach - nach diesem Uebergang `
+      + 'stimmt der Eintrag nicht mehr mit dem ueberein, was zu sehen ist');
+  }
+});
+
+/**
  * DIE ZAHL AM NAV-ZIEL WIRD AN EINER STELLE GEZEICHNET (#868).
  *
  * Gemeldet war, dass das Badge mit den ueberfaelligen Aufgaben nach dem
