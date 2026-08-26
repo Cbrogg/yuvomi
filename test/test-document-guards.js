@@ -63,6 +63,10 @@ const LEAVES_SKIPPED = new Map([
     + 'Modulkopf, die Blaetter darunter sind Detailseiten. Die Sonde faende dort null '
     + 'Leisten und meldete 69 gruene Zustaende, die nie gemessen wurden. Den '
     + 'Dokument-Ueberlauf der Blaetter misst Sonde 10, und die faehrt sie.'],
+  ['Sonde 19', 'misst `.page-toolbar` und zaehlt ihre Zeilen. Ein Settings-Blatt traegt '
+    + 'keine - derselbe Grund wie bei Sonde 1, und dieselbe Folge: 23 Blaetter mal zwei '
+    + 'Sprachen mal drei Breiten waeren 138 Zustaende ohne eine einzige Messung, die '
+    + 'anschliessend als gruen zaehlten.'],
   ['Sonde 5', 'faehrt eine Wischgeste auf `.swipe-row`. In `public/settings/**` kommt die '
     + 'Klasse nicht vor (geprueft, 0 Treffer); die Sonde ueberspringt einen Zustand ohne '
     + 'Wischzeile ohnehin. 23 Blaetter mal zwei Sprachen waeren reine Ladezeit ohne eine '
@@ -3369,6 +3373,179 @@ describe('Sonde 18 - am Scroll-Ende liegt nichts Bedienbares unter dem FAB', () 
 
       assert.deepEqual(findings, [],
         'Der FAB am Scroll-Ende. Dort gehoert ihm der Nachlauf allein.\n  ' + findings.join('\n  '));
+    });
+  }
+});
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * Sonde 19 - in der regulaeren Groessenklasse traegt der Modulkopf EINE Zeile
+ *
+ * WARUM ES DIESE SONDE VORHER NICHT GAB, UND WAS DURCH DIE LUECKE FIEL. Sonde 1
+ * misst Kopf-Ueberlauf, aber nur bei 375px. Sonde 15 zaehlt Kopf-Zeilen, aber
+ * nur in der kompakten Hoehe (640x400). Der Zustand aus #882 - Desktop, Kopf
+ * baut zwei Zeilen - faellt durch beide Raster: er ist kein Ueberlauf (nichts
+ * ragt hinaus, die Leiste wird nur hoeher) und keine kompakte Hoehe. Gemeldet
+ * hat ihn ein Nutzer, fuer vier Module, mit Screenshots.
+ *
+ * WAS GEMESSEN WIRD UND WARUM NICHT DER QUELLTEXT. Ob ein Kopf in eine Zeile
+ * passt, entscheidet die Summe aus Titellaenge, Anzahl der Aktionen, Locale und
+ * Viewport - in keinem Stylesheet steht das. Beim Anlassfall kam dazu, dass die
+ * Ursache aus der KOMPOSITION zweier je fuer sich richtiger Regeln entstand:
+ * eine Marge holte das Zeilenende aufs Lesemass zurueck, ein Modifier erlaubte
+ * den Umbruch, und zusammen beanspruchte der Aktions-Slot 966px einer 1280px
+ * breiten Zeile. Ein Quelltext-Guard haette beide Regeln einzeln gebilligt.
+ *
+ * EINE ZEILE, NICHT ZWEI - siehe die Begruendung an der Schwelle unten. Die
+ * erste Fassung uebernahm die Zwei-Zeilen-Grenze von Sonde 15 und blieb mit
+ * wieder eingebautem Fehler gruen.
+ *
+ * ZWEI ZUSICHERUNGEN, WEIL EINE OHNE DIE ANDERE ERKAUFT WERDEN KANN. Einzeilig
+ * zu sein ist wertlos, wenn der Kopf sein Ende dabei verliert - der
+ * Lesemass-Abstand existiert ja gerade, damit Kopf und Koerper dieselbe rechte
+ * Kante haben. Die erste Fassung des Fix liess ihn nachgeben: der Kopf wurde
+ * einzeilig und schob sein Ende um 69 bis 87px ueber die Koerperkante. Kein
+ * Guard sah das, weil keiner die Kante mass; gefunden hat es ein Reviewer.
+ *
+ * DREI BREITEN, WEIL DIE ENGE VON DER BREITE ABHAENGT. 1024px ist die Kante der
+ * Groessenklasse (darunter regiert die Large-Title-Zone und der Umbruch ist
+ * Absicht), 1280px die Breite, ab der die Content-Spalte steht, und 1960px die
+ * Breite, bei der der Melder gemessen hat - dort war der Kopf zweizeilig,
+ * obwohl 660px Platz frei standen. Die Zeilenzahl wird nur bei den beiden
+ * oberen geprueft; die Begruendung steht an REGULAR_WIDTHS.
+ *
+ * DURCH DIE SICHTEN GEKLICKT, weil genau dort der Anlassfall sass: der
+ * Kalenderkopf baute in Woche, Tag und Agenda eine Zeile mehr als im Monat,
+ * ohne dass ein Element dazukam - nur das Datumslabel wurde laenger.
+ *
+ * `uk` als zweite Sprache: laengste Modulnamen, dieselbe Wahl wie in Sonde 1.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+/* `rows: false` heisst NICHT "hier ist alles erlaubt", sondern "hier ist eine
+ * Zeile nicht erreichbar, und das ist gemessen". Bei 1024px nimmt die Sidebar
+ * dem Kopf rund 220px; innen bleiben 740px, und davon beansprucht das Lesemass
+ * allein 720px. Ein Kopf mit Titel, Suchfeld und vier Aktionen passt da nicht in
+ * eine Zeile, ohne dass Inhalt verschwindet - der Umbruch ist dort die richtige
+ * Antwort auf echten Platzmangel und nicht der Rechenfehler aus #882. Gefunden
+ * hat das erst der GESAMTLAUF: einzeln gefahren blieb die Sonde gruen, weil die
+ * Testinstanz nach achtzehn anderen Sonden mehr Daten traegt und die Filter im
+ * Kopf damit breiter werden.
+ *
+ * Die FLUCHTLINIE wird trotzdem auch dort geprueft: dass ein Kopf umbricht,
+ * entbindet ihn nicht davon, auf der Kante seines Koerpers zu enden. */
+const REGULAR_WIDTHS = [
+  { w: 1024, why: 'Kante der Groessenklasse', rows: false },
+  { w: 1280, why: 'Breite der Content-Spalte', rows: true },
+  { w: 1960, why: 'gemeldete Breite (#882)',   rows: true },
+];
+
+describe('Sonde 19 - in der regulaeren Groessenklasse traegt der Modulkopf eine Zeile', () => {
+  for (const locale of ['de', 'uk']) {
+    test(`Locale ${locale}`, async () => {
+      const findings = [];
+      let seen = 0;
+
+      for (const { w, why, rows: pruefeZeilen } of REGULAR_WIDTHS) {
+        const page = await openPage(harness, { device: 'desktop', theme: 'light', locale });
+        await page.setViewport({ width: w, height: 900, deviceScaleFactor: 1, isMobile: false, hasTouch: false });
+
+        for (const name of sweep('Sonde 19')) {
+          await gotoRoute(page, ALL_ROUTES[name]);
+          await visitViews(page, name, async (where) => {
+            const heads = await page.evaluate(() => [...document.querySelectorAll('.page-toolbar')]
+              .filter((el) => el.getBoundingClientRect().height > 0)
+              .map((el) => {
+                // Disjunkte Cluster ueber die vertikalen Intervalle der Kinder -
+                // dieselbe Rechnung wie in Sonde 15, und aus demselben Grund:
+                // mittig ausgerichtete Slots unterschiedlicher Hoehe beginnen
+                // auseinander, ein Zaehler ueber Oberkanten meldete sonst fuer
+                // einen einzeiligen Kopf vier "Zeilen".
+                const spans = [...el.children]
+                  .map((c) => ({ r: c.getBoundingClientRect(), cs: getComputedStyle(c) }))
+                  .filter((x) => x.r.height > 0 && x.cs.display !== 'none' && x.cs.visibility !== 'hidden')
+                  .map((x) => [x.r.top, x.r.bottom])
+                  .sort((a, b) => a[0] - b[0]);
+                let rows = 0;
+                let end = -Infinity;
+                for (const [top, bottom] of spans) {
+                  if (top >= end) rows += 1;
+                  end = Math.max(end, bottom);
+                }
+                // Wo endet der letzte echte Slot, gemessen ab dem Anfang der
+                // Content-Box? Nur fuer gedeckelte Koepfe - die uebrigen haben
+                // keine Kante, an die sie sich halten muessten.
+                let narrowEnd = null;
+                let measure = null;
+                if (el.classList.contains('page-toolbar--narrow')) {
+                  const cs = getComputedStyle(el);
+                  const contentLeft = el.getBoundingClientRect().left + parseFloat(cs.paddingInlineStart);
+                  const inner = el.clientWidth - parseFloat(cs.paddingInlineStart) - parseFloat(cs.paddingInlineEnd);
+                  measure = parseFloat(getComputedStyle(document.documentElement)
+                    .getPropertyValue('--content-max-width-narrow'));
+                  // Nur pruefen, wo die Spalte ueberhaupt breiter als das
+                  // Lesemass ist - darunter nimmt `max()` den Abstand zurueck
+                  // und der Kopf endet richtigerweise an der Spaltenkante.
+                  if (inner > measure) {
+                    const last = [...el.children]
+                      .filter((c) => getComputedStyle(c).display !== 'none')
+                      .pop();
+                    if (last) narrowEnd = Math.round(last.getBoundingClientRect().right - contentLeft);
+                  }
+                }
+                return {
+                  rows, h: Math.round(el.getBoundingClientRect().height), cls: el.className,
+                  narrowEnd, measure,
+                };
+              }));
+            for (const head of heads) {
+              seen += 1;
+              // DIE FLUCHTLINIE, ZWEITE HAELFTE DERSELBEN FRAGE. Einzeilig zu
+              // sein ist wertlos, wenn der Kopf sein Ende dabei verliert: der
+              // Lesemass-Abstand existiert, damit Kopf und Koerper dieselbe
+              // rechte Kante haben (DESIGN.md, "fuer BEIDE Kanten"). Die erste
+              // Fassung dieses Fix liess ihn nachgeben, blieb einzeilig - und
+              // schob das Kopfende um 69 bis 87px ueber die Koerperkante
+              // hinaus. Kein Guard sah das, weil keiner die Kante mass.
+              if (head.narrowEnd !== null && Math.abs(head.narrowEnd - head.measure) > 1) {
+                findings.push(
+                  `${w}px (${why}) ${where}: Kopfende bei ${head.narrowEnd}px statt `
+                  + `${head.measure}px (Lesemass) - ${head.cls}`,
+                );
+              }
+              // EINE ZEILE, UND DAS IST DER UNTERSCHIED ZU SONDE 15. Dort sind
+              // zwei erlaubt, weil in der kompakten Hoehe eine Bedienzeile im
+              // Kopf legitim ist. Hier waeren zwei die Erlaubnis fuer genau den
+              // gemeldeten Zustand: #882 IST "zwei Zeilen statt einer".
+              //
+              // Das steht hier, weil die erste Fassung dieser Sonde mit `<= 2`
+              // lief - und die Gegenprobe blieb GRUEN, mit wieder eingebautem
+              // Fehler. Eine Sonde, die ihren Anlassfall durchlaesst, misst
+              // nichts; die Zahl aus einer Nachbarsonde zu uebernehmen war
+              // bequem und falsch.
+              //
+              // Ohne Ausnahmeliste, und das ist gemessen: bei 1024, 1280 und
+              // 1960px baut JEDER Kopf eine Zeile - auch die mit Tab-Leiste
+              // (Gesundheit, Belohnungen, Hauswirtschaft) und der Essensplan
+              // mit seiner Zeitraum-Navigation. In der regulaeren Groessenklasse
+              // ist genug Breite da, dass die zweite Zeile der kompakten Hoehe
+              // hier gar nicht erst entsteht.
+              if (!pruefeZeilen || head.rows <= 1) continue;
+              findings.push(
+                `${w}px (${why}) ${where}: Kopf baut ${head.rows} Zeilen (${head.h}px) - ${head.cls}`,
+              );
+            }
+          });
+        }
+        await page.close();
+      }
+
+      assert.ok(seen >= 3 * 12,
+        `Nur ${seen} Kopfzustaende gemessen - erwartet sind mindestens 36 (drei Breiten mal `
+        + 'zwoelf Koepfe). Hat sich die Schreibweise von .page-toolbar geaendert, oder faehrt '
+        + 'die Sonde ihre Routen nicht mehr?');
+
+      assert.deepEqual(findings, [],
+        'Ab 1024px ist der Modulkopf einzeilig, und ein gedeckelter Kopf endet auf der Kante '
+        + 'seines Koerpers - beides war in #882 verletzt.\n  ' + findings.join('\n  '));
     });
   }
 });
