@@ -22,6 +22,7 @@ process.env.TZ = 'Europe/Berlin';
 
 const { MIGRATIONS, get, _setTestDatabase } = await import('../server/db.js');
 const { getCountdowns, nextEventDate, daysBetween } = await import('../server/services/countdowns.js');
+const { nextOccurrence } = await import('../server/services/recurrence.js');
 const { MIRRORED_FIELDS } = await import('../server/services/calendar-outbound.js');
 const { countdownPhrase, countdownRank, daysBetweenDateKeys } = await import('../public/utils/countdown.js');
 
@@ -501,5 +502,123 @@ test('ein PUT ohne das Feld löscht eine gesetzte Markierung nicht', async () =>
     assert.equal(row.countdown, 1, 'ein PUT ohne das Feld hat die Markierung gelöscht');
   } finally {
     await new Promise((resolve) => server.close(resolve));
+  }
+});
+
+// --------------------------------------------------------
+// Was abgelaufen ist, verschwindet - und was laeuft, bleibt (#877)
+// --------------------------------------------------------
+
+/** Ein Termin, wie ihn `nextEventDate` erwartet. */
+const ev = (start, rule = null) => ({ start_datetime: start, all_day: 1, recurrence_rule: rule });
+
+const HEUTE = '2026-08-26';
+const GRACE = { graceDays: 7, tz: 'UTC' };
+
+test('eine Serie mit COUNT ist nach ihrem letzten Mal vorbei (#877)', () => {
+  // GEMELDET WAR: "past/expired appointments continue to be displayed
+  // indefinitely". Der Weg dorthin ist COUNT.
+  //
+  // `nextOccurrence()` ist zustandslos und kann COUNT nicht durchsetzen - das
+  // steht so in recurrence.js und stimmt auch. Was fehlte, ist die Stelle, die
+  // es KANN: `nextEventDate` kennt den Serienstart, also kann sie zaehlen.
+  // Ohne sie lief eine dreimalige Serie aus dem Januar 2025 im August 2026
+  // immer noch weiter und zeigte einen Termin in der ZUKUNFT an - der
+  // Countdown war also nicht nur zu langlebig, sondern schlicht falsch.
+  const dreimalAbJanuar = ev('2025-01-01', 'FREQ=MONTHLY;COUNT=3');
+  assert.equal(nextEventDate(dreimalAbJanuar, HEUTE, null, GRACE), null,
+    'die Serie hatte ihre drei Termine im Januar, Februar und Maerz 2025');
+
+  // Die Gegenrichtung: eine Serie, deren Vorkommen noch nicht aufgebraucht
+  // sind, zaehlt normal weiter.
+  const nochNichtAufgebraucht = ev('2026-01-01', 'FREQ=MONTHLY;COUNT=24');
+  assert.equal(nextEventDate(nochNichtAufgebraucht, HEUTE, null, GRACE), '2026-09-01');
+});
+
+test('COUNT zaehlt ab dem Serienstart, nicht ab heute (#877)', () => {
+  // Der Randfall, an dem eine Zaehlung "ab dem naechsten Vorkommen" gruen
+  // waere und trotzdem falsch: die Serie hat genau noch ein Mal vor sich.
+  const nochEinmal = ev('2026-06-01', 'FREQ=MONTHLY;COUNT=4');
+  assert.equal(nextEventDate(nochEinmal, HEUTE, null, GRACE), '2026-09-01',
+    'Juni, Juli, August, September - das vierte Mal steht noch aus');
+
+  const geradeVorbei = ev('2026-06-01', 'FREQ=MONTHLY;COUNT=3');
+  assert.equal(nextEventDate(geradeVorbei, HEUTE, null, GRACE), null,
+    'Juni, Juli, August - das dritte Mal war der 1. August, also vorbei');
+});
+
+test('eine alte Serie verschwindet nicht, nur weil sie alt ist (#877)', () => {
+  // DIE ANDERE HAELFTE DESSELBEN BERICHTS. `nextOccurrenceAfter` holte die
+  // Serie Schritt fuer Schritt ein und gab nach 1000 Schritten auf; ein Datum
+  // in der Vergangenheit wird dann zu `null`, und der Countdown verschwindet.
+  //
+  // Gemessen: eine TAEGLICHE Serie ab 2023 und eine WOECHENTLICHE ab 2005
+  // fielen heraus - beides voellig gewoehnliche Eintraege, keine Randfaelle.
+  // Ein wiederkehrender Termin, der heute stattfindet, muss heute anzeigen.
+  assert.equal(nextEventDate(ev('2023-01-01', 'FREQ=DAILY'), HEUTE, null, GRACE), HEUTE,
+    'eine taegliche Serie findet auch heute statt');
+  assert.equal(nextEventDate(ev('2015-01-01', 'FREQ=DAILY'), HEUTE, null, GRACE), HEUTE);
+
+  // Woechentlich ab einem Donnerstag im Jahr 2005: der naechste Donnerstag.
+  const woechentlich = nextEventDate(ev('2005-01-06', 'FREQ=WEEKLY'), HEUTE, null, GRACE);
+  assert.ok(woechentlich && woechentlich >= HEUTE,
+    `eine woechentliche Serie seit 2005 darf nicht verschwinden (war: ${woechentlich})`);
+  assert.equal(new Date(`${woechentlich}T00:00:00Z`).getUTCDay(), 4, 'sie bleibt auf ihrem Donnerstag');
+});
+
+test('einmalige Termine folgen weiter der Nachfrist (#877)', () => {
+  // Die Zusicherung aus #647, unveraendert - der Fix darf sie nicht mitnehmen.
+  assert.equal(nextEventDate(ev('2026-08-23'), HEUTE, null, GRACE), '2026-08-23', '3 Tage her: bleibt');
+  assert.equal(nextEventDate(ev('2026-08-18'), HEUTE, null, GRACE), null, '8 Tage her: weg');
+  assert.equal(nextEventDate(ev('2024-08-26'), HEUTE, null, GRACE), null, '2 Jahre her: weg');
+});
+
+test('eine Serie mit UNTIL bleibt vorbei (#877)', () => {
+  // Sie war schon richtig - der Fix darf sie nicht kaputt machen.
+  assert.equal(nextEventDate(ev('2025-01-01', 'FREQ=MONTHLY;UNTIL=20250601T000000Z'), HEUTE, null, GRACE), null);
+});
+
+test('der Sprung beim Aufholen liefert dasselbe wie das Zaehlen (#877)', () => {
+  // DIE ABKUERZUNG DARF DAS ERGEBNIS NICHT AENDERN, nur seinen Preis. Genau
+  // hier liegt das Risiko dieser Sorte Optimierung: ein Sprung, der ein Stueck
+  // zu weit geht, ueberspringt das gesuchte Vorkommen - und das Ergebnis sieht
+  // trotzdem plausibel aus, weil es ein gueltiges Datum der Serie ist.
+  //
+  // Also gegengerechnet: Schritt fuer Schritt vom Serienstart aus, ohne jede
+  // Abkuerzung, und das Ergebnis muss gleich sein.
+  const langsam = (startKey, rule, todayKey) => {
+    let current = startKey;
+    for (let i = 0; i < 20000 && current < todayKey; i += 1) {
+      const next = nextOccurrence(current, rule);
+      if (!next || next <= current) return null;
+      current = next;
+    }
+    return current >= todayKey ? current : null;
+  };
+
+  // Breit ausgelegt, weil ein Sprung genau dort danebengeht, wo das Raster
+  // nicht gleichmaessig ist: Monatsenden, Schaltjahre, ungerade Intervalle.
+  // Der 31.03. mit Intervall 5 stand beim ersten Wurf drin und hat den Fehler
+  // gefunden - die Serie driftet an jedem kurzen Monat, und der Sprung landete
+  // vier Monate zu weit.
+  const faelle = [];
+  for (const iv of [1, 2, 3, 5, 7]) {
+    faelle.push(['2015-01-01', `FREQ=DAILY;INTERVAL=${iv}`]);
+    faelle.push(['2005-01-06', `FREQ=WEEKLY;INTERVAL=${iv}`]);
+    for (const tag of ['01-15', '01-28', '01-29', '01-30', '01-31', '03-31', '05-31']) {
+      faelle.push([`1990-${tag}`, `FREQ=MONTHLY;INTERVAL=${iv}`]);
+    }
+    faelle.push([`2000-02-29`, `FREQ=YEARLY;INTERVAL=${iv}`]);
+    faelle.push([`1990-12-31`, `FREQ=YEARLY;INTERVAL=${iv}`]);
+  }
+  // Und die kurzen Abstaende, bei denen gar nicht gesprungen wird - der
+  // haeufige Fall darf durch die Abkuerzung nicht anders werden.
+  faelle.push(['2026-08-20', 'FREQ=DAILY'], ['2026-08-26', 'FREQ=MONTHLY'],
+    ['2026-08-01', 'FREQ=WEEKLY'], ['2026-07-15', 'FREQ=MONTHLY;INTERVAL=2']);
+
+  for (const [start, rule] of faelle) {
+    const mitSprung = nextEventDate(ev(start, rule), HEUTE, null, GRACE);
+    assert.equal(mitSprung, langsam(start, rule, HEUTE),
+      `${rule} ab ${start}: der Sprung weicht vom Zaehlen ab`);
   }
 });

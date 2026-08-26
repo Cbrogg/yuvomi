@@ -135,18 +135,26 @@ export function nextEventDate(event, todayKey, exceptions = null, { graceDays = 
     return floor && startKey >= floor ? startKey : null;
   }
 
+  /* `seriesStart` SETZT COUNT DURCH (#877). Ohne die Angabe zaehlte eine Serie
+   * mit "endet nach N Malen" endlos weiter: `nextOccurrence()` ist zustandslos
+   * und weiss nicht, das wievielte Vorkommen es liefert. Gemeldet wurde das als
+   * "abgelaufene Termine bleiben unbegrenzt stehen" - und es war sogar der
+   * schlimmere Fall, weil die Kachel dazu ein Datum in der ZUKUNFT nannte.
+   *
+   * Die Kalender-Oberflaeche bietet "endet nach N Malen" ausdruecklich an
+   * (`allowCount` in pages/calendar.js), das ist also keine Sonderform. */
   let candidate = startKey >= todayKey
     ? startKey
-    : nextOccurrenceAfter(startKey, event.recurrence_rule, todayKey);
+    : nextOccurrenceAfter(startKey, event.recurrence_rule, todayKey, { seriesStart: startKey });
 
   let skips = 0;
   while (candidate && exceptions?.has(candidate) && skips++ < MAX_EXCEPTION_SKIPS) {
-    candidate = nextOccurrenceAfter(candidate, event.recurrence_rule, candidate);
+    candidate = nextOccurrenceAfter(candidate, event.recurrence_rule, candidate, { seriesStart: startKey });
   }
-  // `nextOccurrenceAfter` hat eine eigene Schleifengrenze und kann bei einer
-  // sehr alten Serie mit sehr kurzem Intervall aufgeben, bevor sie die Gegenwart
-  // erreicht. Ein Datum in der Vergangenheit ist dann kein Countdown, sondern
-  // ein falscher - lieber nichts zeigen.
+  // Ein Datum in der Vergangenheit ist kein Countdown, sondern ein falscher -
+  // lieber nichts zeigen. Der haeufigste Weg hierher war frueher die
+  // Schleifengrenze beim Aufholen (eine taegliche Serie ab 2023 gab auf);
+  // seit #877 springt das Aufholen, statt zu zaehlen.
   if (!candidate || candidate < todayKey) return null;
   return candidate;
 }
