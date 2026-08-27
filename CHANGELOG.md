@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.50.1] - 2026-08-27
+
+### Fixed
+
+- **A public address typed without a scheme no longer poisons the installer's derived settings.**
+  The advanced step's address field is free text; an entry like `yuvomi.example.com` was taken as
+  is and ended up scheme-less in the `.env` as `BASE_URL` and in every displayed OAuth redirect
+  URI. The field now only wins over the derivation from host and port when it names a full
+  `http://` or `https://` origin.
+
+### Security
+
+- **Resolved all open code-scanning findings.** The screensaver settings trim trailing slashes off
+  the Immich URL without a regular expression that backtracks on adversarial input, the calendar
+  stores its birthday-layer visibility toggle as a plain literal (the value was never more than a
+  toggle), and five test-suite checks now match URLs and markup exactly instead of by substring.
+
 ## [2.50.0] - 2026-08-27
 
 ### Fixed
