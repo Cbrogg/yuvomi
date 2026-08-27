@@ -55,12 +55,30 @@ export const EVENT_FALLBACK_COLOR = '#8E8E93';
  * wechseln koennen, ohne dass jemand etwas geaendert hat.
  */
 export function resolveEventColor(ev) {
-  if (!ev) return EVENT_FALLBACK_COLOR;
+  return resolveEventColorOrNull(ev) ?? EVENT_FALLBACK_COLOR;
+}
+
+/**
+ * Dieselbe Rangfolge, aber OHNE letzte Instanz: `null`, wenn keine der drei
+ * Quellen etwas hergibt.
+ *
+ * Fuer Aufrufer, die einen besseren Notnagel haben als das neutrale Grau - die
+ * Countdown-Kachel etwa faellt auf den Ton ihres Moduls zurueck, und der sagt
+ * mehr als ein Grau, das nach "keine Angabe" aussieht. Sie teilen sich die
+ * Regel trotzdem: eine zweite Rangfolge daneben waere genau das Auseinander-
+ * laufen, das #891 an drei Stellen aufgeraeumt hat.
+ */
+export function resolveEventColorOrNull(ev) {
+  if (!ev) return null;
   if (ev.color) return ev.color;
   const assignees = ev.assigned_users ?? [];
   if (assignees.length > 0) {
     const primary = assignees.find((u) => u.id === ev.assigned_to) ?? assignees[0];
-    return primary.color || EVENT_FALLBACK_COLOR;
+    if (primary.color) return primary.color;
+    // Ein zugewiesenes Mitglied OHNE Farbe faellt bewusst nicht auf die
+    // Kalenderfarbe durch: sonst saehe ein zugewiesener Termin aus wie ein
+    // nicht zugewiesener.
+    return null;
   }
-  return ev.cal_color || EVENT_FALLBACK_COLOR;
+  return ev.cal_color || null;
 }

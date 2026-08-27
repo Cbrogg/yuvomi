@@ -47,6 +47,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   different member than the assignment means, and change between reloads without anyone touching
   it.
 
+  **The countdown tile borrows the colour too.** It read `color` straight off the event and fell
+  back to the module tone - fine while every event carried a colour, but the same appointment would
+  now have shown the assignee's colour in the calendar and a generic tone on the tile right next to
+  it. It resolves through the shared rule as well; only when *no* source has anything does it keep
+  falling back to the module tone, which says more than a neutral grey.
+
+  **A `PUT` that does not mention `assigned_to` no longer re-picks the primary assignee.** The route
+  reloaded the assignment ids and wrote the first one back - but that query has no `ORDER BY`, so it
+  returns them by user id rather than in the order the form sent. With the borrowed colour following
+  `assigned_to`, an appointment could change colour because someone split a series (that request
+  carries only `recurrence_rule`). Same rule as for the colour itself: not sent means not touched.
+
   Two more things surfaced while building it. The overview resolved event colours **on its own**
   (`color || cal_color`, without the assignee branch) - harmless while every appointment carried a
   colour, but two visibly different answers to one question as soon as one might not; both pages now
