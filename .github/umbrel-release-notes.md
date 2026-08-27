@@ -1,8 +1,8 @@
-<!-- version: 2.49.1 -->
-When you set an appointment or a task to repeat, the menu offers daily, weekly, monthly and yearly. Those four read like the only rhythms on offer, and they are not: once you pick one, a field appears next to it that lets you set any interval you like - every two weeks, every three months. Someone opened a thread asking for exactly that, found it days later by picking an option on the off chance, and apologised for not having searched harder. He had searched enough. The menu had answered the wrong question.
+<!-- version: 2.50.0 -->
+Colours you give an appointment now travel. Until this release they reached Google and stopped there: a Nextcloud or iCloud calendar never learned about them, even though Yuvomi went to the trouble of sending an update every time you recoloured something. Both now carry the colour, and clearing one clears it on the other side too. Because the calendar standard only permits colours by name, an appointment arrives at the server as the closest standard colour - a deep violet may land a shade beside where it started.
 
-A line under the menu now says so before you choose, and it steps aside the moment the interval is standing there in front of you. Anyone using a screen reader hears the same thing at the same time, rather than being told about a choice that has already been made. Both the appointment dialog and the task dialog share this field, so it reads the same in either place.
+The other direction was worse, and it is the fix worth knowing about: if you renamed an appointment in Yuvomi, its colour froze there for good. Whoever coloured that same appointment in Nextcloud, iCloud or Google afterwards was talking to an app that had stopped listening. Editing an appointment no longer has that effect - only actually changing its colour does.
 
-Nothing needs to be done by hand, and nothing changes about the appointments, tasks or repeat rules you already have.
+Yuvomi adds a column to its calendar for this, and the first start after the update does that on its own. Nothing to do by hand. Appointments whose colour is protected today stay protected: the update assumes an existing colour was chosen deliberately rather than guessing which ones were frozen by mistake.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.49.1
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.50.0
