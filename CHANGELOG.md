@@ -59,6 +59,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   `assigned_to`, an appointment could change colour because someone split a series (that request
   carries only `recurrence_rule`). Same rule as for the colour itself: not sent means not touched.
 
+  **A deleted member no longer leaves a countdown colourless.** When the primary assignee is
+  deleted, the foreign key clears `assigned_to` and takes that one assignment row with it while the
+  others stay. The calendar falls back to the first remaining assignee; without the same step the
+  tile would have been the only place showing a generic tone.
+
   Two more things surfaced while building it. The overview resolved event colours **on its own**
   (`color || cal_color`, without the assignee branch) - harmless while every appointment carried a
   colour, but two visibly different answers to one question as soon as one might not; both pages now

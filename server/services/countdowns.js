@@ -260,9 +260,22 @@ function eventCountdowns(d, userId, todayKey) {
     SELECT e.id, e.title, e.start_datetime, e.recurrence_rule, e.icon, e.color, e.all_day,
            e.assigned_to,
            -- Die geliehene Farbe braucht dieselben drei Quellen wie im Kalender
-           -- (#891). Hier reicht die PRIMAERE Zuweisung statt des ganzen
-           -- Avatar-Stacks: die Kachel zeigt eine Kante, keine Personenliste.
-           u.avatar_color AS assigned_color,
+           -- (#891). Hier reicht EINE Person statt des ganzen Avatar-Stacks: die
+           -- Kachel zeigt eine Kante, keine Personenliste.
+           --
+           -- Der COALESCE ist der Fall "primaeres Mitglied geloescht": dann
+           -- setzt der Fremdschluessel assigned_to auf NULL und nimmt dessen
+           -- Zuweisungszeile mit, waehrend die uebrigen Zugewiesenen bleiben.
+           -- Der Kalender faellt dort auf den ersten verbliebenen zurueck
+           -- (assignees.find(...) ?? assignees[0]); ohne dieselbe Ruecknahme
+           -- zeigte die Kachel als einzige Stelle den Modulton.
+           COALESCE(u.avatar_color, (
+             SELECT u2.avatar_color FROM event_assignments ea
+             JOIN users u2 ON u2.id = ea.user_id
+             WHERE ea.event_id = e.id
+             ORDER BY ea.user_id
+             LIMIT 1
+           )) AS assigned_color,
            COALESCE(ec.color, isub.color) AS cal_color
     FROM calendar_events e
     LEFT JOIN users u ON u.id = e.assigned_to
