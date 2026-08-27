@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.49.0] - 2026-08-27
+
 ### Fixed
 
 - **An appointment nobody picked a colour for lends the colour of the person it belongs to**
