@@ -7,6 +7,37 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **A colour set on a CalDAV or Apple appointment now reaches the server** (#897). `color` has
+  always been one of the mirrored fields, so recolouring an appointment marked it for an outbound
+  push - but `COLOR` appeared exactly once in the whole server, in `ics-parser.js`, where it is
+  *read*. Nothing ever wrote it. Every recolouring therefore cost a full `PUT` round trip that
+  changed nothing on the server, and the field list claimed a mirroring that did not happen for two
+  of the three outbound providers. This was the promise from #815 that never got a thread of its own.
+
+  Yuvomi now writes `COLOR` (RFC 7986), the same property its parser already reads. **The value is a
+  CSS3 colour name, not a hex code** - §5.9 allows nothing else, and a strict server may reject a hex
+  value - so a stored `#RRGGBB` is mapped to the nearest of the 147 CSS3 names by the same
+  perceptual redmean distance that already maps colours onto Google's eleven `colorId`s. The loss is
+  small (the largest deviation across Yuvomi's own palette is 28 of 255 in a single channel) and it
+  stays on the wire: recolouring sets `user_modified = 1`, and an inbound run writes `color` only
+  while that is `0`, so the neighbouring value read back on the next sync never overwrites the
+  choice.
+
+  `COLOR` is now a *managed* property of the ICS patcher - without that it may be written but not
+  replaced, and an emitted value would not have survived the patch. Freshly uploaded appointments
+  carry their colour from the start too, so one created in Yuvomi no longer arrives at the server
+  colourless.
+
+  **An appointment without a colour of its own sends no `COLOR` field at all** - "leave it alone",
+  not "remove it". The distinction is not a detail: locally, *no colour* cannot be told apart from
+  *we never learned one*. `user_modified` is set on **any** edit, and inbound writes `color` only
+  while it is `0`, so a single title change freezes the colour column; if another client colours that
+  appointment on the server afterwards, Yuvomi never finds out. A `null` here would let that title
+  change strip a colour somebody else chose, permanently. Clearing a colour comes back once there is
+  a state of its own for it (#899).
+
 ## [2.49.1] - 2026-08-27
 
 ### Changed

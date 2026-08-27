@@ -15,6 +15,7 @@ import { createLogger } from '../logger.js';
 import * as outbound from './calendar-outbound.js';
 import { patchICSEvent } from '../utils/ics-patch.js';
 import { toICSDatetime } from '../utils/ics-format.js';
+import { nearestIcalColorName } from '../utils/ical-color.js';
 
 const log = createLogger('CalDAVOutbound');
 
@@ -44,7 +45,7 @@ export function icsFieldsForEvent(event) {
     end   = { value: toICSDatetime(event.end_datetime || event.start_datetime), params: tzParam };
   }
 
-  return {
+  const fields = {
     SUMMARY:     event.title,
     DESCRIPTION: event.description || null,
     LOCATION:    event.location || null,
@@ -52,6 +53,31 @@ export function icsFieldsForEvent(event) {
     DTSTART:     start,
     DTEND:       end,
   };
+
+  // COLOR ist Teil von MIRRORED_FIELDS, wurde aber nie geschrieben (#897): eine
+  // Umfaerbung kostete einen PUT, der beim Server nichts aenderte.
+  //
+  // Geschrieben wird nur eine VORHANDENE Eigenfarbe. Fehlt sie, bleibt das Feld
+  // weg - "nicht anfassen" statt "entfernen". Der Unterschied ist kein Detail:
+  //
+  // Ein null hiesse "der Nutzer hat die Farbe geleert". Lokal ist dieser Zustand
+  // aber nicht von "wir haben nie eine gelernt" zu unterscheiden. user_modified
+  // wird bei JEDER Bearbeitung gesetzt (crud.js), und der Inbound schreibt color
+  // nur, solange das 0 ist - wer einmal den Titel aendert, friert die Farbspalte
+  // ein. Faerbt danach ein anderer Client den Termin auf dem SERVER, erfaehrt
+  // Yuvomi es nie, und die naechste beliebige Bearbeitung raeumte dessen
+  // COLOR-Zeile ab. Dauerhaft, weil auch kein Inbound-Lauf sie zurueckholt.
+  //
+  // Eine Farbe, die sich nicht abbilden laesst (kein gueltiges #RRGGBB), faellt
+  // in denselben Zweig, und das ist dort aus demselben Grund richtig.
+  //
+  // Das Leeren kommt zurueck, sobald es einen eigenen Zustand dafuer gibt
+  // (color_modified statt des ueberladenen user_modified). Solange der fehlt,
+  // ist Schweigen die einzige verlustfreie Antwort.
+  const colorName = nearestIcalColorName(event.color);
+  if (colorName) fields.COLOR = colorName;
+
+  return fields;
 }
 
 /** Dateiname eines Kalenderobjekts aus seiner URL, ersatzweise aus der UID. */
