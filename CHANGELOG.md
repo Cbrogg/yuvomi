@@ -33,7 +33,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   and discarding a real choice is worse than changing nothing: synced appointments normalise
   themselves on the next sync, local ones through the dialog.
 
-  Two things surfaced while building it. The overview resolved event colours **on its own**
+  **Clearing a colour reaches Google too.** The outbound push is an `events.patch`, and a PATCH
+  touches exactly the fields present in the body - so omitting `colorId` means "leave it alone",
+  not "clear it". Google would have kept the old colour while Yuvomi showed the assignee's, and
+  because the same edit sets `user_modified = 1`, no inbound run would ever have reconciled the
+  two again. The payload now carries an explicit null. Not when the colour merely cannot be
+  mapped, though: a missing palette is not a missing colour, and a null there would throw away a
+  colour nobody asked to remove.
+
+  **The inherited colour belongs to the primary assignee**, the one named in `assigned_to` - not
+  to whichever row the assignment query happens to return first, since it aggregates without an
+  `ORDER BY`. With several people on an appointment the colour could otherwise belong to a
+  different member than the assignment means, and change between reloads without anyone touching
+  it.
+
+  Two more things surfaced while building it. The overview resolved event colours **on its own**
   (`color || cal_color`, without the assignee branch) - harmless while every appointment carried a
   colour, but two visibly different answers to one question as soon as one might not; both pages now
   read the same rule from `public/utils/event-color.js`. And an ICS subscription has no

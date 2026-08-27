@@ -37,16 +37,30 @@ export const EVENT_FALLBACK_COLOR = '#8E8E93';
 
 /**
  * Die Anzeigefarbe eines Termins.
- * Rangfolge: 1. eigene Farbe, 2. erste zugewiesene Person, 3. Kalender, 4. Grau.
+ * Rangfolge: 1. eigene Farbe, 2. die PRIMAERE zugewiesene Person, 3. Kalender, 4. Grau.
  *
  * Wer der Termin ist, sagt weiterhin der Avatar-Stack daneben - das ist ohnehin
  * der Weg, auf dem MEHRERE Zugewiesene kommuniziert werden. Die Farbe war fuer
  * diese Auskunft nie die einzige Quelle.
+ *
+ * WARUM NICHT EINFACH `assigned_users[0]`. Die Liste kommt aus
+ * `ASSIGNED_USERS_SQL`, einem `json_group_array` OHNE `ORDER BY` - ihre
+ * Reihenfolge ist die der `event_assignments`-Zeilen und damit nicht die, in der
+ * das Formular die Personen gereiht hat. Die primaere Zuweisung steht
+ * ausdruecklich in `assigned_to` (die Route schreibt dort `userIds[0]` hin), und
+ * nur die ist eine Aussage. Solange die Spalte NOT NULL war, ist der Unterschied
+ * nicht aufgefallen, weil dieser Zweig nie erreicht wurde (#891); ohne die
+ * Unterscheidung wuerde die Farbe bei mehreren Zugewiesenen einem anderen
+ * Mitglied gehoeren als dem, das die Zuweisung meint - und beim Neuladen
+ * wechseln koennen, ohne dass jemand etwas geaendert hat.
  */
 export function resolveEventColor(ev) {
   if (!ev) return EVENT_FALLBACK_COLOR;
   if (ev.color) return ev.color;
   const assignees = ev.assigned_users ?? [];
-  if (assignees.length > 0) return assignees[0].color || EVENT_FALLBACK_COLOR;
+  if (assignees.length > 0) {
+    const primary = assignees.find((u) => u.id === ev.assigned_to) ?? assignees[0];
+    return primary.color || EVENT_FALLBACK_COLOR;
+  }
   return ev.cal_color || EVENT_FALLBACK_COLOR;
 }
