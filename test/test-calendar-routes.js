@@ -567,10 +567,98 @@ test('POST / — legt minimalen Termin an (Defaults)', async () => {
   const res = await call('POST', '/', { actor: ADMIN, body: { title: 'Neuer Termin', start_datetime: '2040-02-01T09:00' } });
   assert.equal(res.status, 201);
   assert.equal(res.body.data.title, 'Neuer Termin');
-  assert.equal(res.body.data.color, '#007AFF', 'Default-Farbe');
+  assert.equal(res.body.data.color, null,
+    'ohne Angabe KEINE eigene Farbe - der Termin leiht sich die der zugewiesenen Person (#891)');
   assert.equal(res.body.data.icon, 'calendar');
   assert.equal(res.body.data.created_by, ADMIN.id);
   assert.equal(res.body.data.visibility, 'all');
+});
+
+test('Farbe: die Route unterscheidet "nicht angefasst" von "ausdruecklich keine" (#891)', async () => {
+  // Der Kern von #891 auf der Serverseite. Beide Faelle schicken einen falsy
+  // Wert; das Feld MUSS trotzdem zwei verschiedene Dinge bewirken koennen, sonst
+  // ist "keine eigene Farbe" nicht ausdrueckbar - genau die Luecke, die die
+  // Farbe der zugewiesenen Person zu totem Code gemacht hat.
+  const created = await call('POST', '/', { actor: ADMIN, body: {
+    title: 'Faerbbar', start_datetime: '2040-04-01T09:00', color: '#8156C0',
+  } });
+  assert.equal(created.status, 201);
+  const id = created.body.data.id;
+  assert.equal(created.body.data.color, '#8156C0', 'eine gewaehlte Farbe wird uebernommen');
+
+  // 1. Feld GAR NICHT mitgeschickt: die Farbe bleibt stehen. Das ist die Regel,
+  //    die ein aelterer Client oder ein Modul-PUT braucht, das color nicht kennt.
+  const untouched = await call('PUT', `/${id}`, { actor: ADMIN, body: {
+    title: 'Faerbbar, umbenannt', start_datetime: '2040-04-01T09:00',
+  } });
+  assert.equal(untouched.status, 200);
+  assert.equal(untouched.body.data.color, '#8156C0',
+    'ein PUT ohne color-Feld darf eine gesetzte Farbe nicht stillschweigend loeschen');
+
+  // 2. Feld AUSDRUECKLICH auf null: die Farbe geht weg. Vorher hat COALESCE im
+  //    UPDATE genau das geschluckt, weil es beide Faelle gleich sieht.
+  const cleared = await call('PUT', `/${id}`, { actor: ADMIN, body: {
+    title: 'Faerbbar, umbenannt', start_datetime: '2040-04-01T09:00', color: null,
+  } });
+  assert.equal(cleared.status, 200);
+  assert.equal(cleared.body.data.color, null,
+    'ein PUT mit color: null nimmt dem Termin seine eigene Farbe ab');
+
+  // 3. Und zurueck: die Wahl ist in beide Richtungen moeglich.
+  const again = await call('PUT', `/${id}`, { actor: ADMIN, body: {
+    title: 'Faerbbar, umbenannt', start_datetime: '2040-04-01T09:00', color: '#3CA368',
+  } });
+  assert.equal(again.body.data.color, '#3CA368', 'und laesst sich wieder setzen');
+
+  // Ein Unsinnswert bleibt ein Fehler - "keine Farbe" heisst nicht "alles erlaubt".
+  const bad = await call('PUT', `/${id}`, { actor: ADMIN, body: {
+    title: 'Faerbbar', start_datetime: '2040-04-01T09:00', color: 'red; background:url(x)',
+  } });
+  assert.equal(bad.status, 400, 'ein ungueltiger Farbwert wird weiterhin abgewiesen');
+});
+
+test('ein PUT ohne assigned_to laesst die primaere Zuweisung stehen (#891)', async () => {
+  // `assigned_to` ist die PRIMAERE Zuweisung, nicht irgendeine: das Formular
+  // schickt seine Reihenfolge mit, und die Route legt `userIds[0]` dort ab.
+  // Beim Nachladen gibt es diese Reihenfolge nicht mehr - `SELECT user_id FROM
+  // event_assignments` hat kein ORDER BY und laeuft ueber den Primaerschluessel,
+  // kommt also nach user_id sortiert zurueck. Ein PUT, das `assigned_to` gar
+  // nicht mitschickt, wuerde die primaere Zuweisung deshalb neu wuerfeln.
+  //
+  // Seit #891 ist das sichtbar statt nur unsauber: die geliehene Farbe folgt
+  // `assigned_to`, ein Termin ohne eigene Farbe wechselt also seine Farbe, ohne
+  // dass jemand die Zuweisung angefasst hat. Der Serien-Split schickt genau so
+  // ein PUT (nur `recurrence_rule`).
+  const created = await call('POST', '/', { actor: ADMIN, body: {
+    title: 'Zwei Zustaendige', start_datetime: '2040-05-01T09:00',
+    assigned_to: [3, 2],   // 3 ist die PRIMAERE - und die hoehere Id
+  } });
+  assert.equal(created.status, 201);
+  const id = created.body.data.id;
+  assert.equal(created.body.data.assigned_to, 3, 'die erste des Formulars wird die primaere');
+
+  // Vorbedingung, ohne die der Test nichts misst: die nachgeladene Reihenfolge
+  // weicht von der des Formulars ab.
+  const nachgeladen = db.prepare('SELECT user_id FROM event_assignments WHERE event_id = ?')
+    .all(id).map((r) => r.user_id);
+  assert.deepEqual(nachgeladen, [2, 3],
+    'die Abfrage ohne ORDER BY liefert nach user_id - sonst prueft dieser Test nichts');
+
+  // Ein PUT, das die Zuweisung nicht erwaehnt.
+  const res = await call('PUT', `/${id}`, { actor: ADMIN, body: {
+    title: 'Zwei Zustaendige', start_datetime: '2040-05-01T09:00',
+    recurrence_rule: 'FREQ=WEEKLY;COUNT=3',
+  } });
+  assert.equal(res.status, 200);
+  assert.equal(res.body.data.assigned_to, 3,
+    'die primaere Zuweisung darf ein PUT, das sie nicht nennt, nicht umlegen');
+  assert.equal(res.body.data.assigned_users.length, 2, 'und beide Zuweisungen bleiben');
+
+  // Wer sie ausdruecklich aendert, bekommt die Aenderung natuerlich.
+  const geaendert = await call('PUT', `/${id}`, { actor: ADMIN, body: {
+    title: 'Zwei Zustaendige', start_datetime: '2040-05-01T09:00', assigned_to: [2, 3],
+  } });
+  assert.equal(geaendert.body.data.assigned_to, 2, 'ein ausdrueckliches assigned_to gilt');
 });
 
 test('POST / — mit Zuweisungen, Serie und Sichtbarkeit', async () => {

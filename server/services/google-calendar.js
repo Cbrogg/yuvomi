@@ -894,9 +894,17 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
     // steht ein EXDATE vorn, landete es sonst als Wiederholungsregel in der DB.
     const rrule       = recurrenceRuleOf(item);
 
-    // Event-Eigenfarbe aus colorId auflösen (Google liefert nur die Paletten-ID),
-    // sonst Kalenderfarbe als Default.
-    const evColor = (item.colorId && colorMap[item.colorId]) || calColor;
+    // NUR die Eigenfarbe des Termins, aufgelöst aus Googles colorId (die API
+    // liefert die Paletten-ID, nicht den Hex-Wert). Die Kalenderfarbe gehört
+    // NICHT hierher: sie ist geerbt und sagt über diesen einen Termin nichts.
+    // Sie hier einzusetzen hat sie ununterscheidbar von einer ausdrücklichen
+    // Angabe gemacht und damit die Farbe der zugewiesenen Person verdrängt
+    // (#891). Der Lesepfad holt sie weiterhin als cal_color über calendar_ref_id.
+    //
+    // Google selbst denkt genauso: ein Event ohne colorId erbt dort die
+    // Kalenderfarbe, und `localEventToGoogle` schickt für einen Termin ohne
+    // eigene Farbe folgerichtig keine colorId zurück.
+    const evColor = (item.colorId && colorMap[item.colorId]) || null;
 
     const existing = db.get().prepare(
       'SELECT id, outbound_dirty FROM calendar_events WHERE external_calendar_id = ? AND external_source = ?'
@@ -1098,9 +1106,26 @@ function localEventToGoogle(event, colorMap = {}, timeZone = householdTimeZone(n
   // Event-Farbe verlustbehaftet auf die nächste der 11 Google-colorIds mappen.
   // Ohne verfügbare Palette (colors.get fehlgeschlagen) bleibt colorId ungesetzt,
   // dann erbt das Event in Google die Kalenderfarbe.
+  //
+  // NULL STATT WEGLASSEN, wenn der Termin keine eigene Farbe (mehr) hat (#891).
+  // Der Unterschied zählt nur beim Update, und dort entscheidet er alles: der
+  // Push ist ein `events.patch`, und ein PATCH fasst genau die Felder an, die im
+  // Body STEHEN. Ein fehlendes `colorId` heißt also "nicht anfassen", nicht
+  // "löschen" - Google behielte seine alte Farbe, während Yuvomi die der
+  // zugewiesenen Person zeigt. Weil dieselbe Bearbeitung `user_modified = 1`
+  // setzt, holt auch kein Inbound-Lauf die beiden je wieder zusammen: die zwei
+  // Seiten blieben dauerhaft verschieden. Vor #891 war das folgenlos, weil
+  // `color` NOT NULL war und dieser Zweig für Updates nie erreicht wurde.
+  //
+  // ABER NUR DANN. Eine fehlende Palette ist etwas anderes als eine fehlende
+  // Farbe: dann trägt der Termin sehr wohl eine, wir können sie nur nicht auf
+  // eine colorId abbilden. Dort ist "nicht anfassen" richtig, und ein Nullwert
+  // würde eine in Google gesetzte Farbe löschen, obwohl niemand das wollte.
   if (event.color) {
     const colorId = nearestColorId(event.color, colorMap);
     if (colorId) gEvent.colorId = colorId;
+  } else {
+    gEvent.colorId = null;
   }
 
   if (allDay) {

@@ -348,12 +348,38 @@ test('localEventToGoogle: ohne Palette bleibt colorId ungesetzt', () => {
   assertEqual(g.colorId, undefined);
 });
 
-test('localEventToGoogle: ohne event.color bleibt colorId ungesetzt', () => {
+test('localEventToGoogle: ohne event.color wird colorId ausdruecklich geleert (#891)', () => {
+  // NICHT weggelassen, sondern null - und der Unterschied ist der ganze Punkt.
+  // Der Update-Push ist ein `events.patch`, und ein PATCH fasst nur die Felder
+  // an, die im Body STEHEN. Ein fehlendes colorId hiesse "nicht anfassen":
+  // Google behielte seine alte Farbe, waehrend Yuvomi die der zugewiesenen
+  // Person zeigt, und weil dieselbe Bearbeitung `user_modified = 1` setzt,
+  // holt auch kein Inbound-Lauf die beiden je wieder zusammen.
+  //
+  // Bis v2.48.0 war das folgenlos, weil `color` NOT NULL war und dieser Zweig
+  // fuer Updates nie erreicht wurde. Der Test stand hier trotzdem - er hat die
+  // damals wahre Beobachtung festgehalten statt der Regel dahinter, und waere
+  // deshalb gruen geblieben, wenn der Fall real wird.
   const g = localEventToGoogle(
     { title: 'Farblos', all_day: 1, start_datetime: '2026-06-03' },
     GOOGLE_EVENT_PALETTE
   );
+  assertEqual(g.colorId, null);
+  assertEqual('colorId' in g, true, 'das Feld MUSS im Body stehen, sonst loescht der PATCH nichts');
+});
+
+test('localEventToGoogle: eine unabbildbare Farbe loescht Googles Farbe NICHT', () => {
+  // Die Gegenprobe zum Test darueber, und die Grenze der Regel: eine fehlende
+  // PALETTE ist etwas anderes als eine fehlende FARBE. Faellt `colors.get` aus,
+  // traegt der Termin sehr wohl eine Farbe - sie laesst sich nur nicht auf eine
+  // der 11 colorIds abbilden. Ein Nullwert wuerde hier eine in Google gesetzte
+  // Farbe wegwerfen, obwohl niemand das wollte; "nicht anfassen" ist richtig.
+  const g = localEventToGoogle(
+    { title: 'Rot', all_day: 1, start_datetime: '2026-06-03', color: '#FF0000' },
+    {}
+  );
   assertEqual(g.colorId, undefined);
+  assertEqual('colorId' in g, false, 'ohne Palette darf das Feld gar nicht erst im Body stehen');
 });
 
 // --------------------------------------------------------
@@ -378,13 +404,25 @@ const gEvent = {
   end:   { dateTime: '2026-06-03T11:00:00Z' },
 };
 
-test('Erst-Import ohne colorId setzt die Kalenderfarbe als Default', () => {
+test('Erst-Import ohne colorId schreibt KEINE Eigenfarbe (#891)', () => {
+  // Bis v2.48.0 landete hier die Kalenderfarbe. Das las sich harmlos - die
+  // Anzeige stimmte ja -, machte aber eine GEERBTE Farbe ununterscheidbar von
+  // einer, die jemand fuer diesen Termin gewaehlt hat. Da die Eigenfarbe seit
+  // #815 vorn steht, hat sie damit die Farbe der zugewiesenen Person auf Dauer
+  // verdraengt. Der Termin bleibt farblos; die Kalenderfarbe kommt beim Lesen
+  // als cal_color ueber calendar_ref_id dazu, wo sie als geerbt erkennbar ist.
   const calRefId = upsertExternalCalendar('google', 'primary', 'Mein Kalender', '#FF0000');
   upsertGoogleEvents([gEvent], calRefId, '#FF0000', COLOR_MAP);
   const row = db.prepare(
-    'SELECT color FROM calendar_events WHERE external_calendar_id = ?'
+    'SELECT color, calendar_ref_id FROM calendar_events WHERE external_calendar_id = ?'
   ).get(gEvent.id);
-  assertEqual(row.color, '#FF0000');
+  assertEqual(row.color, null);
+  // Gegenprobe: die Farbe ist nicht verloren, nur woanders. Ohne diese Haelfte
+  // waere der Test auch dann gruen, wenn der Termin gar keinen Kalender mehr
+  // haette und die geerbte Farbe damit wirklich weg waere.
+  assertEqual(row.calendar_ref_id, calRefId, 'der Kalenderbezug traegt die geerbte Farbe');
+  const cal = db.prepare('SELECT color FROM external_calendars WHERE id = ?').get(calRefId);
+  assertEqual(cal.color, '#FF0000', 'und dort steht sie unveraendert');
 });
 
 test('colorId wird zur Event-Eigenfarbe aufgelöst (#427)', () => {
@@ -397,14 +435,16 @@ test('colorId wird zur Event-Eigenfarbe aufgelöst (#427)', () => {
   assertEqual(row.color, '#FFA500', 'colorId 6 muss auf den Paletten-Hex gemappt werden');
 });
 
-test('Unbekannte colorId fällt auf die Kalenderfarbe zurück', () => {
+test('Unbekannte colorId schreibt ebenfalls keine Eigenfarbe (#891)', () => {
+  // Eine colorId, die in der Palette fehlt, ist keine Farbangabe - also derselbe
+  // Fall wie gar keine colorId, nicht ein Anlass, die Kalenderfarbe einzusetzen.
   const colored = { ...gEvent, id: 'evt-colorid-unknown', colorId: '99' };
   const calRefId = upsertExternalCalendar('google', 'primary', 'Mein Kalender', '#FF0000');
   upsertGoogleEvents([colored], calRefId, '#FF0000', COLOR_MAP);
   const row = db.prepare(
     'SELECT color FROM calendar_events WHERE external_calendar_id = ?'
   ).get('evt-colorid-unknown');
-  assertEqual(row.color, '#FF0000');
+  assertEqual(row.color, null);
 });
 
 test('Re-Sync übernimmt geänderte Google-Farbe, solange user_modified = 0', () => {

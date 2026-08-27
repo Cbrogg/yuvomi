@@ -115,7 +115,11 @@ const MIGRATIONS_SQL = {
       end_datetime         TEXT,
       all_day              INTEGER NOT NULL DEFAULT 0,
       location             TEXT,
-      color                TEXT    NOT NULL DEFAULT '#007AFF',
+      -- Nullable wie in Produktion seit Migration 166 (#891): NULL heisst "dieser
+      -- Termin hat keine eigene Farbe" und leiht sich die der zugewiesenen
+      -- Person. Ein Auszug, der die Spalte weiter NOT NULL haelt, laesst jede
+      -- Suite darauf gruen laufen, die genau diesen Zustand pruefen wollte.
+      color                TEXT,
       icon                 TEXT    NOT NULL DEFAULT 'calendar',
       assigned_to          INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_by           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -358,7 +362,11 @@ const MIGRATIONS_SQL = {
       end_datetime         TEXT,
       all_day              INTEGER NOT NULL DEFAULT 0,
       location             TEXT,
-      color                TEXT    NOT NULL DEFAULT '#007AFF',
+      -- Nullable wie in Produktion seit Migration 166 (#891): NULL heisst "dieser
+      -- Termin hat keine eigene Farbe" und leiht sich die der zugewiesenen
+      -- Person. Ein Auszug, der die Spalte weiter NOT NULL haelt, laesst jede
+      -- Suite darauf gruen laufen, die genau diesen Zustand pruefen wollte.
+      color                TEXT,
       icon                 TEXT    NOT NULL DEFAULT 'calendar',
       assigned_to          INTEGER REFERENCES users(id) ON DELETE SET NULL,
       created_by           INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

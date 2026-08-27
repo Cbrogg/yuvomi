@@ -1422,6 +1422,31 @@
   transform: scale(1.1);
 }
 
+/* "Keine eigene Farbe" - der Termin leiht sich die der zugewiesenen Person
+   (#891). Er traegt bewusst keinen Farbwert, sondern zeigt als einziger Swatch
+   ein Symbol: eine Farbflaeche waere von einer Wahl nicht zu unterscheiden, und
+   die Farbe, die er tatsaechlich ergibt, steht erst fest, wenn die Zuweisung
+   feststeht - im offenen Dialog kann sie sich noch aendern. */
+.color-swatch--inherit {
+  background: var(--color-surface-2);
+  border-color: var(--color-border);
+  display: grid;
+  place-items: center;
+}
+
+.color-swatch--inherit::after {
+  content: '';
+  width: 14px;
+  height: 14px;
+  border-radius: var(--radius-full);
+  background: conic-gradient(
+    var(--color-accent) 0turn 0.25turn,
+    var(--color-surface-2) 0.25turn 0.5turn,
+    var(--color-accent) 0.5turn 0.75turn,
+    var(--color-surface-2) 0.75turn 1turn
+  );
+}
+
 .reminder-section__group {
   margin: 0;
 }

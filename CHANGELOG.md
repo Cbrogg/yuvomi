@@ -7,6 +7,71 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **An appointment nobody picked a colour for lends the colour of the person it belongs to**
+  (#891). Since v2.36.0 every appointment looked as though someone had chosen its colour, so the
+  assigned member's colour never showed - the reporter saw the avatar next to an appointment that no
+  longer matched it.
+
+  **It was a missing state, not a wrong rule.** `calendar_events.color` was `NOT NULL` and rejected
+  the empty string, so there was no way to say *this appointment has no colour of its own*: the
+  dialog wrote the first palette entry into every new appointment and the sync wrote the calendar's
+  colour into every imported one. Both are inherited values, and once stored they were
+  indistinguishable from a deliberate choice - which is why they outranked the person's colour, the
+  rule from #815 being that an explicit value beats a derived one. That rule stands; a never-made
+  choice simply is not an explicit value.
+
+  The column may now be `NULL`, the import paths of all four sync providers stop copying the
+  inherited calendar colour into it, and the event dialog gains a first swatch, **"colour of the
+  assigned person"**, which is where a new appointment starts. Choosing a colour still keeps it, for
+  the appointment and across syncs.
+
+  **Existing appointments are left untouched.** `#007AFF` looks like an old default - no current
+  palette contains it - but it was the first entry of the event palette before the OKLCH switch, so
+  an appointment from the v1 era may well carry it on purpose. A migration cannot tell the two apart,
+  and discarding a real choice is worse than changing nothing: synced appointments normalise
+  themselves on the next sync, local ones through the dialog.
+
+  **Clearing a colour reaches Google too.** The outbound push is an `events.patch`, and a PATCH
+  touches exactly the fields present in the body - so omitting `colorId` means "leave it alone",
+  not "clear it". Google would have kept the old colour while Yuvomi showed the assignee's, and
+  because the same edit sets `user_modified = 1`, no inbound run would ever have reconciled the
+  two again. The payload now carries an explicit null. Not when the colour merely cannot be
+  mapped, though: a missing palette is not a missing colour, and a null there would throw away a
+  colour nobody asked to remove.
+
+  **The inherited colour belongs to the primary assignee**, the one named in `assigned_to` - not
+  to whichever row the assignment query happens to return first, since it aggregates without an
+  `ORDER BY`. With several people on an appointment the colour could otherwise belong to a
+  different member than the assignment means, and change between reloads without anyone touching
+  it.
+
+  **The countdown tile borrows the colour too.** It read `color` straight off the event and fell
+  back to the module tone - fine while every event carried a colour, but the same appointment would
+  now have shown the assignee's colour in the calendar and a generic tone on the tile right next to
+  it. It resolves through the shared rule as well; only when *no* source has anything does it keep
+  falling back to the module tone, which says more than a neutral grey.
+
+  **A `PUT` that does not mention `assigned_to` no longer re-picks the primary assignee.** The route
+  reloaded the assignment ids and wrote the first one back - but that query has no `ORDER BY`, so it
+  returns them by user id rather than in the order the form sent. With the borrowed colour following
+  `assigned_to`, an appointment could change colour because someone split a series (that request
+  carries only `recurrence_rule`). Same rule as for the colour itself: not sent means not touched.
+
+  **A deleted member no longer leaves a countdown colourless.** When the primary assignee is
+  deleted, the foreign key clears `assigned_to` and takes that one assignment row with it while the
+  others stay. The calendar falls back to the first remaining assignee; without the same step the
+  tile would have been the only place showing a generic tone.
+
+  Two more things surfaced while building it. The overview resolved event colours **on its own**
+  (`color || cal_color`, without the assignee branch) - harmless while every appointment carried a
+  colour, but two visibly different answers to one question as soon as one might not; both pages now
+  read the same rule from `public/utils/event-color.js`. And an ICS subscription has no
+  `external_calendars` row, so its colour had to reach the display over its own path - it is now read
+  from `ics_subscriptions`, and appointments from a subscription keep their feed's colour.
+
+
 ## [2.48.0] - 2026-08-27
 
 ### Added

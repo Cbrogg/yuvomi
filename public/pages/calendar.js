@@ -18,6 +18,7 @@ import { shiftEndDateKey, isEndBeforeStart, weekStartIndex, weekdayOrder,
 import { truncateRuleBefore, shiftSeriesStart, shiftEndForStart,
          isLocalRecurringSeries, isExternalRecurringSeries } from '/utils/recurrence-scope.js';
 import { getReadableTextColor } from '/utils/color.js';
+import { resolveEventColor } from '/utils/event-color.js';
 import { refresh as refreshReminders } from '/reminders.js';
 import { parseRemindAtAsUtc } from '/utils/reminder-offset.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
@@ -120,15 +121,36 @@ function pickerColors(event) {
 }
 
 /**
+ * Der Wert des Erben-Swatch: "dieser Termin hat keine eigene Farbe".
+ *
+ * Der Leerstring, nicht `null`, weil er aus `dataset.color` kommt - ein
+ * data-Attribut kennt keinen Nullwert, und ein fehlendes Attribut waere
+ * `undefined` und damit nicht mehr von "gar kein Swatch aktiv" zu
+ * unterscheiden. Genau diese Unterscheidung traegt die Regel unten.
+ */
+const COLOR_INHERIT = '';
+
+/**
  * Welche Farbe ein Speichern schreibt.
  *
- * Die Regel dahinter ist eine einzige: ein Speichern, bei dem niemand die Farbe
- * angefasst hat, darf sie nicht veraendern. Steht kein Swatch auf aktiv, gilt
- * also die Farbe, die der Termin schon traegt - erst wenn auch die fehlt (neuer
- * Termin), die erste der Palette.
+ * Zwei Regeln, und die Reihenfolge ist der ganze Punkt:
+ *
+ * 1. Steht der Erben-Swatch auf aktiv, schreibt das Speichern `null` - der
+ *    Termin bekommt KEINE eigene Farbe und leiht sich die der zugewiesenen
+ *    Person (#891). Das ist eine ausdrueckliche Wahl und deshalb ein Wert, den
+ *    das Backend annehmen muss; `crud.js` unterscheidet sie am mitgeschickten
+ *    Feld von "nicht angefasst".
+ * 2. Steht gar kein Swatch auf aktiv, darf ein Speichern die Farbe nicht
+ *    veraendern - es gilt, was der Termin schon traegt. Fehlt auch die, bleibt
+ *    es bei `null`: ein neuer Termin faengt ohne eigene Farbe an. Bis v2.48.0
+ *    stand hier `EVENT_COLORS[0]`, und weil dieser Palettenerste ununterscheidbar
+ *    von einer bewussten Wahl war, hat er die Personenfarbe verdraengt, ohne dass
+ *    sie je jemand abgewaehlt haette.
  */
 function colorToSave(activeSwatchColor, event) {
-  return activeSwatchColor || event?.color || EVENT_COLORS[0];
+  if (activeSwatchColor === COLOR_INHERIT) return null;
+  if (activeSwatchColor) return activeSwatchColor;
+  return event?.color ?? null;
 }
 
 const EVENT_ICON_ALIASES = {
@@ -415,37 +437,8 @@ function openIconPickerDialog(selectedIcon, onSelect, onClose = () => {}) {
 // --------------------------------------------------------
 
 /** Neutrale Fallback-Farbe wenn weder Assignee noch manuelle Farbe gesetzt. */
-const FALLBACK_COLOR = '#8E8E93';
-
-/**
- * Gibt die primäre Einzelfarbe eines Events zurück.
- * Wird für Textkontrastberechnung und Stellen genutzt, die keine Gradienten unterstützen.
- * Priorität: 1. ev.color, 2. erster Assignee, 3. ev.cal_color, 4. Grau.
- *
- * WARUM DIE TERMINFARBE VORN STEHT (#815). Bis v2.35.0 schlug die Farbe der
- * zugewiesenen Person alles andere. Das warf zwei sehr verschiedene Dinge in
- * denselben Topf: `cal_color` ist GEERBT - jeder Termin des Kalenders hat sie,
- * sie sagt nichts über diesen einen aus -, `ev.color` dagegen ist an DIESEM
- * Termin ausdrücklich gesetzt, von Hand hier oder als RFC-7986-`COLOR` vom
- * CalDAV-Server. Eine ausdrückliche Angabe darf eine abgeleitete nicht
- * verlieren; gegen die geerbte Kalenderfarbe gewinnt die Person weiterhin.
- *
- * Der Melder von #815 hat den Fall belegt: seine Termine tragen in Baikal und
- * Nextcloud eigene Farben, Yuvomi liest sie korrekt ein - sichtbar waren sie
- * nur, solange der Kalender niemandem zugewiesen war. Die Sync war nie das
- * Problem, die Vorrangregel war es.
- *
- * WAS DABEI NICHT VERLOREN GEHT: wer der Termin gehört, steht weiter im
- * Avatar-Stack daneben - das ist ohnehin der Weg, auf dem MEHRERE Zugewiesene
- * kommuniziert werden (siehe resolveEventBackground). Die Farbe war für diese
- * Auskunft nie die einzige Quelle.
- */
-function resolveEventColor(ev) {
-  if (ev.color) return ev.color;
-  const assignees = ev.assigned_users ?? [];
-  if (assignees.length > 0) return assignees[0].color || FALLBACK_COLOR;
-  return ev.cal_color || FALLBACK_COLOR;
-}
+// Die Rangfolge selbst steht in utils/event-color.js, weil das Dashboard
+// dieselbe Frage stellt und vor #891 eine eigene, kuerzere Antwort hatte.
 
 /**
  * Gibt eine einzelne CSS-Füllfarbe zurück (nie ein Gradient).
@@ -3228,15 +3221,20 @@ function wireEventForm(panel, { mode, event = null, reminder = null }) {
   bindUserMultiSelect(panel, 'cal_assigned');
   wireVisibilityWarning(panel, '#modal-visibility', 'cal_assigned', '#modal-visibility-warning');
 
-  // Der Farbwaehler war ausgegraut, sobald jemand zugewiesen war, mit dem
-  // Hinweis, die Farbe der Person schlage sie ohnehin. Das galt bis v2.35.0.
-  // Seit #815 steht die Terminfarbe in resolveEventColor VORN, und weil
-  // calendar_events.color NOT NULL ist und auch den Leerstring ablehnt, ist sie
-  // immer gesetzt: die Zuweisung faerbt seither nie mehr. Die Sperre nahm dem
-  // Nutzer also eine Wahl ab, um ein Versprechen zu halten, das der Code nicht
-  // mehr gab. Wer der Termin ist, sagt weiterhin der Avatar-Stack daneben.
+  // Der Farbwaehler war bis v2.35.0 ausgegraut, sobald jemand zugewiesen war,
+  // mit dem Hinweis, die Farbe der Person schlage sie ohnehin. Seit #815 steht
+  // die Terminfarbe in resolveEventColor VORN, womit der Hinweis unwahr wurde -
+  // die Sperre nahm dem Nutzer eine Wahl ab, um ein Versprechen zu halten, das
+  // der Code nicht mehr gab (#856). Sie ist deshalb weg und bleibt weg.
+  //
+  // Seit #891 ist die Aussage von damals wieder erreichbar, nur als WAHL statt
+  // als Sperre: der Erben-Swatch traegt sie, und wer stattdessen eine Farbe
+  // waehlt, behaelt sie. Wer der Termin ist, sagt weiterhin der Avatar-Stack.
 
-  const selectedColor = isEdit ? (event?.color || EVENT_COLORS[0]) : EVENT_COLORS[0];
+  // Leerstring = der Erben-Swatch. Ein neuer Termin startet dort, und ein
+  // bestehender ohne eigene Farbe steht dort ebenfalls - beides ist seit #891
+  // ein ausdrueckbarer Zustand und nicht mehr der Palettenerste als Notloesung.
+  const selectedColor = isEdit ? (event?.color || COLOR_INHERIT) : COLOR_INHERIT;
 
   // Farb-Auswahl: Auswahl + ARIA + Keyboard (Roving Tabindex)
   function selectSwatch(target) {
@@ -3538,10 +3536,21 @@ function buildEventModalContent({ mode, event, date, reminder = null, time = nul
     <div class="form-group">
       <label class="form-label" id="event-color-label">${t('calendar.colorLabel')}</label>
       <div class="color-picker" id="event-color-picker" role="radiogroup" aria-labelledby="event-color-label">
-        ${pickerColors(isEdit ? event : null).map((c, i) => `
+        <!-- Steht vorn, weil er der Standard ist: ein Termin, fuer den niemand
+             eine Farbe gewaehlt hat, traegt die der zugewiesenen Person (#891).
+             Traegt bewusst KEIN Inline-background - seine Optik kommt aus
+             calendar.css, weil sie eine Designentscheidung ist und keine
+             Nutzereinstellung. -->
+        <div class="color-swatch color-swatch--inherit" data-color=""
+             role="radio"
+             tabindex="0"
+             aria-checked="false"
+             aria-label="${esc(t('calendar.colorInherit'))}"
+             title="${esc(t('calendar.colorInheritHint'))}"></div>
+        ${pickerColors(isEdit ? event : null).map((c) => `
           <div class="color-swatch" data-color="${esc(c)}" style="background-color:${esc(c)};"
                role="radio"
-               tabindex="${i === 0 ? '0' : '-1'}"
+               tabindex="-1"
                aria-checked="false"
                aria-label="${esc(EVENT_COLOR_NAMES()[c] ?? t('calendar.colorCurrent'))}"></div>
         `).join('')}
