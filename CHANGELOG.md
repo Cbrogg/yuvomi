@@ -7,9 +7,53 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.48.0] - 2026-08-27
+
 ### Added
 
-- **Schedule adds opt-in rotating shift patterns and read-only calendar overlays** (#786). Households can define reusable shift types, assign them to cycle days, and replace individual dates with a different shift or an explicit free day. Schedules are computed when read rather than copied into calendar events, so changing a pattern does not leave stale appointments behind. Every household member can read the overlay; members can change only their own schedule and administrators can help any member.
+- **Schedule turns a rotation into one repeating cycle instead of a wall of appointments** (#786,
+  contributed by @mclgoerg). Define reusable shift types, lay them onto the days of a cycle, and
+  replace a single date with a different shift or an explicit day off. A fixed weekly timetable and a
+  rotating shift pattern share the same arithmetic - a "week A / week B" plan is a 14-day cycle, so
+  there is one model rather than two features.
+
+  **A pattern is not calendar recurrence**, and that is the reason it is its own module: a rotation is
+  a repeating sequence of *different* entries, which an RRULE cannot express without splitting it into
+  several unrelated series that then drift apart.
+
+  Entries are **computed when read**, never copied into the calendar. Changing a pattern therefore
+  cannot leave stale appointments behind, and a two-year rotation costs one row instead of roughly
+  seven hundred. The calendar shows them as an explicitly toggleable, read-only layer - a compact
+  strip by default, full blocks on request - and never as ordinary editable events.
+
+  Every household member can read the overlay, because the everyday question is "is Anna free on
+  Tuesday evening". A member writes only their own schedule; administrators write for anyone. Shift
+  types belong to the household rather than to a person: anyone may add one, and only its creator or
+  an administrator may rename or remove it. The module ships **switched off**, the way Inventory does.
+
+### Fixed
+
+- **Recording someone else's medication works in both directions again** (#884). A parent looking
+  after a child could create a medication schedule and a dose entry, but not delete the schedule or
+  tick the dose off - the answer was "not found" for something they had just entered themselves.
+
+  A schedule and a dose entry have no owner of their own; they hang off the medication and inherit its
+  scope. In four places that inheritance was spelled out by hand, and the hand-written version quietly
+  left out the caregiver relationship. Lab results had the same gap, just nobody had run into it.
+
+  **Why it looked random rather than broken:** as long as the caregiver ticks a dose themselves, the
+  request goes through the medication and works. Once the reminder job has created the entry ahead of
+  time, the same button takes a different route - and only that one was closed. Same dose, working one
+  day and refusing the next.
+
+- **The installed app follows the tablet again instead of pinning itself upright** (#890). The web app
+  manifest carried an orientation lock, so a Galaxy Tab held sideways still showed a narrow portrait
+  strip even though the layout has always been responsive well past that width. The lock is gone
+  rather than widened: the app now follows the device, and the rotation lock its owner set.
+
+- **A malformed time is rejected instead of stored.** Time fields validated only the shape `dd:dd`, so
+  an API client could store `99:99` as a reminder or a shift boundary. The check now reads the value
+  as a clock time.
 
 ## [2.47.0] - 2026-08-27
 
