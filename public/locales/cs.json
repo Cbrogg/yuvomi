@@ -59,7 +59,8 @@
             "private": "Pouze já",
             "hint": "Určuje, kdo vidí tuto položku v Yuvomi.",
             "assigneesNobodyHint": "Bez přiřazení vidíš tuto položku jen ty."
-        }
+        },
+        "toShoppingListNamed": "Přidat {{title}} na nákupní seznam"
     },
     "kitchen": {
         "noShoppingLists": "Nákupní seznam ještě neexistuje.",
@@ -658,7 +659,9 @@
         "deleteScopeFuture": "Toto a všechna následující",
         "deleteScopeSeries": "Celá série (všechny týdny)",
         "seriesEndedToast": "Série ukončena od tohoto data.",
-        "seriesDeletedToast": "Série odstraněna."
+        "seriesDeletedToast": "Série odstraněna.",
+        "deleteMealNamed": "Smazat {{title}}",
+        "openRecipeNamed": "Otevřít recept: {{title}}"
     },
     "calendar": {
         "searchOpen": "Hledat události",
@@ -2654,7 +2657,8 @@
         "done": "Začít",
         "skip": "Přeskočit",
         "step2BodyDesktop": "Postranní panel vlevo tě zavede do všech modulů - od kalendáře a úkolů po kuchyni, dokumenty a nastavení.",
-        "step3BodyDesktop": "Tlačítkem + v dolním rohu vytvoříš nové záznamy kdekoli."
+        "step3BodyDesktop": "Tlačítkem + v dolním rohu vytvoříš nové záznamy kdekoli.",
+        "stepProgress": "Krok {{current}} z {{total}}"
     },
     "userMultiSelect": {
         "nobody": "- Nikdo -",
@@ -3275,7 +3279,8 @@
         "sourceTandoor": "Tandoor",
         "sourceNative": "Vlastní",
         "sourceAll": "Vše",
-        "sourceFilterLabel": "Filtrovat podle zdroje"
+        "sourceFilterLabel": "Filtrovat podle zdroje",
+        "plannedThisWeek": "Naplánováno na tento týden"
     },
     "wmo": {
         "0": "Jasno",
