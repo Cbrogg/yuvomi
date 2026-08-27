@@ -7,6 +7,40 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **An appointment nobody picked a colour for lends the colour of the person it belongs to**
+  (#891). Since v2.36.0 every appointment looked as though someone had chosen its colour, so the
+  assigned member's colour never showed - the reporter saw the avatar next to an appointment that no
+  longer matched it.
+
+  **It was a missing state, not a wrong rule.** `calendar_events.color` was `NOT NULL` and rejected
+  the empty string, so there was no way to say *this appointment has no colour of its own*: the
+  dialog wrote the first palette entry into every new appointment and the sync wrote the calendar's
+  colour into every imported one. Both are inherited values, and once stored they were
+  indistinguishable from a deliberate choice - which is why they outranked the person's colour, the
+  rule from #815 being that an explicit value beats a derived one. That rule stands; a never-made
+  choice simply is not an explicit value.
+
+  The column may now be `NULL`, the import paths of all four sync providers stop copying the
+  inherited calendar colour into it, and the event dialog gains a first swatch, **"colour of the
+  assigned person"**, which is where a new appointment starts. Choosing a colour still keeps it, for
+  the appointment and across syncs.
+
+  **Existing appointments are left untouched.** `#007AFF` looks like an old default - no current
+  palette contains it - but it was the first entry of the event palette before the OKLCH switch, so
+  an appointment from the v1 era may well carry it on purpose. A migration cannot tell the two apart,
+  and discarding a real choice is worse than changing nothing: synced appointments normalise
+  themselves on the next sync, local ones through the dialog.
+
+  Two things surfaced while building it. The overview resolved event colours **on its own**
+  (`color || cal_color`, without the assignee branch) - harmless while every appointment carried a
+  colour, but two visibly different answers to one question as soon as one might not; both pages now
+  read the same rule from `public/utils/event-color.js`. And an ICS subscription has no
+  `external_calendars` row, so its colour had to reach the display over its own path - it is now read
+  from `ics_subscriptions`, and appointments from a subscription keep their feed's colour.
+
+
 ## [2.48.0] - 2026-08-27
 
 ### Added

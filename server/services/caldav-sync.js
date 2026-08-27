@@ -662,8 +662,14 @@ async function sync({ createClient } = {}) {
                   url: obj.url, etag: obj.etag, data: obj.data, calendarUrl: selCal.calendar_url,
                 });
               }
-              // Event-Eigenfarbe (RFC 7986) hat Vorrang, sonst Kalenderfarbe.
-              const evColor = ev.color || selCal.calendar_color;
+              // NUR die Eigenfarbe des Termins (RFC 7986 COLOR). Die Kalenderfarbe
+              // gehoert NICHT hierher: sie ist geerbt, gilt fuer jeden Termin des
+              // Kalenders und sagt ueber diesen einen nichts aus. Sie hier
+              // einzusetzen hat sie ununterscheidbar von einer ausdruecklichen
+              // Angabe gemacht und damit die Farbe der zugewiesenen Person
+              // dauerhaft verdraengt (#891). Die Anzeige holt sie weiterhin - als
+              // cal_color ueber calendar_ref_id, wo sie als geerbt erkennbar ist.
+              const evColor = ev.color ?? null;
 
               // Vom Nutzer gelöscht und noch nicht auf dem Server: nicht wieder
               // anlegen, sonst kehrt der Termin bei jedem Sync zurück (#593).

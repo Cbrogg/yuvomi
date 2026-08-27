@@ -378,13 +378,25 @@ const gEvent = {
   end:   { dateTime: '2026-06-03T11:00:00Z' },
 };
 
-test('Erst-Import ohne colorId setzt die Kalenderfarbe als Default', () => {
+test('Erst-Import ohne colorId schreibt KEINE Eigenfarbe (#891)', () => {
+  // Bis v2.48.0 landete hier die Kalenderfarbe. Das las sich harmlos - die
+  // Anzeige stimmte ja -, machte aber eine GEERBTE Farbe ununterscheidbar von
+  // einer, die jemand fuer diesen Termin gewaehlt hat. Da die Eigenfarbe seit
+  // #815 vorn steht, hat sie damit die Farbe der zugewiesenen Person auf Dauer
+  // verdraengt. Der Termin bleibt farblos; die Kalenderfarbe kommt beim Lesen
+  // als cal_color ueber calendar_ref_id dazu, wo sie als geerbt erkennbar ist.
   const calRefId = upsertExternalCalendar('google', 'primary', 'Mein Kalender', '#FF0000');
   upsertGoogleEvents([gEvent], calRefId, '#FF0000', COLOR_MAP);
   const row = db.prepare(
-    'SELECT color FROM calendar_events WHERE external_calendar_id = ?'
+    'SELECT color, calendar_ref_id FROM calendar_events WHERE external_calendar_id = ?'
   ).get(gEvent.id);
-  assertEqual(row.color, '#FF0000');
+  assertEqual(row.color, null);
+  // Gegenprobe: die Farbe ist nicht verloren, nur woanders. Ohne diese Haelfte
+  // waere der Test auch dann gruen, wenn der Termin gar keinen Kalender mehr
+  // haette und die geerbte Farbe damit wirklich weg waere.
+  assertEqual(row.calendar_ref_id, calRefId, 'der Kalenderbezug traegt die geerbte Farbe');
+  const cal = db.prepare('SELECT color FROM external_calendars WHERE id = ?').get(calRefId);
+  assertEqual(cal.color, '#FF0000', 'und dort steht sie unveraendert');
 });
 
 test('colorId wird zur Event-Eigenfarbe aufgelöst (#427)', () => {
@@ -397,14 +409,16 @@ test('colorId wird zur Event-Eigenfarbe aufgelöst (#427)', () => {
   assertEqual(row.color, '#FFA500', 'colorId 6 muss auf den Paletten-Hex gemappt werden');
 });
 
-test('Unbekannte colorId fällt auf die Kalenderfarbe zurück', () => {
+test('Unbekannte colorId schreibt ebenfalls keine Eigenfarbe (#891)', () => {
+  // Eine colorId, die in der Palette fehlt, ist keine Farbangabe - also derselbe
+  // Fall wie gar keine colorId, nicht ein Anlass, die Kalenderfarbe einzusetzen.
   const colored = { ...gEvent, id: 'evt-colorid-unknown', colorId: '99' };
   const calRefId = upsertExternalCalendar('google', 'primary', 'Mein Kalender', '#FF0000');
   upsertGoogleEvents([colored], calRefId, '#FF0000', COLOR_MAP);
   const row = db.prepare(
     'SELECT color FROM calendar_events WHERE external_calendar_id = ?'
   ).get('evt-colorid-unknown');
-  assertEqual(row.color, '#FF0000');
+  assertEqual(row.color, null);
 });
 
 test('Re-Sync übernimmt geänderte Google-Farbe, solange user_modified = 0', () => {

@@ -377,8 +377,11 @@ async function runSync() {
               url: obj.url, etag: obj.etag, data: obj.data, calendarUrl: cal.url,
             });
           }
-          // Event-Eigenfarbe (RFC 7986) hat Vorrang, sonst Kalenderfarbe.
-          const evColor = ev.color || calColor;
+          // NUR die Eigenfarbe des Termins (RFC 7986 COLOR); die Kalenderfarbe
+          // ist geerbt und gehoert nicht in die Eigenfarb-Spalte (#891), sonst
+          // verdraengt sie dauerhaft die Farbe der zugewiesenen Person. Der
+          // Lesepfad holt sie als cal_color ueber calendar_ref_id.
+          const evColor = ev.color ?? null;
 
           // Vom Nutzer gelöscht und noch nicht auf dem Server: nicht wieder
           // anlegen, sonst kehrt der Termin bei jedem Sync zurück (#593).

@@ -46,6 +46,10 @@ router.get('/:id', (req, res) => {
              u_assigned.display_name AS assigned_name,
              u_assigned.avatar_color AS assigned_color,
              u_created.display_name  AS creator_name,
+             -- Dieselbe geerbte Farbe wie im Lesepfad, damit jede Antwort dieses
+             -- Moduls dasselbe Event-Objekt liefert: CalDAV/Google ueber
+             -- calendar_ref_id, ICS-Abos ueber subscription_id (#891).
+             COALESCE(ec.color, isub.color) AS cal_color,
              bd.name       AS birthday_name,
              bd.birth_date AS birthday_date,
              ${ASSIGNED_USERS_SQL},
@@ -53,6 +57,8 @@ router.get('/:id', (req, res) => {
       FROM calendar_events e
       LEFT JOIN users u_assigned ON u_assigned.id = e.assigned_to
       LEFT JOIN users u_created  ON u_created.id  = e.created_by
+      LEFT JOIN external_calendars ec ON ec.id = e.calendar_ref_id
+      LEFT JOIN ics_subscriptions isub ON isub.id = e.subscription_id
       LEFT JOIN birthdays bd ON bd.calendar_event_id = e.id
       WHERE e.id = ?
         AND ${visibilityWhere('e', 'event_assignments', 'event_id')}
@@ -92,7 +98,10 @@ router.post('/', async (req, res) => {
     const vDesc  = str(req.body.description, 'Beschreibung', { max: MAX_TEXT, required: false });
     const vStart = datetime(req.body.start_datetime, 'Startdatum', true);
     const vEnd   = datetime(req.body.end_datetime, 'Enddatum');
-    const vColor = color(req.body.color || '#007AFF', 'Farbe');
+    // Kein Fallback auf eine Palettenfarbe: fehlt die Angabe, bekommt der Termin
+    // KEINE eigene Farbe (NULL) und leiht sich die der zugewiesenen Person
+    // (#891). `color()` liefert fuer undefined/null/'' bereits value: null.
+    const vColor = color(req.body.color, 'Farbe');
     const vIcon  = eventIcon(req.body.icon);
     const vLoc   = str(req.body.location, 'Ort', { max: MAX_TITLE, required: false });
     const vRrule = rrule(req.body.recurrence_rule, 'Wiederholung');
@@ -164,10 +173,16 @@ router.post('/', async (req, res) => {
              u_assigned.display_name AS assigned_name,
              u_assigned.avatar_color AS assigned_color,
              u_created.display_name  AS creator_name,
+             -- Dieselbe geerbte Farbe wie im Lesepfad, damit jede Antwort dieses
+             -- Moduls dasselbe Event-Objekt liefert: CalDAV/Google ueber
+             -- calendar_ref_id, ICS-Abos ueber subscription_id (#891).
+             COALESCE(ec.color, isub.color) AS cal_color,
              ${ASSIGNED_USERS_SQL}
       FROM calendar_events e
       LEFT JOIN users u_assigned ON u_assigned.id = e.assigned_to
       LEFT JOIN users u_created  ON u_created.id  = e.created_by
+      LEFT JOIN external_calendars ec ON ec.id = e.calendar_ref_id
+      LEFT JOIN ics_subscriptions isub ON isub.id = e.subscription_id
       WHERE e.id = ?
     `).get(eventId);
 
@@ -281,6 +296,10 @@ router.put('/:id', async (req, res) => {
       all_day, location, color: colorVal, recurrence_rule,
     } = req.body;
 
+    // `color` ueberhaupt mitgeschickt? Nur dann wird die Spalte angefasst - der
+    // Wert selbst darf dann auch null sein und heisst "keine eigene Farbe" (#891).
+    const colorTouched = Object.hasOwn(req.body, 'color');
+
     const userIds  = req.body.assigned_to !== undefined
       ? parseAssignedTo(req.body.assigned_to)
       : db.get().prepare('SELECT user_id FROM event_assignments WHERE event_id = ?')
@@ -333,7 +352,15 @@ router.put('/:id', async (req, res) => {
             end_datetime    = ?,
             all_day         = COALESCE(?, all_day),
             location        = ?,
-            color           = COALESCE(?, color),
+            -- Nicht COALESCE: der Wert NULL ist hier eine AUSSAGE ("dieser Termin
+            -- hat keine eigene Farbe", #891) und kein fehlender Parameter.
+            -- COALESCE kann beides nicht auseinanderhalten und wuerde die
+            -- Loeschung schlucken. Der Schalter traegt die Unterscheidung, die
+            -- der Body macht: color fehlt = nicht angefasst, color: null =
+            -- ausdruecklich geleert. Damit bleibt die Regel der Nachbarfelder
+            -- erhalten - das PUT eines Clients, der das Feld nicht kennt, darf
+            -- eine gesetzte Farbe nicht stillschweigend loeschen.
+            color           = CASE WHEN ? THEN ? ELSE color END,
             icon            = COALESCE(?, icon),
             assigned_to     = ?,
             recurrence_rule = ?,
@@ -363,7 +390,7 @@ router.put('/:id', async (req, res) => {
         end_datetime !== undefined ? (end_datetime || null) : event.end_datetime,
         all_day !== undefined ? (all_day ? 1 : 0) : null,
         location !== undefined ? (location || null) : event.location,
-        colorVal ?? null,
+        colorTouched ? 1 : 0, colorVal ?? null,
         req.body.icon !== undefined ? vIcon : null,
         firstUid !== undefined ? firstUid : event.assigned_to,
         recurrence_rule !== undefined ? (recurrence_rule || null) : event.recurrence_rule,
@@ -392,10 +419,16 @@ router.put('/:id', async (req, res) => {
              u_assigned.display_name AS assigned_name,
              u_assigned.avatar_color AS assigned_color,
              u_created.display_name  AS creator_name,
+             -- Dieselbe geerbte Farbe wie im Lesepfad, damit jede Antwort dieses
+             -- Moduls dasselbe Event-Objekt liefert: CalDAV/Google ueber
+             -- calendar_ref_id, ICS-Abos ueber subscription_id (#891).
+             COALESCE(ec.color, isub.color) AS cal_color,
              ${ASSIGNED_USERS_SQL}
       FROM calendar_events e
       LEFT JOIN users u_assigned ON u_assigned.id = e.assigned_to
       LEFT JOIN users u_created  ON u_created.id  = e.created_by
+      LEFT JOIN external_calendars ec ON ec.id = e.calendar_ref_id
+      LEFT JOIN ics_subscriptions isub ON isub.id = e.subscription_id
       WHERE e.id = ?
     `).get(id);
 

@@ -894,9 +894,17 @@ function upsertGoogleEvents(items, calRefId = null, calColor = GOOGLE_COLOR, col
     // steht ein EXDATE vorn, landete es sonst als Wiederholungsregel in der DB.
     const rrule       = recurrenceRuleOf(item);
 
-    // Event-Eigenfarbe aus colorId auflösen (Google liefert nur die Paletten-ID),
-    // sonst Kalenderfarbe als Default.
-    const evColor = (item.colorId && colorMap[item.colorId]) || calColor;
+    // NUR die Eigenfarbe des Termins, aufgelöst aus Googles colorId (die API
+    // liefert die Paletten-ID, nicht den Hex-Wert). Die Kalenderfarbe gehört
+    // NICHT hierher: sie ist geerbt und sagt über diesen einen Termin nichts.
+    // Sie hier einzusetzen hat sie ununterscheidbar von einer ausdrücklichen
+    // Angabe gemacht und damit die Farbe der zugewiesenen Person verdrängt
+    // (#891). Der Lesepfad holt sie weiterhin als cal_color über calendar_ref_id.
+    //
+    // Google selbst denkt genauso: ein Event ohne colorId erbt dort die
+    // Kalenderfarbe, und `localEventToGoogle` schickt für einen Termin ohne
+    // eigene Farbe folgerichtig keine colorId zurück.
+    const evColor = (item.colorId && colorMap[item.colorId]) || null;
 
     const existing = db.get().prepare(
       'SELECT id, outbound_dirty FROM calendar_events WHERE external_calendar_id = ? AND external_source = ?'
