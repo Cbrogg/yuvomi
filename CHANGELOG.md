@@ -7,6 +7,39 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.50.4] - 2026-08-28
+
+### Added
+
+- **The view switcher in the tasks header names its views.** List, Kanban and History showed three
+  mute glyphs; a Kanban rectangle and a history arrow are not shared vocabulary. The labels appear
+  from 1024px, where the header is single-line anyway and they cost one pixel. Below that the
+  icon-only form stays - measured, a labelled switcher grows from 130px to 395px and would push the
+  header from two rows to three at 834px. The three single buttons beside it keep their icon form:
+  their names are verbs ("Manage categories"), and a visible label made from an aria-label is a
+  second name for the same control.
+
+### Fixed
+
+- **Checking off a task now confirms the check and can be undone.** The confirmation was already
+  built but never visible: the class was set, the round trip ran, and the list re-render replaced
+  the button before the 200ms animation got a single frame - measured, it played in none of six
+  attempts. It now runs alongside the round trip instead of after it, so it costs no time when the
+  network is slower. Tapping also offers the same undo the swipe gesture has had all along; the most
+  common way to complete a task used to let the entry vanish from the filtered view without a word.
+- **The edge fade on the documents filter row follows the element that actually scrolls.** Below the
+  breakpoint the whole control row scrolls rather than the chip strip inside it, and the fade was
+  wired to the inner element only - 1246 pixels of content on a 390px viewport with no sign that
+  anything continued sideways.
+
+### Changed
+
+- **Every motion curve now comes from a token.** Three literals sat outside `tokens.css`: two spelled
+  out an existing curve by hand, blind to any later change, and the third was a fourth curve nobody
+  had decided on. Three durations move onto the canonical steps in the process (320ms and 350ms to
+  300ms, 220ms to 250ms). A guard checks the shape rather than a file list, so a new file cannot
+  quietly reintroduce one.
+
 ## [2.50.3] - 2026-08-27
 
 ### Added
