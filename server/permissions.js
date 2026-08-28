@@ -25,7 +25,8 @@
  * Routen und Tests.
  */
 
-import { MODULE_KEYS } from './scopes.js';
+import { MODULE_KEYS, getModuleKeys } from './scopes.js';
+import { getExtensionPermissionCatalog } from './services/modules.js';
 
 // Familienrollen (Subjekt-Achse „role"). Spiegelt den CHECK-Constraint der
 // users.family_role-Spalte (Migration, db.js).
@@ -99,8 +100,29 @@ export const WIDGET_ACCESS_LEVELS = Object.freeze(['none', 'allow']);
 const MODULE_DEFAULT = 'write';
 const WIDGET_DEFAULT = 'allow';
 
-const MODULE_KEY_SET = new Set(PERMISSION_MODULES.map((m) => m.key));
-const WIDGET_ID_SET = new Set(PERMISSION_WIDGETS.map((w) => w.id));
+function extensionPermissionModules() {
+  return getExtensionPermissionCatalog().permissionModules || [];
+}
+
+function extensionPermissionWidgets() {
+  return getExtensionPermissionCatalog().permissionWidgets || [];
+}
+
+function allPermissionModules() {
+  return [...PERMISSION_MODULES, ...extensionPermissionModules()];
+}
+
+function allPermissionWidgets() {
+  return [...PERMISSION_WIDGETS, ...extensionPermissionWidgets()];
+}
+
+function moduleKeySet() {
+  return new Set(allPermissionModules().map((m) => m.key));
+}
+
+function widgetIdSet() {
+  return new Set(allPermissionWidgets().map((w) => w.id));
+}
 const MODULE_ACCESS_SET = new Set(MODULE_ACCESS_LEVELS);
 const WIDGET_ACCESS_SET = new Set(WIDGET_ACCESS_LEVELS);
 const FAMILY_ROLE_SET = new Set(FAMILY_ROLES);
@@ -130,9 +152,12 @@ export function resolvePermissions(database, user) {
   const isAdmin = user?.role === 'admin';
   const modules = {};
   const widgets = {};
-  for (const m of PERMISSION_MODULES) modules[m.key] = isAdmin ? 'write' : MODULE_DEFAULT;
-  for (const w of PERMISSION_WIDGETS) widgets[w.id] = isAdmin ? 'allow' : WIDGET_DEFAULT;
+  for (const m of allPermissionModules()) modules[m.key] = isAdmin ? 'write' : MODULE_DEFAULT;
+  for (const w of allPermissionWidgets()) widgets[w.id] = isAdmin ? 'allow' : WIDGET_DEFAULT;
   if (isAdmin) return { admin: true, modules, widgets };
+
+  const MODULE_KEY_SET = moduleKeySet();
+  const WIDGET_ID_SET = widgetIdSet();
 
   const apply = (rows) => {
     for (const r of rows) {
@@ -153,7 +178,7 @@ export function resolvePermissions(database, user) {
   }
 
   // Widgets erben die Modulsperre.
-  for (const w of PERMISSION_WIDGETS) {
+  for (const w of allPermissionWidgets()) {
     if (w.module && modules[w.module] === 'none') widgets[w.id] = 'none';
   }
   return { admin: false, modules, widgets };
@@ -255,12 +280,24 @@ export function clientPermissions(database, user) {
 /** Voller Katalog für die Admin-UI (Module, Widgets, Rollen). */
 export function permissionCatalog() {
   return {
-    modules: PERMISSION_MODULES.map((m) => ({ key: m.key, labelKey: m.labelKey, icon: m.icon })),
-    widgets: PERMISSION_WIDGETS.map((w) => ({ id: w.id, module: w.module })),
+    modules: allPermissionModules().map((m) => ({
+      key: m.key,
+      labelKey: m.labelKey || null,
+      label: m.label || null,
+      icon: m.icon,
+      extensionModuleId: m.extensionModuleId || null,
+    })),
+    widgets: allPermissionWidgets().map((w) => ({
+      id: w.id,
+      module: w.module,
+      label: w.label || null,
+      labelKey: w.labelKey || null,
+    })),
     roles: [...FAMILY_ROLES],
     moduleAccessLevels: [...MODULE_ACCESS_LEVELS],
     widgetAccessLevels: [...WIDGET_ACCESS_LEVELS],
     defaults: { module: MODULE_DEFAULT, widget: WIDGET_DEFAULT },
+    scopeModuleKeys: getModuleKeys(),
   };
 }
 
@@ -275,6 +312,8 @@ export function getSubjectPermissions(database, subjectType, subjectId) {
   const rows = loadSubjectRows(database, subjectType, subjectId);
   const modules = {};
   const widgets = {};
+  const MODULE_KEY_SET = moduleKeySet();
+  const WIDGET_ID_SET = widgetIdSet();
   for (const r of rows) {
     if (r.resource_type === 'module' && MODULE_KEY_SET.has(r.resource_key)) modules[r.resource_key] = r.access;
     else if (r.resource_type === 'widget' && WIDGET_ID_SET.has(r.resource_key)) widgets[r.resource_key] = r.access;
@@ -291,6 +330,8 @@ export function getSubjectPermissions(database, subjectType, subjectId) {
  */
 export function normalizePermissionInput({ modules = {}, widgets = {} } = {}) {
   const rows = [];
+  const MODULE_KEY_SET = moduleKeySet();
+  const WIDGET_ID_SET = widgetIdSet();
   for (const [key, access] of Object.entries(modules || {})) {
     if (!MODULE_KEY_SET.has(key)) throw new Error(`Unknown module: ${key}`);
     if (!MODULE_ACCESS_SET.has(access)) throw new Error(`Invalid module access: ${access}`);
