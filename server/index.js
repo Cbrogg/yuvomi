@@ -64,6 +64,8 @@ import familyRouter from './routes/family.js';
 import backupRouter from './routes/backup.js';
 import housekeepingRouter from './routes/housekeeping.js';
 import modulesRouter from './routes/modules.js';
+import extensionsProxyRouter from './routes/extensions-proxy.js';
+import { listModules } from './services/modules.js';
 import pushRouter from './routes/push.js';
 import emailRouter from './routes/email.js';
 import notificationsRouter from './routes/notifications.js';
@@ -489,6 +491,7 @@ app.use('/api/v1/search', searchRouter);
 app.use('/api/v1/family', familyRouter);
 app.use('/api/v1/backup', backupRouter);
 app.use('/api/v1/housekeeping', housekeepingRouter);
+app.use('/api/v1/extensions', extensionsProxyRouter);
 app.use('/api/v1/modules', modulesRouter);
 app.use('/api/v1/push', pushRouter);
 app.use('/api/v1/email', emailRouter);
@@ -585,6 +588,10 @@ async function runSync() {
 app.listen(PORT, () => {
   logYuvomi.info(`Server running on port ${PORT} | Version ${APP_VERSION}`);
   logYuvomi.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+  listModules({ admin: true }).catch((err) => {
+    log.warn('Initial module registry scan failed:', err.message);
+  });
 
   // Ein Sicherheitsschalter, der still nicht greift, ist schlimmer als keiner:
   // der Betreiber glaubt, das Anmeldeformular sei zu (#847). Beide Fail-open-

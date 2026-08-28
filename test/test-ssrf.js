@@ -230,6 +230,7 @@ test('bekannte Module mit gespeicherter *_url-Spalte binden den SSRF-Schutz ein'
     '../server/services/subscription-logo.js',
     '../server/services/recipe-providers/mealie.js',
     '../server/services/recipe-providers/tandoor.js',
+    '../server/routes/extensions-proxy.js',
   ];
   for (const path of modules) {
     const src = read(path);
