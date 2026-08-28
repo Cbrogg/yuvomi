@@ -1990,7 +1990,7 @@ function renderWeekView(container) {
   container.insertAdjacentHTML('beforeend', `
     <div class="week-view">
       <div class="week-view__header" id="week-header"
-           style="display:grid;grid-template-columns:var(--space-12) repeat(${colCount},1fr);">
+           style="display:grid;grid-template-columns:var(--cal-gutter-width) repeat(${colCount},1fr);">
         <div class="week-view__time-gutter"></div>
         ${days.map((d) => {
           const dt = new Date(d + 'T00:00:00');
@@ -2001,7 +2001,7 @@ function renderWeekView(container) {
         }).join('')}
       </div>
       <!-- Ganztägige Ereignisse -->
-      <div class="allday-row" style="display:grid;grid-template-columns:var(--space-12) repeat(${colCount},1fr);">
+      <div class="allday-row" style="display:grid;grid-template-columns:var(--cal-gutter-width) repeat(${colCount},1fr);">
         <div class="calendar-all-day-label">${t('calendar.allDayShort')}</div>
         ${days.map((d, i) => `
           <div class="allday-cell">
