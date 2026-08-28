@@ -26,7 +26,6 @@
  */
 
 import { MODULE_KEYS, getModuleKeys } from './scopes.js';
-import { getExtensionPermissionCatalog } from './services/modules.js';
 
 // Familienrollen (Subjekt-Achse „role"). Spiegelt den CHECK-Constraint der
 // users.family_role-Spalte (Migration, db.js).
@@ -100,12 +99,25 @@ export const WIDGET_ACCESS_LEVELS = Object.freeze(['none', 'allow']);
 const MODULE_DEFAULT = 'write';
 const WIDGET_DEFAULT = 'allow';
 
+/** Extension catalog injected at runtime by the module registry — keeps this file off db.js. */
+let _extensionPermissionModules = [];
+let _extensionPermissionWidgets = [];
+
+export function setExtensionPermissionCatalog(catalog) {
+  _extensionPermissionModules = Array.isArray(catalog?.permissionModules)
+    ? catalog.permissionModules.filter((m) => m && typeof m.key === 'string')
+    : [];
+  _extensionPermissionWidgets = Array.isArray(catalog?.permissionWidgets)
+    ? catalog.permissionWidgets.filter((w) => w && typeof w.id === 'string')
+    : [];
+}
+
 function extensionPermissionModules() {
-  return getExtensionPermissionCatalog().permissionModules || [];
+  return _extensionPermissionModules;
 }
 
 function extensionPermissionWidgets() {
-  return getExtensionPermissionCatalog().permissionWidgets || [];
+  return _extensionPermissionWidgets;
 }
 
 function allPermissionModules() {

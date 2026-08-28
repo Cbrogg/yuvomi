@@ -122,6 +122,16 @@ const INTENTIONALLY_NOT_IN_INSTALLER = {
     + 'und meint das Verzeichnis IM Container. Hier ist es sogar schaerfer, weil kein Descriptor '
     + 'die Variable unter environment pinnt - ein Host-Pfad aus der .env erreicht den Container '
     + 'also ungebremst. Wer Module ablegt, setzt den Mount in der Compose-Datei.',
+  EXTENSION_PROXY_TARGETS:
+    'JSON-Karte Modul-ID → Sidecar-URL für den optionalen Extension-API-Proxy. Ohne Sidecar '
+    + 'ist der Proxy aus; wer einen betreibt, setzt die Variable in der Compose-Datei neben dem '
+    + 'Sidecar selbst. Ein Installer-Feld hätte ein JSON-Objekt erfragt, das ohne das Modul '
+    + 'keine Bedeutung hat.',
+  EXTENSION_PROXY_ALLOW_PRIVATE_NETWORK:
+    'SSRF-Opt-in für Docker-/LAN-Upstreams des Extension-Proxy. Default false; true nur, wenn '
+    + 'EXTENSION_PROXY_TARGETS auf interne Hostnamen zeigt. Wer Sidecars verdrahtet, fasst die '
+    + '.env ohnehin von Hand an - dieselbe Klasse wie DMS_ALLOW_PRIVATE_NETWORK, nur mit hartem '
+    + 'Default.',
   OIKOS_HTTP_BIND: 'Bindungsadresse für rootless Podman hinter Proxy. Ein falscher Wert macht die App unerreichbar, und der Default ist für jede vom Wizard erzeugte Installation richtig.',
   DMS_ALLOW_PRIVATE_NETWORK:
     'Der einzige *_ALLOW_PRIVATE_NETWORK-Schalter mit Default true (#809): ein DMS ist per '

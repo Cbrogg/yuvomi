@@ -11,6 +11,7 @@ import { createLogger } from '../logger.js';
 import { getSupportedLocales } from '../utils/i18n.js';
 import { normalizeCapabilities, buildExtensionCatalog } from './module-capabilities.js';
 import { setExtensionScopeModules } from '../scopes.js';
+import { setExtensionPermissionCatalog } from '../permissions.js';
 
 const log = createLogger('Modules');
 
@@ -259,6 +260,7 @@ function refreshExtensionCatalog(modules) {
     })),
   );
   setExtensionScopeModules(_extensionCatalog.scopeModules);
+  setExtensionPermissionCatalog(_extensionCatalog);
 }
 
 async function listModules({ admin = false } = {}) {
