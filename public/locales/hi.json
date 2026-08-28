@@ -907,7 +907,8 @@
         "filtersActive": "{{count}} फ़िल्टर सक्रिय",
         "filtersActive_one": "1 फ़िल्टर सक्रिय",
         "filtersReset": "सभी फ़िल्टर हटाएँ",
-        "filtersDisplay": "प्रदर्शन"
+        "filtersDisplay": "प्रदर्शन",
+        "agendaDayEmpty": "कुछ भी नियोजित नहीं"
     },
     "notes": {
         "title": "नोट बोर्ड",

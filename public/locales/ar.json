@@ -907,7 +907,8 @@
         "filtersActive": "{{count}} عوامل تصفية نشطة",
         "filtersActive_one": "عامل تصفية واحد نشط",
         "filtersReset": "إزالة كل عوامل التصفية",
-        "filtersDisplay": "العرض"
+        "filtersDisplay": "العرض",
+        "agendaDayEmpty": "لا شيء مُخطط"
     },
     "notes": {
         "title": "لوحة الملاحظات",
