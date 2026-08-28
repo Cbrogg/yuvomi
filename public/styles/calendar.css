@@ -578,7 +578,17 @@
    * gemessenen 16-%-Rezept, die Tinte beim 38-%-Mix - beide Zusagen gelten
    * unveraendert, die Kante traegt die Farbe. */
   border-inline-start: 3px solid var(--ev-color);
-  overflow: hidden;
+  /* `clip` STATT `hidden`, DAMIT DER TITEL KLEBEN KANN.
+   *
+   * `overflow: hidden` macht aus jedem Element einen Scroll-Container - und
+   * `position: sticky` klebt immer am NAECHSTEN Scroll-Container, hier also am
+   * Block selbst, der nie scrollt. Der Titel stand damit fest an der
+   * Blockoberkante, und ein Termin, der oben aus dem Scrollport ragte, zeigte
+   * eine leere Farbflaeche: gemessen ein 151x120px grosses cyanfarbenes
+   * Rechteck ohne ein Zeichen Text, ausgerechnet beim laengsten Termin des
+   * Tages. `clip` schneidet genauso ab, bildet aber KEINEN Scroll-Container -
+   * derselbe Wechsel, den `.modal-panel` in v2.21.1 gemacht hat. */
+  overflow: clip;
   cursor: pointer;
   z-index: 1;
   line-height: 1.4;
@@ -596,6 +606,11 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  /* Der Titel bleibt an der SICHTBAREN Oberkante seines Blocks, nicht an
+     dessen tatsaechlicher - siehe die Begruendung an `.week-event`. Apple
+     Kalender und Fantastical halten es genauso. */
+  position: sticky;
+  top: 0;
 }
 
 .week-event__time {
@@ -755,10 +770,22 @@
    * Termin in derselben Woche zwei Sprachen, je nachdem welchen Knopf man
    * gedrueckt hatte. */
   border-inline-start: 3px solid var(--ev-color);
-  overflow: hidden;
+  /* `clip` statt `hidden` - dieselbe Begruendung wie an `.week-event`: nur so
+     kann der Text darin kleben. Die Tagesansicht zeichnet DENSELBEN Block,
+     und eine Regel, die nur in einer der beiden Ansichten gilt, laesst
+     denselben Termin zwei Sprachen sprechen (die Lehre aus Etappe 3). */
+  overflow: clip;
   cursor: pointer;
   z-index: 1;
   transition: background-color var(--transition-fast);
+}
+
+/* Der Text bleibt an der sichtbaren Oberkante seines Blocks. `align-self`
+   hebt die zentrierte Ausrichtung des Flex-Containers nur fuer den Textteil
+   auf - die Spine daneben bleibt gestreckt, die Avatare bleiben mittig. */
+.day-event__text {
+  position: sticky;
+  top: 0;
 }
 
 /* Ein Zustand steigt genau eine Sprosse (Tönungsskala). */
@@ -1702,13 +1729,20 @@
     padding: var(--space-0h);
   }
 
+  /* 10px STATT 8px, UND DER GRUND IST DER RING DARUNTER (2026-08-28).
+   *
+   * Ein Punkt, der seine Abgrenzung von einem 1px-Ring bekommt, verliert
+   * davon ein Viertel seiner Flaeche - bei 8px blieben 6px Farbe uebrig, und
+   * die Farbe ist hier die einzige Unterscheidung zwischen zwei Terminen.
+   * 10px ist der kleinste Wert der Skala, bei dem Ring UND Farbe zusammen
+   * lesbar bleiben. */
   .month-day .month-day__event,
   .month-day .cal-task-chip,
   .month-day .month-day__holiday {
     display: inline-flex;
-    width: var(--space-2);
-    height: var(--space-2);
-    min-width: var(--space-2);
+    width: var(--space-2h);
+    height: var(--space-2h);
+    min-width: var(--space-2h);
     padding: 0;
     margin: 0 var(--space-0h) var(--space-0h) 0;
     border: none;
@@ -1718,14 +1752,34 @@
     overflow: hidden;
   }
 
-  /* Als 8px-Punkt trägt die volle --ev-color das Signal (nicht die blasse
-   * Tönung der Desktop-Kachel). */
+  /* DER PUNKT IST HIER DER EINZIGE INFORMATIONSTRAEGER - also muss ER die
+   * 3:1 aus WCAG 1.4.11 halten, nicht die Farbe darin.
+   *
+   * Gemessen an den neun Seed-Terminfarben gegen die helle Arbeitsflaeche:
+   * FUENF fielen durch - Amber 2,15:1, Cyan 2,43:1, Teal 2,49:1, Gruen
+   * 2,54:1, Orange 2,80:1; gegen die Wochenendflaeche riss zusaetzlich Rot
+   * (3,13:1 -> darunter). Im Dark bestanden alle. Eine Invariante, die nur in
+   * einem Theme haelt, ist keine.
+   *
+   * DIE FARBE WIRD NICHT VERBOGEN, DER RING TRAEGT. Sie ist eine freie
+   * Nutzerfarbe, und die User-Farben-Regel laesst sie ausdruecklich zu - sie
+   * nachzudunkeln hiesse, dem Haushalt seine Wahl zu nehmen. Der Ring in
+   * `--color-text-tertiary` haelt die Abgrenzung stattdessen selbst:
+   * light #6B675F 5,64:1 auf Weiss und 4,74:1 auf der Wochenendflaeche,
+   * dark #A9A39A 5,88:1 auf der Kartenflaeche. Damit ist der Punkt in JEDER
+   * Farbe sichtbar, und die Farbe unterscheidet nur noch, welcher.
+   *
+   * NICHT `--color-border-strong`, obwohl der Name danach klingt: er ist fuer
+   * feine Linien gebaut und misst gegen Weiss 1,65:1 - er haette genau den
+   * Fehler wiederholt, den er beheben soll. */
   .month-day .month-day__event {
     background: var(--ev-color);
+    box-shadow: inset 0 0 0 var(--space-px) var(--color-text-tertiary);
   }
 
   .month-day .month-day__holiday {
     background: var(--holi-color, var(--color-text-secondary));
+    box-shadow: inset 0 0 0 var(--space-px) var(--color-text-tertiary);
   }
 
   /* HIER IST DER CHIP DER PUNKT - also trägt er die Stufe im Vollton, genau wie
@@ -1810,111 +1864,79 @@
 }
 
 /* --------------------------------------------------------
- * Toolbar holiday layer toggle buttons
+ * Filter-Knopf und Filter-Blatt
+ *
+ * HIER STANDEN BIS ZU FUENF EBENEN-CHIPS, und sie sind aus drei gemessenen
+ * Gruenden gegangen (Critique 2026-08-28):
+ *
+ *   1. Sie belegten eine eigene Kopfzeile - 56px auf 390px, also 6,6% der
+ *      Viewporthoehe fuer Bedienelemente, die niemand im Blick behalten muss.
+ *   2. Unter 640px fiel ihr Label (die Label-Verlust-Regel), und uebrig
+ *      blieben 48px-Kreise; der Geburtstags-Schalter enthielt danach nur noch
+ *      einen 8px-Punkt und war sehend nicht mehr identifizierbar.
+ *   3. Ihr An/Aus-Zustand war eine Flaeche von 1,085:1 in Light. Die Regel
+ *      `--active`, die ihn tragen sollte, setzte dieselbe `border-color` wie
+ *      der Ruhezustand und war damit ein No-op - der Kommentar daneben
+ *      behauptete das Gegenteil.
+ *
+ * Was bleibt, ist ein Knopf in der EINEN Buttonform der App (`.btn--icon`,
+ * Kapsel aus der Basisregel) mit einer Zahl. Der Zustand ist damit kein
+ * Farbunterschied mehr, sondern ein Zaehler - lesbar auch dort, wo eine
+ * Waschung keine Farbe tragen kann.
  * -------------------------------------------------------- */
-/* Die Gruppe gibt nach, statt den Kopf zu sprengen (#882). Mit `flex-shrink: 0`
- * standen hier je nach eingeschalteten Ebenen bis zu vier beschriftete Chips
- * unverrueckbar in der Zeile - gemessen 234px bei zweien, und mit vieren brach
- * der Kopf schon auf 1960px um. Wie viele Ebenen jemand einschaltet, darf die
- * Zeilenzahl des Kopfes nicht entscheiden. */
-.cal-toolbar__layers {
-  display: flex;
-  align-items: center;
-  gap: var(--space-1);
-  /* OHNE `min-width: 0`, UND DAS IST ABSICHT. Das automatische Flex-Minimum ist
-   * hier genau die richtige Untergrenze: es ist die min-content-Breite der
-   * Gruppe, also die Summe der Chip-Mindestbreiten. Abgeschaltet liesse es die
-   * Gruppe unter diese Summe schrumpfen, waehrend die Chips selbst bei ihrer
-   * Zielgroesse stehenbleiben - sie zeichneten dann ueber die Kante der Gruppe
-   * und in die Nachbarn hinein. Die Labels geben trotzdem nach: das
-   * Nachgiebige sitzt eine Ebene tiefer, am Label des einzelnen Chips. */
+
+/* Der aktive Knopf traegt den MODULTON als Tinte, nicht als Flaeche: eine
+ * Zahl darauf braucht eine Tinte, und der Zaehler steht schon fuer den
+ * Zustand. Die Skalen-Regel („ein Etikett nennt seinen Ton EINMAL") - hier
+ * ist es der Zaehler. */
+.cal-toolbar__filter-btn--active {
+  color: var(--module-accent, var(--color-accent));
 }
 
-.cal-toolbar__layer-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: var(--space-2);
-  padding: var(--space-1) var(--space-2);
+.cal-toolbar__filter-btn {
+  position: relative;
+}
+
+.cal-toolbar__filter-count {
+  position: absolute;
+  top: var(--space-1);
+  inset-inline-end: var(--space-1);
+  min-width: var(--space-4);
+  height: var(--space-4);
+  padding-inline: var(--space-0h);
   border-radius: var(--radius-full);
-  /* 60% statt 40%: erst damit erreicht die Kontur >=3:1 (non-text) auf
-   * beiden Grundfarben; das Label traegt die Layer-Farbe selbst
-   * (dark #A78BFA 7.2:1, light #6D28D9 6.4:1 - beide AA). */
-  border: 1px solid color-mix(in srgb, var(--layer-color) var(--tint-hint), transparent);
-  background: transparent;
-  color: var(--color-text-secondary);
+  /* VOLLTON, kein getoentes Feld: die Zahl steht darauf und braucht eine
+     Tinte. Der Modulton ist ein KURATIERTER Ton, also gilt der erste Zweig
+     der Vollton-Regel - die Farbe IST die Flaeche, die Tinte ist
+     --color-ink-on-vivid. */
+  background: var(--module-accent, var(--color-accent));
+  color: var(--color-ink-on-vivid);
+  font-size: var(--text-2xs);
+  font-weight: var(--font-weight-bold);
+  line-height: var(--space-4);
+  text-align: center;
+  pointer-events: none;
+}
+
+/* --- Das Blatt ------------------------------------------------------- */
+
+.cal-filters__group + .cal-filters__group {
+  margin-top: var(--space-5);
+}
+
+.cal-filters__heading {
   font-size: var(--text-xs);
-  font-weight: var(--font-weight-medium);
-  cursor: pointer;
-  transition: background var(--transition-fast), color var(--transition-fast), border-color var(--transition-fast);
-  white-space: nowrap;
-  /* Der Chip gibt sein Label her, bevor der Kopf umbricht - aber nie sein Ziel:
-   * die Untergrenze ist dieselbe Zielgroesse, die die 640px-Regel weiter unten
-   * setzt, wenn sie das Label ganz entfernt. Ein Label zu verlieren darf ein
-   * Ziel nicht verkleinern (#882). */
-  min-width: var(--target-base);
-  overflow: hidden;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: var(--tracking-label);
+  text-transform: uppercase;
+  color: var(--color-text-tertiary);
+  margin: 0 0 var(--space-2);
 }
 
-/* Das Label ist der nachgiebige Teil des Chips; Symbol und Punkt bleiben. */
-.cal-toolbar__layer-btn > span:not(.cal-toolbar__layer-dot) {
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.cal-filters__reset {
+  margin-top: var(--space-5);
+  width: 100%;
 }
-
-.cal-toolbar__layer-btn:hover {
-  background: color-mix(in srgb, var(--layer-color) var(--tint-state), transparent);
-  color: var(--color-text-primary);
-}
-
-.cal-toolbar__layer-btn--active {
-  background: color-mix(in srgb, var(--layer-color) var(--tint-state), var(--color-surface));
-  color: var(--color-text-primary);
-  border-color: color-mix(in srgb, var(--layer-color) var(--tint-hint), transparent);
-}
-
-/* Der Mir-zugewiesen-Chip ist inaktiv NEUTRAL wie seine Nachbarn - die Farbe
- * erscheint erst mit der Aktivierung (Beschluss 2026-08-17, umgesetzt
- * 2026-08-27). Vorher trug er sein Label dauerhaft in der Layer-Farbe, und
- * zwei Personas lasen den Ruhezustand als „Filter ist an" - ein Chip, der
- * inaktiv schon farbig spricht, hat keinen sichtbaren Aktivwechsel mehr.
- * Die AA-Messung des Tints (dark #A78BFA 7.2:1, light #6D28D9 6.4:1) bleibt
- * fuer den AKTIVEN Zustand dokumentiert. */
-
-.cal-toolbar__layer-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: var(--radius-full);
-  background: var(--layer-color);
-  flex-shrink: 0;
-  opacity: 0.5;
-  transition: opacity var(--transition-fast);
-}
-
-.cal-toolbar__layer-btn--active .cal-toolbar__layer-dot {
-  opacity: 1;
-}
-
-/* DIE LABEL-VERLUST-REGEL (Runde 6, Phase 3b): unter 640px fällt das Label,
- * und der Chip wird zum freistehenden Icon-Ziel - also trägt er die Zielgröße
- * `--target-base` statt der 28px, die aus dem beschrifteten Chip übrig blieben.
- * Ein Label zu verlieren darf ein Ziel nie verkleinern. Den Zustand tragen
- * weiterhin die getönte Fläche (`--active`) und das gefüllte Icon bzw. der
- * volldeckende Punkt - nie die Kante allein. */
-@media (max-width: 640px) {
-  .cal-toolbar__layer-btn span:not(.cal-toolbar__layer-dot) {
-    display: none;
-  }
-  .cal-toolbar__layer-btn {
-    padding: 0;
-    border-radius: var(--radius-full);
-    width: var(--target-base);
-    height: var(--target-base);
-    flex-shrink: 0;
-    justify-content: center;
-  }
-}
-
 
 /* Die Feiertags- und Schul-Layer tragen eine NUTZERFARBE und bekommen sie
    deshalb als Inline-Style aus den Einstellungen. Der Schichtplan hat keine -
@@ -1929,10 +1951,6 @@
 .schedule-time-block {
   pointer-events: none;
   z-index: 0;
-}
-
-.cal-toolbar__layer-btn[data-layer="schedule"] {
-  --layer-color: var(--module-schedule);
 }
 
 .cal-toolbar__schedule-warning {

@@ -1183,8 +1183,18 @@ das war der Bestand, und zwar viermal mit vier eigenen Antworten - `.cal-toolbar
 schrumpfte unter 640px vom beschrifteten Chip auf 28x28, `.birthdays-toolbar__import` zog nur
 seinen Innenabstand zusammen und blieb als 50x48-Oval in einer Form zurueck, die es sonst
 nirgends gibt, `.perm-seg__opt` stand als Icon-Segment auf 34x30, und allein
-`.documents-dms-link-btn` machte es richtig. Alle vier messen jetzt `--target-base`
+`.documents-dms-link-btn` machte es richtig. Alle messen `--target-base`
 (auf Touch `--target-lg`).
+
+**Der erste der vier ist seit 2026-08-28 GESCHICHTE, und sein Ende ist die staerkere Lesart
+derselben Regel.** `.cal-toolbar__mine-btn` und die vier Ebenen-Chips daneben sind aus dem
+Kalenderkopf verschwunden; ihre Schalter stehen jetzt beschriftet im Filter-Blatt
+(`openCalendarFilters`). Der Anlass war gemessen: die Regel hatte ihre Zielgroesse gerettet,
+aber nicht die Verstaendlichkeit - ein 48px-Kreis mit einem 8px-Punkt darin ist ein volles
+Ziel und sagt trotzdem nichts, und der Zustand, den er „ueber getoente Flaeche" tragen sollte,
+mass 1,085:1. **Die Regel sagt, was passiert, wenn ein Label faellt. Sie sagt nicht, dass es
+fallen muss** - und wo ein Blatt Platz hat, ist das Label die bessere Antwort als die beste
+Icon-Form.
 
 NICHT geregelt ist, WANN ein Label faellt: das entscheidet die Leiste, in der das Element
 steht, denn es haengt daran, was sonst noch in ihr liegt. Kalender und Geburtstage geben ihr
