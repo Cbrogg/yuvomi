@@ -7,6 +7,66 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.51.0] - 2026-08-28
+
+### Added
+
+- **The calendar has a filter sheet.** Holidays, school holidays, the shift overlay and birthdays
+  used to sit in the module header as up to five chips; below 640px they lost their labels and were
+  left as circles, one of them containing nothing but an 8px dot. Their on/off state was a surface
+  difference of 1.085:1 - the rule meant to carry it set the same border as the resting state and
+  did nothing - and four of the five had no `aria-pressed` at all, so the layer was stateless to a
+  screen reader. The sheet gives every switch its label back and adds what the calendar never had:
+  a filter by person, each row carrying that member's own colour. An empty selection means everyone,
+  so there is always a way back. The header keeps one button with the number of active filters.
+- **Filtering by person, not by calendar.** A colour legend is not constructible here: an event's
+  colour comes from three sources in order - its own colour, the primary assigned member, the
+  calendar - so "this colour means that calendar" would be wrong for the majority of entries. The
+  person is the one unambiguous axis, and in a family planner it is the one being asked about.
+
+### Fixed
+
+- **Every scroll area of the app was reserving 105 pixels for a banner nobody ever saw.** The
+  install prompt's trailing space was switched on by the mere presence of its element - which is
+  static in the page and never absent, renders 0x0 until one of its conditions is met, and on iOS
+  never fires at all. Measured, that cost 21.2% of the calendar grid's height on a 390px phone,
+  23.9% at 320px, and the same 105px in the notes. The component now reports whether it is actually
+  showing. A month row grows from 62.9 to 80.4 pixels on a phone.
+- **On a phone, the dot standing for an event now meets its contrast requirement.** Below 640px it
+  is the only carrier of information in the main view on the main platform, and five of the nine
+  colours failed WCAG 1.4.11 against the light surface (amber 2.15:1 through orange 2.80:1) while
+  all nine passed in dark mode - an invariant that only holds in one theme is not one. The colour
+  itself is untouched, since it is the household's to choose; a ring now carries the separation.
+  All 24 measured combinations are at 4.69:1 or better.
+- **A long appointment in the week and day views keeps its title visible.** An entry beginning above
+  the visible area showed a blank coloured rectangle - measured 151x120 pixels without a single
+  character - and it was the longest, most important entries this happened to.
+- **Tapping a day no longer rewrites the calendar's default view.** A navigation gesture silently
+  changed a setting, with no feedback and no way back other than noticing that the app opened
+  differently next time.
+- **At exactly 640px the calendar was in two states at once.** The stylesheet had already reduced
+  entries to dots while the click handling still assumed the desktop layout, so a tap had to hit a
+  10-pixel target instead of the whole cell.
+- **A header bar that overflows now shows that it continues.** The rounding tolerance was applied to
+  the scroll position as well as to the overflow itself, and subtracted from both ends: for any
+  overflow up to twice that tolerance a bar counted as being at its start and at its end at the same
+  time and showed no fade. Measured on the Ukrainian calendar at 375px, where the view switcher runs
+  over by 4 pixels and sits 2 pixels in.
+- **The install prompt cleaned up after itself again.** Its class defined the same lifecycle callback
+  twice; in JavaScript the later definition silently wins, so the listener teardown never ran. After
+  dismissal the prompt kept a click counter on the document that went on writing to local storage.
+
+### Changed
+
+- **The calendar header gives a row back to the content.** On a 390px phone it measured 230.1 pixels,
+  27.3% of the viewport, in four stacked rows; it now shares its title row and takes 174.1 pixels.
+  The "Today" button appears only when today is not in view, which frees exactly the width the date
+  label needs to stay whole. At 320px the row breaks instead, because a truncated month name is the
+  worse trade.
+- **The switch row is one shared form across the whole app.** It lived in the settings stylesheet,
+  which only loads on the settings route, so the primitive documented as "one switch, one form" had
+  no effect anywhere else.
+
 ## [2.50.4] - 2026-08-28
 
 ### Added
