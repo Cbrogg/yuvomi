@@ -8,7 +8,7 @@ import { api } from '/api.js';
 import { renderRRuleFields, bindRRuleEvents, getRRuleValues, recurrenceRow } from '/rrule-ui.js';
 import { openModal as openSharedModal, closeModal, wireBlurValidation, validateAll, btnSuccess, btnError, btnLoading, promptModal, confirmModal, advancedSection } from '/components/modal.js';
 import { openDetailView, closeDetailView, visibilityRow, assignedRow } from '/components/detail-view.js';
-import { stagger, vibrate, scheduleUndoableDelete } from '/utils/ux.js';
+import { stagger, vibrate, scheduleUndoableDelete, animationSettled } from '/utils/ux.js';
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { t, getLocale, formatDate, formatDayMonth, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc, renderMarkdownLight } from '/utils/html.js';
@@ -4109,12 +4109,44 @@ function wireTaskList(container) {
 
     if (action === 'toggle-status') {
       const status = target.dataset.status;
+      const nextStatus = status === 'done' ? 'open' : 'done';
       vibrate(15);
-      target.classList.toggle('task-status-btn--done', status !== 'done');
-      target.closest('.task-card')?.classList.toggle('task-card--done', status !== 'done');
+      // Beide Zustandsklassen führen, nicht nur die neue anhängen: der Knopf
+      // trug sonst `--open` UND `--done` gleichzeitig (gemessen 2026-08-28),
+      // und die Regel, die zuletzt im Stylesheet steht, gewann das Aussehen.
+      target.classList.toggle('task-status-btn--done', nextStatus === 'done');
+      target.classList.toggle('task-status-btn--open', nextStatus !== 'done');
+      target.closest('.task-card')?.classList.toggle('task-card--done', nextStatus === 'done');
+      // Die Quittung startet JETZT und läuft neben dem Roundtrip, nicht danach:
+      // `loadTasks()` ersetzt den Knopf, und ohne dieses Warten war `check-pop`
+      // (tasks.css:703) in 0 von 6 Messungen zu sehen. Siehe animationSettled().
+      const settled = animationSettled(target);
       try {
         await toggleTaskStatus(id, status);
+        await settled;
         await loadTasks(container);
+        // Derselbe Rückweg wie beim Wischen. Die Geste hatte hier zwei
+        // Endpunkte mit zwei Antworten: der Wisch bot Undo an, der Tipp - die
+        // häufigere Bedienung - liess den Eintrag kommentarlos aus dem
+        // gefilterten Bild verschwinden.
+        //
+        // Die Schlüssel heissen weiter `swiped*`: ihr TEXT ist gestenneutral
+        // ("Als erledigt markiert."), nur der Name nennt die Wischgeste. Ein
+        // Rename kostet 24 Locale-Dateien für eine Namensschuld, die kein
+        // Nutzer sieht - vermerkt statt bezahlt.
+        window.yuvomi.showToast(
+          t(nextStatus === 'done' ? 'tasks.swipedDoneToast' : 'tasks.swipedOpenToast'),
+          'default',
+          5000,
+          async () => {
+            try {
+              await toggleTaskStatus(id, nextStatus);
+              await loadTasks(container);
+            } catch (err) {
+              window.yuvomi.showToast(err.message, 'danger');
+            }
+          },
+        );
       } catch (err) {
         window.yuvomi.showToast(err.message, 'danger');
         await loadTasks(container);
@@ -4228,18 +4260,36 @@ export async function render(container, { user }) {
           className: 'tasks-toolbar__search page-toolbar__center',
         })}
         <div class="page-toolbar__actions">
+          <!-- ICON PLUS LABEL, wie beim Geschwister-Umschalter in der Filterreihe
+               (#group-mode-toggle, ~60 Zeilen tiefer). tasks.css:143 sagt ueber
+               den Label-Verlust ausdruecklich „Der Ansichts-Umschalter im Kopf
+               bekommt sie mit; er ist dasselbe Bauteil" - nur trug er gar kein
+               Label, das haette fallen koennen. Die Regel lief hier ins Leere,
+               und uebrig blieben drei stumme Glyphen (Critique 2026-08-28, P1:
+               ein Kanban-Rechteck und ein Verlaufs-Pfeil sind kein geteiltes
+               Vokabular). Unter 640px faellt das Label ueber die vorhandene
+               Regel weg, mobil bleibt also die Icon-Form - iOS-Kanon.
+               Die drei EINZELNEN Knoepfe daneben behalten ihre reine Icon-Form:
+               ihre Namen sind Verben („Kategorien verwalten"), und ein
+               aria-label als sichtbaren Text weiterzureichen verbietet
+               DESIGN.md. Damit trennt jetzt auch der Text, was vorher nur die
+               Behaelterform andeutete: benannte Ansichten in der Gruppe,
+               unbenannte Werkzeuge daneben. -->
           <div class="group-toggle group-toggle--icons" id="view-toggle" role="group" aria-label="${t('tasks.viewToggleLabel')}">
             <button type="button" class="group-toggle__btn ${isKanban || isHistory ? '' : 'group-toggle__btn--active'}" data-view="list"
                     title="${t('tasks.listView')}" aria-label="${t('tasks.listView')}" aria-pressed="${!isKanban && !isHistory}">
-              <i data-lucide="list" class="icon-md" aria-hidden="true"></i>
+              <i data-lucide="list" class="icon-md group-toggle__icon" aria-hidden="true"></i>
+              <span class="group-toggle__label">${t('tasks.listView')}</span>
             </button>
             <button type="button" class="group-toggle__btn ${isKanban ? 'group-toggle__btn--active' : ''}" data-view="kanban"
                     title="${t('tasks.kanbanView')}" aria-label="${t('tasks.kanbanView')}" aria-pressed="${isKanban}">
-              <i data-lucide="columns" class="icon-md" aria-hidden="true"></i>
+              <i data-lucide="columns" class="icon-md group-toggle__icon" aria-hidden="true"></i>
+              <span class="group-toggle__label">${t('tasks.kanbanView')}</span>
             </button>
             <button type="button" class="group-toggle__btn ${isHistory ? 'group-toggle__btn--active' : ''}" data-view="history"
                     title="${t('tasks.historyView')}" aria-label="${t('tasks.historyView')}" aria-pressed="${isHistory}">
-              <i data-lucide="history" class="icon-md" aria-hidden="true"></i>
+              <i data-lucide="history" class="icon-md group-toggle__icon" aria-hidden="true"></i>
+              <span class="group-toggle__label">${t('tasks.historyView')}</span>
             </button>
           </div>
           <button class="btn btn--ghost btn--icon" id="btn-bulk-select"
