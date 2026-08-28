@@ -23,6 +23,13 @@ import { refresh as refreshReminders } from '/reminders.js';
 import { parseRemindAtAsUtc } from '/utils/reminder-offset.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
 import { wireTablist } from '/utils/tablist.js';
+// EINE Schalterform, auch hier. Das Primitiv liegt unter `/settings/`, weil
+// dort sein Anlass lag (vier Schalterformen nebeneinander, Critique
+// 2026-07-27) - die Funktion selbst ist geteiltes UI-Vokabular und kein
+// Einstellungs-Bauteil. Eine Kopie im Kalender waeren zwei Wahrheiten ueber
+// dieselbe Form; der Umzug nach `/utils/` beruehrt zehn Blaetter und gehoert
+// in eine eigene Runde. Der Import benennt die Schuld, statt sie zu umgehen.
+import { toggleRowHtml } from '/settings/components.js';
 import { localizeBirthdayEvent } from '/utils/birthday-event.js';
 import { googleTargetValue, caldavTargetValue, outlookTargetValue } from '/utils/sync-target.js';
 import { renderSkeletonList } from '/utils/skeleton.js';
@@ -308,6 +315,40 @@ const LAYER_BIRTHDAYS_KEY = 'yuvomi:calendar:layer:birthdays';
 const LAYER_SCHEDULE_KEY = 'yuvomi:calendar:layer:schedule';
 const SCHEDULE_DISPLAY_KEY = 'yuvomi:calendar:schedule-display';
 const ASSIGNED_TO_ME_KEY  = 'yuvomi:calendar:assignedToMe';
+const PEOPLE_FILTER_KEY   = 'yuvomi:calendar:people';
+
+/* DIE FEIERTAGSFARBEN, WENN DER HAUSHALT KEINE GEWAEHLT HAT.
+ *
+ * Sie standen zweimal als nacktes Hex im Markup dieser Datei und viermal im
+ * Server (routes/preferences.js, services/holidays.js). Hier stehen sie
+ * einmal - der Client erfindet keinen eigenen Wert, er nennt denselben wie
+ * die Quelle.
+ *
+ * DIE WERTE SELBST SIND EIN OFFENER PUNKT, kein Versehen: `#FF3B30` und
+ * `#34C759` sind iOS System Red und System Green, also genau die
+ * Apple-Rohpalette, die der Direction Contract am 2026-08-10 ausdruecklich
+ * verlassen hat. Sie zu aendern faerbt jeden Haushalt um, der nie eine Farbe
+ * gewaehlt hat - das ist eine Entscheidung des Betreibers, keine Reparatur,
+ * und sie muesste den Server mitnehmen. Bis dahin steht der Wert wenigstens
+ * an einer Stelle statt an dreien. */
+/* DIE MOBIL-GRENZE STEHT EINMAL, UND SIE FOLGT DEM CSS.
+ *
+ * Sie stand viermal als `(max-width: 639px)` im JS, waehrend calendar.css an
+ * drei Stellen bei `max-width: 640px` schaltet. Bei GENAU 640px war die App
+ * deshalb in zwei Zustaenden zugleich: das CSS hatte die Termin-Chips schon
+ * auf Punkte reduziert, das JS hielt noch die Desktop-Klicklogik - ein Tap
+ * musste einen 10px-Punkt treffen, statt die ganze Zelle als Ziel zu haben.
+ * Verifiziert bei 640px: `cssMobile: true`, `jsMobile: false`.
+ *
+ * Ein Guard haelt beide Seiten zusammen (`test:frontend-audit`): jede
+ * matchMedia-Grenze dieser Datei muss eine Media-Query-Grenze in calendar.css
+ * sein. Zwei Zahlen fuer dieselbe Schwelle sind genau die Bauart, an der
+ * dieser Fehler entstanden ist. */
+const MOBILE_MEDIA_QUERY = '(max-width: 640px)';
+
+const HOLIDAY_PUBLIC_FALLBACK = '#FF3B30';
+const HOLIDAY_SCHOOL_FALLBACK = '#34C759';
+
 const DATE_KEY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /* DIE STUNDENHOEHE STEHT IN tokens.css UND NUR DORT.
@@ -521,6 +562,20 @@ let state = {
   defaultDuration: 60,     // Standard-Termindauer (Minuten) aus den Präferenzen
   currentUserId: null,     // eigene User-ID für „Mir zugewiesen"-Filter
   assignedToMe:  false,    // nur Termine/Aufgaben zeigen, die mir zugewiesen sind
+  // Gewaehlte Personen als Set von User-IDs; LEER heisst ALLE, nicht KEINE.
+  //
+  // DIE ACHSE IST DIE PERSON, NICHT DER KALENDER - und das ist eine gemessene
+  // Entscheidung, keine Auslegung. Die Critique vom 2026-08-28 verlangte einen
+  // „Kalenderfilter mit Legende" nach Apples Muster. Eine FARBLEGENDE ist hier
+  // aber nicht konstruierbar: `resolveEventColor()` (utils/event-color.js)
+  // beantwortet die Farbe aus DREI Quellen in Rangfolge - eigene Terminfarbe,
+  // Farbe der primaeren zugewiesenen Person, Kalenderfarbe. Eine Legende, die
+  // „diese Farbe = jener Kalender" behauptet, waere bei jedem Termin falsch,
+  // der eine eigene Farbe traegt oder von einer Person erbt - also bei der
+  // Mehrheit. Die Person dagegen ist eindeutig: sie steht in
+  // `assigned_users`, ihre Farbe gehoert ihr, und in einem FAMILIENplaner ist
+  // „wessen Termin ist das" die Frage, die der Filter beantworten soll.
+  people:        new Set(),
 };
 let _container = null;
 
@@ -887,6 +942,43 @@ function belongsToMe(item) {
 }
 
 /**
+ * True, solange der Personenfilter aus ist oder eine der gewaehlten Personen
+ * zugewiesen ist.
+ *
+ * EIN LEERES SET HEISST „ALLE", NICHT „KEINE" - und das ist die einzige
+ * Lesart, die einen Ruecknahmeweg hat. Die Umkehrung (leer = nichts zeigen)
+ * haette einen Zustand erzeugt, aus dem der leere Kalender selbst nicht mehr
+ * herausfuehrt: wer alle Haekchen entfernt, saehe nichts mehr und haette
+ * ausserhalb des Blatts keinen Hinweis darauf, warum.
+ *
+ * Termine OHNE Zuweisung fallen bei aktivem Filter heraus. Das ist Absicht:
+ * der Filter beantwortet „wessen Termin", und ein Termin ohne Person ist
+ * keine Antwort darauf. Der Rueckweg steht im Blatt.
+ */
+function matchesPeopleFilter(item) {
+  if (state.people.size === 0) return true;
+  return (item.assigned_users ?? []).some((u) => state.people.has(u.id));
+}
+
+/** Beide Personen-Achsen in einem Praedikat - „mir" und die Auswahl. */
+function passesPersonFilters(item) {
+  return belongsToMe(item) && matchesPeopleFilter(item);
+}
+
+/** Wie viele Filter gerade etwas wegnehmen - die Zahl am Filterknopf. */
+function activeFilterCount() {
+  let n = 0;
+  if (state.assignedToMe) n += 1;
+  if (state.people.size > 0) n += 1;
+  const hp = state.holidayPrefs ?? {};
+  if (hp.holiday_show_public && !state.layerHolidays) n += 1;
+  if (hp.holiday_show_school && !state.layerSchool) n += 1;
+  if (!state.layerBirthdays) n += 1;
+  if (scheduleEnabled() && !state.layerSchedule) n += 1;
+  return n;
+}
+
+/**
  * True, solange die Ebene sichtbar ist, zu der ein Termin gehoert (#778).
  *
  * Geburtstage kommen aus den Kontakten und fuellen bei einem grossen Adressbuch
@@ -916,7 +1008,7 @@ function eventsOnDay(dateStr) {
         return start <= dateStr && end >= dateStr;
       });
   const layered = state.layerBirthdays ? list : list.filter(isVisibleLayer);
-  return state.assignedToMe ? layered.filter(belongsToMe) : layered;
+  return layered.filter(passesPersonFilters);
 }
 
 /**
@@ -989,7 +1081,7 @@ function tasksOnDay(dateStr) {
   const list = _dayIndex.active
     ? (_dayIndex.tasks.get(dateStr) ?? [])
     : state.tasks.filter((t) => t.due_date === dateStr);
-  return state.assignedToMe ? list.filter(belongsToMe) : list;
+  return list.filter(passesPersonFilters);
 }
 
 /** Holiday entries that overlap a given date (respects layer toggles). */
@@ -1212,6 +1304,7 @@ export async function render(container, { user }) {
   state.scheduleDisplay = localStorage.getItem(SCHEDULE_DISPLAY_KEY) === 'blocks' ? 'blocks' : 'compact';
   state.currentUserId = user?.id ?? null;
   state.assignedToMe  = localStorage.getItem(ASSIGNED_TO_ME_KEY) === '1';
+  state.people = restorePeopleFilter(state.users);
 
   renderToolbar();
   renderView();
@@ -1246,72 +1339,37 @@ function renderToolbar() {
   const bar = _container.querySelector('#cal-toolbar');
   if (!bar) return;
 
-  const hp = state.holidayPrefs ?? {};
-  const showHolidayToggle = hp.holiday_show_public;
-  const showSchoolToggle  = hp.holiday_show_school;
+  // DIE EBENEN WOHNEN IM BLATT, NICHT IM KOPF (2026-08-28).
+  //
+  // Hier standen bis zu fuenf Chips plus den „Mir zugewiesen"-Schalter und
+  // belegten damit eine eigene Kopfzeile - gemessen 56px auf 390px, also
+  // 6,6% der Viewporthoehe, fuer Bedienelemente, die unter 640px ihr Label
+  // verloren und deren An/Aus-Zustand eine Flaeche von 1,085:1 war. Was hier
+  // bleibt, ist ein Knopf mit der ZAHL der aktiven Filter: er beantwortet die
+  // einzige Frage, die der Kopf beantworten muss („nehme ich gerade etwas
+  // weg?"), und der Rest steht beschriftet im Blatt (openCalendarFilters).
+  const filterCount = activeFilterCount();
 
-  // Der Geburtstags-Schalter erscheint nur, wenn im geladenen Bereich wirklich
-  // Geburtstage liegen - oder wenn die Ebene aus ist, denn sonst gaebe es keinen
-  // Weg zurueck: ohne sichtbare Geburtstage verschwaende der Knopf, der sie
-  // wieder einschaltet.
-  const showBirthdayToggle = hasBirthdayEvents() || !state.layerBirthdays;
-  // Der zweite Zweig haelt den Knopf sichtbar, wenn die Ebene ausgeschaltet ist -
-  // sonst gaebe es keinen Weg zurueck. Er darf aber nicht ueber ein
-  // abgeschaltetes Modul hinweghelfen, sonst bliebe der Schalter stehen, wenn
-  // gerade niemand mehr etwas einschalten kann.
-  const showScheduleToggle = scheduleEnabled()
-    && (state.scheduleEntries.length > 0 || !state.layerSchedule);
-
-  const holidayToggleHtml = (showHolidayToggle || showSchoolToggle || showBirthdayToggle || showScheduleToggle) ? `
-    <div class="cal-toolbar__layers">
-      ${showHolidayToggle ? `
-        <button class="cal-toolbar__layer-btn ${state.layerHolidays ? 'cal-toolbar__layer-btn--active' : ''}"
-                id="cal-layer-holidays" data-layer="holidays"
-                title="${t('calendar.toggleHolidays')}"
-                style="--layer-color:${esc(hp.holiday_public_color ?? '#FF3B30')}">
-          <span class="cal-toolbar__layer-dot"></span>
-          <span>${t('calendar.toggleHolidays')}</span>
-        </button>
-      ` : ''}
-      ${showSchoolToggle ? `
-        <button class="cal-toolbar__layer-btn ${state.layerSchool ? 'cal-toolbar__layer-btn--active' : ''}"
-                id="cal-layer-school" data-layer="school"
-                title="${t('calendar.toggleSchool')}"
-                style="--layer-color:${esc(hp.holiday_school_color ?? '#34C759')}">
-          <span class="cal-toolbar__layer-dot"></span>
-          <span>${t('calendar.toggleSchool')}</span>
-        </button>
-      ` : ''}
-      ${showScheduleToggle ? `
-        <button class="cal-toolbar__layer-btn ${state.layerSchedule ? 'cal-toolbar__layer-btn--active' : ''}"
-                data-layer="schedule"
-                title="${t('schedule.overlay')}">
-          <span class="cal-toolbar__layer-dot"></span>
-          <span>${t('schedule.overlay')}</span>
-        </button>
-        <button class="cal-toolbar__layer-btn" data-schedule-display
-                title="${t(state.scheduleDisplay === 'compact' ? 'schedule.fullBlocks' : 'schedule.compactDisplay')}">
-          <span>${t(state.scheduleDisplay === 'compact' ? 'schedule.fullBlocks' : 'schedule.compactDisplay')}</span>
-        </button>
-        ${state.scheduleWarnings.length ? `
-          <span class="cal-toolbar__schedule-warning" role="status"
-                title="${esc(t('schedule.overlapWarning', { date: state.scheduleWarnings[0].date_key, user: scheduleOwnerName(state.scheduleWarnings[0]) }))}">
-            <i data-lucide="triangle-alert" class="icon-sm" aria-hidden="true"></i>
-            <span>${t('schedule.overlapWarningShort')}</span>
-          </span>
-        ` : ''}
-      ` : ''}
-      ${showBirthdayToggle ? `
-        <button class="cal-toolbar__layer-btn ${state.layerBirthdays ? 'cal-toolbar__layer-btn--active' : ''}"
-                id="cal-layer-birthdays" data-layer="birthdays"
-                title="${t('calendar.toggleBirthdays')}"
-                style="--layer-color:var(--color-accent)">
-          <span class="cal-toolbar__layer-dot"></span>
-          <span>${t('calendar.toggleBirthdays')}</span>
-        </button>
-      ` : ''}
-    </div>
+  // DIE UEBERLAPPUNGSWARNUNG BLEIBT IM KOPF. Sie ist eine Meldung mit
+  // `role="status"`, kein Filter - im Blatt waere sie hinter einem Klick
+  // versteckt, und eine Warnung, die man erst oeffnen muss, ist keine.
+  const scheduleWarningHtml = (scheduleEnabled() && state.scheduleWarnings.length) ? `
+    <span class="cal-toolbar__schedule-warning" role="status"
+          title="${esc(t('schedule.overlapWarning', { date: state.scheduleWarnings[0].date_key, user: scheduleOwnerName(state.scheduleWarnings[0]) }))}">
+      <i data-lucide="triangle-alert" class="icon-sm" aria-hidden="true"></i>
+      <span>${t('schedule.overlapWarningShort')}</span>
+    </span>
   ` : '';
+
+  const filterBtnHtml = `
+    ${scheduleWarningHtml}
+    <button class="btn btn--icon cal-toolbar__filter-btn ${filterCount ? 'cal-toolbar__filter-btn--active' : ''}"
+            id="cal-filters" aria-label="${filterCount ? esc(t('calendar.filtersActive', { count: filterCount })) : t('calendar.filtersOpen')}"
+            title="${t('calendar.filters')}" aria-haspopup="dialog">
+      <i data-lucide="sliders-horizontal" aria-hidden="true"></i>
+      ${filterCount ? `<span class="cal-toolbar__filter-count" aria-hidden="true">${filterCount}</span>` : ''}
+    </button>
+  `;
 
   bar.replaceChildren();
   bar.insertAdjacentHTML('beforeend', `
@@ -1327,15 +1385,7 @@ function renderToolbar() {
       </button>
     </div>
     <div class="page-toolbar__actions">
-      ${holidayToggleHtml}
-      ${state.users.length > 1 && state.currentUserId != null ? `
-        <button class="cal-toolbar__layer-btn cal-toolbar__mine-btn ${state.assignedToMe ? 'cal-toolbar__layer-btn--active' : ''}"
-                id="cal-assigned-me" aria-pressed="${state.assignedToMe ? 'true' : 'false'}"
-                title="${t('calendar.assignedToMe')}" style="--layer-color:var(--module-calendar)">
-          <i data-lucide="user" class="icon-sm" aria-hidden="true"></i>
-          <span>${t('calendar.assignedToMe')}</span>
-        </button>
-      ` : ''}
+      ${filterBtnHtml}
       <!-- KEIN aria-controls im geschlossenen Zustand: die Suchleiste entsteht
            erst beim Öffnen (openCalendarSearch), und ein Verweis auf eine ID, die
            es noch nicht gibt, kündigt einem Screenreader ein Ziel an, das nicht
@@ -1370,11 +1420,6 @@ function renderToolbar() {
 
   if (window.lucide) lucide.createIcons({ el: bar });
 
-  // Scroll-Affordanz der Bar-Zeile: das Segment passt auf 375px komplett,
-  // aber 320px-Geraete und lange Locales scrollen - dann zeigt der geteilte
-  // Peek-Fade (.page-toolbar__bar, layout.css) den Anschnitt.
-  wireScrollFade(bar.querySelector('.cal-toolbar__views'));
-
   updateLabel();
 
   bar.querySelector('#cal-prev').addEventListener('click', () => navigate(-1));
@@ -1382,51 +1427,17 @@ function renderToolbar() {
   bar.querySelector('#cal-today').addEventListener('click', goToday);
   bar.querySelector('#cal-add').addEventListener('click', () => openEventModal({ mode: 'create', date: newEventDate() }));
   bar.querySelector('#cal-search').addEventListener('click', openCalendarSearch);
+  bar.querySelector('#cal-filters').addEventListener('click', openCalendarFilters);
 
-  bar.querySelector('#cal-assigned-me')?.addEventListener('click', (e) => {
-    state.assignedToMe = !state.assignedToMe;
-    try { localStorage.setItem(ASSIGNED_TO_ME_KEY, state.assignedToMe ? '1' : '0'); } catch {}
-    const btn = e.currentTarget;
-    btn.classList.toggle('cal-toolbar__layer-btn--active', state.assignedToMe);
-    btn.setAttribute('aria-pressed', String(state.assignedToMe));
-    renderView();
-  });
-
-  bar.querySelector('[data-schedule-display]')?.addEventListener('click', () => {
-    state.scheduleDisplay = state.scheduleDisplay === 'compact' ? 'blocks' : 'compact';
-    localStorage.setItem(SCHEDULE_DISPLAY_KEY, state.scheduleDisplay);
-    renderToolbar();
-    renderView();
-  });
-
-  bar.querySelectorAll('[data-layer]').forEach((btn) => {
-    btn.addEventListener('click', () => {
-      const layer = btn.dataset.layer;
-      if (layer === 'holidays') {
-        state.layerHolidays = !state.layerHolidays;
-        localStorage.setItem(LAYER_HOLIDAYS_KEY, state.layerHolidays);
-        btn.classList.toggle('cal-toolbar__layer-btn--active', state.layerHolidays);
-      } else if (layer === 'school') {
-        state.layerSchool = !state.layerSchool;
-        localStorage.setItem(LAYER_SCHOOL_KEY, state.layerSchool);
-        btn.classList.toggle('cal-toolbar__layer-btn--active', state.layerSchool);
-      } else if (layer === 'schedule') {
-        state.layerSchedule = !state.layerSchedule;
-        localStorage.setItem(LAYER_SCHEDULE_KEY, state.layerSchedule);
-        btn.classList.toggle('cal-toolbar__layer-btn--active', state.layerSchedule);
-      } else if (layer === 'birthdays') {
-        state.layerBirthdays = !state.layerBirthdays;
-        // Literale statt Boolean: der Variablenname triggert sonst die
-        // PII-Heuristik des Code-Scanners - gespeichert wird nur ein Toggle.
-        localStorage.setItem(LAYER_BIRTHDAYS_KEY, state.layerBirthdays ? 'true' : 'false');
-        btn.classList.toggle('cal-toolbar__layer-btn--active', state.layerBirthdays);
-      }
-      renderView();
-    });
-  });
-
-  // Ansichts-Umschalter scrollt auf Mobile horizontal (Scrollbalken versteckt):
-  // Rand-Fade als Affordanz (geteilte has-fade-*-Konvention, Audit F-06).
+  // EIN wireScrollFade auf diesem Element, nicht zwei.
+  //
+  // Es stand hier oben UND unten am Tablist-Block - beide Male auf
+  // `.cal-toolbar__views`, beide Rueckgabewerte verworfen. Der Helfer ist
+  // nicht idempotent (utils/ux.js): jeder Aufruf haengt einen Scroll-Listener,
+  // einen ResizeObserver und einen MutationObserver mit `subtree: true` an.
+  // `renderToolbar()` laeuft bei jedem Filterwechsel erneut, also wuchs die
+  // Zahl der Beobachter mit der Benutzung. Der Aufruf gehoert an den Ort, an
+  // dem auch die Tablist verdrahtet wird - dort steht er jetzt, einmal.
   wireScrollFade(bar.querySelector('.cal-toolbar__views'));
   viewTabs = wireTablist(bar.querySelector('.cal-toolbar__views'), {
     activeId: state.view,
@@ -1454,12 +1465,41 @@ function updateLabel() {
     // Mobil zeigt die "Woche" ein 3-Tage-Fenster um den Cursor (renderWeekView);
     // ein "KW 30"-Label würde dann einen Bereich behaupten, der nicht zu sehen
     // ist (Audit A1-19). Das Label nennt stattdessen den sichtbaren Bereich.
-    lbl.textContent = window.matchMedia('(max-width: 639px)').matches
+    lbl.textContent = window.matchMedia(MOBILE_MEDIA_QUERY).matches
       ? t('calendar.dayRangeLabel', { from: formatDayMonth(addDays(state.cursor, -1)), to: formatPreferredDate(addDays(state.cursor, 1)) })
       : t('calendar.weekNumberLabel', { week: getWeekNumber(state.cursor), month: mon, year });
   }
   if (state.view === 'day')    lbl.textContent = formatDate(state.cursor, { weekday: true, long: true });
   if (state.view === 'agenda') lbl.textContent = t('calendar.agendaFrom', { date: formatDate(state.cursor) });
+
+  syncTodayButton();
+}
+
+/**
+ * „HEUTE" ERSCHEINT NUR, WENN HEUTE NICHT ZU SEHEN IST.
+ *
+ * Ein Knopf, der an den aktuellen Zeitraum zurueckfuehrt, ist sinnlos, solange
+ * man dort steht - Apple Kalender und Fantastical blenden ihn genau dann aus.
+ * Hier ist er ausserdem die Gegenmassnahme zu `flex-basis: 0` am Center-Slot
+ * (layout.css): der engere Slot kappt das Zeitraum-Label sonst auf seine
+ * 7ch-Untergrenze, und die 66px dieses Knopfes sind genau die, die fehlen.
+ *
+ * `hidden` STATT ENTFERNEN, und das ist der Punkt: der Slot behaelt seine
+ * Basis 0 und bleibt in der Titelzeile, egal ob der Knopf da ist. Die
+ * KOPFHOEHE springt beim Navigieren damit nicht - nur die Labelbreite aendert
+ * sich. Ein Kopf, der beim Blaettern seine Hoehe wechselt, waere derselbe
+ * Fehler, den die kollabierende Leiste mit ihrem negativen `top` vermeidet.
+ *
+ * Die Frage „ist heute zu sehen" beantwortet der ANGEZEIGTE BEREICH, nicht
+ * eine Fallunterscheidung je Ansicht: `getRangeForView` kennt ihn fuer alle
+ * vier, und eine zweite Rechnung daneben waere die naechste Stelle, an der
+ * Monat und Agenda auseinanderlaufen.
+ */
+function syncTodayButton() {
+  const btn = _container.querySelector('#cal-today');
+  if (!btn) return;
+  const { from, to } = getRangeForView(state.view, state.cursor);
+  btn.hidden = state.today >= from && state.today <= to;
 }
 
 function getWeekNumber(dateStr) {
@@ -1481,7 +1521,7 @@ async function navigate(dir) {
   if (state.view === 'month') {
     state.cursor = addMonths(state.cursor, dir);
   } else if (state.view === 'week') {
-    const isMobile = window.matchMedia('(max-width: 639px)').matches;
+    const isMobile = window.matchMedia(MOBILE_MEDIA_QUERY).matches;
     state.cursor = addDays(state.cursor, dir * (isMobile ? 3 : 7));
   } else if (state.view === 'day') {
     state.cursor = addDays(state.cursor, dir);
@@ -1501,10 +1541,23 @@ async function goToday() {
   renderView();
 }
 
+/**
+ * Drill-in aus einer Tageszelle - EINE NAVIGATION, KEINE EINSTELLUNG.
+ *
+ * Hier stand `setSavedCalendarView('day')`. Eine Geste, die „zeig mir diesen
+ * Tag" meint, schrieb damit still die STANDARDANSICHT des Kalenders um: wer
+ * dreimal auf eine Monatszelle tippte, oeffnete den Kalender fortan in der
+ * Tagesansicht und bekam dafuer weder eine Rueckmeldung noch einen Rueckweg -
+ * verifiziert, `yuvomi:calendar:view` stand nach einem Tap auf `"day"` und
+ * ueberlebte den Reload.
+ *
+ * `state.view` und `viewTabs.sync` wechseln die Ansicht fuer die Sitzung, und
+ * genau das ist gemeint. Gespeichert wird die Ansicht nur dort, wo der Nutzer
+ * sie WAEHLT: im `onChange` der Tablist.
+ */
 async function switchToDayView(date) {
   state.cursor = date;
   state.view = 'day';
-  setSavedCalendarView('day');
   viewTabs?.sync('day');
   await reloadForView();
   updateLabel();
@@ -1728,7 +1781,7 @@ function renderMonthView(container) {
     // Punkten reduziert (reines "etwas ist los"-Signal), ein Tap darf nie in
     // einem Event-Popup enden statt in der handlungsfähigen Tagesansicht (P1).
     // Desktop behält die feinere Interaktion: Chip -> Ziel, Zelle -> Tag.
-    const isMobile = window.matchMedia('(max-width: 639px)').matches;
+    const isMobile = window.matchMedia(MOBILE_MEDIA_QUERY).matches;
     if (!isMobile) {
       const taskChip = e.target.closest('.cal-task-chip');
       if (taskChip) {
@@ -1912,7 +1965,7 @@ function monthDayAriaLabel(date, total) {
 // --------------------------------------------------------
 
 function renderWeekView(container) {
-  const isMobile = window.matchMedia('(max-width: 639px)').matches;
+  const isMobile = window.matchMedia(MOBILE_MEDIA_QUERY).matches;
   // Auf Mobile: 3-Tage-Fenster zentriert um state.cursor statt vollem Mo–So
   const days = isMobile
     ? Array.from({ length: 3 }, (_, i) => addDays(state.cursor, i - 1))
@@ -2377,6 +2430,247 @@ function renderAgendaView(container) {
 // Eine Leiste unter der Toolbar; der Body zeigt eine chronologische Trefferliste
 // (Vergangenheit + Zukunft) mit „Heute"-Anker. Klick öffnet den Termin im Kontext.
 // --------------------------------------------------------
+
+// --------------------------------------------------------
+// Filter-Blatt
+//
+// DER ORT, AN DEM DIE EBENEN WOHNEN - und der Grund, warum sie umgezogen sind.
+//
+// Bis 2026-08-28 standen bis zu fuenf Ebenen-Schalter als Chips im Modulkopf.
+// Gemessen kostete das eine eigene Kopfzeile (56px = 6,6% der Viewporthoehe
+// auf 390px), und unter 640px verloren die Chips ihr Label: uebrig blieben
+// 48px-Kreise, von denen einer nur einen 8px-Punkt enthielt. Ihr An/Aus-
+// Zustand war eine Flaeche von 1,085:1 in Light - die `--active`-Regel, die
+// ihn tragen sollte, setzte dieselbe Kante wie der Ruhezustand und war damit
+// ein No-op. Vier der fuenf hatten kein `aria-pressed`; fuer einen
+// Screenreader war die Ebene zustandslos.
+//
+// Ein Blatt loest alle drei Befunde mit einem Bauteil: die Schalter bekommen
+// ihre Beschriftung zurueck, ihr Zustand ist eine echte Checkbox statt einer
+// Waschung, und der Kopf gibt eine Zeile her.
+//
+// WAS ES NICHT IST: eine FARBLEGENDE. Die Farbe eines Termins kommt aus drei
+// Quellen in Rangfolge (`resolveEventColor`, utils/event-color.js) - eigene
+// Farbe, primaere zugewiesene Person, Kalender. Eine Legende „diese Farbe =
+// jener Kalender" waere bei jedem Termin falsch, der eine der ersten beiden
+// Quellen nutzt. Die Person ist die einzige Achse, die eindeutig ist, und in
+// einem Familienplaner ist sie auch die gefragte.
+// --------------------------------------------------------
+
+/** Die Ebenen, die es im aktuellen Zustand ueberhaupt gibt. */
+function availableLayers() {
+  const hp = state.holidayPrefs ?? {};
+  const rows = [];
+  if (hp.holiday_show_public) {
+    rows.push({
+      key: 'holidays', label: t('calendar.toggleHolidays'),
+      checked: state.layerHolidays, color: hp.holiday_public_color ?? HOLIDAY_PUBLIC_FALLBACK,
+    });
+  }
+  if (hp.holiday_show_school) {
+    rows.push({
+      key: 'school', label: t('calendar.toggleSchool'),
+      checked: state.layerSchool, color: hp.holiday_school_color ?? HOLIDAY_SCHOOL_FALLBACK,
+    });
+  }
+  if (scheduleEnabled()) {
+    rows.push({
+      key: 'schedule', label: t('schedule.overlay'),
+      checked: state.layerSchedule, color: null,
+    });
+  }
+  // Der Geburtstags-Schalter braucht hier keine „gibt es welche?"-Bedingung
+  // mehr: im Blatt kostet eine Zeile keine Kopfzeile, und ein Schalter, der
+  // je nach Datenlage verschwindet, ist im Blatt schwerer zu finden als eine
+  // Zeile, die immer an derselben Stelle steht.
+  rows.push({
+    key: 'birthdays', label: t('calendar.toggleBirthdays'),
+    checked: state.layerBirthdays, color: null,
+  });
+  return rows;
+}
+
+/** Initialen einer Person - dieselbe Bildung wie im Avatar-Stack. */
+function personInitials(name) {
+  return String(name ?? '')
+    .split(' ')
+    .map((w) => w[0] ?? '')
+    .join('')
+    .toUpperCase()
+    .slice(0, 2);
+}
+
+function openCalendarFilters() {
+  const layers = availableLayers();
+  const people = state.users ?? [];
+
+  const layerRows = layers.map((row) => toggleRowHtml({
+    label: row.label,
+    checked: row.checked,
+    swatchColor: row.color,
+    attrs: { 'data-filter-layer': row.key },
+  })).join('');
+
+  // Der Anzeigemodus des Schichtplans ist KEIN Filter - er nimmt nichts weg,
+  // er zeigt dasselbe anders. Er steht trotzdem hier, weil er im Kopf als
+  // Text-Chip neben den Ebenen hing und dort dieselbe Zeile kostete; im Blatt
+  // hat er als beschrifteter Schalter zum ersten Mal einen Zustand, den man
+  // ablesen kann statt ihn aus der Knopfbeschriftung zu erschliessen (der
+  // Chip hiess „Volle Bloecke", wenn er sie NICHT zeigte).
+  const scheduleDisplayRow = scheduleEnabled() ? toggleRowHtml({
+    label: t('schedule.fullBlocks'),
+    checked: state.scheduleDisplay === 'blocks',
+    attrs: { 'data-filter-schedule-display': 'true' },
+  }) : '';
+
+  const meRow = (people.length > 1 && state.currentUserId != null)
+    ? toggleRowHtml({
+      label: t('calendar.assignedToMe'),
+      checked: state.assignedToMe,
+      attrs: { 'data-filter-mine': 'true' },
+    })
+    : '';
+
+  const personRows = people.map((u) => toggleRowHtml({
+    label: u.display_name ?? '',
+    // Leeres Set heisst ALLE - die Haekchen stehen dann auf „an", weil genau
+    // das der sichtbare Zustand ist. Wer das erste abwaehlt, waehlt damit die
+    // uebrigen aus; das ist die Lesart, die Apple in derselben Liste hat.
+    checked: state.people.size === 0 || state.people.has(u.id),
+    // ZWEI NAMEN FUER DIESELBE FARBE, und das ist kein Tippfehler in einer
+    // der beiden Quellen: `/auth/users` liefert die Spalte roh als
+    // `avatar_color`, waehrend `assigned_users` sie im JSON auf `color`
+    // umbenennt (services/calendar-events.js:17). Wer nur einen der beiden
+    // Namen liest, bekommt an einer der beiden Stellen `undefined` - hier
+    // stand zuerst `u.color` und die Scheiben blieben in jeder Zeile leer.
+    swatchColor: u.avatar_color ?? u.color ?? null,
+    swatchLabel: personInitials(u.display_name),
+    attrs: { 'data-filter-person': String(u.id) },
+  })).join('');
+
+  const content = `
+    <div class="cal-filters">
+      ${layerRows ? `
+        <section class="cal-filters__group">
+          <h3 class="cal-filters__heading">${t('calendar.filtersLayers')}</h3>
+          ${layerRows}
+        </section>
+      ` : ''}
+      ${(meRow || personRows) ? `
+        <section class="cal-filters__group">
+          <h3 class="cal-filters__heading">${t('calendar.filtersPeople')}</h3>
+          ${meRow}
+          ${personRows}
+        </section>
+      ` : ''}
+      ${scheduleDisplayRow ? `
+        <section class="cal-filters__group">
+          <h3 class="cal-filters__heading">${t('calendar.filtersDisplay')}</h3>
+          ${scheduleDisplayRow}
+        </section>
+      ` : ''}
+      <button type="button" class="btn btn--secondary cal-filters__reset" id="cal-filters-reset">
+        ${t('calendar.filtersReset')}
+      </button>
+    </div>
+  `;
+
+  openSharedModal({ title: t('calendar.filters'), content, size: 'sm', initialFocus: 'none' });
+
+  const panel = document.querySelector('#shared-modal-overlay .modal-panel');
+  if (!panel) return;
+
+  const LAYER_STATE = {
+    holidays:  ['layerHolidays',  LAYER_HOLIDAYS_KEY],
+    school:    ['layerSchool',    LAYER_SCHOOL_KEY],
+    schedule:  ['layerSchedule',  LAYER_SCHEDULE_KEY],
+    birthdays: ['layerBirthdays', LAYER_BIRTHDAYS_KEY],
+  };
+
+  panel.addEventListener('change', (e) => {
+    const input = e.target;
+    if (!(input instanceof HTMLInputElement)) return;
+
+    const layerKey = input.dataset.filterLayer;
+    if (layerKey && LAYER_STATE[layerKey]) {
+      const [field, storageKey] = LAYER_STATE[layerKey];
+      state[field] = input.checked;
+      try { localStorage.setItem(storageKey, input.checked ? 'true' : 'false'); } catch {}
+    } else if (input.dataset.filterScheduleDisplay) {
+      state.scheduleDisplay = input.checked ? 'blocks' : 'compact';
+      try { localStorage.setItem(SCHEDULE_DISPLAY_KEY, state.scheduleDisplay); } catch {}
+    } else if (input.dataset.filterMine) {
+      state.assignedToMe = input.checked;
+      try { localStorage.setItem(ASSIGNED_TO_ME_KEY, input.checked ? '1' : '0'); } catch {}
+    } else if (input.dataset.filterPerson) {
+      const id = Number(input.dataset.filterPerson);
+      // Der Sprung aus „alle" heraus: das erste Abwaehlen macht aus dem leeren
+      // Set die Menge der UEBRIGEN. Ohne diesen Schritt haette ein Klick auf
+      // ein Haekchen, das „alle" bedeutet, gar nichts getan.
+      if (state.people.size === 0) {
+        for (const u of state.users ?? []) state.people.add(u.id);
+      }
+      if (input.checked) state.people.add(id);
+      else state.people.delete(id);
+      // Wieder ALLE gewaehlt heisst wieder „kein Filter" - sonst bliebe ein
+      // Filter aktiv, der nichts wegnimmt, und der Zaehler am Knopf loege.
+      if (state.people.size === (state.users ?? []).length) state.people.clear();
+      persistPeopleFilter();
+    } else {
+      return;
+    }
+
+    renderToolbar();
+    renderView();
+  });
+
+  panel.querySelector('#cal-filters-reset')?.addEventListener('click', () => {
+    state.layerHolidays = true;
+    state.layerSchool = true;
+    state.layerSchedule = true;
+    state.layerBirthdays = true;
+    state.assignedToMe = false;
+    state.people.clear();
+    try {
+      localStorage.setItem(LAYER_HOLIDAYS_KEY, 'true');
+      localStorage.setItem(LAYER_SCHOOL_KEY, 'true');
+      localStorage.setItem(LAYER_SCHEDULE_KEY, 'true');
+      localStorage.setItem(LAYER_BIRTHDAYS_KEY, 'true');
+      localStorage.setItem(ASSIGNED_TO_ME_KEY, '0');
+    } catch {}
+    persistPeopleFilter();
+    closeModal({ force: true });
+    renderToolbar();
+    renderView();
+  });
+}
+
+/**
+ * Der gespeicherte Personenfilter, GEGEN DEN HAUSHALT GEPRUEFT.
+ *
+ * Eine gespeicherte ID, die es nicht mehr gibt (Mitglied entfernt), waere ein
+ * Filter, den kein Haekchen im Blatt mehr zurueckstellen kann: der Kalender
+ * bliebe leer, das Blatt zeigte lauter aktive Haekchen, und der Zaehler am
+ * Knopf naennte einen Filter ohne sichtbare Ursache. Deshalb faellt jede
+ * unbekannte ID beim Laden weg - und wenn danach alle oder keine uebrig sind,
+ * ist es wieder „alle", also gar kein Filter.
+ */
+function restorePeopleFilter(users) {
+  const known = new Set((users ?? []).map((u) => u.id));
+  let stored;
+  try { stored = JSON.parse(localStorage.getItem(PEOPLE_FILTER_KEY) ?? '[]'); } catch { stored = []; }
+  if (!Array.isArray(stored)) return new Set();
+  const valid = stored.map(Number).filter((id) => known.has(id));
+  if (valid.length === 0 || valid.length === known.size) return new Set();
+  return new Set(valid);
+}
+
+function persistPeopleFilter() {
+  try {
+    if (state.people.size === 0) localStorage.removeItem(PEOPLE_FILTER_KEY);
+    else localStorage.setItem(PEOPLE_FILTER_KEY, JSON.stringify([...state.people]));
+  } catch {}
+}
 
 function openCalendarSearch() {
   if (searchActive) {

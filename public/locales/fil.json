@@ -911,7 +911,15 @@
         "deleteSubscribedSeriesDetail": "Nagmula ang \"{{title}}\" sa isang naka-subscribe na kalendaryo. Walang matatanggal ang Yuvomi doon - mawawala lamang ang serye hanggang sa susunod na pag-sync; upang tuluyang matanggal, mag-unsubscribe sa kalendaryo.",
         "deleteSubscribedSeriesConfirm": "Tanggalin pa rin",
         "colorInherit": "Kulay ng taong itinalaga",
-        "colorInheritHint": "Walang sariling kulay ang kaganapan at kinukuha nito ang kulay ng taong itinalaga. Kung walang itinalaga, ang kulay ng kalendaryo ang iiral."
+        "colorInheritHint": "Walang sariling kulay ang kaganapan at kinukuha nito ang kulay ng taong itinalaga. Kung walang itinalaga, ang kulay ng kalendaryo ang iiral.",
+        "filters": "Mga filter",
+        "filtersOpen": "Buksan ang mga filter",
+        "filtersLayers": "Mga layer",
+        "filtersPeople": "Mga tao",
+        "filtersActive": "{{count}} aktibong filter",
+        "filtersActive_one": "1 aktibong filter",
+        "filtersReset": "Alisin ang lahat ng filter",
+        "filtersDisplay": "Pagpapakita"
     },
     "notes": {
         "title": "Board",

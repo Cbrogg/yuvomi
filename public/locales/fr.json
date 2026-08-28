@@ -899,7 +899,15 @@
         "deleteSubscribedSeriesDetail": "« {{title}} » provient d’un calendrier abonné. Yuvomi ne peut rien y supprimer : la série ne disparaît que jusqu’à la prochaine synchronisation ; pour la retirer définitivement, désabonnez-vous du calendrier.",
         "deleteSubscribedSeriesConfirm": "Supprimer quand même",
         "colorInherit": "Couleur de la personne assignée",
-        "colorInheritHint": "L'événement n'a pas de couleur propre et reprend celle de la personne à qui il est assigné. Si personne n'est assigné, la couleur du calendrier s'applique."
+        "colorInheritHint": "L'événement n'a pas de couleur propre et reprend celle de la personne à qui il est assigné. Si personne n'est assigné, la couleur du calendrier s'applique.",
+        "filters": "Filtres",
+        "filtersOpen": "Ouvrir les filtres",
+        "filtersLayers": "Calques",
+        "filtersPeople": "Personnes",
+        "filtersActive": "{{count}} filtres actifs",
+        "filtersActive_one": "1 filtre actif",
+        "filtersReset": "Effacer tous les filtres",
+        "filtersDisplay": "Affichage"
     },
     "notes": {
         "title": "Notes",

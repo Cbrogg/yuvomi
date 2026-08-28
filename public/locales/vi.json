@@ -899,7 +899,15 @@
         "deleteSubscribedSeriesDetail": "\"{{title}}\" đến từ một lịch đã đăng ký. Yuvomi không thể xóa gì ở đó - chuỗi chỉ biến mất cho đến lần đồng bộ tiếp theo; để xóa hẳn, hãy hủy đăng ký lịch đó.",
         "deleteSubscribedSeriesConfirm": "Vẫn xóa",
         "colorInherit": "Màu của người được giao",
-        "colorInheritHint": "Sự kiện không có màu riêng mà lấy màu của người được giao. Nếu không giao cho ai, màu của lịch sẽ được áp dụng."
+        "colorInheritHint": "Sự kiện không có màu riêng mà lấy màu của người được giao. Nếu không giao cho ai, màu của lịch sẽ được áp dụng.",
+        "filters": "Bộ lọc",
+        "filtersOpen": "Mở bộ lọc",
+        "filtersLayers": "Lớp",
+        "filtersPeople": "Mọi người",
+        "filtersActive": "{{count}} bộ lọc đang bật",
+        "filtersActive_one": "1 bộ lọc đang bật",
+        "filtersReset": "Xóa tất cả bộ lọc",
+        "filtersDisplay": "Hiển thị"
     },
     "notes": {
         "title": "Bảng ghi chú",

@@ -911,7 +911,15 @@
         "deleteSubscribedSeriesDetail": "\"{{title}}\" berasal dari kalender langganan. Yuvomi tidak dapat menghapus apa pun di sana - rangkaian hanya hilang sampai sinkronisasi berikutnya; untuk menghapusnya permanen, berhenti berlangganan kalender tersebut.",
         "deleteSubscribedSeriesConfirm": "Tetap hapus",
         "colorInherit": "Warna orang yang ditugaskan",
-        "colorInheritHint": "Acara tidak mendapat warna sendiri dan mengambil warna orang yang ditugaskan. Jika tidak ada yang ditugaskan, warna kalender yang berlaku."
+        "colorInheritHint": "Acara tidak mendapat warna sendiri dan mengambil warna orang yang ditugaskan. Jika tidak ada yang ditugaskan, warna kalender yang berlaku.",
+        "filters": "Filter",
+        "filtersOpen": "Buka filter",
+        "filtersLayers": "Lapisan",
+        "filtersPeople": "Orang",
+        "filtersActive": "{{count}} filter aktif",
+        "filtersActive_one": "1 filter aktif",
+        "filtersReset": "Hapus semua filter",
+        "filtersDisplay": "Tampilan"
     },
     "notes": {
         "title": "Catatan",
