@@ -24,6 +24,24 @@ Every table: `id INTEGER PRIMARY KEY`, `created_at TEXT`, `updated_at TEXT` (ISO
 | oidc_provider | TEXT | OIDC issuer URL of the provider that set `oidc_sub`, nullable. Partial UNIQUE index on `(oidc_sub, oidc_provider)` WHERE NOT NULL. |
 | calendar_feed_token | TEXT | Secret token authenticating the user's read-only ICS export feed, nullable. Partial UNIQUE index on `calendar_feed_token` WHERE NOT NULL. |
 | calendar_feed_show_assignees | INTEGER | Opt-in flag (0/1, default 0): when set, the read-only ICS export feed appends the assigned members to each event's `SUMMARY`, e.g. `Pool party (Mom, Dad)`. |
+| onboarding_version | INTEGER | NOT NULL, default 0 (migration v168) — the walkthrough version this account has seen |
+
+**The onboarding walkthrough is remembered per account, not per browser (v2.52.0).** The marker used
+to live only in `localStorage`, so a new device or a private window showed the walkthrough again to
+an account that had long dismissed it. `/auth/me` and `/auth/login` therefore carry
+`onboarding_pending`, computed as `onboarding_version < CURRENT_ONBOARDING_VERSION`
+(`server/auth.js`); `POST /api/v1/auth/onboarding-seen` records the current version on the calling
+account.
+
+A number rather than a flag, because "seen" alone allows no later extension: if a future release
+warrants showing the walkthrough again, a maintenance commit raises `CURRENT_ONBOARDING_VERSION` and
+every account below it sees it once more — no further migration. Migration v168 backfills existing
+accounts to 1 (they have seen the current walkthrough by definition) while the column default stays
+0, so every future `INSERT INTO users` gets the right behaviour for a new account without its own
+change. The `localStorage` key remains as an **additional** condition rather than a replacement: it
+is how the visual-probe harness suppresses the dialog without marking a test account server-side.
+The install-to-home-screen banner is deliberately untouched — whether a device has the PWA installed
+is a property of that device, so it keeps its local 7-day snooze.
 
 ### Two-Factor Authentication (migration v159, #672)
 
@@ -110,7 +128,7 @@ One pending invitation per row. The `users` row is only created when the invitat
 | recurrence_rule | TEXT | iCal RRULE |
 | recurrence_from_completion | INTEGER | NOT NULL DEFAULT 0 (migration v127, #658) — 1 anchors the next due date to the day the task was ticked off instead of to its due date |
 | parent_task_id | INTEGER | FK → Tasks (max 2 levels) |
-| recurrence_origin_id | INTEGER | FK → Tasks, ON DELETE SET NULL (migration v122) — the completed instance whose completion created this one. Deliberately not `parent_task_id`, which means "subtask" |
+| recurrence_origin_id | INTEGER | FK → Tasks, ON DELETE SET NULL (migration v122) — the completed instance whose completion created this one. Deliberately not `parent_task_id`, which means "subtask". **The column carries two meanings and `parent_task_id` tells them apart** (v2.52.1, #924): on a root task it means "I am the next run of X", on a subtask copied into a follow-up (v2.8.4, #742) it means "I am the copy of Y in this run". Only the first is a follow-up, so every read that acts on one must filter for `parent_task_id IS NULL` |
 | points | INTEGER | NOT NULL DEFAULT 0 — reward points credited to assigned members on completion (Rewards module, migration v69) |
 | visibility | TEXT | NOT NULL DEFAULT `all` — `all` \| `assignees` \| `private`; who may see the task (migration v78) |
 | locked | INTEGER | NOT NULL DEFAULT 0 (migration v155, #830) — 1 closes the task **definition** to everyone but its creator and admins, while ticking off, commenting, and assigning oneself stay open for all. A subtask inherits its parent's lock |
@@ -129,7 +147,7 @@ Recurring tasks keep only one open instance: the next instance is created on com
 
 The flag is copied onto the follow-up instance; without that the series would fall back to the due-date grid from its second run on, and it would do so silently, because the follow-up looks complete either way. The completion day is read in the household's own zone (`TZ`, see `server/utils/timezone.js`): ticking a task off at 00:30 must count as the new day, or a weekly task would come back six days later. The anchor is local to Yuvomi and does not travel over CalDAV, because RFC 5545 has no way to express it and a mirrored VTODO carries the rule alone. The shared calculation lives in `nextDueAfterCompletion()` in `server/services/recurrence.js`, deliberately separate from the route because resettable countdowns want the same "counts from the moment you touched it" arithmetic (#647).
 
-**Undoing a completion (migration v122, #650):** ticking a series off is reversible. The follow-up instance records which completion created it (`recurrence_origin_id`), so moving a task back out of `done` — via the checkbox or the edit dialog — removes that follow-up again instead of leaving it standing next to the reopened task. Only an untouched follow-up is withdrawn: one that is still `open` and has not itself been completed. Since the follow-up carries copied subtasks of its own (v2.8.4, #742), "untouched" is a comparison rather than a head count: each subtask is checked against the one it was copied from, and any difference — a changed status, an edited field or date, one added or removed — keeps the follow-up standing. Merely *having* subtasks no longer protects it, or a checklist series could never be un-ticked; editing one still does, because that is work a click on the predecessor must not discard. Once work has accumulated on it, a click on its predecessor must not throw that away. The same link makes the creation idempotent: a completion never adds a second follow-up.
+**Undoing a completion (migration v122, #650):** ticking a series off is reversible. The follow-up instance records which completion created it (`recurrence_origin_id`), so moving a task back out of `done` — via the checkbox or the edit dialog — removes that follow-up again instead of leaving it standing next to the reopened task. Only an untouched follow-up is withdrawn: one that is still `open` and has not itself been completed. Since the follow-up carries copied subtasks of its own (v2.8.4, #742), "untouched" is a comparison rather than a head count: each subtask is checked against the one it was copied from, and any difference — a changed status, an edited field or date, one added or removed — keeps the follow-up standing. Merely *having* subtasks no longer protects it, or a checklist series could never be un-ticked; editing one still does, because that is work a click on the predecessor must not discard. Once work has accumulated on it, a click on its predecessor must not throw that away. The same link makes the creation idempotent: a completion never adds a second follow-up. **Only a whole occurrence counts as a follow-up** (v2.52.1, #924): the copied subtasks carry `recurrence_origin_id` as well, so until then unticking a subtask *on the finished occurrence* looked up its own copy in the next one, found an untouched row, and deleted it — a four-step series came back as 0/4 and dropped to 0/3, then 0/2. The lookup is restricted to root tasks; a tick on a past run is a fact about that run alone. Occurrences that already lost a step this way stay as they are, since the row was really deleted.
 
 **Category default repaired (migration v114, #586):** v83 moved the categories into their own table and migrated existing rows from `Sonstiges` to the key `misc`, but left the column default at `Sonstiges` — a key that never existed in `task_categories`. Every row created without an explicit category (notably every task arriving through the CalDAV mirror) therefore carried a key that appeared in no dropdown and no filter, and jumped silently to the first real category on the first save. v114 rebuilds the table with the correct default and re-homes every orphaned key.
 
@@ -1352,7 +1370,8 @@ Per-user reminders attached to tasks, calendar events, subscriptions, inventory 
 | remind_at | TEXT | ISO 8601 datetime, NOT NULL |
 | dismissed | INTEGER | 0/1, default 0 |
 | pushed_at | TEXT | ISO 8601 datetime, nullable — set once all active notification targets have been sent, skipped, or exhausted, so the reminder is not processed indefinitely |
-| created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+| created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL — whose reminder this row *is*: who gets notified, and who may change or dismiss it |
+| assigned_from | INTEGER | FK → Users (SET NULL), nullable (migration v169) — whose action the row was derived from. `NULL` means self-set, which is what every pre-v169 row is |
 
 All types except `pantry_item` can be set and deleted through `POST`/`PUT`/`DELETE
 /api/v1/reminders`. Four of them are **derived** - their module recreates the reminder whenever the
@@ -1384,6 +1403,30 @@ The event dialog manages the set via `GET /api/v1/reminders/all?entity_type=even
 (returns the full list) and `PUT /api/v1/reminders?entity_type=event&entity_id=…` with
 `{ remind_ats: [...] }` (replace-set semantics: deduplicated, max 5). Tasks and subscriptions keep
 using the single-reminder endpoints (`GET`/`POST /api/v1/reminders`).
+
+**A reminder on a shared event reaches its assignees (v2.52.0).** A reminder set by the member who
+**created** the event is written for everyone assigned to it as a row of their own, so it is
+delivered to them and appears when they open the event. Rows of their own rather than one row with a
+recipient list, because everything hanging off a reminder is per-person: `dismissed`, `pushed_at`,
+and the time itself, which each member may move. A shared row would have needed a second table for
+each of those three, and the delivery path already keys on `created_by`.
+
+Only the event's author distributes. Anyone else setting a reminder on a shared event sets it for
+themselves — otherwise one member making a note would notify the household. Four rules bound the
+fan-out, all of them about what must *not* happen:
+
+- A reminder an assignee set for themselves (`assigned_from IS NULL`) is never overwritten, and its
+  presence stops the fan-out to that person entirely: they have already decided when to be reminded.
+- A dismissed row is not resurrected while the set of times is unchanged. Dismissing means "I have
+  seen this", not "I want nothing about this event", so a *changed* time does reach them.
+- Removing someone from the event deletes their inherited rows, but not one they set themselves.
+- Deleting the author's own reminders removes the inherited ones with them — leaving a notification
+  standing that the author just abolished would be a promise without cover.
+
+Both triggers — writing a reminder (`server/routes/reminders.js`) and changing the assignment
+(`setEventAssignments` in `server/routes/calendar/helpers.js`) — go through one service,
+`server/services/event-reminder-fanout.js`. Two implementations would be unusually expensive here: a
+reminder that does **not** arrive does not announce itself.
 
 ### Push Subscriptions
 
@@ -2640,7 +2683,7 @@ The surface carries four things, in this order: **the time**, large (this is whe
 - View mode persisted in localStorage; URL parameter `?view=kanban` (or `?view=history`) overrides (useful for tablet kiosk setups)
 
 **Features:**
-- CRUD + subtasks (max 2 levels, checkbox list, progress bar). Subtasks are tickable **wherever they are visible** — on the task card and, since v1.78.1 (#671), in the detail view too. Read-only rows there had assumed the list next door would carry the interaction, but that list keeps them behind a collapsed progress bar, so a freshly created subtask could end up visible and unreachable at the same time
+- CRUD + subtasks (max 2 levels, checkbox list, progress bar). Subtasks are tickable **wherever they are visible** — on the task card and, since v1.78.1 (#671), in the detail view too. Read-only rows there had assumed the list next door would carry the interaction, but that list keeps them behind a collapsed progress bar, so a freshly created subtask could end up visible and unreachable at the same time. **Adding one works wherever the task is open, including the first** (v2.52.1, #925): the detail view offers "add subtask" on the same terms as the card row (may edit the task, not archived, not itself a subtask), and its section now stands even when empty — the same rule the comments below it follow. The card hides its inline actions below 640px by design, and the "add" button for the *first* subtask hung on nothing else, so on a phone every later subtask could be added and the first could not. This is the second instance of one pattern: a view that assumes the view next door carries the interaction, while that one is closed on exactly the device in question. `test:frontend-audit` reads the card's inline actions out of the markup and requires a reachable path for each in the detail view
 - **Renaming and removing a subtask (v2.12.0 · #748):** each subtask row carries a rename and a delete action beside its checkbox, at the same size and in the same restrained tone as the actions on the task row above it. Deliberately **not hover-only** — a touch device has no hover, and correcting a typo is exactly where a phone is the likely device. Deleting asks first and names what it removes, since ticking off is reversible and this is not. The server needed nothing for this: a subtask is an ordinary task with a `parent_task_id`, so `PUT`/`DELETE /api/v1/tasks/:id` already covered both.
 - **Subtasks expanded by default (#623):** a household-wide preference (`tasks_subtasks_expanded` in `sync_config`, admin-gated, default off) decides whether the subtask list of a task starts open instead of collapsed behind its progress bar. Manual expand and collapse still work per task; the preference only sets the starting state. Settings → Modules → Module options.
 - **Multi-person assignment:** tasks can be assigned to multiple family members simultaneously via `UserMultiSelect` checkbox dropdown; stacked avatar circles (up to 3 visible + `+N` overflow badge) shown on task cards and Kanban — each circle shows the member's profile photo if set, otherwise coloured initials
@@ -2667,6 +2710,22 @@ The surface carries four things, in this order: **the time**, large (this is whe
 - **Mobile swipe (sides swapped in this release):** swiping towards the row's **start** (right in LTR, left in RTL) marks the task done or reopens it; swiping towards its **end** opens the task. The panels are addressed as `leading`/`trailing` in `public/utils/swipe-row.js`, not as left/right, so the gesture mirrors correctly in RTL. Existing users are told once via `common.swipeSidesSwapped`.
 - **Sync target on a new task (#695):** the task dialog carries a "sync target" field, the same shape the event dialog has had since #620, listing only the reminder lists the household enabled *for tasks*. Prefilled from `tasks_default_target`. It is absent for subtasks (they carry no target of their own) and replaced by a sentence on a task that is already mirrored — moving a task between lists is deliberately not offered, so a dropdown there would promise something the sync does not do. `GET /api/v1/tasks/sync-targets` serves the options to every logged-in member, with no credentials or server URLs in the payload.
 - **The note is a note (#731):** the free-text field is six rows, not two, and the read view renders it as Markdown through the same `renderMarkdownLight()` the notes module and the dashboard use — so a checklist, a heading or a bold word looks the same wherever it appears. The editor carries the same `.md-toolbar` the notes module does — not a copy of it but the shared component both draw from, so a checkbox written in a task is the same characters as one written in a note.
+- **Tappable checklists in the description (#917, v2.52.0):** the rendered `- [ ]` boxes are real
+  controls in the task detail view, the same way they have been in Notes since #704 — the same rule
+  from `public/utils/markdown-checklist.js`, imported by both browser and server, one more caller
+  rather than a second implementation. `PATCH /api/v1/tasks/:id/check` rewrites exactly the one
+  source line, so two members ticking different items in the same minute both keep their tick; a
+  full-body `PUT` would have let the later save drop the earlier one silently. Addressed by source
+  line number (`data-md-line`), never by item text, with the line the client saw sent as `expect` and
+  a mismatch answered `409`.
+
+  Two rules diverge from a plain description edit. **The lock (#830) does not stop a tick:** it
+  covers what the task *is*, not how far it has come — `PATCH /:id/status` deliberately has no lock
+  check either, and `toggleChecklistLine` cannot change anything but the one character between the
+  brackets. **Visibility does apply**, answering 404 rather than 403 so a guessed id says nothing.
+  And because `description` is a *mirrored* CalDAV field, a tick marks the row for outbound push —
+  without that it would stay local and the next inbound would bring the unticked line back. A
+  repeated tick on an item already in that state changes nothing and announces nothing.
 - Badge for overdue tasks
 
 ### Shopping Lists (`/shopping`)
@@ -3218,6 +3277,23 @@ modules/
 ## API Documentation
 
 An OpenAPI 3.0 specification is served at `/api/v1/openapi.json` and `/openapi.json` to **signed-in admins** (both endpoints require an admin session or API token). Append `?download=1` to download as a file. The spec covers all authenticated endpoints and can be imported into any OpenAPI-compatible client (Insomnia, Postman, etc.). The interactive `/docs` page follows the same admin gate and is hidden entirely in production unless `ENABLE_API_DOCS=true`.
+
+**"Covers all endpoints" is now a checked claim (v2.52.0).** It had not been one: 40 of 297 routes
+were missing, among them four entire modules that had never had a line of specification — quick
+links, screensaver, recipe providers, and the permissions endpoints behind the rights matrix. The
+existing guard (`test:openapi-structure`) verifies that the spec's own fragment files are imported
+and spread, never that they match the routers. `test:openapi-coverage` compares the two in both
+directions: a route without documentation fails, and so does a documented route no router serves —
+the second kind is otherwise found only by the integrator who calls it.
+
+The guard follows the *routers* rather than a file list, which matters because four modules split
+their routes across sub-files and `inventory/index.js` mounts five sub-routers under prefixes of
+their own. Three blind spots had to be closed while building it, and each would have made the guard
+look **greener** rather than redder: sub-mounts (without them it invents paths and reports those as
+gaps), named imports (`import { router as authRouter }` — missing it drops the whole `/auth` branch
+from the check), and the router variable that is called `targetRouter` in `server/auth.js`. Its
+exception list is empty and each entry would have to carry its reason on the spot: an exception
+without a justification is a gap with better camouflage.
 
 Authentication options for external integrations:
 - **Session cookie:** standard browser session after login
