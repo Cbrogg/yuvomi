@@ -18,6 +18,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   same way. Unticking a subtask made it look up its own copy in the next occurrence, mistake it for
   a follow-up nobody had touched, and delete it. Only whole occurrences count as follow-ups now, so
   a tick on a past run stays on that run.
+- **On a phone there is now a way to add the FIRST subtask to a task.** Every later one worked: once
+  a task had a subtask, the expanded list offered "add subtask" and it went through. The first one
+  hung on a button in the task row, and the row hides its inline buttons below 640px on purpose -
+  three 44px targets squeezed the title into two lines. The replacement was meant to be the reading
+  view, which is what tapping a task opens, except that view only drew its subtask section when
+  there were already subtasks to draw. So the entrance existed on an iPad and nowhere on an iPhone.
+  The section now stands even when it is empty, as long as it has something to offer, which is the
+  same rule the comments at the bottom have always followed.
 
 ## [2.52.0] - 2026-08-29
 
