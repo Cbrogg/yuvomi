@@ -94,7 +94,7 @@ Modules must follow the same frontend security rules as core Yuvomi:
 
 A module page is browser code with no server of its own. When a module needs stored state, scheduled work, or a third-party credential, run that as a separate service beside Yuvomi rather than as a patch to core, and leave Yuvomi on its official image. What follows is what such a module needs in order to survive a Yuvomi upgrade.
 
-Serve the service from the same origin under an `/api/` path; `/api/extensions/<module-id>/` is a reasonable convention. Browser requests then carry the Yuvomi session cookie, and the service worker leaves them alone. The stale-cache trap described above applies to any dynamic path outside `/api/`.
+Serve the service from the same origin under `/api/extensions/<module-id>/`. That path is required, not a convention: `capabilities.api.prefix` is rejected unless it is exactly `/api/extensions/<module-id>`, so an extension cannot take over a core API prefix. Browser requests then carry the Yuvomi session cookie, and the service worker leaves them alone. The stale-cache trap described above applies to any dynamic path outside `/api/`.
 
 Do not open `yuvomi.db`. It is core's private storage: the schema changes between releases without notice, and a second writer breaks Yuvomi's own migrations. Read and write through `/api/v1` instead. If the data a module needs is not reachable through the API, that is a missing endpoint worth an issue, not a reason to reach for the file.
 
@@ -197,12 +197,13 @@ Rules:
 - Permission module key: `ext:<module-id>` (appears in Settings -> Admin -> Roles & permissions).
 - Widget id in the dashboard: `<module-id>:<widget-id>` (namespace avoids collisions with core widgets).
 - `capabilities.permissions.module` is required when you declare widgets and/or `api.prefix`.
+- `capabilities.api.prefix`, when declared, must be exactly `/api/extensions/<module-id>` (trailing slash optional). Any other prefix — including a core path such as `/api/tasks` — is rejected and the module loads as errored.
 - Widget `entry` must export `renderWidget(container, { size, options, user })`.
 - Widgets fetch their own data (typically from your sidecar API). They are not injected into `GET /api/v1/dashboard`.
 - `optionsSchema` supports up to 8 keys (`boolean`, `number`, `string`, or `enum` via `enum` array).
 - Widget chrome (header, module seal, empty states) should follow the dashboard widget patterns in `DESIGN.md` ("Der Widget-Kopf") - core renders error/retry chrome for failed loads; your `renderWidget` owns the happy path inside the mount.
 
-Serve a sidecar from the same origin under `/api/extensions/<module-id>/` (Traefik or an equivalent reverse proxy). The Capabilities JSON example above is the canonical minimal manifest; copy it into your own folder under `modules/`.
+Serve a sidecar from the same origin under `/api/extensions/<module-id>/` (Traefik or an equivalent reverse proxy). `capabilities.api.prefix` must match that path exactly. The Capabilities JSON example above is the canonical minimal manifest; copy it into your own folder under `modules/`.
 
 ## Loading And Failure Behavior
 
