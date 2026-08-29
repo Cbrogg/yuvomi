@@ -911,7 +911,16 @@
         "deleteSubscribedSeriesDetail": "„{{title}}\" stammt aus einem abonnierten Kalender. Yuvomi kann dort nichts löschen - die Serie verschwindet nur bis zum nächsten Abgleich; dauerhaft wird sie erst, wenn du das Abo abbestellst.",
         "deleteSubscribedSeriesConfirm": "Trotzdem löschen",
         "colorInherit": "Farbe der zugewiesenen Person",
-        "colorInheritHint": "Der Termin bekommt keine eigene Farbe und übernimmt die der zugewiesenen Person. Ist niemand zugewiesen, gilt die Farbe des Kalenders."
+        "colorInheritHint": "Der Termin bekommt keine eigene Farbe und übernimmt die der zugewiesenen Person. Ist niemand zugewiesen, gilt die Farbe des Kalenders.",
+        "filters": "Filter",
+        "filtersOpen": "Filter öffnen",
+        "filtersLayers": "Ebenen",
+        "filtersPeople": "Personen",
+        "filtersActive": "{{count}} Filter aktiv",
+        "filtersActive_one": "1 Filter aktiv",
+        "filtersReset": "Alle Filter aufheben",
+        "filtersDisplay": "Darstellung",
+        "agendaDayEmpty": "Nichts geplant"
     },
     "notes": {
         "title": "Notizen",

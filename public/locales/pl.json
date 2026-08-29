@@ -911,7 +911,16 @@
         "deleteSubscribedSeriesDetail": "„{{title}}\" pochodzi z subskrybowanego kalendarza. Yuvomi nie może tam nic usunąć - seria zniknie tylko do następnej synchronizacji; trwale usuniesz ją, anulując subskrypcję.",
         "deleteSubscribedSeriesConfirm": "Usuń mimo to",
         "colorInherit": "Kolor przypisanej osoby",
-        "colorInheritHint": "Wydarzenie nie ma własnego koloru i przejmuje kolor przypisanej osoby. Jeśli nikt nie jest przypisany, obowiązuje kolor kalendarza."
+        "colorInheritHint": "Wydarzenie nie ma własnego koloru i przejmuje kolor przypisanej osoby. Jeśli nikt nie jest przypisany, obowiązuje kolor kalendarza.",
+        "filters": "Filtry",
+        "filtersOpen": "Otwórz filtry",
+        "filtersLayers": "Warstwy",
+        "filtersPeople": "Osoby",
+        "filtersActive": "Aktywne filtry: {{count}}",
+        "filtersActive_one": "1 aktywny filtr",
+        "filtersReset": "Wyczyść wszystkie filtry",
+        "filtersDisplay": "Wyświetlanie",
+        "agendaDayEmpty": "Nic zaplanowane"
     },
     "notes": {
         "title": "Notatki",

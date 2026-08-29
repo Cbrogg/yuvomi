@@ -899,7 +899,16 @@
         "deleteSubscribedSeriesDetail": "«{{title}}» proviene da un calendario sottoscritto. Yuvomi non può eliminare nulla lì: la serie scompare solo fino alla prossima sincronizzazione; per rimuoverla definitivamente, annulla la sottoscrizione.",
         "deleteSubscribedSeriesConfirm": "Elimina comunque",
         "colorInherit": "Colore della persona assegnata",
-        "colorInheritHint": "L'evento non ha un colore proprio e assume quello della persona assegnata. Se non è assegnato a nessuno, vale il colore del calendario."
+        "colorInheritHint": "L'evento non ha un colore proprio e assume quello della persona assegnata. Se non è assegnato a nessuno, vale il colore del calendario.",
+        "filters": "Filtri",
+        "filtersOpen": "Apri filtri",
+        "filtersLayers": "Livelli",
+        "filtersPeople": "Persone",
+        "filtersActive": "{{count}} filtri attivi",
+        "filtersActive_one": "1 filtro attivo",
+        "filtersReset": "Rimuovi tutti i filtri",
+        "filtersDisplay": "Visualizzazione",
+        "agendaDayEmpty": "Niente in programma"
     },
     "notes": {
         "title": "Bacheca",

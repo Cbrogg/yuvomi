@@ -899,7 +899,16 @@
         "deleteSubscribedSeriesDetail": "„{{title}}\" pochází z odebíraného kalendáře. Yuvomi tam nemůže nic odstranit - série zmizí jen do další synchronizace; natrvalo ji odstraníte zrušením odběru.",
         "deleteSubscribedSeriesConfirm": "Přesto odstranit",
         "colorInherit": "Barva přiřazené osoby",
-        "colorInheritHint": "Událost nemá vlastní barvu a přebírá barvu přiřazené osoby. Pokud není nikdo přiřazen, platí barva kalendáře."
+        "colorInheritHint": "Událost nemá vlastní barvu a přebírá barvu přiřazené osoby. Pokud není nikdo přiřazen, platí barva kalendáře.",
+        "filters": "Filtry",
+        "filtersOpen": "Otevřít filtry",
+        "filtersLayers": "Vrstvy",
+        "filtersPeople": "Osoby",
+        "filtersActive": "Aktivní filtry: {{count}}",
+        "filtersActive_one": "1 aktivní filtr",
+        "filtersReset": "Zrušit všechny filtry",
+        "filtersDisplay": "Zobrazení",
+        "agendaDayEmpty": "Nic naplánováno"
     },
     "notes": {
         "title": "Nástěnka",

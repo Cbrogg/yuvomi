@@ -899,7 +899,16 @@
         "deleteSubscribedSeriesDetail": "\"{{title}}\" komt uit een geabonneerde agenda. Yuvomi kan daar niets verwijderen - de reeks verdwijnt alleen tot de volgende synchronisatie; opzeggen van het abonnement verwijdert hem definitief.",
         "deleteSubscribedSeriesConfirm": "Toch verwijderen",
         "colorInherit": "Kleur van de toegewezen persoon",
-        "colorInheritHint": "De afspraak krijgt geen eigen kleur en neemt die van de toegewezen persoon over. Is er niemand toegewezen, dan geldt de kleur van de agenda."
+        "colorInheritHint": "De afspraak krijgt geen eigen kleur en neemt die van de toegewezen persoon over. Is er niemand toegewezen, dan geldt de kleur van de agenda.",
+        "filters": "Filters",
+        "filtersOpen": "Filters openen",
+        "filtersLayers": "Lagen",
+        "filtersPeople": "Personen",
+        "filtersActive": "{{count}} filters actief",
+        "filtersActive_one": "1 filter actief",
+        "filtersReset": "Alle filters wissen",
+        "filtersDisplay": "Weergave",
+        "agendaDayEmpty": "Niets gepland"
     },
     "notes": {
         "title": "Bord",

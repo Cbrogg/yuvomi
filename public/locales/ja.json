@@ -899,7 +899,16 @@
         "deleteSubscribedSeriesDetail": "「{{title}}」は購読中のカレンダーの予定です。Yuvomi はそちらの予定を削除できないため、次回の同期までしか消えません。完全に消すには購読を解除してください。",
         "deleteSubscribedSeriesConfirm": "それでも削除",
         "colorInherit": "担当者の色",
-        "colorInheritHint": "予定は独自の色を持たず、担当者の色を引き継ぎます。担当者がいない場合はカレンダーの色が適用されます。"
+        "colorInheritHint": "予定は独自の色を持たず、担当者の色を引き継ぎます。担当者がいない場合はカレンダーの色が適用されます。",
+        "filters": "フィルター",
+        "filtersOpen": "フィルターを開く",
+        "filtersLayers": "レイヤー",
+        "filtersPeople": "メンバー",
+        "filtersActive": "フィルター {{count}} 件が有効",
+        "filtersActive_one": "フィルター 1 件が有効",
+        "filtersReset": "すべてのフィルターを解除",
+        "filtersDisplay": "表示",
+        "agendaDayEmpty": "予定なし"
     },
     "notes": {
         "title": "メモボード",

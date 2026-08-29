@@ -899,7 +899,16 @@
         "deleteSubscribedSeriesDetail": "”{{title}}” kommer från en prenumererad kalender. Yuvomi kan inte ta bort något där - serien försvinner bara till nästa synkronisering; säg upp prenumerationen för att ta bort den permanent.",
         "deleteSubscribedSeriesConfirm": "Ta bort ändå",
         "colorInherit": "Färg för den tilldelade personen",
-        "colorInheritHint": "Händelsen får ingen egen färg utan tar den tilldelade personens. Om ingen är tilldelad gäller kalenderns färg."
+        "colorInheritHint": "Händelsen får ingen egen färg utan tar den tilldelade personens. Om ingen är tilldelad gäller kalenderns färg.",
+        "filters": "Filter",
+        "filtersOpen": "Öppna filter",
+        "filtersLayers": "Lager",
+        "filtersPeople": "Personer",
+        "filtersActive": "{{count}} filter aktiva",
+        "filtersActive_one": "1 filter aktivt",
+        "filtersReset": "Rensa alla filter",
+        "filtersDisplay": "Visning",
+        "agendaDayEmpty": "Inget planerat"
     },
     "notes": {
         "title": "Anteckningar",

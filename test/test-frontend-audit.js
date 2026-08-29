@@ -577,6 +577,61 @@ test('kein endlos animiertes Element traegt in derselben Regel einen filter', ()
 });
 
 /**
+ * Eine Bewegung nennt ihre Kurve aus einem Token.
+ *
+ * DIE REGEL, NICHT DIE LISTE: geprueft wird die BAUART - eine `cubic-bezier(`-
+ * Klammer in einem Stylesheet ausserhalb von tokens.css. Eine Allowlist der
+ * bekannten Suender waere hier der falsche Bau gewesen: sie sagt zu jeder
+ * NEUEN Datei ja, und genau so sind die drei Treffer entstanden, die diesen
+ * Guard ausgeloest haben (Critique 2026-08-28).
+ *
+ * DER ANLASS: `rewards.css:250` fuehrte `cubic-bezier(0.22, 1, 0.36, 1)` - eine
+ * VIERTE Kurve, die tokens.css nicht kennt und die niemand entschieden hat.
+ * `layout.css:4909` und `settings.css:2985` schrieben dagegen `--ease-glass`
+ * bzw. `--ease-out` woertlich aus: derselbe Wert, am Token vorbei. Der
+ * Unterschied ist unsichtbar, solange niemand die Kurve aendert - und genau
+ * dann faellt er auf, weil zwei Elemente der Aenderung nicht folgen.
+ *
+ * `tokens.css` ist ausgenommen, weil dort die Kurven DEFINIERT werden. Die drei
+ * Namen (`--ease-out`, `--ease-glass`, `--ease-sidebar-glide`) sind die
+ * vollstaendige Liste; wer eine vierte braucht, gibt ihr dort einen Namen und
+ * einen Grund, statt sie in ein Bauteil zu schreiben.
+ */
+test('keine Bewegungskurve steht ausserhalb von tokens.css als Literal', () => {
+  const styleDir = new URL('../public/styles/', import.meta.url);
+  const offenders = [];
+  let seenCurveTokens = 0;
+
+  for (const { selector, body, at } of eachRule(read('../public/styles/tokens.css'))) {
+    seenCurveTokens += (body.match(/--ease-[a-z-]+\s*:/g) || []).length;
+  }
+
+  for (const file of readdirSync(styleDir).filter((f) => f.endsWith('.css'))) {
+    if (file === 'tokens.css') continue;
+    for (const { selector, body, at } of eachRule(read(`../public/styles/${file}`))) {
+      if (!/cubic-bezier\s*\(/.test(body)) continue;
+      const m = body.match(/[^;{]*cubic-bezier\s*\([^)]*\)[^;}]*/);
+      offenders.push(`${file}${at.length ? ` [${at.join(' ')}]` : ''}: ${selector} -> ${(m ? m[0] : '').trim()}`);
+    }
+  }
+
+  // Eine leere Liste ist keine Zusicherung: faende der Scanner tokens.css nicht
+  // mehr, waere dieser Guard gruen, waehrend er nichts mehr liest.
+  assert.ok(seenCurveTokens >= 3,
+    `Nur ${seenCurveTokens} --ease-*-Definitionen in tokens.css gefunden - der Scanner `
+    + 'liest die Token-Datei nicht mehr, statt nichts zu beanstanden.');
+
+  assert.deepEqual(offenders.sort(), [],
+    'Eine Bewegungskurve steht als Literal in einem Bauteil statt als Token. Wer '
+    + '`--ease-out` oder `--ease-glass` woertlich ausschreibt, folgt einer spaeteren '
+    + 'Aenderung des Tokens nicht mehr; wer eine unbekannte Kurve schreibt, fuehrt eine '
+    + 'vierte Bewegungssprache ohne Entscheidung ein. Kurven werden in tokens.css '
+    + `benannt und hier nur benutzt.\n${offenders.join('\n')}`);
+});
+
+
+
+/**
  * Das Wetter-Vokabular haelt an vier Enden zusammen.
  *
  * DIE LAGEN UND BAENDER STEHEN NICHT ALS LISTE HIER, sondern werden aus
@@ -819,6 +874,127 @@ test('das Install-Banner faellt nicht in die abgeloeste Welt zurueck', () => {
   // ausbleibt - sonst bleibt das Host-Element samt Listenern im Dokument.
   assert.match(source, /setTimeout\(finish/,
     '_remove() braucht eine Frist als zweiten Weg hinaus (transitionend feuert ohne Transition nie)');
+});
+
+/**
+ * DER NACHLAUF HAENGT AM ZUSTAND, NICHT AN DER ANWESENHEIT.
+ *
+ * `:root:has(yuvomi-install-prompt)` war immer wahr: das Element steht statisch
+ * in index.html, rendert 0x0 solange keine Anzeigebedingung erfuellt ist, und
+ * auf iOS feuert `beforeinstallprompt` nie. Der 89px-Fallback sprang damit
+ * dauerhaft an - JEDER Scrollport der App reservierte 105px fuer ein Banner,
+ * das keiner je gesehen hat (gemessen: 21,2% der Kalender-Rasterhoehe bei
+ * 390px, 23,9% bei 320px, dieselben 105px in den Notizen).
+ *
+ * Zwei Enden, zwei Zusicherungen: das CSS muss den Zustand ABFRAGEN, und das
+ * Bauteil muss ihn SETZEN. Nur eines von beiden zu pruefen laesst die Regel
+ * still zerfallen, sobald die andere Seite umgebaut wird.
+ */
+test('der Install-Nachlauf haengt am gerenderten Banner, nicht an seiner Existenz', () => {
+  const layout = read('../public/styles/layout.css');
+  const source = read('../public/components/yuvomi-install-prompt.js');
+
+  const setzer = layout.match(/:root:has\(yuvomi-install-prompt([^)]*)\)\s*\{[^}]*--install-prompt-tail/);
+  assert.ok(setzer, 'die Regel, die --install-prompt-tail setzt, muss ueber :root:has(yuvomi-install-prompt...) laufen');
+  assert.match(setzer[1], /\[[a-z-]+\]/,
+    'das :has()-Argument braucht ein Zustands-Attribut. Ohne eines fragt der Selektor nur, ob das '
+    + 'Element im DOM steht - und das ist es immer (index.html). Gemessen: 105px Nachlauf unter '
+    + 'jedem Scrollport der App, dauerhaft, ohne je ein Banner zu zeigen.');
+
+  const attr = setzer[1].match(/\[([a-z-]+)\]/)[1];
+  assert.match(source, new RegExp(`setAttribute\\(\\s*SHOWN_ATTR|setAttribute\\(\\s*['"\`]${attr}['"\`]`),
+    `das Bauteil muss ${attr} setzen, wenn das Banner steht - sonst fragt das CSS einen Zustand ab, den niemand meldet`);
+  assert.match(source, new RegExp(`removeAttribute\\(\\s*SHOWN_ATTR|removeAttribute\\(\\s*['"\`]${attr}['"\`]`),
+    `das Bauteil muss ${attr} beim Abbau wieder entfernen`);
+});
+
+/**
+ * EINE LIFECYCLE-METHODE JE KLASSE - und das ist keine Stilfrage.
+ *
+ * `yuvomi-install-prompt` hatte ZWEI `disconnectedCallback`. In einer
+ * JS-Klasse gewinnt die spaetere Definition kommentarlos: der Listener-Abbau
+ * der ersten lief nie. Nach jedem Entfernen blieben `beforeinstallprompt`,
+ * `locale-changed` und ein Click-Zaehler auf `document` haengen - letzterer
+ * schrieb bei JEDEM Klick der Sitzung weiter in localStorage, obwohl das
+ * Banner weg war. Beide Fassungen sahen fuer sich richtig aus; nur ihre
+ * Koexistenz war der Fehler.
+ *
+ * Als REGEL ueber alle Komponenten, nicht als Einzelfall: eine Namensliste
+ * haette den naechsten Fall in der naechsten Datei nicht gesehen.
+ */
+/**
+ * JS UND CSS SCHALTEN AN DERSELBEN SCHWELLE.
+ *
+ * Der Kalender fragte viermal `(max-width: 639px)` ab, waehrend
+ * `calendar.css` bei `max-width: 640px` schaltet. Bei GENAU 640px war die
+ * Seite in zwei Zustaenden zugleich: das CSS hatte die Termin-Chips schon auf
+ * Punkte reduziert, das JS hielt noch die Desktop-Klicklogik - ein Tap musste
+ * einen 10px-Punkt treffen statt die ganze Zelle.
+ *
+ * Als REGEL ueber alle Seiten: jede `matchMedia`-Grenze muss eine Grenze
+ * sein, die im CSS derselben Seite (oder in layout.css) auch vorkommt. Eine
+ * Zahl, die nur eine der beiden Seiten kennt, ist per Konstruktion eine
+ * Schwelle, an der sie auseinanderlaufen.
+ */
+test('jede matchMedia-Grenze einer Seite kennt ihr CSS auch', () => {
+  // SEITENWEISE, NICHT UEBER ALLE STYLESHEETS - und das ist die Lehre aus der
+  // ersten Fassung dieses Guards. Sie sammelte die Grenzen aller Dateien in
+  // EINEN Satz; damit war `639px` „gedeckt", weil schedule.css und
+  // split-expenses.css es fuehren, und der Guard blieb gruen, als ich den
+  // Fehler zur Gegenprobe wieder einbaute. Ein Breakpoint ist nur dort eine
+  // Deckung, wo er auf DIESELBEN Elemente wirkt.
+  const shared = new Set();
+  for (const file of ['layout.css', 'tokens.css', 'list-row.css', 'panel.css', 'sub-tabs.css']) {
+    for (const m of read(`../public/styles/${file}`).matchAll(/\(\s*(?:min|max)-width:\s*(\d+)px\s*\)/g)) {
+      shared.add(m[1]);
+    }
+  }
+
+  const offenders = [];
+  for (const path of walkJsFiles('../public/pages/')) {
+    const page = path.split('/').pop().replace(/\.js$/, '');
+    const cssPath = `../public/styles/${page}.css`;
+    const own = new Set(shared);
+    if (existsSync(new URL(cssPath, import.meta.url))) {
+      for (const m of read(cssPath).matchAll(/\(\s*(?:min|max)-width:\s*(\d+)px\s*\)/g)) own.add(m[1]);
+    }
+
+    // JEDES Media-Query-LITERAL der Datei, nicht nur die direkt an
+    // `matchMedia()` uebergebenen. Die erste Fassung suchte
+    // `matchMedia('(max-width: …` - und wurde in dem Moment blind, in dem der
+    // Kalender seine vier Literale zu EINER Konstante zusammenzog, also genau
+    // durch die Aufraeumarbeit, die dieser Guard absichern soll. Beide
+    // Gegenproben (639px, 641px) blieben gruen. Ein Guard, der die gute Form
+    // nicht mehr prueft, prueft nichts.
+    for (const m of withoutBlockComments(read(path)).matchAll(/['"`]\(\s*(?:min|max)-width:\s*(\d+)px\s*\)['"`]/g)) {
+      if (!own.has(m[1])) {
+        offenders.push(`${path}: schaltet bei ${m[1]}px, aber weder ${page}.css noch die geteilten Stylesheets kennen diese Grenze`);
+      }
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'matchMedia-Grenze ohne Entsprechung im eigenen CSS - an genau dieser Zahl laufen Layout und '
+    + 'Verhalten auseinander:\n  ' + offenders.join('\n  '));
+});
+
+test('keine Komponente definiert dieselbe Lifecycle-Methode zweimal', () => {
+  const LIFECYCLE = ['connectedCallback', 'disconnectedCallback', 'adoptedCallback', 'attributeChangedCallback'];
+  const offenders = [];
+
+  for (const file of walkJsFiles('../public/components/')) {
+    const src = read(file);
+    for (const name of LIFECYCLE) {
+      const treffer = [...src.matchAll(new RegExp(`^\\s{2}(?:async\\s+)?${name}\\s*\\(`, 'gm'))];
+      if (treffer.length > 1) {
+        offenders.push(`${file}: ${name} ist ${treffer.length}x definiert`);
+      }
+    }
+  }
+
+  assert.deepEqual(offenders, [],
+    'doppelte Lifecycle-Methode - die spaetere ueberschreibt die fruehere lautlos:\n  '
+    + offenders.join('\n  '));
 });
 
 test('der Hinweis am Formularlabel ist eine Klasse, kein Inline-Design-Wert', () => {

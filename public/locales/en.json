@@ -899,7 +899,16 @@
         "deleteSubscribedSeriesDetail": "\"{{title}}\" comes from a subscribed calendar. Yuvomi cannot delete anything there - the series only disappears until the next sync; to remove it for good, unsubscribe from the calendar.",
         "deleteSubscribedSeriesConfirm": "Delete anyway",
         "colorInherit": "Colour of the assigned person",
-        "colorInheritHint": "The event gets no colour of its own and takes the one of the person it is assigned to. With nobody assigned, the calendar's colour applies."
+        "colorInheritHint": "The event gets no colour of its own and takes the one of the person it is assigned to. With nobody assigned, the calendar's colour applies.",
+        "filters": "Filters",
+        "filtersOpen": "Open filters",
+        "filtersLayers": "Layers",
+        "filtersPeople": "People",
+        "filtersActive": "{{count}} filters active",
+        "filtersActive_one": "1 filter active",
+        "filtersReset": "Clear all filters",
+        "filtersDisplay": "Display",
+        "agendaDayEmpty": "Nothing planned"
     },
     "notes": {
         "title": "Board",

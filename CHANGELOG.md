@@ -16,6 +16,132 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   everyone if a large enough change warrants it - no new migration required, just raising the current
   version. The install-to-home-screen banner is unchanged: whether a device has the app installed is
   a property of that device, not the account, so it keeps its existing local 7-day snooze.
+- **Week-view day headings align with the hourly calendar columns.** The header and all-day row
+  now share the hourly grid's gutter width.
+- **The all-day label lines up with the hours below it.** The row it sits in was corrected above,
+  but the label inside it kept the old 48px width in a 64px column. It is right-aligned, so it
+  ended 16px short of the hour figures that start directly underneath: the column boundaries
+  matched and the two labels still did not. Both texts now end on the same vertical edge.
+
+## [2.51.2] - 2026-08-29
+
+### Changed
+
+- **Documentation only, no change to the application.** `docs/SPEC.md` now records three calendar
+  behaviours it did not carry: that choosing a view persists it while drilling into one does not
+  (v2.51.0), how the view switcher and the calendar body relate as tablist and panel, and that the
+  agenda shows today even when today is empty (both v2.51.1). The first of these is the reason the
+  matching bug stayed invisible for a release: the specification described the intention, the code
+  did more, and nobody reading the spec would have found a contradiction.
+
+## [2.51.1] - 2026-08-29
+
+### Fixed
+
+- **The agenda no longer skips today in silence.** It lists only days that hold something, which is
+  right for the coming weeks and wrong for the first one: the header announced "From 28 August" and
+  the first row was the 29th. The day being asked about went missing precisely when the answer was
+  "nothing", and a missing day reads as a loading error rather than a free one. Today now appears
+  with a quiet "Nothing planned"; every other empty day stays out, since a list of emptiness helps
+  nobody.
+- **The calendar's view switcher tells assistive technology what it switches.** The bar carried
+  `role="tablist"` with four tabs, but there was no `role="tabpanel"` anywhere in the document and
+  no `aria-controls` - the relationship ended at the tab, and what it changed was nowhere stated.
+- **The empty-day hint in the day view is no longer cut in half by an hour line.** It sat as plain
+  text in the time grid, and the next line ran straight through the sentence.
+
+## [2.51.0] - 2026-08-28
+
+### Added
+
+- **The calendar has a filter sheet.** Holidays, school holidays, the shift overlay and birthdays
+  used to sit in the module header as up to five chips; below 640px they lost their labels and were
+  left as circles, one of them containing nothing but an 8px dot. Their on/off state was a surface
+  difference of 1.085:1 - the rule meant to carry it set the same border as the resting state and
+  did nothing - and four of the five had no `aria-pressed` at all, so the layer was stateless to a
+  screen reader. The sheet gives every switch its label back and adds what the calendar never had:
+  a filter by person, each row carrying that member's own colour. An empty selection means everyone,
+  so there is always a way back. The header keeps one button with the number of active filters.
+- **Filtering by person, not by calendar.** A colour legend is not constructible here: an event's
+  colour comes from three sources in order - its own colour, the primary assigned member, the
+  calendar - so "this colour means that calendar" would be wrong for the majority of entries. The
+  person is the one unambiguous axis, and in a family planner it is the one being asked about.
+
+### Fixed
+
+- **Every scroll area of the app was reserving 105 pixels for a banner nobody ever saw.** The
+  install prompt's trailing space was switched on by the mere presence of its element - which is
+  static in the page and never absent, renders 0x0 until one of its conditions is met, and on iOS
+  never fires at all. Measured, that cost 21.2% of the calendar grid's height on a 390px phone,
+  23.9% at 320px, and the same 105px in the notes. The component now reports whether it is actually
+  showing. A month row grows from 62.9 to 80.4 pixels on a phone.
+- **On a phone, the dot standing for an event now meets its contrast requirement.** Below 640px it
+  is the only carrier of information in the main view on the main platform, and five of the nine
+  colours failed WCAG 1.4.11 against the light surface (amber 2.15:1 through orange 2.80:1) while
+  all nine passed in dark mode - an invariant that only holds in one theme is not one. The colour
+  itself is untouched, since it is the household's to choose; a ring now carries the separation.
+  All 24 measured combinations are at 4.69:1 or better.
+- **A long appointment in the week and day views keeps its title visible.** An entry beginning above
+  the visible area showed a blank coloured rectangle - measured 151x120 pixels without a single
+  character - and it was the longest, most important entries this happened to.
+- **Tapping a day no longer rewrites the calendar's default view.** A navigation gesture silently
+  changed a setting, with no feedback and no way back other than noticing that the app opened
+  differently next time.
+- **At exactly 640px the calendar was in two states at once.** The stylesheet had already reduced
+  entries to dots while the click handling still assumed the desktop layout, so a tap had to hit a
+  10-pixel target instead of the whole cell.
+- **A header bar that overflows now shows that it continues.** The rounding tolerance was applied to
+  the scroll position as well as to the overflow itself, and subtracted from both ends: for any
+  overflow up to twice that tolerance a bar counted as being at its start and at its end at the same
+  time and showed no fade. Measured on the Ukrainian calendar at 375px, where the view switcher runs
+  over by 4 pixels and sits 2 pixels in.
+- **The install prompt cleaned up after itself again.** Its class defined the same lifecycle callback
+  twice; in JavaScript the later definition silently wins, so the listener teardown never ran. After
+  dismissal the prompt kept a click counter on the document that went on writing to local storage.
+
+### Changed
+
+- **The calendar header gives a row back to the content.** On a 390px phone it measured 230.1 pixels,
+  27.3% of the viewport, in four stacked rows; it now shares its title row and takes 174.1 pixels.
+  The "Today" button appears only when today is not in view, which frees exactly the width the date
+  label needs to stay whole. At 320px the row breaks instead, because a truncated month name is the
+  worse trade.
+- **The switch row is one shared form across the whole app.** It lived in the settings stylesheet,
+  which only loads on the settings route, so the primitive documented as "one switch, one form" had
+  no effect anywhere else.
+
+## [2.50.4] - 2026-08-28
+
+### Added
+
+- **The view switcher in the tasks header names its views.** List, Kanban and History showed three
+  mute glyphs; a Kanban rectangle and a history arrow are not shared vocabulary. The labels appear
+  from 1024px, where the header is single-line anyway and they cost one pixel. Below that the
+  icon-only form stays - measured, a labelled switcher grows from 130px to 395px and would push the
+  header from two rows to three at 834px. The three single buttons beside it keep their icon form:
+  their names are verbs ("Manage categories"), and a visible label made from an aria-label is a
+  second name for the same control.
+
+### Fixed
+
+- **Checking off a task now confirms the check and can be undone.** The confirmation was already
+  built but never visible: the class was set, the round trip ran, and the list re-render replaced
+  the button before the 200ms animation got a single frame - measured, it played in none of six
+  attempts. It now runs alongside the round trip instead of after it, so it costs no time when the
+  network is slower. Tapping also offers the same undo the swipe gesture has had all along; the most
+  common way to complete a task used to let the entry vanish from the filtered view without a word.
+- **The edge fade on the documents filter row follows the element that actually scrolls.** Below the
+  breakpoint the whole control row scrolls rather than the chip strip inside it, and the fade was
+  wired to the inner element only - 1246 pixels of content on a 390px viewport with no sign that
+  anything continued sideways.
+
+### Changed
+
+- **Every motion curve now comes from a token.** Three literals sat outside `tokens.css`: two spelled
+  out an existing curve by hand, blind to any later change, and the third was a fourth curve nobody
+  had decided on. Three durations move onto the canonical steps in the process (320ms and 350ms to
+  300ms, 220ms to 250ms). A guard checks the shape rather than a file list, so a new file cannot
+  quietly reintroduce one.
 
 ## [2.50.3] - 2026-08-27
 
