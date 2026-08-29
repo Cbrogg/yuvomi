@@ -238,13 +238,17 @@ export function getLocale() {
 export const EXTENSION_LOCALE_FALLBACKS = ['en', DEFAULT_LOCALE];
 
 export function nestFlatLocaleDict(flatDict) {
-  const moduleRoot = {};
+  const DANGEROUS = new Set(['__proto__', 'constructor', 'prototype']);
+  const moduleRoot = Object.create(null);
   for (const [key, value] of Object.entries(flatDict || {})) {
     if (typeof value !== 'string') continue;
-    let node = moduleRoot;
     const parts = String(key).trim().split('.');
+    if (parts.some((p) => !p || DANGEROUS.has(p))) continue;
+    let node = moduleRoot;
     for (let i = 0; i < parts.length - 1; i++) {
-      node[parts[i]] = node[parts[i]] || {};
+      if (!Object.prototype.hasOwnProperty.call(node, parts[i]) || typeof node[parts[i]] !== 'object') {
+        node[parts[i]] = Object.create(null);
+      }
       node = node[parts[i]];
     }
     node[parts[parts.length - 1]] = value;
