@@ -879,7 +879,7 @@ export const schemas = {
               type: 'array',
               items: { $ref: '#/components/schemas/ExtensionModuleWidget' },
             },
-            apiPrefix: { type: 'string', description: 'Sidecar API prefix, e.g. /api/extensions/my-module.' },
+            apiPrefix: { type: 'string', description: 'Sidecar API prefix. Must be exactly `/api/extensions/<module-id>`.' },
             scopeKey: { type: 'string', description: 'API token scope module key, typically `ext:<module-id>`.' },
           },
         },
