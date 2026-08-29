@@ -9,6 +9,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Fixed
 
+- **The onboarding walkthrough is remembered per account, not per device.** It used to live only in
+  `localStorage`, so a new device or a private browsing window showed it again even though the
+  account had already dismissed it. Dismissing it now also updates the account, and a version number
+  (rather than a plain seen/unseen flag) means a later release can intentionally show it again to
+  everyone if a large enough change warrants it - no new migration required, just raising the current
+  version. The install-to-home-screen banner is unchanged: whether a device has the app installed is
+  a property of that device, not the account, so it keeps its existing local 7-day snooze.
 - **Week-view day headings align with the hourly calendar columns.** The header and all-day row
   now share the hourly grid's gutter width.
 - **The all-day label lines up with the hours below it.** The row it sits in was corrected above,

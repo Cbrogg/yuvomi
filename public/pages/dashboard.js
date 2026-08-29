@@ -4,7 +4,7 @@
  * Abhängigkeiten: /api.js
  */
 
-import { api } from '/api.js';
+import { api, auth } from '/api.js';
 import { canSeeWidget } from '/permissions.js';
 import { t, formatDate, formatTime, timeSuffix, getLocale, getNumberFormat } from '/i18n.js';
 import { getReadableTextColor, AVATAR_FALLBACK_COLOR } from '/utils/color.js';
@@ -214,6 +214,12 @@ function showOnboarding(appContainer, onDone) {
     finished = true;
     document.removeEventListener('keydown', onKeydown);
     localStorage.setItem(ONBOARDING_KEY, '1');
+    // Am Konto vermerken, nicht nur am Geraet: sonst zeigt ein neues Geraet
+    // oder ein privates Fenster den Rundgang erneut, obwohl das Konto ihn
+    // schon gesehen hat. Bewusst fire-and-forget - ein Netzwerkfehler hier
+    // darf den Dialog nicht am Schliessen hindern; der lokale Merker faengt
+    // den aktuellen Browser ohnehin ab.
+    auth.markOnboardingSeen().catch(() => {});
     // Fokus dorthin zurückgeben, wo er vor dem Dialog lag (sonst neutral auf
     // den Body), damit Tastatur-/SR-Nutzer nicht im entfernten Overlay hängen.
     const restoreTarget = (previouslyFocused && document.contains(previouslyFocused))
@@ -4339,7 +4345,13 @@ export async function render(container, { user }) {
   // Einfuehrung dann, wenn sie ihm etwas nuetzt.
   if (wallMode) return;
 
-  if (!localStorage.getItem(ONBOARDING_KEY)) {
+  // Das Konto entscheidet (onboarding_pending aus /auth/me), nicht mehr allein
+  // das Geraet - sonst zeigt ein neues Geraet oder ein privates Fenster den
+  // Rundgang erneut, obwohl das Konto ihn schon gesehen hat. Der lokale
+  // Schluessel bleibt eine ZUSAETZLICHE Bedingung statt zu entfallen: er ist
+  // der Weg, mit dem Test-Faelle (document-guards-harness.js) den Dialog
+  // gezielt unterdruecken, ohne einen Testnutzer am Server zu markieren.
+  if (user?.onboarding_pending && !localStorage.getItem(ONBOARDING_KEY)) {
     setTimeout(() => showOnboarding(container, () => maybeHintCustomize(container)), 400);
   } else {
     maybeHintCustomize(container);
