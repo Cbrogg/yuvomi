@@ -7,6 +7,35 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.54.0] - 2026-08-29
+
+### Added
+
+- **The Calendar tile on the Overview can leave birthdays out.** A household that keeps the
+  Birthdays tile on the Overview read every birthday twice - once under Birthdays, once between the
+  next appointments - and the layer switch in the Calendar module did nothing about it. The tile's
+  options dialog (Customise, the sliders button) now carries the same "Birthdays" switch the
+  Calendar filter sheet has, worded identically. It is its own setting rather than a reading of the
+  Calendar module's: that switch lives in the browser's local storage and applies to the device,
+  while widget options live in your preferences and apply to the account, so one value serving both
+  would mean unchecking it on the phone silently decided what the wall tablet shows, or did not,
+  depending on which of the two you happened to read. Birthdays stay in unless you take them out.
+  Filtered before the five-item cap, not after, so taking them out fills the freed rows with the
+  next real appointments instead of leaving a shorter list; recognised by the birthday entry behind
+  the event, not by its title, which is stored in the household's data language.
+
+### Fixed
+
+- **The Notes tile on the Overview shows as many notes as it has room for.** It was the only list
+  tile that never read its own size: the route capped the supply at three, so three was the ceiling
+  for every size the tile can take. Since the tile ships at 1×2 - tall - that left roughly a third
+  of the card empty, and a household with five pinned notes saw three of them and no hint that
+  there were more, while the metric tile beside it said "5 pinned". Reported as pinned notes not
+  appearing on the dashboard (#928). The row count now comes from the size class the way it does
+  for birthdays, tasks and appointments (`listRowCap`), and the route supplies five - the amount
+  the largest version can hold. Exactly the same correction the birthday tile got when it had the
+  same defect; the notes were missed at the time.
+
 ## [2.53.0] - 2026-08-29
 
 ### Changed

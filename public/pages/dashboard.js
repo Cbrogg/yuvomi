@@ -1167,7 +1167,16 @@ function renderTodayMeals(meals, visibleMealTypes = MEAL_ORDER) {
   </div>`;
 }
 
-function renderPinnedNotes(notes) {
+function renderPinnedNotes(allNotes, size) {
+  /* WIE VIELE ZEILEN, ENTSCHEIDET DIE KACHEL - wie bei jeder anderen
+   * Listenkachel (`listRowCap`). Die Notizen waren die einzige, die ihre Groesse
+   * gar nicht las: der Server schnitt bei drei, und drei war damit die
+   * Obergrenze fuer jede Fassung. Ab Werk steht die Kachel auf 1x2, also hoch -
+   * unter drei Zeilen blieb rund ein Drittel der Karte leer, und wer fuenf
+   * Notizen angepinnt hatte, sah drei davon und keinen Hinweis auf die
+   * uebrigen (#928). Dieselbe Korrektur haben die Geburtstage schon bekommen;
+   * die Notizen wurden dabei uebersehen. */
+  const notes = allNotes.slice(0, listRowCap(size));
   if (!notes.length) {
     return `<div class="widget widget--notes">
       ${widgetHeader('notes', t('nav.notes'), 0, '/notes')}
@@ -2375,6 +2384,14 @@ async function openWidgetOptions(id, current = {}) {
           <input type="radio" name="cal-scope" value="mine" ${options.scope === 'mine' ? 'checked' : ''}>
           <span>${t('calendar.assignedToMe')}</span>
         </label>
+      </fieldset>
+      <fieldset class="form-group widget-options__group">
+        <legend class="form-label">${t('calendar.filtersLayers')}</legend>
+        <p class="widget-options__hint">${t('dashboard.optionCalendarBirthdaysHint')}</p>
+        <label class="widget-options__choice">
+          <input type="checkbox" name="cal-birthdays" ${options.birthdays === 'hide' ? '' : 'checked'}>
+          <span>${t('calendar.toggleBirthdays')}</span>
+        </label>
       </fieldset>`
     : `
       <fieldset class="form-group widget-options__group">
@@ -2418,6 +2435,9 @@ async function openWidgetOptions(id, current = {}) {
             // nicht gespeichert - sonst stuende in jedem Layout ein Feld, das
             // den Auslieferungszustand wiederholt.
             if (scope === 'mine') next.scope = 'mine';
+            // Dasselbe eine Zeile tiefer, nur andersherum notiert: gespeichert
+            // wird das ABWAEHLEN, nicht das Haekchen (#927).
+            if (!panel.querySelector('input[name="cal-birthdays"]')?.checked) next.birthdays = 'hide';
           } else {
             const picked = [...panel.querySelectorAll('input[name="task-category"]:checked')].map((el) => el.value);
             // Keine Auswahl heisst „alle" - eine leere Liste als Filter waere
@@ -2541,7 +2561,7 @@ function renderDashboardLayout(cfg, data, weather, currency, { editing = false, 
     housekeeping: () => renderHousekeepingWidget(data.housekeeping ?? {}, currency),
     family: () => renderFamilyWidget(data.users ?? [], data),
     meals: () => renderTodayMeals(data.todayMeals ?? [], visibleMealTypes),
-    notes: () => renderPinnedNotes(data.pinnedNotes ?? []),
+    notes: (size) => renderPinnedNotes(data.pinnedNotes ?? [], size),
     shopping: () => renderShoppingLists(data.shoppingLists ?? []),
     weather: () => (weather ? renderWeatherWidget(weather) : ''),
     clock: () => renderClockWidget(),
