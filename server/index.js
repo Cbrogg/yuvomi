@@ -583,13 +583,19 @@ async function runSync() {
 // --------------------------------------------------------
 // Server starten
 // --------------------------------------------------------
+// Scan the extension catalog before the socket accepts requests. resolvePermissions
+// drops unknown ext:* rows, and moduleAccessVerdict is a deny-list — a missing
+// key means allow. Starting the scan inside the listen callback left that window
+// open until the first GET /api/v1/modules (or /permissions/catalog).
+try {
+  await listModules({ admin: true });
+} catch (err) {
+  log.warn('Initial module registry scan failed:', err.message);
+}
+
 app.listen(PORT, () => {
   logYuvomi.info(`Server running on port ${PORT} | Version ${APP_VERSION}`);
   logYuvomi.info(`Environment: ${process.env.NODE_ENV || 'development'}`);
-
-  listModules({ admin: true }).catch((err) => {
-    log.warn('Initial module registry scan failed:', err.message);
-  });
 
   // Ein Sicherheitsschalter, der still nicht greift, ist schlimmer als keiner:
   // der Betreiber glaubt, das Anmeldeformular sei zu (#847). Beide Fail-open-
