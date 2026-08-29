@@ -480,7 +480,9 @@
         "lockedDetail": "Solo il creatore e gli amministratori",
         "tagsSkippedLocked": "{{count}} attività bloccate ignorate.",
         "tagsSkippedLocked_one": "{{count}} attività bloccata ignorata.",
-        "listLoadError": "Impossibile caricare i compiti."
+        "listLoadError": "Impossibile caricare i compiti.",
+        "checklistToggle": "Spunta elemento",
+        "checkConflict": "L’attività è stata modificata nel frattempo. Riaprila."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} pasti",
@@ -2739,7 +2741,8 @@
         "customHours": "Ore",
         "customDays": "Giorni",
         "customWeeks": "Settimane",
-        "sectionTitlePlural": "Promemoria"
+        "sectionTitlePlural": "Promemoria",
+        "sharedWithAssignees": "Anche chi è assegnato a questo evento riceve questo promemoria."
     },
     "onboarding": {
         "step1Title": "Benvenuto in {{name}}",

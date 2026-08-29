@@ -492,7 +492,9 @@
         "lockedDetail": "Nur Ersteller:in und Administratoren",
         "tagsSkippedLocked": "{{count}} gesperrte Aufgaben übersprungen.",
         "tagsSkippedLocked_one": "{{count}} gesperrte Aufgabe übersprungen.",
-        "listLoadError": "Aufgaben konnten nicht geladen werden."
+        "listLoadError": "Aufgaben konnten nicht geladen werden.",
+        "checklistToggle": "Eintrag abhaken",
+        "checkConflict": "Die Aufgabe wurde inzwischen geändert. Bitte erneut öffnen."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} Mahlzeiten",
@@ -2653,7 +2655,8 @@
         "customHours": "Stunden",
         "customDays": "Tage",
         "customWeeks": "Wochen",
-        "sectionTitlePlural": "Erinnerungen"
+        "sectionTitlePlural": "Erinnerungen",
+        "sharedWithAssignees": "Wer diesem Termin zugewiesen ist, bekommt diese Erinnerung ebenfalls."
     },
     "birthdays": {
         "inDays": "in {{days}} Tagen",

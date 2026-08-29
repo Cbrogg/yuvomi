@@ -480,7 +480,9 @@
         "lockedDetail": "Yalnızca oluşturan kişi ve yöneticiler",
         "tagsSkippedLocked": "{{count}} kilitli görev atlandı.",
         "tagsSkippedLocked_one": "{{count}} kilitli görev atlandı.",
-        "listLoadError": "Görevler yüklenemedi."
+        "listLoadError": "Görevler yüklenemedi.",
+        "checklistToggle": "Öğeyi işaretle",
+        "checkConflict": "Görev bu arada değişti. Lütfen yeniden açın."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} öğünden",
@@ -2739,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "Hatırlatıcılar"
+        "sectionTitlePlural": "Hatırlatıcılar",
+        "sharedWithAssignees": "Bu etkinliğe atanan kişiler de bu hatırlatmayı alır."
     },
     "onboarding": {
         "step1Title": "{{name}} uygulamasına hoş geldiniz",

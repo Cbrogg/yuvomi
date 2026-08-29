@@ -26,6 +26,72 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Extension API proxy outbound requests** go through the shared SSRF guard and `safeRequest`, with an opt-in to allow private-network Docker sidecar targets.
 
+## [2.52.0] - 2026-08-29
+
+### Added
+
+- **A reminder on a shared event now reaches the people it was shared with.** Reminders were tied to
+  whoever created them, and nothing else. Someone would create an event, assign it to both partners,
+  set a reminder for the day before - and only they would be reminded. Worse, when the other person
+  opened the same event the reminder field was simply empty, which reads as "none is set" rather
+  than "yours is not set". Both assumed it was shared, and an appointment was missed. A reminder set
+  by the person who created the event is now written for each assignee as a row of their own, so it
+  arrives by push and shows up when they open it. Rows of their own, because everything attached to
+  a reminder is personal: whether it was dismissed, whether it was already delivered, and the time
+  itself, which each person may move. A reminder somebody set for themselves is never overwritten by
+  this, a dismissed one does not come back unless the time actually changed, and dropping someone
+  from the event drops the inherited reminder with it. Anyone who is not the event's author still
+  sets reminders for themselves alone - otherwise half the household would be notified because one
+  person made themselves a note.
+- **Checklists in a task's description can be ticked off where they are shown.** The boxes rendered
+  from `- [ ]` were already there and already inert: ticking one meant opening the editor and
+  hand-editing raw Markdown, which is enough friction that in practice the checklist stops being
+  maintained and the task's real state stops being visible to anyone else. They are now real
+  controls, exactly as they have been in Notes since v2.42.0 - the same rule, the same file, one
+  more caller rather than a second implementation. The server rewrites only the one source line, so
+  two members ticking different items at the same moment both keep their tick; saving the whole
+  description would have let the later writer discard the earlier one silently. A locked task stays
+  tickable on purpose, for the same reason marking one done does: the lock covers what the task is,
+  not how far it has come.
+
+### Changed
+
+- **Forty routes that existed only in the code now exist in the API specification too.** `/api/v1`
+  has been a documented surface since v2.7.1, and what is not in the specification does not exist
+  for anyone integrating against it. Four whole modules had never had a line of it: quick links, the
+  screensaver, recipe providers, and the permissions endpoints behind the rights matrix. Nothing was
+  broken, and nothing reported it either - the existing guard checks that the specification's own
+  files are wired up correctly, never that they match the routers. A new one now compares the two in
+  both directions, so neither a route without documentation nor a documented route without a route
+  handler can appear again.
+
+### Fixed
+
+- **The onboarding walkthrough is remembered per account, not per device.** It used to live only in
+  `localStorage`, so a new device or a private browsing window showed it again even though the
+  account had already dismissed it. Dismissing it now also updates the account, and a version number
+  (rather than a plain seen/unseen flag) means a later release can intentionally show it again to
+  everyone if a large enough change warrants it - no new migration required, just raising the current
+  version. The install-to-home-screen banner is unchanged: whether a device has the app installed is
+  a property of that device, not the account, so it keeps its existing local 7-day snooze.
+- **Week-view day headings align with the hourly calendar columns.** The header and all-day row
+  now share the hourly grid's gutter width.
+- **The all-day label lines up with the hours below it.** The row it sits in was corrected above,
+  but the label inside it kept the old 48px width in a 64px column. It is right-aligned, so it
+  ended 16px short of the hour figures that start directly underneath: the column boundaries
+  matched and the two labels still did not. Both texts now end on the same vertical edge.
+
+## [2.51.2] - 2026-08-29
+
+### Changed
+
+- **Documentation only, no change to the application.** `docs/SPEC.md` now records three calendar
+  behaviours it did not carry: that choosing a view persists it while drilling into one does not
+  (v2.51.0), how the view switcher and the calendar body relate as tablist and panel, and that the
+  agenda shows today even when today is empty (both v2.51.1). The first of these is the reason the
+  matching bug stayed invisible for a release: the specification described the intention, the code
+  did more, and nobody reading the spec would have found a contradiction.
+
 ## [2.51.1] - 2026-08-29
 
 ### Fixed

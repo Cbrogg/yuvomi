@@ -480,7 +480,9 @@
         "lockedDetail": "Pouze autor a administrátoři",
         "tagsSkippedLocked": "Přeskočeno {{count}} zamčených úkolů.",
         "tagsSkippedLocked_one": "Přeskočen {{count}} zamčený úkol.",
-        "listLoadError": "Úkoly se nepodařilo načíst."
+        "listLoadError": "Úkoly se nepodařilo načíst.",
+        "checklistToggle": "Odškrtnout položku",
+        "checkConflict": "Úkol byl mezitím změněn. Otevřete jej prosím znovu."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} jídla",
@@ -3164,7 +3166,8 @@
         "customHours": "Hodiny",
         "customDays": "Dny",
         "customWeeks": "Týdny",
-        "sectionTitlePlural": "Připomínky"
+        "sectionTitlePlural": "Připomínky",
+        "sharedWithAssignees": "Toto připomenutí dostanou i osoby přiřazené k této události."
     },
     "birthdays": {
         "inDays": "za {{days}} dní",

@@ -480,7 +480,9 @@
         "lockedDetail": "Créateur et administrateurs uniquement",
         "tagsSkippedLocked": "{{count}} tâches verrouillées ignorées.",
         "tagsSkippedLocked_one": "{{count}} tâche verrouillée ignorée.",
-        "listLoadError": "Impossible de charger les tâches."
+        "listLoadError": "Impossible de charger les tâches.",
+        "checklistToggle": "Cocher l’élément",
+        "checkConflict": "La tâche a été modifiée entre-temps. Veuillez la rouvrir."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} repas",
@@ -2739,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "Rappels"
+        "sectionTitlePlural": "Rappels",
+        "sharedWithAssignees": "Les personnes affectées à cet événement reçoivent aussi ce rappel."
     },
     "onboarding": {
         "step1Title": "Bienvenue dans {{name}}",

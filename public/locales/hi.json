@@ -480,7 +480,9 @@
         "lockedDetail": "केवल निर्माता और व्यवस्थापक",
         "tagsSkippedLocked": "{{count}} लॉक किए गए कार्य छोड़े गए।",
         "tagsSkippedLocked_one": "{{count}} लॉक किया गया कार्य छोड़ा गया।",
-        "listLoadError": "कार्य लोड नहीं हो सके।"
+        "listLoadError": "कार्य लोड नहीं हो सके।",
+        "checklistToggle": "आइटम पर निशान लगाएं",
+        "checkConflict": "कार्य इस बीच बदल गया है। कृपया इसे फिर से खोलें।"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} भोजन",
@@ -2739,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "अनुस्मारक"
+        "sectionTitlePlural": "अनुस्मारक",
+        "sharedWithAssignees": "इस कार्यक्रम को सौंपे गए लोगों को भी यह अनुस्मारक मिलता है।"
     },
     "onboarding": {
         "step1Title": "{{name}} में आपका स्वागत है",

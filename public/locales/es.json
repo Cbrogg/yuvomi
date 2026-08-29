@@ -480,7 +480,9 @@
         "lockedDetail": "Solo el creador y los administradores",
         "tagsSkippedLocked": "{{count}} tareas bloqueadas omitidas.",
         "tagsSkippedLocked_one": "{{count}} tarea bloqueada omitida.",
-        "listLoadError": "No se pudieron cargar las tareas."
+        "listLoadError": "No se pudieron cargar las tareas.",
+        "checklistToggle": "Marcar elemento",
+        "checkConflict": "La tarea ha cambiado mientras tanto. Vuelve a abrirla."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} comidas",
@@ -2739,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "Recordatorios"
+        "sectionTitlePlural": "Recordatorios",
+        "sharedWithAssignees": "Quien esté asignado a este evento también recibe este recordatorio."
     },
     "onboarding": {
         "step1Title": "Bienvenido a {{name}}",

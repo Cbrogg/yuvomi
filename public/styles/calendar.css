@@ -1551,9 +1551,15 @@
   flex-shrink: 0;
 }
 
+/* Die Beschriftung füllt die Zeitspalte, statt 48px in einer 64px-Spur zu
+ * stehen. #920 hat die SPUR auf --cal-gutter-width gebracht, die Beschriftung
+ * darin blieb auf --space-12: sie ist rechtsbündig, endete also 16px zu früh
+ * und stand damit weiter neben den Stundenzahlen, die genau darunter beginnen.
+ * Ihr padding-right ist deshalb dasselbe wie in .week-view__time-slot - beide
+ * Texte enden auf derselben senkrechten Kante. */
 .calendar-all-day-label {
-  width: var(--space-12);
-  padding: var(--space-0h) var(--space-1) var(--space-0h) 0;
+  width: var(--cal-gutter-width);
+  padding: var(--space-0h) var(--space-2) var(--space-0h) 0;
   font-size: var(--text-xs);
   color: var(--color-text-secondary);
   text-align: right;

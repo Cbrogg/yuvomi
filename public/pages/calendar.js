@@ -2022,7 +2022,7 @@ function renderWeekView(container) {
   container.insertAdjacentHTML('beforeend', `
     <div class="week-view">
       <div class="week-view__header" id="week-header"
-           style="display:grid;grid-template-columns:var(--space-12) repeat(${colCount},1fr);">
+           style="display:grid;grid-template-columns:var(--cal-gutter-width) repeat(${colCount},1fr);">
         <div class="week-view__time-gutter"></div>
         ${days.map((d) => {
           const dt = new Date(d + 'T00:00:00');
@@ -2033,7 +2033,7 @@ function renderWeekView(container) {
         }).join('')}
       </div>
       <!-- Ganztägige Ereignisse -->
-      <div class="allday-row" style="display:grid;grid-template-columns:var(--space-12) repeat(${colCount},1fr);">
+      <div class="allday-row" style="display:grid;grid-template-columns:var(--cal-gutter-width) repeat(${colCount},1fr);">
         <div class="calendar-all-day-label">${t('calendar.allDayShort')}</div>
         ${days.map((d, i) => `
           <div class="allday-cell">
@@ -3337,6 +3337,12 @@ function renderCalendarReminderSection(reminders = [], event = null, defaultOffs
   const enabled = rows.length > 0;
   const rowsHtml = (enabled ? rows : [{ offset: '0', amount: 1, unit: 'days' }])
     .map((r) => reminderRowHtml(r)).join('');
+  /* NUR WER DEN TERMIN ANGELEGT HAT, TEILT SEINE ERINNERUNG (#921) - und nur
+   * der bekommt den Hinweis. Fuer alle anderen waere er unwahr: wer sich an
+   * einem fremden Termin einen Merker setzt, setzt ihn fuer sich, damit nicht
+   * der halbe Haushalt eine Meldung bekommt, weil ein Einzelner sich etwas
+   * notiert hat. Ein neuer Termin gehoert dem, der ihn gerade anlegt. */
+  const sharesReminder = !event || event.created_by === state.currentUserId;
   return `
     <div class="reminder-section">
       <div class="reminder-section__header">
@@ -3354,6 +3360,7 @@ function renderCalendarReminderSection(reminders = [], event = null, defaultOffs
           <i data-lucide="plus" class="icon-sm" aria-hidden="true"></i>
           ${t('reminders.addReminder')}
         </button>
+        ${sharesReminder ? `<p class="form-hint">${t('reminders.sharedWithAssignees')}</p>` : ''}
       </div>
     </div>`;
 }

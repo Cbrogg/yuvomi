@@ -480,7 +480,9 @@
         "lockedDetail": "仅创建者和管理员",
         "tagsSkippedLocked": "已跳过 {{count}} 个锁定的任务。",
         "tagsSkippedLocked_one": "已跳过 {{count}} 个锁定的任务。",
-        "listLoadError": "无法加载任务。"
+        "listLoadError": "无法加载任务。",
+        "checklistToggle": "勾选条目",
+        "checkConflict": "任务已被修改，请重新打开。"
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} 餐",
@@ -2739,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "提醒"
+        "sectionTitlePlural": "提醒",
+        "sharedWithAssignees": "被指派到此日程的人也会收到此提醒。"
     },
     "onboarding": {
         "step1Title": "欢迎使用{{name}}",

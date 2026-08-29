@@ -480,7 +480,9 @@
         "lockedDetail": "Alleen de maker en beheerders",
         "tagsSkippedLocked": "{{count}} vergrendelde taken overgeslagen.",
         "tagsSkippedLocked_one": "{{count}} vergrendelde taak overgeslagen.",
-        "listLoadError": "Taken konden niet worden geladen."
+        "listLoadError": "Taken konden niet worden geladen.",
+        "checklistToggle": "Item afvinken",
+        "checkConflict": "De taak is intussen gewijzigd. Open deze opnieuw."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} maaltijden",
@@ -2641,7 +2643,8 @@
         "customHours": "Uren",
         "customDays": "Dagen",
         "customWeeks": "Weken",
-        "sectionTitlePlural": "Herinneringen"
+        "sectionTitlePlural": "Herinneringen",
+        "sharedWithAssignees": "Wie aan deze afspraak is toegewezen, krijgt deze herinnering ook."
     },
     "birthdays": {
         "inDays": "over {{days}} dagen",
