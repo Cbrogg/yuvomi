@@ -133,3 +133,108 @@ test('extensions-proxy binds SSRF guard and safeRequest', async () => {
   assert.match(src, /from ['"]\.\.\/utils\/http\.js['"]/);
   assert.match(src, /safeRequest/);
 });
+
+test('encodeRestPath rejects traversal segments', () => {
+  assert.equal(__test.encodeRestPath('accounts/1'), 'accounts/1');
+  assert.equal(__test.encodeRestPath(''), '');
+  assert.throws(() => __test.encodeRestPath('../../admin/secret'), /Invalid extension path/);
+  assert.throws(() => __test.encodeRestPath('foo/../bar'), /Invalid extension path/);
+  assert.throws(() => __test.encodeRestPath('foo/./bar'), /Invalid extension path/);
+  assert.throws(() => __test.encodeRestPath('foo//bar'), /Invalid extension path/);
+});
+
+test('forwardHeaders allowlists and mints identity, never cookies', () => {
+  const headers = __test.forwardHeaders({
+    headers: {
+      cookie: 'connect.sid=stolen',
+      authorization: 'Bearer sk-admin',
+      'content-type': 'application/json',
+      accept: 'application/json',
+      host: 'household.example',
+      'x-forwarded-for': '1.2.3.4',
+    },
+    authUserId: 7,
+    authRole: 'member',
+    session: { displayName: 'Ada' },
+    sessionModuleAccess: { 'ext:demo-ext': 'read' },
+  }, 'ext:demo-ext');
+  assert.equal(headers.cookie, undefined);
+  assert.equal(headers.authorization, undefined);
+  assert.equal(headers.host, undefined);
+  assert.equal(headers['x-forwarded-for'], undefined);
+  assert.equal(headers['content-type'], 'application/json');
+  assert.equal(headers.accept, 'application/json');
+  assert.equal(headers['x-yuvomi-user-id'], '7');
+  assert.equal(headers['x-yuvomi-user-name'], 'Ada');
+  assert.equal(headers['x-yuvomi-user-role'], 'member');
+  assert.equal(headers['x-yuvomi-access'], 'read');
+});
+
+test('applyUpstreamHeaders drops set-cookie', () => {
+  const captured = {};
+  const res = {
+    setHeader(key, value) { captured[String(key).toLowerCase()] = value; },
+  };
+  __test.applyUpstreamHeaders({
+    headers: {
+      get(name) {
+        const map = {
+          'set-cookie': 'connect.sid=evil',
+          'content-type': 'application/json',
+          'x-csrf-token': 'sidecar-token',
+          etag: '"abc"',
+        };
+        return map[name] ?? null;
+      },
+    },
+  }, res);
+  assert.equal(captured['set-cookie'], undefined);
+  assert.equal(captured['x-csrf-token'], undefined);
+  assert.equal(captured['content-type'], 'application/json');
+  assert.equal(captured.etag, '"abc"');
+});
+
+test('serializeBody rejects unsupported content types with 415', () => {
+  try {
+    __test.serializeBody({
+      method: 'POST',
+      headers: { 'content-type': 'multipart/form-data; boundary=x' },
+      body: { file: true },
+    });
+    assert.fail('expected 415');
+  } catch (err) {
+    assert.equal(err.status, 415);
+  }
+});
+
+test('cookie POST under /api/v1/extensions requires CSRF', async () => {
+  const { csrfMiddleware } = await import('../server/middleware/csrf.js');
+  const token = 'a'.repeat(64);
+  const app = express();
+  app.use((req, res, next) => {
+    req.authMethod = 'session';
+    req.session = { userId: 1, role: 'admin', csrfToken: token };
+    res.cookie = () => {};
+    next();
+  });
+  app.use('/api/v1', csrfMiddleware);
+  app.use('/api/v1/extensions', (_req, res) => res.json({ leaked: true }));
+  const server = app.listen(0);
+  const baseUrl = await new Promise((r) => server.on('listening', () => r(`http://127.0.0.1:${server.address().port}`)));
+  try {
+    const forged = await fetch(`${baseUrl}/api/v1/extensions/demo-ext/accounts`, { method: 'POST' });
+    assert.equal(forged.status, 403);
+    const body = await forged.json();
+    assert.match(body.error, /csrf/i);
+    assert.equal(body.leaked, undefined);
+
+    const ok = await fetch(`${baseUrl}/api/v1/extensions/demo-ext/accounts`, {
+      method: 'POST',
+      headers: { 'X-CSRF-Token': token, 'Content-Type': 'application/json' },
+    });
+    assert.equal(ok.status, 200);
+    assert.equal((await ok.json()).leaked, true);
+  } finally {
+    await new Promise((r) => server.close(r));
+  }
+});

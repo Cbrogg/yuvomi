@@ -30,9 +30,6 @@ function generateToken() {
 function csrfMiddleware(req, res, next) {
   if (req.authMethod === 'api_token') return next();
 
-  // Extension sidecars (e.g. budget-v2) enforce their own CSRF on upstream.
-  if (req.path.startsWith('/extensions/')) return next();
-
   // Token generieren falls noch nicht vorhanden (erste Request nach Login)
   if (!req.session.csrfToken) {
     req.session.csrfToken = generateToken();

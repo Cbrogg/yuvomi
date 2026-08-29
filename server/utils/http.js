@@ -78,7 +78,6 @@ function fetchLike(res) {
         return Array.isArray(value) ? value.join(', ') : (value ?? null);
       },
     },
-    _rawHeaders: res.headers,
     body: decodeBody(res),
   };
 }

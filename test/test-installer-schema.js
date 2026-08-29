@@ -132,6 +132,10 @@ const INTENTIONALLY_NOT_IN_INSTALLER = {
     + 'EXTENSION_PROXY_TARGETS auf interne Hostnamen zeigt. Wer Sidecars verdrahtet, fasst die '
     + '.env ohnehin von Hand an - dieselbe Klasse wie DMS_ALLOW_PRIVATE_NETWORK, nur mit hartem '
     + 'Default.',
+  EXTENSION_PROXY_IDENTITY_SECRET:
+    'Gemeinsames Geheimnis, das der Proxy als X-Yuvomi-Proxy-Secret an den Sidecar schickt. '
+    + 'Ohne Sidecar bedeutungslos; wer eines setzt, setzt es in der Compose-Datei neben dem '
+    + 'Sidecar, nie im Installer.',
   OIKOS_HTTP_BIND: 'Bindungsadresse für rootless Podman hinter Proxy. Ein falscher Wert macht die App unerreichbar, und der Default ist für jede vom Wizard erzeugte Installation richtig.',
   DMS_ALLOW_PRIVATE_NETWORK:
     'Der einzige *_ALLOW_PRIVATE_NETWORK-Schalter mit Default true (#809): ein DMS ist per '

@@ -6,6 +6,11 @@
  *        createGuardedLookup (server/utils/ssrf.js) - dieselbe SSRF-Härtung wie
  *        bei Nutzer-URLs, mit Opt-in EXTENSION_PROXY_ALLOW_PRIVATE_NETWORK für
  *        interne Docker-Hostnamen.
+ *
+ *        Outbound headers are an allowlist (never the caller's Cookie or
+ *        Authorization). Identity is minted by Yuvomi. Upstream Set-Cookie is
+ *        not copied onto the Yuvomi origin. rest is confined to the module
+ *        namespace.
  */
 
 import dns from 'node:dns/promises';
@@ -22,6 +27,10 @@ import { safeRequest } from '../utils/http.js';
 const log = createLogger('ExtensionsProxy');
 
 const ENV_ALLOW_PRIVATE_NETWORK = 'EXTENSION_PROXY_ALLOW_PRIVATE_NETWORK';
+const ENV_IDENTITY_SECRET = 'EXTENSION_PROXY_IDENTITY_SECRET';
+
+const FORWARD_REQ = new Set(['content-type', 'accept', 'accept-language']);
+const FORWARD_RES = new Set(['content-type', 'content-disposition', 'cache-control', 'etag']);
 
 function isPrivateNetworkAllowed() {
   return readPrivateNetworkOptIn(ENV_ALLOW_PRIVATE_NETWORK);
@@ -76,64 +85,74 @@ function parseProxyTargets() {
   }
 }
 
+function httpError(status, message) {
+  const err = new Error(message);
+  err.status = status;
+  return err;
+}
+
+function encodeRestPath(rest) {
+  const raw = Array.isArray(rest) ? rest.join('/') : String(rest || '');
+  if (!raw) return '';
+  const segments = raw.split('/');
+  for (const segment of segments) {
+    if (segment === '' || segment === '.' || segment === '..') {
+      throw httpError(400, 'Invalid extension path.');
+    }
+  }
+  return segments.map(encodeURIComponent).join('/');
+}
+
 function serializeBody(req) {
   if (req.method === 'GET' || req.method === 'HEAD') return undefined;
   const { body } = req;
   if (body === undefined || body === null) return undefined;
-  if (Buffer.isBuffer(body)) return body;
-  if (typeof body === 'string') return body;
+  if (Buffer.isBuffer(body) || typeof body === 'string') return body;
   const ct = String(req.headers['content-type'] || '').toLowerCase();
   if (ct.includes('application/json')) return JSON.stringify(body);
-  return undefined;
+  throw httpError(415, 'Unsupported Media Type');
 }
 
-function forwardHeaders(req) {
-  const headers = { ...req.headers };
-  delete headers.host;
-  delete headers.connection;
-  delete headers['content-length'];
+function grantedAccess(req, permissionKey) {
+  if (!req.sessionModuleAccess) return 'write';
+  return req.sessionModuleAccess[permissionKey] || 'write';
+}
+
+function forwardHeaders(req, permissionKey) {
+  const headers = {};
+  for (const [key, value] of Object.entries(req.headers || {})) {
+    if (FORWARD_REQ.has(String(key).toLowerCase()) && value != null) {
+      headers[key] = value;
+    }
+  }
+  headers['x-yuvomi-user-id'] = String(req.authUserId ?? '');
+  headers['x-yuvomi-user-name'] = String(req.session?.displayName || '');
+  headers['x-yuvomi-user-role'] = String(req.authRole ?? '');
+  headers['x-yuvomi-access'] = grantedAccess(req, permissionKey);
+  const secret = process.env[ENV_IDENTITY_SECRET];
+  if (secret) headers['x-yuvomi-proxy-secret'] = secret;
   return headers;
 }
 
 function applyUpstreamHeaders(upstreamRes, res) {
-  const raw = upstreamRes._rawHeaders;
-  if (raw && typeof raw === 'object') {
-    for (const [key, value] of Object.entries(raw)) {
-      const lower = key.toLowerCase();
-      if (lower === 'transfer-encoding') continue;
-      if (Array.isArray(value)) {
-        for (const v of value) res.append(key, v);
-      } else if (value != null) {
-        res.setHeader(key, value);
-      }
-    }
-    return;
-  }
-  const h = upstreamRes.headers;
-  if (h && typeof h.forEach === 'function') {
-    h.forEach((value, key) => {
-      if (key.toLowerCase() === 'transfer-encoding') return;
-      res.setHeader(key, value);
-    });
-    return;
-  }
-  if (h && typeof h.get === 'function') {
-    for (const name of ['content-type', 'content-disposition', 'x-csrf-token', 'set-cookie', 'cache-control']) {
-      const v = h.get(name);
-      if (v) res.setHeader(name, v);
-    }
+  const h = upstreamRes?.headers;
+  if (!h || typeof h.get !== 'function') return;
+  for (const name of FORWARD_RES) {
+    const value = h.get(name);
+    if (value) res.setHeader(name, value);
   }
 }
-
-const PROXY_TARGETS = parseProxyTargets();
 
 const router = express.Router({ mergeParams: true });
 
 router.all('/:moduleId/{*rest}', async (req, res) => {
   const moduleId = String(req.params.moduleId || '');
-  const rest = Array.isArray(req.params.rest)
-    ? req.params.rest.join('/')
-    : String(req.params.rest || '');
+  let restPath;
+  try {
+    restPath = encodeRestPath(req.params.rest);
+  } catch (err) {
+    return res.status(err.status || 400).json({ error: err.message, code: err.status || 400 });
+  }
   const permissionKey = extensionPermissionKey(moduleId);
 
   const catalog = getExtensionPermissionCatalog();
@@ -142,7 +161,7 @@ router.all('/:moduleId/{*rest}', async (req, res) => {
     return res.status(404).json({ error: 'Extension module not found or not enabled.', code: 404 });
   }
 
-  const pathKey = `extensions/${moduleId}/${rest}`.replace(/\/+$/, '');
+  const pathKey = `extensions/${moduleId}/${restPath}`.replace(/\/+$/, '');
   const moduleKey = moduleForPath(pathKey) || permissionKey;
 
   if (req.authMethod === 'api_token' && req.authScopes != null) {
@@ -163,7 +182,7 @@ router.all('/:moduleId/{*rest}', async (req, res) => {
     }
   }
 
-  const upstream = PROXY_TARGETS[moduleId];
+  const upstream = parseProxyTargets()[moduleId];
   if (!upstream) {
     return res.status(502).json({
       error: 'Extension proxy target not configured for this module.',
@@ -172,14 +191,16 @@ router.all('/:moduleId/{*rest}', async (req, res) => {
   }
 
   const query = req.url.includes('?') ? req.url.slice(req.url.indexOf('?')) : '';
-  const targetUrl = `${upstream}/api/extensions/${encodeURIComponent(moduleId)}/${rest}${query}`;
+  const suffix = restPath ? `/${restPath}` : '';
+  const targetUrl = `${upstream}/api/extensions/${encodeURIComponent(moduleId)}${suffix}${query}`;
 
   try {
     await checkSSRF(upstream);
+    const body = serializeBody(req);
     const reqOpts = {
       method: req.method,
-      headers: forwardHeaders(req),
-      body: serializeBody(req),
+      headers: forwardHeaders(req, permissionKey),
+      body,
       redirect: 'manual',
     };
     if (!isPrivateNetworkAllowed()) reqOpts.lookup = createGuardedLookup();
@@ -192,6 +213,9 @@ router.all('/:moduleId/{*rest}', async (req, res) => {
     }
     res.send(Buffer.concat(chunks));
   } catch (err) {
+    if (err.status === 415) {
+      return res.status(415).json({ error: err.message, code: 415 });
+    }
     if (String(err.message || '').includes('private IP')) {
       log.warn(`Proxy SSRF block for ${moduleId}:`, err.message);
       return res.status(502).json({ error: 'Extension upstream URL is not allowed.', code: 502 });
@@ -207,5 +231,10 @@ export const __test = {
   normalizeUpstreamUrl,
   checkSSRF,
   isPrivateNetworkAllowed,
+  encodeRestPath,
+  serializeBody,
+  forwardHeaders,
+  applyUpstreamHeaders,
   ENV_ALLOW_PRIVATE_NETWORK,
+  ENV_IDENTITY_SECRET,
 };
