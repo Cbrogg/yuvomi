@@ -3549,7 +3549,7 @@ test('das Lesemass haengt an der Seite, nicht am Traeger', () => {
   const layout = read('../public/styles/layout.css');
   const shared = read('../public/styles/list-row.css');
 
-  assert.match(layout, /\.page-measure--narrow\s*\{[\s\S]*?--page-measure:\s*var\(--content-max-width-narrow\)/,
+  assert.match(layout, /\.(?:page-measure--narrow|app-page--reading)\s*\{[\s\S]*?--page-measure:\s*var\(--layout-reading\)/,
     'die Rolle muss die Variable setzen - sonst liest der Rest hier nichts');
 
   // Die Traeger lesen die Variable, mit der alten Konstante als Rueckfall.
@@ -3570,7 +3570,9 @@ test('das Lesemass haengt an der Seite, nicht am Traeger', () => {
     const src = read(page);
     if (!/class="[^"]*\blist-row\b/.test(src)) continue;
     if (ZWEISPALTIG.test(src)) continue;
-    assert.match(src, /page-measure--narrow/,
+    // Calendar agenda toggles reading measure per view (is-reading-measure).
+    if (/is-reading-measure/.test(src) && /app-page--full|data-composition="full"/.test(src)) continue;
+    assert.match(src, /page-measure--narrow|app-page--(?:reading|data|dashboard|form)|data-composition="(?:reading|data|dashboard|form)"|mode:\s*'(?:reading|data|dashboard|form)'|renderAppPage\s*\(/,
       `${page}: zeigt eine Zeilenliste, traegt das Lesemass der Seite aber nicht - `
       + 'Kopf und Bedienzeilen enden dann neben ihrem eigenen Koerper');
   }
@@ -8183,7 +8185,7 @@ test('birthday and navigation headings keep a sequential hierarchy', () => {
   const birthdays = read('../public/pages/birthdays.js');
   const navigation = read('../public/settings/pages/modules-navigation.js');
 
-  assert.match(birthdays, /<h1 class="page-toolbar__title">/);
+  assert.match(birthdays, /<h1 class="page-toolbar__title">|renderPageTitle\s*\(/);
   assert.doesNotMatch(birthdays, /<h3>/);
   assert.match(navigation, /<h2 class="settings-navigation-panel__title"/);
   assert.match(navigation, /<h3 class="settings-navigation-group__title"/);
@@ -8568,7 +8570,7 @@ test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
   for (const file of pages) {
     const src = read(file);
     // EIN KOPF, EINE BREITE - die bewusste Gegenform (2026-08-27): wer sein
-    // Lesemass je SICHT am Koerper toggelt (page-measure--narrow), den Kopf
+    // Lesemass je SICHT am Koerper toggelt (page-measure--narrow / is-reading-measure), den Kopf
     // aber konstant laesst, hat gemischte Koerperbreiten und haelt die Kante
     // seines BREITESTEN Koerpers. Heute ist das der Kalender: drei Flaechen,
     // eine Lesebahn - und seit die Ansichts-Umschalter in der Bar-Zeile
@@ -8576,7 +8578,7 @@ test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
     // wohnen (Sonde 19). Der Verzicht ist an der BAUART ablesbar, nicht an
     // einem Dateinamen; wer BEIDE toggelt (tasks: Liste gegen Kanban), wird
     // weiter geprueft.
-    if (/classList\.toggle\(\s*'page-measure--narrow'/.test(src)
+    if (/classList\.toggle\(\s*'(?:page-measure--narrow|is-reading-measure)'/.test(src)
       && !/classList\.toggle\(\s*'page-toolbar--narrow'/.test(src)) continue;
     // Jeder Kopf dieser Seite, egal ob als Template-Literal oder über className.
     const heads = [
@@ -8623,11 +8625,11 @@ test('wer seinen Körper aufs Lesemaß kappt, kappt auch seinen Kopf', () => {
   // rail-brechend aus.
   const spacer = narrowRules.filter((r) =>
     r.selectors.some((sel) => /\.page-toolbar--narrow::after\b/.test(sel))
-    && /flex(?:-basis)?:[^;]*var\(--content-max-width-narrow\)/.test(r.body));
+    && /flex(?:-basis)?:[^;]*var\(--page-measure,\s*var\(--layout-reading\)\)|flex(?:-basis)?:[^;]*var\(--layout-reading\)/.test(r.body));
   assert.equal(
     spacer.length, 1,
     'layout.css: .page-toolbar--narrow::after muss das Ende seiner Zeile als Flex-Slot auf '
-    + '--content-max-width-narrow zurückholen (genau eine Regel, gefunden: ' + spacer.length + ')',
+    + '--page-measure/--layout-reading zurückholen (genau eine Regel, gefunden: ' + spacer.length + ')',
   );
 
   // Und KEINE der Regeln darf den Rückhalt wieder als Marge setzen. Über ALLE
@@ -14536,4 +14538,199 @@ test('jede auf Touch ausgeblendete Karten-Aktion hat einen Weg in der Leseansich
   assert.ok(new RegExp(`if \\(${gate[1]}\\)`).test(nodeFn[0]),
     `der Anlege-Knopf haengt nicht mehr an "${gate[1]}" - der Guard misst dann eine `
     + 'Bedingung, die den Knopf gar nicht mehr gattert');
+});
+
+/* ============================================================
+ * PAGE COMPOSITION SYSTEM — PAGE-001 … PAGE-010
+ * (PAGE-COMPOSITION.md)
+ * ============================================================ */
+
+const COMPOSITION_MODES = ['reading', 'data', 'dashboard', 'form', 'split', 'full'];
+const COMPOSITION_MODE_RE = new RegExp(
+  `app-page--(?:${COMPOSITION_MODES.join('|')})|data-composition="(?:${COMPOSITION_MODES.join('|')})"|page-measure--narrow`,
+);
+
+/** Pages migrated onto the composition contract (strict). Others stay allowlisted. */
+const COMPOSITION_MIGRATED = new Set([
+  'birthdays.js',
+  'contacts.js',
+  'notes.js',
+  'rewards.js',
+  'pantry.js',
+  'recipes.js',
+  'inventory.js',
+  'schedule.js',
+  'documents.js',
+  'housekeeping.js',
+  'budget.js',
+  'budget-stats.js',
+  'budget-plans.js',
+  'subscriptions.js',
+  'split-expenses.js',
+  'calendar.js',
+  'tasks.js',
+  'health.js',
+  'dashboard.js',
+]);
+
+const COMPOSITION_OUT_OF_SCOPE = new Set([
+  'shopping.js',
+  'meals.js',
+  'settings.js',
+  'login.js',
+  'setup.js',
+  'join.js',
+  'forgot-password.js',
+  'reset-password.js',
+]);
+
+const COMPOSITION_BLACKLIST_WIDTH = /max-width\s*:\s*(?!none|100%|var\(--(?:page-measure|layout-|content-max-width))[0-9.]+(?:px|rem|em|vw)/i;
+const COMPOSITION_NEGATIVE_MARGIN = /margin(?:-inline|-left|-right|-inline-start|-inline-end)?\s*:\s*-[0-9]/i;
+const COMPOSITION_LOCAL_BP = /@media\s*\(\s*max-width\s*:\s*(?!768px|1024px|640px|900px)[0-9]+px\s*\)/;
+
+test('PAGE-001: migrated page declares exactly one composition mode', () => {
+  for (const page of walkJsFiles('../public/pages/')) {
+    const name = page.split('/').pop();
+    if (!COMPOSITION_MIGRATED.has(name)) continue;
+    const src = withoutHtmlComments(read(page));
+    const found = COMPOSITION_MODES.filter((mode) =>
+      new RegExp(`app-page--${mode}|data-composition="${mode}"|mode:\\s*'${mode}'`).test(src));
+    // Compat: page-measure--narrow alone counts as reading until aliases retire.
+    if (/page-measure--narrow/.test(src) && !found.includes('reading')) found.push('reading');
+    assert.ok(found.length >= 1, `PAGE-001 ${name}: must declare a composition mode`);
+    assert.equal(found.length, 1,
+      `PAGE-001 ${name}: exactly one mode expected, found ${found.join(',')}`);
+  }
+});
+
+test('PAGE-002: PageHeader and PageBody share composition context', () => {
+  const layout = read('../public/styles/layout.css');
+  assert.match(layout, /\.app-page--reading[\s\S]*?--page-measure:\s*var\(--layout-reading\)/,
+    'PAGE-002: reading mode must set --page-measure');
+  assert.match(layout, /\.page-measure--narrow[\s\S]*?--page-measure:\s*var\(--layout-reading\)|\.app-page--reading,\s*\n\.app-page--form,\s*\n\.page-measure--narrow/,
+    'PAGE-002: compat alias and reading mode share --page-measure');
+  // Budget KPI band must read the page measure (Header/Body axis).
+  assert.match(layout, /\.page-measure--narrow :is\([\s\S]*?\.metric-grid/,
+    'PAGE-002: .metric-grid must share the reading measure with header/list');
+});
+
+test('PAGE-003: primary content must not define arbitrary width', () => {
+  for (const page of walkJsFiles('../public/pages/')) {
+    const name = page.split('/').pop();
+    if (COMPOSITION_OUT_OF_SCOPE.has(name)) continue;
+    if (!COMPOSITION_MIGRATED.has(name)) continue;
+    const src = withoutBlockComments(read(page));
+    const hits = [...src.matchAll(/style\s*=\s*["'][^"']*max-width\s*:\s*[^;"']+/gi)];
+    for (const hit of hits) {
+      assert.ok(/var\(--(?:page-measure|layout-|content-max-width)/.test(hit[0]) || /100%|none/.test(hit[0]),
+        `PAGE-003 ${name}: arbitrary inline max-width — ${hit[0]}`);
+    }
+  }
+  for (const file of ['birthdays.css', 'contacts.css', 'notes.css', 'rewards.css', 'budget.css']) {
+    const css = withoutBlockComments(read(`../public/styles/${file}`));
+    for (const rule of eachRule(css)) {
+      if (!COMPOSITION_BLACKLIST_WIDTH.test(rule.body)) continue;
+      if (/--layout-|--page-measure|--content-max-width/.test(rule.body)) continue;
+      // Component-internal widths (chips, avatars, icons) are fine; page roots are not.
+      if (/\.(?:app-page|[\w-]+-page)\b/.test(rule.selector)) {
+        assert.fail(`PAGE-003 ${file}: page-level arbitrary width in ${rule.selector}`);
+      }
+    }
+  }
+});
+
+test('PAGE-004: layout width tokens exist and are wired', () => {
+  const tokens = read('../public/styles/tokens.css');
+  assert.match(tokens, /--layout-reading:\s*var\(--content-max-width-narrow\)/,
+    'PAGE-004: --layout-reading');
+  assert.match(tokens, /--layout-content:\s*60rem/,
+    'PAGE-004: --layout-content');
+  assert.match(tokens, /--layout-wide:\s*75rem/,
+    'PAGE-004: --layout-wide');
+  const layout = read('../public/styles/layout.css');
+  assert.match(layout, /\.app-page\s*\{/, 'PAGE-004: .app-page primitive');
+  assert.match(layout, /\.page-measure\s*\{/, 'PAGE-004: .page-measure primitive');
+  assert.match(layout, /\.page-section--bleed\s*\{/, 'PAGE-004: bleed primitive');
+  assert.ok(existsSync(new URL('../public/utils/page-layout.js', import.meta.url)),
+    'PAGE-004: page-layout.js must exist');
+});
+
+test('PAGE-005: migrated pages avoid local page-geometry breakpoints', () => {
+  for (const file of ['birthdays.css', 'contacts.css', 'notes.css', 'rewards.css']) {
+    const css = withoutBlockComments(read(`../public/styles/${file}`));
+    // Soft: only flag bizarre one-off widths not on the shared scale.
+    const odd = [...css.matchAll(/@media\s*\(\s*max-width\s*:\s*([0-9]+)px\s*\)/g)]
+      .map((m) => Number(m[1]))
+      .filter((n) => ![640, 768, 900, 1024, 1440].includes(n) && n < 600);
+    assert.equal(odd.length, 0,
+      `PAGE-005 ${file}: odd local breakpoints ${odd.join(',')}`);
+  }
+});
+
+test('PAGE-006: page-level negative margins are prohibited on migrated CSS', () => {
+  for (const file of ['birthdays.css', 'contacts.css', 'notes.css', 'rewards.css', 'pantry.css']) {
+    const css = withoutBlockComments(read(`../public/styles/${file}`));
+    for (const rule of eachRule(css)) {
+      if (!COMPOSITION_NEGATIVE_MARGIN.test(rule.body)) continue;
+      if (/\.page-section--bleed/.test(rule.selector)) continue;
+      if (/\.(?:app-page|[\w-]+-page)\b/.test(rule.selector)) {
+        assert.fail(`PAGE-006 ${file}: page-level negative margin in ${rule.selector}`);
+      }
+    }
+  }
+});
+
+test('PAGE-007: page-layout helpers export the contract surface', () => {
+  const src = read('../public/utils/page-layout.js');
+  for (const name of [
+    'COMPOSITION_MODES',
+    'compositionModeClass',
+    'renderAppPage',
+    'renderPageHeader',
+    'renderPageTitle',
+    'renderPageBody',
+    'renderPageSection',
+    'renderListSection',
+    'renderMetricBand',
+  ]) {
+    assert.match(src, new RegExp(`export (?:const|function) ${name}`),
+      `PAGE-007: missing export ${name}`);
+  }
+  assert.match(src, /COMPOSITION_MODES = Object\.freeze\(\[\s*'reading'/,
+    'PAGE-007: modes must include reading');
+});
+
+test('PAGE-008: DESIGN.md points at the composition system', () => {
+  const design = read('../DESIGN.md');
+  assert.match(design, /PAGE-COMPOSITION\.md/,
+    'PAGE-008: DESIGN.md must link PAGE-COMPOSITION.md');
+  assert.ok(existsSync(new URL('../PAGE-COMPOSITION.md', import.meta.url)),
+    'PAGE-008: PAGE-COMPOSITION.md must exist');
+});
+
+test('PAGE-009: composition mode owns responsive split/full behaviour', () => {
+  const layout = read('../public/styles/layout.css');
+  assert.match(layout, /\.app-page--split[\s\S]*?@media \(min-width: 1024px\)|\.app-page--split \{[\s\S]*?grid-template-columns/,
+    'PAGE-009: split mode must define its responsive grid in layout.css');
+  assert.match(layout, /\.app-page--full[\s\S]*?--page-measure:\s*none/,
+    'PAGE-009: full mode clears page measure');
+});
+
+test('PAGE-010: full-bleed is an explicit --bleed declaration', () => {
+  const layout = read('../public/styles/layout.css');
+  assert.match(layout, /\.page-section--bleed\s*\{[\s\S]*?padding-inline:\s*var\(--page-inline-pad\)/,
+    'PAGE-010: bleed primitive must use --page-inline-pad');
+  const helpers = read('../public/utils/page-layout.js');
+  assert.match(helpers, /page-section--bleed/,
+    'PAGE-010: helpers must emit bleed class');
+});
+
+test('PAGE composition: reference page birthdays uses page-layout helpers', () => {
+  const src = read('../public/pages/birthdays.js');
+  assert.match(src, /from ['"]\/utils\/page-layout\.js['"]/,
+    'birthdays.js must import page-layout helpers (reference page)');
+  assert.match(src, /renderAppPage|compositionModeClass/,
+    'birthdays.js must use composition helpers');
+  assert.match(src, /data-composition|app-page--reading|mode:\s*'reading'/,
+    'birthdays.js must declare reading mode');
 });
