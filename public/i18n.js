@@ -25,7 +25,7 @@ let currentLocale = DEFAULT_LOCALE;
 let translations = {};
 let fallbackTranslations = {};
 /** Third-party bundles: moduleId -> { defaultLocale, trees: { [locale]: nested } } */
-let extensionLocaleStore = {};
+let extensionLocaleStore = Object.create(null);
 let i18nReady = false;
 let resolveI18nReady;
 const i18nReadyPromise = new Promise((resolve) => {
@@ -306,7 +306,7 @@ export function unregisterExtensionTranslations(moduleId) {
 }
 
 export function clearExtensionTranslations() {
-  extensionLocaleStore = {};
+  extensionLocaleStore = Object.create(null);
 }
 
 export { resolveExtensionTranslation, extensionLocaleChain };

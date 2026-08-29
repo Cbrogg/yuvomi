@@ -6,7 +6,7 @@
 
 import { api, auth } from '/api.js';
 import { canAccessNavModule, navModuleAccess, setExtensionNavMap } from '/permissions.js';
-import { setExtensionModules } from '/utils/extension-widgets.js';
+import { setExtensionModules, selectThirdPartyModuleList } from '/utils/extension-widgets.js';
 import { initExtensionI18n, moduleDisplayLabel, reloadExtensionLocales } from '/utils/extension-i18n.js';
 import { clearApiCache } from '/sw-register.js';
 import { forgetLayoutHint } from '/utils/dashboard-layout-hint.js';
@@ -923,9 +923,9 @@ async function syncPreferencesOnce() {
 async function syncThirdPartyModules() {
   try {
     const res = await api.get('/modules');
-    _thirdPartyModules = Array.isArray(res?.data) ? res.data : [];
+    _thirdPartyModules = selectThirdPartyModuleList(_thirdPartyModules, { ok: true, data: res?.data });
   } catch {
-    _thirdPartyModules = [];
+    _thirdPartyModules = selectThirdPartyModuleList(_thirdPartyModules, { ok: false });
   }
   setExtensionModules(_thirdPartyModules);
   setExtensionNavMap(_thirdPartyModules);
