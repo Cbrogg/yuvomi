@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.54.0] - 2026-08-29
+
 ### Added
 
 - **The Calendar tile on the Overview can leave birthdays out.** A household that keeps the
