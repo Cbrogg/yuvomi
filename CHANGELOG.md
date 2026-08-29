@@ -22,6 +22,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Extension `capabilities.api.prefix` must be exactly `/api/extensions/<module-id>`** — any other prefix, including a core path such as `/api/tasks`, is rejected so an installed module cannot take over a core token scope.
 - **Extension UI labels resolve through a locale fallback chain** (UI language, module default, `en`, `de`, then static manifest labels) in navigation, Settings, permissions admin, and the dashboard widget chrome.
 
+### Fixed
+
+- **A failed `GET /modules` no longer wipes the household's extension widget layout.** A network hiccup, a server restart, or the `/api/` rate limit used to empty the in-memory module list; the next dashboard save then persisted a config with every `ext` tile gone. On recovery the widget came back as a newcomer: default size, default position, options lost. A failed fetch now keeps the previous list, and stored `<module-id>:<widget-id>` entries survive normalize even while the module is disabled or the catalog is empty.
+- **The extension permission catalog is scanned before the server accepts requests.** Starting the scan inside the `app.listen` callback left a window where stored `ext:<module-id> → none` rows were dropped and the deny-list treated a missing key as allow.
+- **Extension locale lookup no longer throws for module ids that collide with `Object.prototype`.** `constructor` (and `toString`) pass the module-id regex; looking them up on a plain `{}` store made `t()` throw instead of returning the key.
+- **The empty options dialog for a third-party widget no longer quotes the task-categories copy.** It has its own string.
+
 ## [2.54.0] - 2026-08-29
 
 ### Added
