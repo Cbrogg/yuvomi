@@ -907,7 +907,8 @@
         "filtersActive": "{{count}} filters active",
         "filtersActive_one": "1 filter active",
         "filtersReset": "Clear all filters",
-        "filtersDisplay": "Display"
+        "filtersDisplay": "Display",
+        "agendaDayEmpty": "Nothing planned"
     },
     "notes": {
         "title": "Board",

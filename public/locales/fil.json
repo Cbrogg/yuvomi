@@ -919,7 +919,8 @@
         "filtersActive": "{{count}} aktibong filter",
         "filtersActive_one": "1 aktibong filter",
         "filtersReset": "Alisin ang lahat ng filter",
-        "filtersDisplay": "Pagpapakita"
+        "filtersDisplay": "Pagpapakita",
+        "agendaDayEmpty": "Walang nakaplano"
     },
     "notes": {
         "title": "Board",

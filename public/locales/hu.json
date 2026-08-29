@@ -907,7 +907,8 @@
         "filtersActive": "{{count}} aktív szűrő",
         "filtersActive_one": "1 aktív szűrő",
         "filtersReset": "Összes szűrő törlése",
-        "filtersDisplay": "Megjelenítés"
+        "filtersDisplay": "Megjelenítés",
+        "agendaDayEmpty": "Semmi sincs tervezve"
     },
     "notes": {
         "title": "Tábla",

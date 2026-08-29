@@ -907,7 +907,8 @@
         "filtersActive": "{{count}} ενεργά φίλτρα",
         "filtersActive_one": "1 ενεργό φίλτρο",
         "filtersReset": "Κατάργηση όλων των φίλτρων",
-        "filtersDisplay": "Εμφάνιση"
+        "filtersDisplay": "Εμφάνιση",
+        "agendaDayEmpty": "Τίποτα προγραμματισμένο"
     },
     "notes": {
         "title": "Σημειώσεις",

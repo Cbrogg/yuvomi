@@ -919,7 +919,8 @@
         "filtersActive": "Aktywne filtry: {{count}}",
         "filtersActive_one": "1 aktywny filtr",
         "filtersReset": "Wyczyść wszystkie filtry",
-        "filtersDisplay": "Wyświetlanie"
+        "filtersDisplay": "Wyświetlanie",
+        "agendaDayEmpty": "Nic zaplanowane"
     },
     "notes": {
         "title": "Notatki",

@@ -907,7 +907,8 @@
         "filtersActive": "{{count}} bộ lọc đang bật",
         "filtersActive_one": "1 bộ lọc đang bật",
         "filtersReset": "Xóa tất cả bộ lọc",
-        "filtersDisplay": "Hiển thị"
+        "filtersDisplay": "Hiển thị",
+        "agendaDayEmpty": "Không có kế hoạch"
     },
     "notes": {
         "title": "Bảng ghi chú",

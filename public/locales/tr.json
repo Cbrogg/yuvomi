@@ -907,7 +907,8 @@
         "filtersActive": "{{count}} filtre etkin",
         "filtersActive_one": "1 filtre etkin",
         "filtersReset": "Tüm filtreleri kaldır",
-        "filtersDisplay": "Görünüm"
+        "filtersDisplay": "Görünüm",
+        "agendaDayEmpty": "Planlanmış bir şey yok"
     },
     "notes": {
         "title": "Notlar",
