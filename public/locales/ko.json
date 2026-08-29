@@ -919,7 +919,8 @@
         "filtersActive": "필터 {{count}}개 적용됨",
         "filtersActive_one": "필터 1개 적용됨",
         "filtersReset": "모든 필터 해제",
-        "filtersDisplay": "표시"
+        "filtersDisplay": "표시",
+        "agendaDayEmpty": "예정된 일정 없음"
     },
     "notes": {
         "title": "메모",

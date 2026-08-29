@@ -907,7 +907,8 @@
         "filtersActive": "Активных фильтров: {{count}}",
         "filtersActive_one": "1 активный фильтр",
         "filtersReset": "Снять все фильтры",
-        "filtersDisplay": "Отображение"
+        "filtersDisplay": "Отображение",
+        "agendaDayEmpty": "Ничего не запланировано"
     },
     "notes": {
         "title": "Заметки",

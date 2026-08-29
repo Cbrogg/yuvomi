@@ -1411,7 +1411,9 @@ function renderToolbar() {
       <div class="cal-toolbar__views" role="tablist" aria-label="${t('nav.calendar')}">
         ${VIEWS.map((v) => `
           <button class="cal-toolbar__view-btn ${v === state.view ? 'cal-toolbar__view-btn--active' : ''}"
-                  role="tab" data-tab-id="${v}" aria-selected="${v === state.view ? 'true' : 'false'}"
+                  role="tab" id="cal-view-tab-${v}" data-tab-id="${v}"
+                  aria-selected="${v === state.view ? 'true' : 'false'}"
+                  ${v === state.view ? 'aria-controls="cal-body"' : ''}
                   tabindex="${v === state.view ? '0' : '-1'}">${VIEW_LABELS()[v]}</button>
         `).join('')}
       </div>
@@ -1473,6 +1475,36 @@ function updateLabel() {
   if (state.view === 'agenda') lbl.textContent = t('calendar.agendaFrom', { date: formatDate(state.cursor) });
 
   syncTodayButton();
+  syncViewPanel();
+}
+
+/**
+ * DER KOERPER IST DAS PANEL DER TABLEISTE - EINES, NICHT VIER.
+ *
+ * Die Leiste trug `role="tablist"` mit vier `role="tab"`, aber es gab kein
+ * `role="tabpanel"` im Dokument und kein `aria-controls`: fuer einen
+ * Screenreader endete die Beziehung beim Tab, und was er umschaltet, stand
+ * nirgends.
+ *
+ * Der geteilte Helfer `syncTabPanels` (utils/sub-tabs.js) passt hier nicht,
+ * und das ist kein Versehen: er verwaltet N Panels und versteckt die
+ * inaktiven per `hidden`. Der Kalender hat EIN `#cal-body`, dessen INHALT bei
+ * jedem Wechsel ersetzt wird - es gibt kein zweites Panel zum Verstecken. Die
+ * Beziehung ist deshalb umgekehrt gerichtet: das Panel nennt den Tab, der es
+ * gerade beschriftet, und nur der aktive Tab traegt `aria-controls`. Ein
+ * inaktiver Tab, der auf dasselbe Panel zeigt, waere die Zusage, dass es
+ * SEINEN Inhalt enthaelt - und die ist falsch.
+ */
+function syncViewPanel() {
+  const body = _container?.querySelector('#cal-body');
+  if (!body) return;
+  body.setAttribute('role', 'tabpanel');
+  body.setAttribute('aria-labelledby', `cal-view-tab-${state.view}`);
+
+  for (const btn of _container.querySelectorAll('.cal-toolbar__view-btn')) {
+    if (btn.dataset.tabId === state.view) btn.setAttribute('aria-controls', 'cal-body');
+    else btn.removeAttribute('aria-controls');
+  }
 }
 
 /**
@@ -2359,9 +2391,25 @@ function renderAgendaView(container) {
   const { from, to } = getAgendaRange(state.cursor);
   const days = Array.from({ length: 31 }, (_, i) => addDays(from, i));
 
+  /* HEUTE WIRD NICHT STILL UEBERSPRUNGEN.
+   *
+   * Die Agenda listet nur Tage, an denen etwas steht - richtig fuer die
+   * naechsten Wochen, falsch fuer den ersten. Der Kopf kuendigt „Ab
+   * 28.08.2026" an, und die erste Zeile war der 29.: der Tag, nach dem
+   * gefragt wird, fehlte genau dann, wenn die Antwort „nichts" lautet - und
+   * ein fehlender Tag sieht aus wie ein Ladefehler, nicht wie ein freier Tag.
+   * Die CSS-Regel `agenda-day__header--today` gab es laengst, sie konnte nur
+   * nie feuern.
+   *
+   * NUR HEUTE, und nur wenn heute im Bereich liegt. Jeder leere Tag als Zeile
+   * waere eine Liste aus Leere; „heute" ist der eine Tag, dessen Abwesenheit
+   * eine Frage offen laesst. */
+  const todayInRange = state.today >= from && state.today <= to;
+
   const groups = days
     .map((d) => ({ date: d, events: eventsOnDay(d), tasks: tasksOnDay(d), holidays: holidaysOnDay(d), schedule: scheduleEntriesOnDay(d) }))
-    .filter((g) => g.events.length > 0 || g.tasks.length > 0 || g.holidays.length > 0 || g.schedule.length > 0);
+    .filter((g) => g.events.length > 0 || g.tasks.length > 0 || g.holidays.length > 0 || g.schedule.length > 0
+      || (todayInRange && g.date === state.today));
 
   container.replaceChildren();
   container.insertAdjacentHTML('beforeend', `
@@ -2388,6 +2436,8 @@ function renderAgendaView(container) {
             ${schedule.length ? `<div class="agenda-holidays">${schedule.map((entry) => renderScheduleChip(entry, 'agenda-holiday')).join('')}</div>` : ''}
             ${events.length ? `<div class="list-rows">${events.map((ev) => renderAgendaEvent(ev, date)).join('')}</div>` : ''}
             ${tasks.length ? `<div class="agenda-tasks">${tasks.map(renderTaskChip).join('')}</div>` : ''}
+            ${(!events.length && !tasks.length && !holidays.length && !schedule.length)
+              ? `<p class="agenda-day__empty">${t('calendar.agendaDayEmpty')}</p>` : ''}
           </div>
         `).join('')
       }

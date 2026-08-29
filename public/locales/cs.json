@@ -907,7 +907,8 @@
         "filtersActive": "Aktivní filtry: {{count}}",
         "filtersActive_one": "1 aktivní filtr",
         "filtersReset": "Zrušit všechny filtry",
-        "filtersDisplay": "Zobrazení"
+        "filtersDisplay": "Zobrazení",
+        "agendaDayEmpty": "Nic naplánováno"
     },
     "notes": {
         "title": "Nástěnka",

@@ -907,7 +907,8 @@
         "filtersActive": "{{count}} filtros ativos",
         "filtersActive_one": "1 filtro ativo",
         "filtersReset": "Limpar todos os filtros",
-        "filtersDisplay": "Apresentação"
+        "filtersDisplay": "Apresentação",
+        "agendaDayEmpty": "Nada planeado"
     },
     "notes": {
         "title": "Quadro de notas",

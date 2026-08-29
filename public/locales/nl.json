@@ -907,7 +907,8 @@
         "filtersActive": "{{count}} filters actief",
         "filtersActive_one": "1 filter actief",
         "filtersReset": "Alle filters wissen",
-        "filtersDisplay": "Weergave"
+        "filtersDisplay": "Weergave",
+        "agendaDayEmpty": "Niets gepland"
     },
     "notes": {
         "title": "Bord",

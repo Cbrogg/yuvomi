@@ -26,6 +26,22 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Extension API proxy outbound requests** go through the shared SSRF guard and `safeRequest`, with an opt-in to allow private-network Docker sidecar targets.
 
+## [2.51.1] - 2026-08-29
+
+### Fixed
+
+- **The agenda no longer skips today in silence.** It lists only days that hold something, which is
+  right for the coming weeks and wrong for the first one: the header announced "From 28 August" and
+  the first row was the 29th. The day being asked about went missing precisely when the answer was
+  "nothing", and a missing day reads as a loading error rather than a free one. Today now appears
+  with a quiet "Nothing planned"; every other empty day stays out, since a list of emptiness helps
+  nobody.
+- **The calendar's view switcher tells assistive technology what it switches.** The bar carried
+  `role="tablist"` with four tabs, but there was no `role="tabpanel"` anywhere in the document and
+  no `aria-controls` - the relationship ended at the tab, and what it changed was nowhere stated.
+- **The empty-day hint in the day view is no longer cut in half by an hour line.** It sat as plain
+  text in the time grid, and the next line ran straight through the sentence.
+
 ## [2.51.0] - 2026-08-28
 
 ### Added
