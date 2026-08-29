@@ -95,6 +95,36 @@ function forwardHeaders(req) {
   return headers;
 }
 
+function applyUpstreamHeaders(upstreamRes, res) {
+  const raw = upstreamRes._rawHeaders;
+  if (raw && typeof raw === 'object') {
+    for (const [key, value] of Object.entries(raw)) {
+      const lower = key.toLowerCase();
+      if (lower === 'transfer-encoding') continue;
+      if (Array.isArray(value)) {
+        for (const v of value) res.append(key, v);
+      } else if (value != null) {
+        res.setHeader(key, value);
+      }
+    }
+    return;
+  }
+  const h = upstreamRes.headers;
+  if (h && typeof h.forEach === 'function') {
+    h.forEach((value, key) => {
+      if (key.toLowerCase() === 'transfer-encoding') return;
+      res.setHeader(key, value);
+    });
+    return;
+  }
+  if (h && typeof h.get === 'function') {
+    for (const name of ['content-type', 'content-disposition', 'x-csrf-token', 'set-cookie', 'cache-control']) {
+      const v = h.get(name);
+      if (v) res.setHeader(name, v);
+    }
+  }
+}
+
 const PROXY_TARGETS = parseProxyTargets();
 
 const router = express.Router({ mergeParams: true });
@@ -155,10 +185,7 @@ router.all('/:moduleId/{*rest}', async (req, res) => {
     if (!isPrivateNetworkAllowed()) reqOpts.lookup = createGuardedLookup();
     const upstreamRes = await safeRequest(targetUrl, reqOpts);
     res.status(upstreamRes.status);
-    upstreamRes.headers.forEach((value, key) => {
-      if (key.toLowerCase() === 'transfer-encoding') return;
-      res.setHeader(key, value);
-    });
+    applyUpstreamHeaders(upstreamRes, res);
     const chunks = [];
     for await (const chunk of upstreamRes.body) {
       chunks.push(chunk);
