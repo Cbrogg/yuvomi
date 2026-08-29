@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Unchecking a subtask on a finished occurrence no longer takes it out of the next one.** A weekly
+  task with four steps would come back with all four reset, as it should. Go back to the occurrence
+  you just finished, untick one step there, and that step disappeared from the upcoming occurrence:
+  0/4 became 0/3, and doing it again took another one. The cause was a column carrying two meanings.
+  `recurrence_origin_id` says "I am the next run of X" on a task and "I am the copy of Y in this
+  run" on a subtask, and the code that undoes a follow-up when you un-finish a series read both the
+  same way. Unticking a subtask made it look up its own copy in the next occurrence, mistake it for
+  a follow-up nobody had touched, and delete it. Only whole occurrences count as follow-ups now, so
+  a tick on a past run stays on that run.
+
 ## [2.52.0] - 2026-08-29
 
 ### Added
