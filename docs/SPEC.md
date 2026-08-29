@@ -24,6 +24,24 @@ Every table: `id INTEGER PRIMARY KEY`, `created_at TEXT`, `updated_at TEXT` (ISO
 | oidc_provider | TEXT | OIDC issuer URL of the provider that set `oidc_sub`, nullable. Partial UNIQUE index on `(oidc_sub, oidc_provider)` WHERE NOT NULL. |
 | calendar_feed_token | TEXT | Secret token authenticating the user's read-only ICS export feed, nullable. Partial UNIQUE index on `calendar_feed_token` WHERE NOT NULL. |
 | calendar_feed_show_assignees | INTEGER | Opt-in flag (0/1, default 0): when set, the read-only ICS export feed appends the assigned members to each event's `SUMMARY`, e.g. `Pool party (Mom, Dad)`. |
+| onboarding_version | INTEGER | NOT NULL, default 0 (migration v168) — the walkthrough version this account has seen |
+
+**The onboarding walkthrough is remembered per account, not per browser (v2.52.0).** The marker used
+to live only in `localStorage`, so a new device or a private window showed the walkthrough again to
+an account that had long dismissed it. `/auth/me` and `/auth/login` therefore carry
+`onboarding_pending`, computed as `onboarding_version < CURRENT_ONBOARDING_VERSION`
+(`server/auth.js`); `POST /api/v1/auth/onboarding-seen` records the current version on the calling
+account.
+
+A number rather than a flag, because "seen" alone allows no later extension: if a future release
+warrants showing the walkthrough again, a maintenance commit raises `CURRENT_ONBOARDING_VERSION` and
+every account below it sees it once more — no further migration. Migration v168 backfills existing
+accounts to 1 (they have seen the current walkthrough by definition) while the column default stays
+0, so every future `INSERT INTO users` gets the right behaviour for a new account without its own
+change. The `localStorage` key remains as an **additional** condition rather than a replacement: it
+is how the visual-probe harness suppresses the dialog without marking a test account server-side.
+The install-to-home-screen banner is deliberately untouched — whether a device has the PWA installed
+is a property of that device, so it keeps its local 7-day snooze.
 
 ### Two-Factor Authentication (migration v159, #672)
 
@@ -1352,7 +1370,8 @@ Per-user reminders attached to tasks, calendar events, subscriptions, inventory 
 | remind_at | TEXT | ISO 8601 datetime, NOT NULL |
 | dismissed | INTEGER | 0/1, default 0 |
 | pushed_at | TEXT | ISO 8601 datetime, nullable — set once all active notification targets have been sent, skipped, or exhausted, so the reminder is not processed indefinitely |
-| created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL |
+| created_by | INTEGER | FK → Users (CASCADE delete), NOT NULL — whose reminder this row *is*: who gets notified, and who may change or dismiss it |
+| assigned_from | INTEGER | FK → Users (SET NULL), nullable (migration v169) — whose action the row was derived from. `NULL` means self-set, which is what every pre-v169 row is |
 
 All types except `pantry_item` can be set and deleted through `POST`/`PUT`/`DELETE
 /api/v1/reminders`. Four of them are **derived** - their module recreates the reminder whenever the
@@ -1384,6 +1403,30 @@ The event dialog manages the set via `GET /api/v1/reminders/all?entity_type=even
 (returns the full list) and `PUT /api/v1/reminders?entity_type=event&entity_id=…` with
 `{ remind_ats: [...] }` (replace-set semantics: deduplicated, max 5). Tasks and subscriptions keep
 using the single-reminder endpoints (`GET`/`POST /api/v1/reminders`).
+
+**A reminder on a shared event reaches its assignees (v2.52.0).** A reminder set by the member who
+**created** the event is written for everyone assigned to it as a row of their own, so it is
+delivered to them and appears when they open the event. Rows of their own rather than one row with a
+recipient list, because everything hanging off a reminder is per-person: `dismissed`, `pushed_at`,
+and the time itself, which each member may move. A shared row would have needed a second table for
+each of those three, and the delivery path already keys on `created_by`.
+
+Only the event's author distributes. Anyone else setting a reminder on a shared event sets it for
+themselves — otherwise one member making a note would notify the household. Four rules bound the
+fan-out, all of them about what must *not* happen:
+
+- A reminder an assignee set for themselves (`assigned_from IS NULL`) is never overwritten, and its
+  presence stops the fan-out to that person entirely: they have already decided when to be reminded.
+- A dismissed row is not resurrected while the set of times is unchanged. Dismissing means "I have
+  seen this", not "I want nothing about this event", so a *changed* time does reach them.
+- Removing someone from the event deletes their inherited rows, but not one they set themselves.
+- Deleting the author's own reminders removes the inherited ones with them — leaving a notification
+  standing that the author just abolished would be a promise without cover.
+
+Both triggers — writing a reminder (`server/routes/reminders.js`) and changing the assignment
+(`setEventAssignments` in `server/routes/calendar/helpers.js`) — go through one service,
+`server/services/event-reminder-fanout.js`. Two implementations would be unusually expensive here: a
+reminder that does **not** arrive does not announce itself.
 
 ### Push Subscriptions
 
@@ -2667,6 +2710,22 @@ The surface carries four things, in this order: **the time**, large (this is whe
 - **Mobile swipe (sides swapped in this release):** swiping towards the row's **start** (right in LTR, left in RTL) marks the task done or reopens it; swiping towards its **end** opens the task. The panels are addressed as `leading`/`trailing` in `public/utils/swipe-row.js`, not as left/right, so the gesture mirrors correctly in RTL. Existing users are told once via `common.swipeSidesSwapped`.
 - **Sync target on a new task (#695):** the task dialog carries a "sync target" field, the same shape the event dialog has had since #620, listing only the reminder lists the household enabled *for tasks*. Prefilled from `tasks_default_target`. It is absent for subtasks (they carry no target of their own) and replaced by a sentence on a task that is already mirrored — moving a task between lists is deliberately not offered, so a dropdown there would promise something the sync does not do. `GET /api/v1/tasks/sync-targets` serves the options to every logged-in member, with no credentials or server URLs in the payload.
 - **The note is a note (#731):** the free-text field is six rows, not two, and the read view renders it as Markdown through the same `renderMarkdownLight()` the notes module and the dashboard use — so a checklist, a heading or a bold word looks the same wherever it appears. The editor carries the same `.md-toolbar` the notes module does — not a copy of it but the shared component both draw from, so a checkbox written in a task is the same characters as one written in a note.
+- **Tappable checklists in the description (#917, v2.52.0):** the rendered `- [ ]` boxes are real
+  controls in the task detail view, the same way they have been in Notes since #704 — the same rule
+  from `public/utils/markdown-checklist.js`, imported by both browser and server, one more caller
+  rather than a second implementation. `PATCH /api/v1/tasks/:id/check` rewrites exactly the one
+  source line, so two members ticking different items in the same minute both keep their tick; a
+  full-body `PUT` would have let the later save drop the earlier one silently. Addressed by source
+  line number (`data-md-line`), never by item text, with the line the client saw sent as `expect` and
+  a mismatch answered `409`.
+
+  Two rules diverge from a plain description edit. **The lock (#830) does not stop a tick:** it
+  covers what the task *is*, not how far it has come — `PATCH /:id/status` deliberately has no lock
+  check either, and `toggleChecklistLine` cannot change anything but the one character between the
+  brackets. **Visibility does apply**, answering 404 rather than 403 so a guessed id says nothing.
+  And because `description` is a *mirrored* CalDAV field, a tick marks the row for outbound push —
+  without that it would stay local and the next inbound would bring the unticked line back. A
+  repeated tick on an item already in that state changes nothing and announces nothing.
 - Badge for overdue tasks
 
 ### Shopping Lists (`/shopping`)
@@ -3218,6 +3277,23 @@ modules/
 ## API Documentation
 
 An OpenAPI 3.0 specification is served at `/api/v1/openapi.json` and `/openapi.json` to **signed-in admins** (both endpoints require an admin session or API token). Append `?download=1` to download as a file. The spec covers all authenticated endpoints and can be imported into any OpenAPI-compatible client (Insomnia, Postman, etc.). The interactive `/docs` page follows the same admin gate and is hidden entirely in production unless `ENABLE_API_DOCS=true`.
+
+**"Covers all endpoints" is now a checked claim (v2.52.0).** It had not been one: 40 of 297 routes
+were missing, among them four entire modules that had never had a line of specification — quick
+links, screensaver, recipe providers, and the permissions endpoints behind the rights matrix. The
+existing guard (`test:openapi-structure`) verifies that the spec's own fragment files are imported
+and spread, never that they match the routers. `test:openapi-coverage` compares the two in both
+directions: a route without documentation fails, and so does a documented route no router serves —
+the second kind is otherwise found only by the integrator who calls it.
+
+The guard follows the *routers* rather than a file list, which matters because four modules split
+their routes across sub-files and `inventory/index.js` mounts five sub-routers under prefixes of
+their own. Three blind spots had to be closed while building it, and each would have made the guard
+look **greener** rather than redder: sub-mounts (without them it invents paths and reports those as
+gaps), named imports (`import { router as authRouter }` — missing it drops the whole `/auth` branch
+from the check), and the router variable that is called `targetRouter` in `server/auth.js`. Its
+exception list is empty and each entry would have to carry its reason on the spot: an exception
+without a justification is a gap with better camouflage.
 
 Authentication options for external integrations:
 - **Session cookie:** standard browser session after login
