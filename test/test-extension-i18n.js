@@ -130,6 +130,30 @@ test('registerExtensionTranslations still resolves a legitimate nested key', () 
   assert.equal(({}).polluted, undefined);
 });
 
+test('nestFlatLocaleDict drops DANGEROUS segments instead of creating own keys', () => {
+  const tree = nestFlatLocaleDict({
+    '__proto__.polluted': 'PWNED',
+    'constructor.prototype.polluted': 'PWNED',
+    'prototype.x': 'PWNED',
+    'widget.title': 'ok',
+  });
+  assert.equal(tree.widget.title, 'ok');
+  assert.deepEqual(Reflect.ownKeys(tree).sort(), ['widget']);
+  assert.equal(Object.hasOwn(tree, '__proto__'), false);
+  assert.equal(Object.hasOwn(tree, 'constructor'), false);
+  assert.equal(Object.hasOwn(tree, 'prototype'), false);
+});
+
+test('t() does not throw for module ids that collide with Object.prototype', () => {
+  clearExtensionTranslations();
+  assert.equal(t('extensions.constructor.widget.title'), 'extensions.constructor.widget.title');
+  assert.equal(t('extensions.toString.widget.title'), 'extensions.toString.widget.title');
+  assert.equal(t('extensions.__proto__.widget.title'), 'extensions.__proto__.widget.title');
+
+  registerExtensionTranslations('constructor', { 'widget.title': 'Weather' });
+  assert.equal(t('extensions.constructor.widget.title'), 'Weather');
+});
+
 test('clearExtensionTranslations removes overlay', () => {
   registerExtensionTranslations('demo-mod', { menu: 'X' });
   clearExtensionTranslations();

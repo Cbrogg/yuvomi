@@ -67,9 +67,12 @@ const {
   permissionCatalog,
   normalizePermissionInput,
   replaceSubjectPermissions,
+  setExtensionPermissionCatalog,
+  buildSessionModuleAccess,
+  moduleAccessVerdict,
 } = await import('../server/permissions.js');
 const { extensionPermissionKey, normalizeCapabilities } = await import('../server/services/module-capabilities.js');
-const { moduleForPath } = await import('../server/scopes.js');
+const { moduleForPath, setExtensionScopeModules } = await import('../server/scopes.js');
 
 const db = dbmod.get();
 
@@ -156,6 +159,42 @@ test('normalizeCapabilities accepts /api/extensions/{moduleId} with a trailing s
   );
   assert.equal(caps.apiPrefix, '/api/extensions/taskextras');
   assert.equal(caps.scopeKey, 'ext:taskextras');
+});
+
+test('stored ext permission rows are dropped while the catalog is empty (deny-list fail-open)', async () => {
+  const user = { id: 99, role: 'member', family_role: 'child' };
+  db.prepare(`
+    INSERT INTO access_permissions (subject_type, subject_id, resource_type, resource_key, access)
+    VALUES (?, ?, ?, ?, ?)
+  `).run('user', String(user.id), 'module', 'ext:demo-ext', 'none');
+
+  setExtensionPermissionCatalog({ permissionModules: [], permissionWidgets: [] });
+  setExtensionScopeModules([]);
+
+  const emptyResolved = resolvePermissions(db, user);
+  assert.equal(emptyResolved.modules['ext:demo-ext'], undefined);
+  const emptyMap = buildSessionModuleAccess(emptyResolved);
+  assert.equal(moduleAccessVerdict(emptyMap, 'ext:demo-ext', 'write'), 'allow');
+
+  await svc.listModules({ admin: true });
+  const loaded = resolvePermissions(db, user);
+  assert.equal(loaded.modules['ext:demo-ext'], 'none');
+  const loadedMap = buildSessionModuleAccess(loaded);
+  assert.equal(moduleAccessVerdict(loadedMap, 'ext:demo-ext', 'write'), 'none');
+});
+
+test('listModules is awaited before app.listen so the catalog is populated at accept', () => {
+  const raw = fs.readFileSync(new URL('../server/index.js', import.meta.url), 'utf8');
+  const bootAt = raw.indexOf('// Server starten');
+  assert.ok(bootAt >= 0, 'boot section marker is present');
+  // Line comments only: withoutBlockComments treats the `*/*` in `Accept: */*`
+  // as a comment opener and swallows app.listen with it.
+  const src = raw.slice(bootAt).replace(/^\s*\/\/.*$/gm, '');
+  const listenIdx = src.indexOf('app.listen(');
+  assert.ok(listenIdx >= 0, 'app.listen is present');
+  const awaitIdx = src.lastIndexOf('await listModules', listenIdx);
+  assert.ok(awaitIdx >= 0 && awaitIdx < listenIdx, 'await listModules must precede app.listen');
+  assert.doesNotMatch(src, /listModules\s*\([^)]*\)\s*\.catch/);
 });
 
 test('a colliding api.prefix never reaches PREFIX_TO_MODULE', async () => {
