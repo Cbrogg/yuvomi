@@ -7,6 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Week-view day headings align with the hourly calendar columns.** The header and all-day row
+  now share the hourly grid's gutter width.
+
 ## [2.51.2] - 2026-08-29
 
 ### Changed

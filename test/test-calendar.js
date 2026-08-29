@@ -575,6 +575,27 @@ test('clickedTime: eine Spalte ohne messbare Höhe legt nichts Falsches an', () 
  * Regex: das alte Muster war dreimal blind und jedes Mal war der Guard grün. */
 const calendarCss = readFileSync(new URL('../public/styles/calendar.css', import.meta.url), 'utf8');
 
+test('Wochenraster: Kopf, Ganztagszeile und Stunden verwenden dieselbe Zeitspaltenbreite', () => {
+  const src = readFileSync(new URL('../public/pages/calendar.js', import.meta.url), 'utf8');
+  const renderWeekView = src.slice(
+    src.indexOf('function renderWeekView'),
+    src.indexOf('function renderDayView'),
+  );
+  const gutterColumns = renderWeekView.match(
+    /grid-template-columns:var\(--cal-gutter-width\) repeat\(\$\{colCount\},1fr\)/g,
+  ) ?? [];
+  const timeGutter = [...eachRule(calendarCss)]
+    .find((rule) => rule.selector.trim() === '.week-view__times');
+
+  assert(gutterColumns.length === 2,
+    'Kopf und Ganztagszeile müssen --cal-gutter-width verwenden; die Stundenleiste darunter '
+    + 'verwendet dasselbe Token und sonst laufen die Tagesgrenzen auseinander');
+  assert(timeGutter && /width:\s*var\(--cal-gutter-width\)/.test(timeGutter.body),
+    'die Stundenleiste muss ihre Breite aus --cal-gutter-width beziehen');
+  assert(!renderWeekView.includes('grid-template-columns:var(--space-12)'),
+    'die Wochenansicht darf nicht auf die alte 48px-Sprosse zurückfallen');
+});
+
 function zIndexOf(selector) {
   for (const rule of eachRule(calendarCss)) {
     if (!rule.selector.split(',').map((s) => s.trim()).includes(selector)) continue;
