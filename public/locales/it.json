@@ -2741,7 +2741,8 @@
         "customHours": "Ore",
         "customDays": "Giorni",
         "customWeeks": "Settimane",
-        "sectionTitlePlural": "Promemoria"
+        "sectionTitlePlural": "Promemoria",
+        "sharedWithAssignees": "Anche chi è assegnato a questo evento riceve questo promemoria."
     },
     "onboarding": {
         "step1Title": "Benvenuto in {{name}}",

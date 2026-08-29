@@ -2655,7 +2655,8 @@
         "customHours": "시간",
         "customDays": "일",
         "customWeeks": "주",
-        "sectionTitlePlural": "알림"
+        "sectionTitlePlural": "알림",
+        "sharedWithAssignees": "이 일정에 배정된 사람도 이 알림을 받습니다."
     },
     "birthdays": {
         "inDays": "{{days}}일 후",

@@ -2643,7 +2643,8 @@
         "customHours": "Giờ",
         "customDays": "Ngày",
         "customWeeks": "Tuần",
-        "sectionTitlePlural": "Lời nhắc"
+        "sectionTitlePlural": "Lời nhắc",
+        "sharedWithAssignees": "Những người được giao sự kiện này cũng nhận được lời nhắc này."
     },
     "birthdays": {
         "inDays": "trong {{days}} ngày",

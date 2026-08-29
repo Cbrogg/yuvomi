@@ -3166,7 +3166,8 @@
         "customHours": "Hodiny",
         "customDays": "Dny",
         "customWeeks": "Týdny",
-        "sectionTitlePlural": "Připomínky"
+        "sectionTitlePlural": "Připomínky",
+        "sharedWithAssignees": "Toto připomenutí dostanou i osoby přiřazené k této události."
     },
     "birthdays": {
         "inDays": "za {{days}} dní",

@@ -2643,7 +2643,8 @@
         "customHours": "Uren",
         "customDays": "Dagen",
         "customWeeks": "Weken",
-        "sectionTitlePlural": "Herinneringen"
+        "sectionTitlePlural": "Herinneringen",
+        "sharedWithAssignees": "Wie aan deze afspraak is toegewezen, krijgt deze herinnering ook."
     },
     "birthdays": {
         "inDays": "over {{days}} dagen",

@@ -2741,7 +2741,8 @@
         "customHours": "Timmar",
         "customDays": "dagar",
         "customWeeks": "Veckor",
-        "sectionTitlePlural": "Påminnelser"
+        "sectionTitlePlural": "Påminnelser",
+        "sharedWithAssignees": "Den som är tilldelad den här händelsen får också den här påminnelsen."
     },
     "onboarding": {
         "step1Title": "Välkommen till {{name}}",

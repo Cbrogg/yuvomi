@@ -2741,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "提醒"
+        "sectionTitlePlural": "提醒",
+        "sharedWithAssignees": "被指派到此日程的人也会收到此提醒。"
     },
     "onboarding": {
         "step1Title": "欢迎使用{{name}}",

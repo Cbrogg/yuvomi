@@ -2741,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "Υπενθυμίσεις"
+        "sectionTitlePlural": "Υπενθυμίσεις",
+        "sharedWithAssignees": "Όσοι έχουν ανατεθεί σε αυτό το συμβάν λαμβάνουν επίσης αυτή την υπενθύμιση."
     },
     "onboarding": {
         "step1Title": "Καλώς ήρθατε στο {{name}}",

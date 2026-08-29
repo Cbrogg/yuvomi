@@ -2741,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "التذكيرات"
+        "sectionTitlePlural": "التذكيرات",
+        "sharedWithAssignees": "يحصل المُكلَّفون بهذا الموعد على هذا التذكير أيضًا."
     },
     "onboarding": {
         "step1Title": "مرحبًا بك في {{name}}",

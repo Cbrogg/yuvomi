@@ -2655,7 +2655,8 @@
         "customHours": "Godziny",
         "customDays": "Dni",
         "customWeeks": "Tygodnie",
-        "sectionTitlePlural": "Przypomnienia"
+        "sectionTitlePlural": "Przypomnienia",
+        "sharedWithAssignees": "Osoby przypisane do tego wydarzenia również otrzymają to przypomnienie."
     },
     "birthdays": {
         "inDays": "za {{days}} dni",

@@ -2741,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "Напоминания"
+        "sectionTitlePlural": "Напоминания",
+        "sharedWithAssignees": "Участники, назначенные на это событие, тоже получат это напоминание."
     },
     "onboarding": {
         "step1Title": "Добро пожаловать в {{name}}",

@@ -2643,7 +2643,8 @@
         "customHours": "Óra",
         "customDays": "Nap",
         "customWeeks": "Hét",
-        "sectionTitlePlural": "Emlékeztetők"
+        "sectionTitlePlural": "Emlékeztetők",
+        "sharedWithAssignees": "Az eseményhez rendelt személyek is megkapják ezt az emlékeztetőt."
     },
     "birthdays": {
         "inDays": "{{days}} nap múlva",

@@ -2741,7 +2741,8 @@
         "customHours": "Horas",
         "customDays": "Dias",
         "customWeeks": "Semanas",
-        "sectionTitlePlural": "Lembretes"
+        "sectionTitlePlural": "Lembretes",
+        "sharedWithAssignees": "Quem estiver atribuído a este evento também recebe este lembrete."
     },
     "onboarding": {
         "step1Title": "Bem-vindo ao {{name}}",

@@ -2643,7 +2643,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "Reminders"
+        "sectionTitlePlural": "Reminders",
+        "sharedWithAssignees": "Anyone assigned to this event gets this reminder too."
     },
     "birthdays": {
         "inDays": "in {{days}} days",

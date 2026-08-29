@@ -2741,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "अनुस्मारक"
+        "sectionTitlePlural": "अनुस्मारक",
+        "sharedWithAssignees": "इस कार्यक्रम को सौंपे गए लोगों को भी यह अनुस्मारक मिलता है।"
     },
     "onboarding": {
         "step1Title": "{{name}} में आपका स्वागत है",

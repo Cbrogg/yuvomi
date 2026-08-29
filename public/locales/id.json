@@ -2655,7 +2655,8 @@
         "customHours": "Jam",
         "customDays": "Hari",
         "customWeeks": "Minggu",
-        "sectionTitlePlural": "Pengingat"
+        "sectionTitlePlural": "Pengingat",
+        "sharedWithAssignees": "Orang yang ditugaskan ke acara ini juga menerima pengingat ini."
     },
     "birthdays": {
         "inDays": "dalam {{days}} hari",

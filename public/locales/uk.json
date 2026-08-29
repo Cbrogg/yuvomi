@@ -2643,7 +2643,8 @@
         "customHours": "Години",
         "customDays": "Днів",
         "customWeeks": "Тижнів",
-        "sectionTitlePlural": "Нагадування"
+        "sectionTitlePlural": "Нагадування",
+        "sharedWithAssignees": "Ті, кому призначено цю подію, також отримають це нагадування."
     },
     "recipes": {
         "mealTypeNone": "Без прийому їжі",

@@ -2741,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "Rappels"
+        "sectionTitlePlural": "Rappels",
+        "sharedWithAssignees": "Les personnes affectées à cet événement reçoivent aussi ce rappel."
     },
     "onboarding": {
         "step1Title": "Bienvenue dans {{name}}",

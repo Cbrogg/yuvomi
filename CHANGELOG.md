@@ -9,6 +9,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Added
 
+- **A reminder on a shared event now reaches the people it was shared with.** Reminders were tied to
+  whoever created them, and nothing else. Someone would create an event, assign it to both partners,
+  set a reminder for the day before - and only they would be reminded. Worse, when the other person
+  opened the same event the reminder field was simply empty, which reads as "none is set" rather
+  than "yours is not set". Both assumed it was shared, and an appointment was missed. A reminder set
+  by the person who created the event is now written for each assignee as a row of their own, so it
+  arrives by push and shows up when they open it. Rows of their own, because everything attached to
+  a reminder is personal: whether it was dismissed, whether it was already delivered, and the time
+  itself, which each person may move. A reminder somebody set for themselves is never overwritten by
+  this, a dismissed one does not come back unless the time actually changed, and dropping someone
+  from the event drops the inherited reminder with it. Anyone who is not the event's author still
+  sets reminders for themselves alone - otherwise half the household would be notified because one
+  person made themselves a note.
 - **Checklists in a task's description can be ticked off where they are shown.** The boxes rendered
   from `- [ ]` were already there and already inert: ticking one meant opening the editor and
   hand-editing raw Markdown, which is enough friction that in practice the checklist stops being

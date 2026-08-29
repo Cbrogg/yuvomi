@@ -2741,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "リマインダー"
+        "sectionTitlePlural": "リマインダー",
+        "sharedWithAssignees": "この予定に割り当てられた人にも、このリマインダーが届きます。"
     },
     "onboarding": {
         "step1Title": "{{name}}へようこそ",

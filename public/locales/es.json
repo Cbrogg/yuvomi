@@ -2741,7 +2741,8 @@
         "customHours": "Hours",
         "customDays": "Days",
         "customWeeks": "Weeks",
-        "sectionTitlePlural": "Recordatorios"
+        "sectionTitlePlural": "Recordatorios",
+        "sharedWithAssignees": "Quien esté asignado a este evento también recibe este recordatorio."
     },
     "onboarding": {
         "step1Title": "Bienvenido a {{name}}",

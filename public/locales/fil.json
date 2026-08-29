@@ -2655,7 +2655,8 @@
         "customHours": "Oras",
         "customDays": "Araw",
         "customWeeks": "Linggo",
-        "sectionTitlePlural": "Mga Paalala"
+        "sectionTitlePlural": "Mga Paalala",
+        "sharedWithAssignees": "Nakukuha rin ng mga nakatalaga sa kaganapang ito ang paalalang ito."
     },
     "birthdays": {
         "inDays": "sa loob ng {{days}} araw",

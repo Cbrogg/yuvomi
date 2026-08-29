@@ -2655,7 +2655,8 @@
         "customHours": "Stunden",
         "customDays": "Tage",
         "customWeeks": "Wochen",
-        "sectionTitlePlural": "Erinnerungen"
+        "sectionTitlePlural": "Erinnerungen",
+        "sharedWithAssignees": "Wer diesem Termin zugewiesen ist, bekommt diese Erinnerung ebenfalls."
     },
     "birthdays": {
         "inDays": "in {{days}} Tagen",
