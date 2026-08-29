@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Third-party modules can declare capabilities in `module.json`** for dashboard widgets, household permissions (`ext:<module-id>`), and API token scopes - the same surfaces core modules use, without changing core application code.
+- **The dashboard dynamically loads third-party widget entry points** (`renderWidget`) from protected module assets, with per-widget error isolation and an optional generic options dialog driven by `optionsSchema`.
+- **Third-party modules can ship UI translations** in `locales/{locale}.json` with manifest `i18n.defaultLocale`, `labelKey` / `titleKey`, and the same 24 core languages as Yuvomi.
+- **OpenAPI now documents extension module capabilities** and module i18n metadata.
+
+### Changed
+
+- **`GET /api/v1/modules` includes normalized `capabilities` and `i18n` metadata** (widgets, permission module metadata, API prefix, available locale files) for each installed extension module.
+- **Dashboard widgets, navigation, route guards, and admin permissions merge extension entries at runtime** from enabled modules, so third-party widget ids (`<module-id>:<widget-id>`) and `ext:<module-id>` permission keys behave like core modules.
+- **API token and MCP scope pickers include extension modules** from the live permissions catalog instead of a fixed core-only list.
+- **Extension UI labels resolve through a locale fallback chain** (UI language, module default, `en`, `de`, then static manifest labels) in navigation, Settings, permissions admin, and the dashboard widget chrome.
+
 ## [2.52.1] - 2026-08-29
 
 ### Fixed
