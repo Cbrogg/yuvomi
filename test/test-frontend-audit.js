@@ -6477,7 +6477,18 @@ test('phase 7 calendar inline polish keeps icons and all-day labels tokenized', 
   assert.match(source, /class="calendar-all-day-label"/, 'all-day gutter labels should use the shared label class');
   assert.match(allDayLabel, /font-size:\s*var\(--text-xs\)/, 'all-day labels should use a text token');
   assert.match(allDayLabel, /color:\s*var\(--color-text-secondary\)/, 'all-day labels should use readable secondary text');
-  assert.match(allDayLabel, /width:\s*var\(--space-12\)/, 'all-day gutter width should use a spacing token');
+  // DIESE ZEILE STAND AUF --space-12 UND HAT DEN FEHLER FESTGEHALTEN, NICHT GEFUNDEN.
+  //
+  // Gemeint war "die Breite kommt aus einem Token statt aus einer Zahl". Geprueft
+  // wurde ein BESTIMMTES Token - und das falsche: --space-12 sind 48px, die
+  // Zeitspalte daneben ist --cal-gutter-width (64px). Die rechtsbuendige
+  // Beschriftung endete dadurch 16px links von den Stundenzahlen darunter, und
+  // der Guard war nicht nur blind dafuer, er wurde beim Richtigstellen rot.
+  //
+  // Jetzt prueft er die Absicht: ein Token, und zwar der, den die Zeitspalte
+  // selbst fuehrt. Welche Zahl dahintersteht, entscheidet tokens.css.
+  assert.match(allDayLabel, /width:\s*var\(--cal-gutter-width\)/,
+    'all-day gutter width should come from the same token as the hour column, not a second spacing value');
 });
 
 test('phase 7 Budget row actions stay touch-safe on mobile', () => {
