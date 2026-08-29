@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.52.0] - 2026-08-29
+
 ### Added
 
 - **A reminder on a shared event now reaches the people it was shared with.** Reminders were tied to
