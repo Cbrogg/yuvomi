@@ -11,6 +11,7 @@ import {
   setExtensionLocaleBundles,
   resolveExtensionTranslation,
   extensionLocaleChain,
+  nestFlatLocaleDict,
   t,
 } from '../public/i18n.js';
 import {
@@ -104,6 +105,29 @@ test('isValidExtensionLabelKey rejects invalid keys', () => {
   assert.equal(isValidExtensionLabelKey('widgets.summary'), true);
   assert.equal(isValidExtensionLabelKey('Bad Key'), false);
   assert.equal(isValidExtensionLabelKey(''), false);
+});
+
+test('nestFlatLocaleDict does not poison Object.prototype', () => {
+  delete Object.prototype.polluted;
+  const tree = nestFlatLocaleDict({
+    '__proto__.polluted': 'PWNED',
+    'widget.title': 'harmless',
+  });
+  assert.equal(({}).polluted, undefined);
+  assert.equal(Object.hasOwn(Object.prototype, 'polluted'), false);
+  assert.equal(tree.widget.title, 'harmless');
+  assert.equal(Object.getPrototypeOf(tree), null);
+
+  nestFlatLocaleDict({ 'constructor.prototype.polluted': 'PWNED' });
+  assert.equal(({}).polluted, undefined);
+  delete Object.prototype.polluted;
+});
+
+test('registerExtensionTranslations still resolves a legitimate nested key', () => {
+  clearExtensionTranslations();
+  registerExtensionTranslations('demo-mod', { 'widget.title': 'harmless' });
+  assert.equal(t('extensions.demo-mod.widget.title'), 'harmless');
+  assert.equal(({}).polluted, undefined);
 });
 
 test('clearExtensionTranslations removes overlay', () => {

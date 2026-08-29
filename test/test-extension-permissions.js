@@ -50,6 +50,16 @@ writeModule('demo-ext', {
   'widgets/summary.js': 'export async function renderWidget() {}\n',
 });
 
+writeModule('taskextras', {
+  id: 'taskextras',
+  name: 'Task Extras',
+  entry: 'index.js',
+  capabilities: {
+    permissions: { module: { label: 'Task Extras', icon: 'box' } },
+    api: { prefix: '/api/tasks' },
+  },
+}, { 'index.js': 'export async function render() {}\n' });
+
 const dbmod = await import('../server/db.js');
 const svc = await import('../server/services/modules.js');
 const {
@@ -58,7 +68,8 @@ const {
   normalizePermissionInput,
   replaceSubjectPermissions,
 } = await import('../server/permissions.js');
-const { extensionPermissionKey } = await import('../server/services/module-capabilities.js');
+const { extensionPermissionKey, normalizeCapabilities } = await import('../server/services/module-capabilities.js');
+const { moduleForPath } = await import('../server/scopes.js');
 
 const db = dbmod.get();
 
@@ -102,4 +113,59 @@ test('normalizePermissionInput accepts extension widget id', async () => {
 
 test('extensionPermissionKey helper', () => {
   assert.equal(extensionPermissionKey('demo-ext'), 'ext:demo-ext');
+});
+
+const capsStubs = {
+  publicUrl: () => '',
+  pathExists: async () => true,
+  isSafeRelativeFile: () => true,
+};
+
+function capsRaw(prefix) {
+  return {
+    name: 'Task Extras',
+    capabilities: {
+      permissions: { module: { label: 'Task Extras', icon: 'box' } },
+      api: { prefix },
+    },
+  };
+}
+
+test('normalizeCapabilities rejects a prefix that collides with a core module', async () => {
+  await assert.rejects(
+    () => normalizeCapabilities(capsRaw('/api/tasks'), 'taskextras', '/tmp/mod', capsStubs.publicUrl, capsStubs.pathExists, capsStubs.isSafeRelativeFile),
+    /must be \/api\/extensions\/taskextras/,
+  );
+});
+
+test('normalizeCapabilities rejects a prefix anchored to a different module id', async () => {
+  await assert.rejects(
+    () => normalizeCapabilities(capsRaw('/api/extensions/other-id'), 'taskextras', '/tmp/mod', capsStubs.publicUrl, capsStubs.pathExists, capsStubs.isSafeRelativeFile),
+    /must be \/api\/extensions\/taskextras/,
+  );
+});
+
+test('normalizeCapabilities accepts /api/extensions/{moduleId} with a trailing slash', async () => {
+  const caps = await normalizeCapabilities(
+    capsRaw('/api/extensions/taskextras/'),
+    'taskextras',
+    '/tmp/mod',
+    capsStubs.publicUrl,
+    capsStubs.pathExists,
+    capsStubs.isSafeRelativeFile,
+  );
+  assert.equal(caps.apiPrefix, '/api/extensions/taskextras');
+  assert.equal(caps.scopeKey, 'ext:taskextras');
+});
+
+test('a colliding api.prefix never reaches PREFIX_TO_MODULE', async () => {
+  const mods = await svc.listModules({ admin: true });
+  const colliding = mods.find((m) => m.id === 'taskextras');
+  assert.ok(colliding, 'taskextras is listed for admin');
+  assert.equal(colliding.status, 'error');
+  assert.match(colliding.error, /must be \/api\/extensions\/taskextras/);
+
+  const catalog = permissionCatalog();
+  assert.ok(!catalog.scopeModuleKeys.includes('ext:taskextras'));
+  assert.equal(moduleForPath('/tasks/5'), 'tasks');
 });

@@ -56,3 +56,12 @@ test('buildDefaultWidgetConfig inserts extension widgets before weather', () => 
   assert.ok(weatherIdx >= 0);
   assert.ok(summaryIdx < weatherIdx);
 });
+
+test('normalizeDashboardConfigWithExtensions inserts a missing first id at 0, not the end', () => {
+  ext.setExtensionModules(sampleModules);
+  const cfg = ext.normalizeDashboardConfigWithExtensions([
+    { id: 'calendar', visible: true, order: 0, size: '1x2' },
+  ]);
+  assert.equal(cfg[0].id, 'tasks');
+  assert.notEqual(cfg[cfg.length - 1].id, 'tasks');
+});
