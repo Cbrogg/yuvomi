@@ -2588,6 +2588,18 @@ Responsive grid: 1 column on mobile, 2 on tablet, 3 on desktop.
 
 **The day program (v2.4.0):** "Today at a glance" is a chronological day program instead of three module aggregates: today's remaining appointments (with their time), tasks due today ("by 17:00"; overdue first, then all-day, then date-only), the next planned meal at a nominal slot time, and open shopping as a timeless closing row — each row carrying its module seal, the assignee's avatar (seal∩avatar mark) and `data-object-kind`/`data-object-id` anchors. The task row opens the same quick-action dialog as the tasks widget (done/edit); the calendar row keeps its `?open=` deep link; the meal row needs no special path because `/meals` already scrolls today's slot into view. Capped at 6 rows with a "+N more today" footnote. An empty day answers instead of disappearing: "Free today" / "All done for today", with an outlook naming whichever comes first — the next appointment or the next due task; a complete program closes with "Nothing else today", which names tomorrow's first due task when one exists. The echo rule still applies throughout: a visible widget of a domain removes that domain's cockpit rows and carries its own warnings. Two server slices feed this: `memberTodayTasks` (per-member open count due today or overdue, visibility-filtered for the viewer) and `tasksDoneToday` (needed to tell "all done" from "nothing was ever due"). Weather moved from a card into a quiet masthead line under the greeting; the card remains as a wall-tablet opt-in and, when visible, silences the line (no echo). The family widget shows per member what today holds (next appointment, open-task count) and, on free days, each member's next upcoming appointment instead of stacking identical "Free today" lines. Dashboard content refreshes silently on tab reactivation and every 15 minutes while the tab stays visible (never while customizing). The module hairline sits on every widget card regardless of size, and a card whose action link and origin diverge names its seal tone explicitly (family → contacts).
 
+**The task row opens the whole task (v2.53.0, #918):** the note above says a task row opens "the same
+quick-action dialog as the tasks widget (done/edit)". That dialog is gone. Both the cockpit row and
+the rows of the tasks and countdown widgets now open the full reading view from
+`components/task-detail.js` — the same one the Tasks module opens — with subtasks, comments,
+documents, the tickable checkboxes in the description and the complete action set, and the dashboard
+refreshes its own tiles afterwards instead of navigating anywhere. The two-button card was never a
+design decision; it was the only thing reachable while that view lived inside `pages/tasks.js`. See
+[Tasks](#tasks-tasks) for what the view needs from its surroundings. The `data-object-kind` /
+`data-object-id` anchors keep their meaning and gained a second reader: deleting a task hides every
+representation of it for the length of the undo strip, and the Overview names its objects with those
+attributes while the widget rows use `data-task-id` — the same task can stand in two tiles at once.
+
 **The board carries its module colours (v2.6.0):** module identity on a widget card was a 2px hairline along its top edge, which the dark theme swallowed - seventeen modules' worth of colour read as a wall of grey rectangles. The card header carries the family tone as a wash band (`--tint-wash`, the scale rung defined for a tint sitting *under* foreign content), and the seal on that band receives the band as its own `--seal-base`; without it the disc mixes against the card surface and sits at 1.06:1 on the tint. The hairline stays. The day programme takes the larger card radius and one elevation step above the grid - it had been sitting one step *below* the widgets it leads - and its rows tint in their own module tone on hover instead of neutral grey. On phones the programme no longer shrinks in padding or title size; only the page gutter narrows. The minimum grid column is 280px, because at 270 the ellipse cut through real names ("Aunt Claire Bec…").
 
 **The header band is as tall as its title line (v2.6.1):** the band measured 73px for a 17px title and a 24px seal - between 18% and 29.9% of the card at 390×844 - because the "Alle" link claimed a full 48px touch box inside a 12px-padded row. A free-standing target owes its size in **one** axis, so the link takes it in the width (`min-width: --target-lg`) while its box drops to `--target-sm` and its hit area stays 48px through a `::before` that bleeds into the header padding. Band 73px → 49px at an unchanged 48px hit height; the title line carries the measure so the error tile without a link lands on the same value. The title stays 17px - the row was bulky, not the type.
@@ -2684,6 +2696,30 @@ The surface carries four things, in this order: **the time**, large (this is whe
 
 **Features:**
 - CRUD + subtasks (max 2 levels, checkbox list, progress bar). Subtasks are tickable **wherever they are visible** — on the task card and, since v1.78.1 (#671), in the detail view too. Read-only rows there had assumed the list next door would carry the interaction, but that list keeps them behind a collapsed progress bar, so a freshly created subtask could end up visible and unreachable at the same time. **Adding one works wherever the task is open, including the first** (v2.52.1, #925): the detail view offers "add subtask" on the same terms as the card row (may edit the task, not archived, not itself a subtask), and its section now stands even when empty — the same rule the comments below it follow. The card hides its inline actions below 640px by design, and the "add" button for the *first* subtask hung on nothing else, so on a phone every later subtask could be added and the first could not. This is the second instance of one pattern: a view that assumes the view next door carries the interaction, while that one is closed on exactly the device in question. `test:frontend-audit` reads the card's inline actions out of the markup and requires a reachable path for each in the detail view
+- **One reading view, wherever a task is shown (v2.53.0, #918):** clicking a task in the **Overview**
+  or on a task chip in any of the four **Calendar** views opens the same detail view the Tasks module
+  opens, in place. Before this, the Overview brought up a card with two buttons ("Edit", which
+  navigated into the Tasks module, and "Mark as done"), and a calendar chip navigated away outright —
+  everything else a task carries (subtasks, comments, attached documents, the tickable checkboxes in
+  its description, due date, assignee, points, history) was neither visible nor reachable from there.
+  That weighed more than two missing buttons sound like: the Overview is where the app stands open
+  during the day, the Tasks module is where tasks get created and groomed, and the view with fewer
+  capabilities was the one used more often. The view lives in `public/components/task-detail.js` and
+  the surrounding view tells it what it cannot know — who is looking (`currentUserId`, `isAdmin`),
+  what it can resolve (`users`, `categories`), and how to refresh itself (`onChanged`, so the
+  calendar refreshes its day and the widget its tile rather than navigating anywhere). What a field
+  of a task *means* (archived, editable under the lock, how its due date reads, its category label)
+  moved alongside into `public/utils/task-fields.js`; those rules had already been copied into
+  `dashboard.js` once, which is the drift this prevents. Permission checks travel with the view: a
+  locked task (#830) stays uneditable from the Overview, and a read-only member gets the conversation
+  without an input field. **The edit form stays with its module** and is handed to the view as a
+  mounter — a caller that gives none gets a reading view without an Edit button rather than one that
+  leads nowhere, and the same applies when `/tasks/meta/options` fails, since a category select with
+  no options produces a save the server rejects. `pages/tasks.js` exports `openTaskById(taskId, {
+  user, container, onChanged })` as the single outside entry point, loaded dynamically so the task
+  form's weight stays out of the Overview's startup — **and it ensures `/styles/tasks.css` and waits
+  for it**, because the router keeps exactly one page stylesheet loaded and both the reading view and
+  the form take their appearance from there.
 - **Renaming and removing a subtask (v2.12.0 · #748):** each subtask row carries a rename and a delete action beside its checkbox, at the same size and in the same restrained tone as the actions on the task row above it. Deliberately **not hover-only** — a touch device has no hover, and correcting a typo is exactly where a phone is the likely device. Deleting asks first and names what it removes, since ticking off is reversible and this is not. The server needed nothing for this: a subtask is an ordinary task with a `parent_task_id`, so `PUT`/`DELETE /api/v1/tasks/:id` already covered both.
 - **Subtasks expanded by default (#623):** a household-wide preference (`tasks_subtasks_expanded` in `sync_config`, admin-gated, default off) decides whether the subtask list of a task starts open instead of collapsed behind its progress bar. Manual expand and collapse still work per task; the preference only sets the starting state. Settings → Modules → Module options.
 - **Multi-person assignment:** tasks can be assigned to multiple family members simultaneously via `UserMultiSelect` checkbox dropdown; stacked avatar circles (up to 3 visible + `+N` overflow badge) shown on task cards and Kanban — each circle shows the member's profile photo if set, otherwise coloured initials

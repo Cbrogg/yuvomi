@@ -1,6 +1,8 @@
-<!-- version: 2.52.1 -->
-A recurring task no longer loses steps from its next occurrence. If a weekly task had a checklist of subtasks, going back to the occurrence you had just finished and unticking one of its steps quietly removed that step from the upcoming occurrence: four steps became three, and doing it again left two. Ticking something back on a past occurrence now only affects that occurrence. Worth checking your recurring tasks once after the update - any steps that were already lost this way are gone and need to be added back by hand, after which they carry forward correctly again.
+<!-- version: 2.53.0 -->
+Tapping a task on the Overview or in the Calendar now opens the whole task, right where you are. Until now the Overview answered with a small card offering two things - "Edit", which took you into the Tasks module, and "Mark as done" - while a task on a calendar day simply navigated you away, and the week you were reading was gone. Everything else a task carries was out of reach from there: its subtasks, the conversation about it, attached documents, the checkboxes in its description, who it is assigned to and when it is due.
 
-On a phone there is now a way to add the first subtask to a task. Every subtask after the first could always be added, but the button for the first one lived only in the task row, and that row hides its buttons on narrow screens to keep titles on one line. Opening the task now offers "add subtask" whether or not it already has any, so an iPhone can do what an iPad could.
+All of that is available from either place now, and you stay where you were. Tick a step off in the calendar and the day updates around you; finish a task from the Overview and the tile you opened it from refreshes itself. This is worth knowing because the Overview is where most households actually leave the app open, so it was the view that could do the least while being used the most.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.52.1
+Nothing to do after the update - no migration, and no settings changed.
+
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.53.0
