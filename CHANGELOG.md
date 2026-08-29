@@ -7,6 +7,17 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.51.2] - 2026-08-29
+
+### Changed
+
+- **Documentation only, no change to the application.** `docs/SPEC.md` now records three calendar
+  behaviours it did not carry: that choosing a view persists it while drilling into one does not
+  (v2.51.0), how the view switcher and the calendar body relate as tablist and panel, and that the
+  agenda shows today even when today is empty (both v2.51.1). The first of these is the reason the
+  matching bug stayed invisible for a release: the specification described the intention, the code
+  did more, and nobody reading the spec would have found a contradiction.
+
 ## [2.51.1] - 2026-08-29
 
 ### Fixed
