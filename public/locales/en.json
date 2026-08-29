@@ -480,7 +480,9 @@
         "lockedDetail": "Creator and administrators only",
         "tagsSkippedLocked": "{{count}} locked tasks skipped.",
         "tagsSkippedLocked_one": "{{count}} locked task skipped.",
-        "listLoadError": "Tasks could not be loaded."
+        "listLoadError": "Tasks could not be loaded.",
+        "checklistToggle": "Tick item",
+        "checkConflict": "The task has changed in the meantime. Please open it again."
     },
     "shopping": {
         "importMealsPreviewMeals_few": "{{count}} meals",

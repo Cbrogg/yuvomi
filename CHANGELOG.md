@@ -7,6 +7,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Checklists in a task's description can be ticked off where they are shown.** The boxes rendered
+  from `- [ ]` were already there and already inert: ticking one meant opening the editor and
+  hand-editing raw Markdown, which is enough friction that in practice the checklist stops being
+  maintained and the task's real state stops being visible to anyone else. They are now real
+  controls, exactly as they have been in Notes since v2.42.0 - the same rule, the same file, one
+  more caller rather than a second implementation. The server rewrites only the one source line, so
+  two members ticking different items at the same moment both keep their tick; saving the whole
+  description would have let the later writer discard the earlier one silently. A locked task stays
+  tickable on purpose, for the same reason marking one done does: the lock covers what the task is,
+  not how far it has come.
+
 ### Fixed
 
 - **The onboarding walkthrough is remembered per account, not per device.** It used to live only in

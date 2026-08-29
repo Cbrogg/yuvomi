@@ -12,6 +12,7 @@ import { stagger, vibrate, scheduleUndoableDelete, animationSettled } from '/uti
 import { wireSwipeRows, maybeShowSwipeHint } from '/utils/swipe-row.js';
 import { t, getLocale, formatDate, formatDayMonth, formatTime, formatDateInput, parseDateInput, isDateInputValid, formatTimeInput, parseTimeInput } from '/i18n.js';
 import { esc, renderMarkdownLight } from '/utils/html.js';
+import { splitKeepingLineEndings } from '/utils/markdown-checklist.js';
 import { renderMarkdownToolbar, wireMarkdownToolbar } from '/utils/markdown-toolbar.js';
 import { refresh as refreshReminders } from '/reminders.js';
 import { renderUserMultiSelect, getSelectedUserIds, bindUserMultiSelect, renderAvatarStack } from '/components/user-multi-select.js';
@@ -2090,7 +2091,7 @@ function renderTaskDetail(task, reminders = [], container = null) {
     // Riegel im Formular, weil sie den Irrtum bestätigt statt ihn zu verhindern.
     // Der Riegel steht jetzt trotzdem auch dort (`wireCountdownGate`).
     { icon: 'hourglass', label: t('dashboard.countdownTitle'), value: task.countdown && task.due_date ? t('tasks.countdownDetail') : '' },
-    { icon: 'align-left', label: t('tasks.descriptionLabel'), node: descriptionNode(task.description), multiline: true },
+    { icon: 'align-left', label: t('tasks.descriptionLabel'), node: descriptionNode(task), multiline: true },
     // „Wann war das zuletzt dran" - nur bei wiederkehrenden Aufgaben (#791).
     // Eine einmalige Aufgabe beantwortet die Frage schon mit ihrem Status: sie
     // ist erledigt oder nicht, und ein Verlauf mit genau einer Zeile darin
@@ -2116,13 +2117,70 @@ function renderTaskDetail(task, reminders = [], container = null) {
  * Der Renderer maskiert selbst, deshalb ist insertAdjacentHTML hier zulaessig -
  * dieselbe Zusicherung, auf der notes.js und dashboard.js bereits stehen.
  */
-function descriptionNode(description) {
-  const text = (description ?? '').trim();
+function descriptionNode(task) {
+  const text = (task.description ?? '').trim();
   if (!text) return null;
   const box = document.createElement('div');
   box.className = 'task-detail__note';
-  box.insertAdjacentHTML('beforeend', renderMarkdownLight(text));
+  // Interaktiv, weil diese Ansicht beides kann, was der Renderer dafür
+  // verlangt: sie zeigt den VOLLSTÄNDIGEN Text (die Zeilennummern am Kästchen
+  // sind also die der Aufgabe) und sie kennt die Aufgaben-Id. Das Dashboard und
+  // die Kalender-Chips bekommen diese Optionen deshalb ausdrücklich nicht.
+  box.insertAdjacentHTML('beforeend', renderMarkdownLight(text, {
+    checklist: { interactive: true, toggleLabel: t('tasks.checklistToggle') },
+  }));
+  box.addEventListener('click', (e) => {
+    const hit = e.target.closest('.note-md-box[data-md-line]');
+    if (hit) toggleDescriptionCheck(task, hit);
+  });
   return box;
+}
+
+/**
+ * Einen Haken in der Beschreibung setzen oder lösen (#917).
+ *
+ * Optimistisch wie bei den Notizen und bei den Teilaufgaben: ein Abhaken, das
+ * erst nach der Antwort reagiert, fühlt sich wie ein verschluckter Tap an - und
+ * genau auf dem Wandtablett ist das die ganze Interaktion.
+ *
+ * `expect` ist die Gegenprobe zum Zeilenindex: hat jemand den Text inzwischen
+ * bearbeitet, zeigt der Index woanders hin, und ein Haken in der falschen Zeile
+ * wäre schlimmer als eine Fehlermeldung. Der Server antwortet dann mit 409.
+ *
+ * Der lokale Stand wird aus der ANTWORT nachgezogen, nicht selbst gerechnet:
+ * sonst liefe `expect` beim zweiten Tap gegen einen Text, den nur der Client
+ * kennt.
+ */
+async function toggleDescriptionCheck(task, box) {
+  const line    = parseInt(box.dataset.mdLine, 10);
+  const checked = box.dataset.mdChecked !== '1';
+  const expect  = splitKeepingLineEndings(task.description)[line * 2];
+
+  // Der eigene Stand kennt die angetippte Zeile gar nicht mehr - dasselbe
+  // Ergebnis wie ein 409, nur ohne den Umweg über den Server. Ausdrücklich
+  // nicht stilles Nichtstun, sonst täte ein Tap einfach nichts.
+  if (expect === undefined) {
+    window.yuvomi?.showToast(t('tasks.checkConflict'), 'danger');
+    return;
+  }
+
+  const paint = (on) => {
+    box.setAttribute('aria-checked', String(on));
+    box.dataset.mdChecked = on ? '1' : '0';
+    box.closest('.note-md-check')?.classList.toggle('is-checked', on);
+  };
+
+  paint(checked);
+  try {
+    const res = await api.patch(`/tasks/${task.id}/check`, { line, checked, expect });
+    task.description = res.data.description;
+  } catch (err) {
+    paint(!checked);
+    window.yuvomi?.showToast(
+      err.status === 409 ? t('tasks.checkConflict') : (err.data?.error ?? t('common.unknownError')),
+      'danger',
+    );
+  }
 }
 
 /**
