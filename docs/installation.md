@@ -863,6 +863,8 @@ If codes are rejected on a device whose clock drifts, sync the clock rather than
 
 Enable single sign-on via any OpenID Connect provider (Authentik, Keycloak, Google, Microsoft Entra, etc.).
 
+Pocket ID documents Yuvomi as one of its [client examples](https://pocket-id.org/docs/client-examples/yuvomi), which is a working set of values for the four variables below if you run that provider.
+
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
 | `OIDC_ISSUER` | OIDC provider issuer URL (e.g. `https://authentik.example.com/application/o/yuvomi/`) | - | No |
