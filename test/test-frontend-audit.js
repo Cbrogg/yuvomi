@@ -8491,6 +8491,13 @@ test('page-inline-pad contract holds across every stylesheet (#577)', () => {
 
   // (2) Wer die Content-Spalte trägt, darf sie nirgends mit einem Festwert
   //     überschreiben - auch nicht in einem späteren @media-Block derselben Datei.
+  //
+  // Composition pages may move the gutter to `.app-page__body` in layout.css
+  // (PAGE-COMPOSITION.md). That counts as the carrier when the page root uses
+  // `.app-page` / `renderAppPage` and the module CSS no longer repeats the pad.
+  const layoutCss = read('../public/styles/layout.css');
+  const compositionBodyOwnsPad = /\.app-page--(?:reading|form|data|dashboard)\s*>\s*\.app-page__body[\s\S]{0,200}?padding-inline:\s*var\(--page-inline-pad\)/.test(layoutCss);
+
   for (const mod of bleedModules) {
     const css = read(`../public/styles/${mod}.css`);
     const rules = cssRules(css);
@@ -8498,7 +8505,11 @@ test('page-inline-pad contract holds across every stylesheet (#577)', () => {
       rules.filter((r) => /padding-inline:\s*var\(--page-inline-pad\)|margin-inline:\s*var\(--page-inline-pad\)/.test(r.body))
         .flatMap((r) => r.selectors),
     );
-    assert.ok(carriers.size > 0, `${mod}: kein Träger der Content-Spalte (--page-inline-pad) gefunden (#577)`);
+    const pageFile = `../public/pages/${mod}.js`;
+    const pageSrc = existsSync(new URL(pageFile, import.meta.url)) ? read(pageFile) : '';
+    const usesCompositionBody = /app-page|renderAppPage/.test(pageSrc) && compositionBodyOwnsPad;
+    assert.ok(carriers.size > 0 || usesCompositionBody,
+      `${mod}: kein Träger der Content-Spalte (--page-inline-pad) gefunden (#577)`);
 
     for (const rule of rules) {
       for (const sel of rule.selectors.filter((s) => carriers.has(s))) {
@@ -14688,6 +14699,7 @@ test('PAGE-007: page-layout helpers export the contract surface', () => {
     'renderAppPage',
     'renderPageHeader',
     'renderPageTitle',
+    'renderPageActions',
     'renderPageBody',
     'renderPageSection',
     'renderListSection',
@@ -14727,10 +14739,48 @@ test('PAGE-010: full-bleed is an explicit --bleed declaration', () => {
 
 test('PAGE composition: reference page birthdays uses page-layout helpers', () => {
   const src = read('../public/pages/birthdays.js');
+  const css = withoutBlockComments(read('../public/styles/birthdays.css'));
   assert.match(src, /from ['"]\/utils\/page-layout\.js['"]/,
     'birthdays.js must import page-layout helpers (reference page)');
-  assert.match(src, /renderAppPage|compositionModeClass/,
-    'birthdays.js must use composition helpers');
-  assert.match(src, /data-composition|app-page--reading|mode:\s*'reading'/,
-    'birthdays.js must declare reading mode');
+  for (const name of [
+    'renderAppPage',
+    'renderPageHeader',
+    'renderPageTitle',
+    'renderPageActions',
+    'renderPageBody',
+    'renderPageSection',
+    'renderListSection',
+  ]) {
+    assert.match(src, new RegExp(name), `reference must call ${name}`);
+  }
+  assert.match(src, /mode:\s*'reading'/, 'reference must declare reading mode');
+  assert.match(src, /legacyAlias:\s*false/,
+    'reference must omit .page-measure--narrow compat alias');
+  assert.match(src, /data-composition-reference/,
+    'reference must mark data-composition-reference');
+  assert.match(src, /measured:\s*true/, 'reference header must use measured rail');
+  assert.doesNotMatch(src, /page-measure--narrow/,
+    'reference source must not reintroduce page-measure--narrow');
+  // Module CSS owns accent/list chrome only — no page geometry.
+  for (const rule of eachRule(css)) {
+    if (!/\.birthdays-page\b/.test(rule.selector)) continue;
+    assert.doesNotMatch(rule.body, /max-width\s*:/,
+      `reference CSS must not set page max-width on ${rule.selector}`);
+    assert.doesNotMatch(rule.body, /margin-inline\s*:\s*var\(--page-inline-pad\)/,
+      `reference CSS must not own page gutters on ${rule.selector}`);
+  }
+  assert.doesNotMatch(css, /\.birthdays-hint\s*\{[^}]*margin-inline\s*:\s*var\(--page-inline-pad\)/,
+    'hint gutter must come from .app-page__body, not birthdays.css');
+  assert.doesNotMatch(css, /\.birthdays-list\s*\{[^}]*margin-inline\s*:\s*var\(--page-inline-pad\)/,
+    'list gutter must come from composition body, not birthdays.css');
+});
+
+test('PAGE composition: measured toolbar rail exists in layout.css', () => {
+  const layout = read('../public/styles/layout.css');
+  assert.match(layout, /\.page-toolbar--measured/,
+    'measured toolbar modifier must exist');
+  assert.match(layout, /\.page-toolbar__rail/,
+    'toolbar rail primitive must exist');
+  assert.match(layout, /\.app-page--reading\s*>\s*\.app-page__body/,
+    'reading body must own page-inline-pad gutters');
 });
