@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.54.0] - 2026-08-29
+
 ### Added
 
 - **Third-party modules can declare capabilities in `module.json`** for dashboard widgets, household permissions (`ext:<module-id>`), and API token scopes - the same surfaces core modules use, without changing core application code.
