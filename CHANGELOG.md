@@ -11,6 +11,10 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 - **Week-view day headings align with the hourly calendar columns.** The header and all-day row
   now share the hourly grid's gutter width.
+- **The all-day label lines up with the hours below it.** The row it sits in was corrected above,
+  but the label inside it kept the old 48px width in a 64px column. It is right-aligned, so it
+  ended 16px short of the hour figures that start directly underneath: the column boundaries
+  matched and the two labels still did not. Both texts now end on the same vertical edge.
 
 ## [2.51.2] - 2026-08-29
 

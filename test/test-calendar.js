@@ -596,6 +596,29 @@ test('Wochenraster: Kopf, Ganztagszeile und Stunden verwenden dieselbe Zeitspalt
     'die Wochenansicht darf nicht auf die alte 48px-Sprosse zurückfallen');
 });
 
+/* EINE SPUR IN DER RICHTIGEN BREITE IST NOCH KEINE FLUCHTLINIE.
+ *
+ * Die Prüfung darüber sichert die SPALTE. Was in ihr steht, hat sie nicht
+ * gesehen: die Ganztags-Beschriftung stand auf --space-12 (48px) in der
+ * 64px-Spur, ist rechtsbündig und endete deshalb 16px links von den
+ * Stundenzahlen, die genau darunter anfangen - der Versatz überlebte den Fix
+ * für die Spalten. Beide Texte enden nur dann auf derselben Kante, wenn sie
+ * dieselbe Breite UND dasselbe padding-right haben. */
+test('Ganztags-Beschriftung endet auf derselben Kante wie die Stundenzahlen', () => {
+  const rules = [...eachRule(calendarCss)];
+  const label = rules.find((rule) => rule.selector.trim() === '.calendar-all-day-label');
+  const slot = rules.find((rule) => rule.selector.trim() === '.week-view__time-slot');
+
+  assert(label && slot, 'Beschriftung und Stundenschlitz müssen beide eine eigene Regel haben');
+  assert(/width:\s*var\(--cal-gutter-width\)/.test(label.body),
+    'die Ganztags-Beschriftung muss die volle Zeitspalte füllen, nicht --space-12');
+
+  const paddingRight = (body) => body.match(/padding(?:-right)?:\s*([^;]+)/)?.[1]?.trim() ?? '';
+  const labelPad = paddingRight(label.body).split(/\s+/)[1] ?? paddingRight(label.body);
+  assert(labelPad === paddingRight(slot.body),
+    `rechter Innenabstand läuft auseinander: Beschriftung ${labelPad}, Stunde ${paddingRight(slot.body)}`);
+});
+
 function zIndexOf(selector) {
   for (const rule of eachRule(calendarCss)) {
     if (!rule.selector.split(',').map((s) => s.trim()).includes(selector)) continue;
