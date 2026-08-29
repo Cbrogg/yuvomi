@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.52.1] - 2026-08-29
+
 ### Fixed
 
 - **Unchecking a subtask on a finished occurrence no longer takes it out of the next one.** A weekly
