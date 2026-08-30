@@ -19,6 +19,7 @@ import {
   loadLinkedEntriesForItems, loadLinkedEntries, computeTotal,
 } from './entry-links.js';
 import { warrantyEndDate, reminderDateForWarranty } from '../../services/inventory-deadlines.js';
+import { dataUrlContentMatches } from '../../utils/file-signature.js';
 import {
   validateTrackedDatesInput, writeTrackedDates, removeTrackedDateReminders, loadTrackedDates, loadTrackedDatesForItems,
 } from './item-dates.js';
@@ -77,6 +78,8 @@ function validatePhotoData(val) {
   const s = String(val).trim();
   if (s.length > MAX_PHOTO_LENGTH) return { value: null, error: 'Photo is too large.' };
   if (!PHOTO_RE.test(s)) return { value: null, error: 'Photo must be a valid image data URL.' };
+  // Der Regex prueft die Deklaration, diese Zeile den Inhalt (#937).
+  if (!dataUrlContentMatches(s)) return { value: null, error: 'Photo content does not match its image type.' };
   return { value: s, error: null };
 }
 
