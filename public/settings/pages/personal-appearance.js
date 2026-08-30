@@ -292,6 +292,26 @@ function renderPage(container, preferences, isAdmin) {
           </select>
         </div>
         <div id="region-error" class="form-error" role="alert" hidden></div>
+        <!-- Die Waehrung stand bis #934 in der Formatkarte darunter, die
+             ausgeblendet ist, solange eine Region-Voreinstellung genau passt.
+             Das ergab eine Falle mit Ansage: sichtbar wurde das Feld erst, WENN
+             man die Waehrung schon einmal geaendert hatte (dann passt kein
+             Preset mehr und die Karte klappt auf) - wer sie suchte, fand sie
+             also nie. Der Wegweiser aus den Modul-Optionen fuehrte genau
+             dorthin, wo nichts zu sehen war.
+
+             Sie steht jetzt hier, weil sie kein Format ist: Datum und Uhrzeit
+             sagen, WIE ein Wert dasteht, und folgen dem Ort. Die Waehrung folgt
+             dem Geld, und das ist nicht dasselbe - ein Haushalt kann sehr wohl
+             deutsche Formate und ein Konto in Dollar haben. Die Region belegt
+             sie weiterhin vor; das bleibt der bequeme Weg, nur nicht mehr der
+             einzige. -->
+        <div class="form-group">
+          <label class="form-label" for="currency-select">${t('settings.currencyLabel')}</label>
+          <select class="form-input" id="currency-select" aria-describedby="currency-hint currency-error"></select>
+        </div>
+        <p class="form-hint" id="currency-hint">${t('settings.currencyHint')}</p>
+        <div id="currency-error" class="form-error" role="alert" hidden></div>
       </div>` : `
       <div class="settings-card">
         <p class="form-hint">${t('settings.regionAdminOnly')}</p>
@@ -315,12 +335,6 @@ function renderPage(container, preferences, isAdmin) {
         <p class="form-hint">${esc(t('settings.timezoneAuto', { zone: preferences.timezone_effective || 'UTC' }))}</p>`}
       </div>
       <div class="settings-card" id="custom-formats"${customHidden ? ' hidden' : ''}>
-        ${isAdmin ? `
-        <div class="form-group">
-          <label class="form-label" for="currency-select">${t('settings.currencyLabel')}</label>
-          <select class="form-input" id="currency-select" aria-describedby="currency-error"></select>
-        </div>
-        <div id="currency-error" class="form-error" role="alert" hidden></div>` : ''}
         <p class="form-hint" id="formats-household-hint">${t('settings.formatsHouseholdHint')}</p>
         <div class="form-group">
           <label class="form-label" for="date-format-select">${t('settings.dateFormatLabel')}</label>
@@ -384,14 +398,49 @@ function readFormatState(container) {
 
 // Hält den Region-Dropdown mit den drei Einzel-Selects synchron (Preset oder
 // "Benutzerdefiniert"), nachdem ein Einzelwert manuell geändert wurde.
-function syncRegionSelect(container) {
+/**
+ * Blendet die Formatkarte passend zur aufgeloesten Region ein oder aus.
+ *
+ * Eine eigene Funktion, weil zwei verschiedene Wege hier hineinfuehren und nur
+ * einer von beiden `detectRegion` benutzen darf: der Regionswechsel kennt die
+ * gewaehlte Region und muss sie behalten (sonst springt der Select auf die
+ * erste Region mit gleichem Format-Triple, #486), waehrend eine Aenderung an
+ * einem Einzelfeld die Region erst herleiten muss.
+ */
+function applyCustomVisibility(container, region) {
+  const customBlock = container.querySelector('#custom-formats');
+  if (customBlock) customBlock.hidden = region !== CUSTOM_REGION;
+}
+
+/**
+ * Zieht den Region-Select den Einzelfeldern nach.
+ *
+ * @param {HTMLElement} container
+ * @param {object} [opts]
+ * @param {boolean} [opts.mayHide] Darf die Formatkarte dabei zugehen?
+ *        `false` fuer Aenderungen, die AUS der Karte kommen: wer ein eigenes
+ *        Format zusammenstellt, laeuft unterwegs durch Zwischenstaende, und
+ *        einer davon trifft leicht zufaellig ein Preset. `EUR/mdy/24h` auf
+ *        `EUR/dmy/12h` umzustellen geht ueber `EUR/dmy/24h` - also durch
+ *        `de-DE`. Die Karte waere nach dem ersten Schritt verschwunden, mitsamt
+ *        dem Feld, in dem der Fokus gerade stand.
+ * @param {string} [opts.region] Erzwungene Region statt der hergeleiteten.
+ */
+function syncRegionSelect(container, { mayHide = true, region = null } = {}) {
   const regionSelect = container.querySelector('#region-select');
   if (!regionSelect) return;
-  regionSelect.value = detectRegion({
+  regionSelect.value = region ?? detectRegion({
     currency: container.querySelector('#currency-select')?.value,
     date_format: container.querySelector('#date-format-select')?.value,
     time_format: container.querySelector('#time-format-select')?.value,
   });
+  // Die Karte muss der Anzeige folgen. Seit die Waehrung ausserhalb von ihr
+  // steht (#934), kann eine Aenderung die Region auf "Benutzerdefiniert"
+  // schieben, ohne dass der Nutzer die Karte je gesehen hat - stuende sie dann
+  // weiter auf `hidden`, behauptete der Select etwas, das die Seite nicht zeigt.
+  if (mayHide || regionSelect.value === CUSTOM_REGION) {
+    applyCustomVisibility(container, regionSelect.value);
+  }
 }
 
 /**
@@ -521,9 +570,8 @@ function bindEvents(container, user) {
 
   const regionSelect = container.querySelector('#region-select');
   regionSelect?.addEventListener('change', async () => {
-    const customBlock = container.querySelector('#custom-formats');
     if (regionSelect.value === CUSTOM_REGION) {
-      if (customBlock) customBlock.hidden = false;
+      applyCustomVisibility(container, CUSTOM_REGION);
       return;
     }
     const preset = REGION_PRESETS[regionSelect.value];
@@ -531,6 +579,14 @@ function bindEvents(container, user) {
     const errorElement = container.querySelector('#region-error');
     clearError(errorElement);
     regionSelect.disabled = true;
+    // Die Waehrung mitsperren: der Regionswechsel schreibt sie mit und setzt das
+    // Feld nach der Antwort auf den Preset-Wert. Wer waehrenddessen eine andere
+    // waehlt, hat je nach Reihenfolge der Antworten entweder seine Wahl serverseitig
+    // verloren oder sieht die des Presets, obwohl gespeichert wurde, was er wollte.
+    // Zwei unabhaengige PUTs auf dasselbe Feld sind kein Zustand, den eine
+    // Fehlermeldung heilt - also erst gar nicht zulassen.
+    const currencyDuringRegion = container.querySelector('#currency-select');
+    if (currencyDuringRegion) currencyDuringRegion.disabled = true;
     try {
       await savePreferences({
         currency: preset.currency,
@@ -560,7 +616,7 @@ function bindEvents(container, user) {
       window.dispatchEvent(new CustomEvent('time-format-changed', {
         detail: { timeFormat: preset.time_format },
       }));
-      if (customBlock) customBlock.hidden = true;
+      applyCustomVisibility(container, regionSelect.value);
       // Scheitert das Nachladen, bleibt nur das Automatik-Label stale - kein
       // Grund, den erfolgreichen Regionswechsel als Fehler zu melden.
       await refreshDataLanguageOptions(container).catch(() => {});
@@ -569,6 +625,7 @@ function bindEvents(container, user) {
       showError(errorElement, error.message);
     } finally {
       if (regionSelect.isConnected) regionSelect.disabled = false;
+      if (currencyDuringRegion?.isConnected) currencyDuringRegion.disabled = false;
     }
   });
 
@@ -585,7 +642,24 @@ function bindEvents(container, user) {
         () => savePreferences({ currency: currencySelect.value }),
       );
       persistedCurrency = currencySelect.value;
-      syncRegionSelect(container);
+      // EINE WAEHRUNGSAENDERUNG DARF DIE REGION NICHT WECHSELN. `detectRegion`
+      // liest die Waehrung als Unterscheidungsmerkmal mit, also traf ein
+      // de-DE-Haushalt, der EUR auf CHF stellt, formal exakt `de-CH` - und
+      // `applyNumberLocale` stellte daraufhin die Betraege von deutscher auf
+      // Schweizer Gruppierung um (1.234,50 → 1'234.50). Das ist das Gegenteil
+      // dessen, was dieses Feld verspricht: die Waehrung sollte sich UNABHAENGIG
+      // vom regionalen Format aendern lassen (#934).
+      //
+      // Bestaetigen darf die Herleitung die Region also, wechseln nicht. Passt
+      // sie nicht mehr, ist der Zustand ehrlicherweise "benutzerdefiniert" -
+      // Datum und Uhrzeit bleiben dabei unangetastet.
+      const regionBefore = container.querySelector('#region-select')?.value;
+      const derived = detectRegion({
+        currency: currencySelect.value,
+        date_format: container.querySelector('#date-format-select')?.value,
+        time_format: container.querySelector('#time-format-select')?.value,
+      });
+      syncRegionSelect(container, { region: derived === regionBefore ? regionBefore : CUSTOM_REGION });
       applyNumberLocale(readFormatState(container));
       window.yuvomi?.showToast(t('settings.currencySaved'), 'success');
     } catch (error) {
@@ -604,7 +678,7 @@ function bindEvents(container, user) {
       window.dispatchEvent(new CustomEvent('date-format-changed', {
         detail: { dateFormat: dateFormatSelect.value },
       }));
-      syncRegionSelect(container);
+      syncRegionSelect(container, { mayHide: false });
       applyNumberLocale(readFormatState(container));
       window.yuvomi?.showToast(t('settings.dateFormatSavedToast'), 'success');
     } catch (error) {
@@ -625,7 +699,7 @@ function bindEvents(container, user) {
       window.dispatchEvent(new CustomEvent('time-format-changed', {
         detail: { timeFormat: timeFormatSelect.value },
       }));
-      syncRegionSelect(container);
+      syncRegionSelect(container, { mayHide: false });
       applyNumberLocale(readFormatState(container));
       window.yuvomi?.showToast(t('settings.timeFormatSavedToast'), 'success');
     } catch (error) {
