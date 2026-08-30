@@ -1210,6 +1210,43 @@ test('personal account leaf preserves self-profile, password, and logout contrac
   assert.match(source, /role="alert"[^>]*>\$\{t\('settings\.loadError'\)\}/);
 });
 
+test('#936: ein verknuepftes Rezept hat von der Essenskarte aus einen Ausgang', () => {
+  // Ein Essen liess sich mit einem Rezept aus dem eigenen Haus verknuepfen
+  // (`recipe_id`), aber der Aktionsknopf auf der Karte gab es nur fuer eine
+  // EXTERNE Adresse (`recipe_url`). Die Verknuepfung hatte also keinen Ausgang -
+  // man konnte sie anlegen und nie benutzen.
+  const meals = read('../public/pages/meals.js');
+  const recipes = read('../public/pages/recipes.js');
+
+  // Der Knopf existiert und zeigt auf die Deep-Link-Schreibweise, die Kontakte
+  // und Startseite schon benutzen - kein dritter eigener Parameter.
+  assert.match(meals, /data-action="open-linked-recipe"/);
+  assert.match(meals, /href="\/recipes\?open=\$\{encodeURIComponent\(meal\.recipe_id\)\}"/);
+
+  // Und die Gegenseite liest ihn. Ohne das waere der Link eine Adresse, die
+  // niemand auswertet: /recipes oeffnete sich, das Rezept bliebe zugeklappt.
+  assert.match(recipes, /new URLSearchParams\(window\.location\.search\)\.get\('open'\)/);
+  // Der AUFRUF, nicht der Name: `/openRecipeFromQuery\(\)/` trifft auch die
+  // Funktionsdefinition und bleibt gruen, wenn niemand sie mehr ruft. Genau das
+  // ist der ersten Fassung passiert. Geprueft wird deshalb der Aufruf innerhalb
+  // von render(), nach dem Laden der Liste - vorher gaebe es keine Zeile zum
+  // Aufklappen.
+  const renderAt = recipes.indexOf('export async function render(container)');
+  assert.ok(renderAt > 0, 'render() existiert');
+  const renderBody = recipes.slice(renderAt);
+  assert.match(renderBody, /renderRecipeList\(\);\s*(?:\n\s*\/\/[^\n]*)*\n\s*openRecipeFromQuery\(\);/,
+    'der Deep-Link wird nicht gelesen - /recipes?open=N oeffnet dann nichts');
+
+  // Der Klick geht ueber `<a href>` und darf dem Browser seine Modifier lassen -
+  // sonst nimmt der Handler dem Nutzer Cmd-Klick und "Link kopieren" wieder weg,
+  // wofuer der Link ueberhaupt ein Link ist.
+  const handlerAt = meals.indexOf("action === 'open-linked-recipe'");
+  assert.ok(handlerAt > 0, 'der Klick wird behandelt');
+  const handler = meals.slice(handlerAt, handlerAt + 400);
+  assert.match(handler, /metaKey \|\| e\.ctrlKey \|\| e\.shiftKey \|\| e\.altKey/);
+  assert.match(handler, /navigate\(/, 'ein roher href waere ein Vollreload der PWA');
+});
+
 test('personal appearance leaf owns theme, locale, and regional preferences', () => {
   const source = read('../public/settings/pages/personal-appearance.js');
 
