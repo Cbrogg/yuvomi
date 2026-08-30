@@ -61,8 +61,9 @@ function syncReminder(subscription) {
 function loadSubscription(id) {
   return db.get().prepare(`
     SELECT s.*, c.name AS category_name, c.color AS category_color,
-           c.budget_subcategory_key,
-           p.name AS payment_method_name, u.display_name AS creator_name
+           c.label_key AS category_label_key, c.budget_subcategory_key,
+           p.name AS payment_method_name, p.label_key AS payment_method_label_key,
+           u.display_name AS creator_name
     FROM budget_subscriptions s
     LEFT JOIN subscription_categories c ON c.id = s.category_id
     LEFT JOIN subscription_payment_methods p ON p.id = s.payment_method_id
@@ -371,7 +372,10 @@ router.put('/categories/:id', (req, res) => {
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
     const database = db.get();
     database.transaction(() => {
-      database.prepare('UPDATE subscription_categories SET name = ?, color = ? WHERE id = ?')
+      // UMBENENNEN MACHT EINE VORGABE ZUR EIGENEN ZEILE: `label_key` faellt
+      // weg, damit der eingegebene Name gilt statt weiterhin uebersetzt zu
+      // werden. Dasselbe tun tasks.js, contacts.js und inventory/categories.js.
+      database.prepare('UPDATE subscription_categories SET name = ?, color = ?, label_key = NULL WHERE id = ?')
         .run(name.value, categoryColor.value, id);
       // Die verknüpfte Budget-Subkategorie führt denselben Namen (POST-Invariante).
       if (existing.budget_subcategory_key) {
@@ -420,7 +424,8 @@ router.put('/payment-methods/:id', (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Payment method not found.', code: 404 });
     const name = str(req.body.name, 'Name', { max: MAX_SHORT });
     if (name.error) return res.status(400).json({ error: name.error, code: 400 });
-    db.get().prepare('UPDATE subscription_payment_methods SET name = ? WHERE id = ?').run(name.value, id);
+    // Wie bei den Kategorien: ein eigener Name schlaegt den uebersetzten.
+    db.get().prepare('UPDATE subscription_payment_methods SET name = ?, label_key = NULL WHERE id = ?').run(name.value, id);
     res.json({ data: db.get().prepare('SELECT * FROM subscription_payment_methods WHERE id = ?').get(id) });
   } catch (err) {
     if (String(err.message).includes('UNIQUE')) return res.status(409).json({ error: 'Payment method already exists.', code: 409 });
@@ -517,8 +522,9 @@ router.get('/', async (req, res) => {
     }
     const rows = db.get().prepare(`
       SELECT s.*, c.name AS category_name, c.color AS category_color,
-             c.budget_subcategory_key,
-             p.name AS payment_method_name, u.display_name AS creator_name
+             c.label_key AS category_label_key, c.budget_subcategory_key,
+             p.name AS payment_method_name, p.label_key AS payment_method_label_key,
+             u.display_name AS creator_name
       FROM budget_subscriptions s
       LEFT JOIN subscription_categories c ON c.id = s.category_id
       LEFT JOIN subscription_payment_methods p ON p.id = s.payment_method_id
@@ -531,14 +537,25 @@ router.get('/', async (req, res) => {
     const enabledRows = converted.rows.filter((row) => row.enabled);
     const completedCount = converted.rows.filter((row) => row.status === 'completed').length;
     const monthlyTotal = enabledRows.reduce((sum, row) => sum + (row.monthly_base || 0), 0);
+    // GRUPPIERT WIRD NACH DER ZEILE, NICHT NACH IHREM ANZEIGETEXT. Hier stand
+    // `row.category_name || 'Uncategorized'`, und damit erfand die Antwort zwei
+    // englische Woerter, die kein Klient uebersetzen konnte - eine Sammelposition
+    // hiess auch in einer spanischen Oberflaeche "Unspecified" (#950). Sie traegt
+    // jetzt `id: null` und ueberlaesst das Wort dem Leser; eine Vorgabezeile
+    // reicht ihren `label_key` durch, eine eigene ihren Namen.
     const byCategory = new Map();
     const byPaymentMethod = new Map();
+    const bucket = (map, id, name, labelKey, amount) => {
+      const entry = map.get(id) ?? { id, name, label_key: labelKey, amount: 0 };
+      entry.amount += amount;
+      map.set(id, entry);
+    };
     for (const row of enabledRows) {
-      const category = row.category_name || 'Uncategorized';
-      const method = row.payment_method_name || 'Unspecified';
-      byCategory.set(category, (byCategory.get(category) || 0) + (row.monthly_base || 0));
-      byPaymentMethod.set(method, (byPaymentMethod.get(method) || 0) + (row.monthly_base || 0));
+      const amount = row.monthly_base || 0;
+      bucket(byCategory, row.category_id ?? null, row.category_name ?? null, row.category_label_key ?? null, amount);
+      bucket(byPaymentMethod, row.payment_method_id ?? null, row.payment_method_name ?? null, row.payment_method_label_key ?? null, amount);
     }
+    const breakdown = (map) => [...map.values()].map((e) => ({ ...e, amount: Number(e.amount.toFixed(2)) }));
     res.json({
       data: {
         subscriptions: converted.rows,
@@ -550,8 +567,8 @@ router.get('/', async (req, res) => {
           monthly_budget: configured.monthly_budget,
           remaining_budget: Number((configured.monthly_budget - monthlyTotal).toFixed(2)),
           base_currency: configured.base_currency,
-          by_category: [...byCategory].map(([name, amount]) => ({ name, amount: Number(amount.toFixed(2)) })),
-          by_payment_method: [...byPaymentMethod].map(([name, amount]) => ({ name, amount: Number(amount.toFixed(2)) })),
+          by_category: breakdown(byCategory),
+          by_payment_method: breakdown(byPaymentMethod),
         },
         rates: converted.rates,
       },

@@ -6751,6 +6751,60 @@ const MIGRATIONS = [
       CREATE INDEX IF NOT EXISTS idx_reminders_assigned_from ON reminders(assigned_from);
     `,
   },
+  {
+    version: 170,
+    description: 'Subscriptions: seed categories and payment methods carry a label key, so they speak the reader language (#950)',
+    // GEMELDET WAR EINE HALBE UEBERSETZUNG. Im Feld "Kategorien und
+    // Zahlungsarten verwalten" standen die Kategorien auf Spanisch und die
+    // Zahlungsarten daneben auf Englisch - dieselbe Liste, zwei Sprachen.
+    //
+    // Der Grund: BEIDE Tabellen speichern ihre sieben bzw. sechs Vorgaben als
+    // englischen TEXT ('Credit Card', 'Entertainment'). Die Kategorien hatten
+    // im Frontend eine Karte, die diesen Text auf einen i18n-Schluessel abbog;
+    // die Zahlungsarten hatten keine. Es war also nie eine zweite Uebersetzung
+    // noetig, sondern die erste an der falschen Stelle: eine Karte im Frontend
+    // kann nur raten, ob 'Other' die Vorgabe oder eine selbst angelegte Zeile
+    // desselben Namens meint.
+    //
+    // DIE ANTWORT STEHT IM PROJEKT SCHON VIERMAL: task_categories,
+    // contact_categories, inventory_categories und die Dokumentordner tragen
+    // ihren uebersetzten Namen als `label_key` und ihren freien Namen als
+    // `name`. Gelesen wird `label_key ? t(label_key) : name`. Damit ist die
+    // Frage "Vorgabe oder eigene Zeile" eine Eigenschaft der ZEILE, keine
+    // Namensuebereinstimmung - und Umbenennen loescht den Schluessel, womit
+    // der eigene Name gilt (so machen es die drei Routen oben auch).
+    //
+    // WARUM DER BACKFILL UEBER DEN NAMEN GEHT UND DAS RICHTIG IST: einen
+    // anderen Anker gibt es fuer Bestandszeilen nicht, und er ist genau so
+    // treffsicher wie die Frontend-Karte, die er ersetzt. Wer 'Credit Card'
+    // laengst in 'Kreditkarte' umbenannt hat, wird nicht getroffen und behaelt
+    // seinen Namen - das ist der gewuenschte Ausgang, nicht der verpasste.
+    up: `
+      ALTER TABLE subscription_categories     ADD COLUMN label_key TEXT;
+      ALTER TABLE subscription_payment_methods ADD COLUMN label_key TEXT;
+
+      UPDATE subscription_categories SET label_key = CASE name
+        WHEN 'Entertainment' THEN 'budget.subcatSubscriptionEntertainment'
+        WHEN 'Productivity'  THEN 'budget.subcatSubscriptionProductivity'
+        WHEN 'Utilities'     THEN 'budget.subcatSubscriptionUtilities'
+        WHEN 'Health'        THEN 'budget.subcatSubscriptionHealth'
+        WHEN 'Education'     THEN 'budget.subcatSubscriptionEducation'
+        WHEN 'Other'         THEN 'budget.subcatSubscriptionOther'
+      END
+      WHERE name IN ('Entertainment', 'Productivity', 'Utilities', 'Health', 'Education', 'Other');
+
+      UPDATE subscription_payment_methods SET label_key = CASE name
+        WHEN 'Credit Card'   THEN 'subscriptions.paymentMethodCreditCard'
+        WHEN 'Debit Card'    THEN 'subscriptions.paymentMethodDebitCard'
+        WHEN 'PayPal'        THEN 'subscriptions.paymentMethodPaypal'
+        WHEN 'Apple Pay'     THEN 'subscriptions.paymentMethodApplePay'
+        WHEN 'Google Pay'    THEN 'subscriptions.paymentMethodGooglePay'
+        WHEN 'Bank Transfer' THEN 'subscriptions.paymentMethodBankTransfer'
+        WHEN 'Other'         THEN 'subscriptions.paymentMethodOther'
+      END
+      WHERE name IN ('Credit Card', 'Debit Card', 'PayPal', 'Apple Pay', 'Google Pay', 'Bank Transfer', 'Other');
+    `,
+  },
 ];
 
 /**
