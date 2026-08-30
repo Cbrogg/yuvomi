@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **The currency setting is where you look for it.** It sat inside the format card under Appearance
+  → Region / Format, and that card is hidden whenever a region preset matches your settings exactly.
+  Since the currency is one of the things a preset is matched on, the effect was circular: on a
+  default installation the card stays shut and the field is invisible - but change the currency and
+  no preset matches any more, the card opens, and the field appears. It only became visible once you
+  had already found it, which nobody had. The note in Module options pointing at "Appearance →
+  Region / Format" led to exactly the place where nothing was shown; the reporter searched both and
+  came away empty both times (#934). The currency now sits in the region card, which is always
+  visible. Picking a region still fills it in - that stays the quick way, it is just no longer the
+  only one. A currency is not a format: dates and times say how a value is written and follow a
+  place, while a household can keep German formats and an account in dollars.
+
 ## [2.54.0] - 2026-08-29
 
 ### Added
