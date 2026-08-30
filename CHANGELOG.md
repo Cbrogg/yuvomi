@@ -58,6 +58,19 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Redirects now have to stay on http/https and may not step down from https; the credential headers
   are dropped when the origin changes, and only then, so a server sending `/cal` to `/cal/` keeps
   working. Reported as part of a security audit (#937).
+### Security
+
+- **Uploads are checked against their content, not just their declaration.** Every upload arrives as
+  a data URL, and the type in its prefix - `data:application/pdf;base64,...` - comes from the
+  sender's browser and can be set to anything. Five paths took that word for it: documents, birthday
+  photos, housekeeper pictures, quick-link icons and subscription logos, each with its own check and
+  none of them looking at the file. Yuvomi now verifies the file's own signature for PDF, PNG, JPEG,
+  WebP, GIF and the Office formats. Plain text and CSV keep passing unchecked - text has no header,
+  and a rule that guessed would reject a spreadsheet whose first cell holds angle brackets. What is
+  served to the browser was already protected against the execution side of this (fixed content
+  type, `nosniff`, a narrow policy); the gain here is the quiet failure - a file filed as an
+  insurance policy that is not one, noticed years later when whoever uploaded it is long gone.
+  Reported as part of a security audit (#937).
 
 ## [2.54.0] - 2026-08-29
 
