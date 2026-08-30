@@ -51,6 +51,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Needs SMTP configured. Three refusals are told apart rather than collapsed into one failure: the
   member has no address, SMTP is not set up, or nothing on the list is still open.
 
+  Only actual household members can be picked, and that is narrower than "has an account". Housekeeping
+  staff and shared-expense guests both have logins and both have a contact with an address on it -
+  guests especially are external people who are blocked from every other part of the app. The rule that
+  decides this is written once and used by both the picker and the send route, so the two cannot drift
+  apart. An address field holding a list rather than one address makes that member unreachable instead
+  of reaching everyone on it.
+
 ### Fixed
 
 - **The settings page works offline again.** Its shell loads `dirty-guard.js` - the part that asks
