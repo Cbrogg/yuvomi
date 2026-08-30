@@ -232,7 +232,7 @@ test('foldICSLine lässt kurze Zeilen unangetastet', () => {
 // ── Feldabbildung ───────────────────────────────────────────────────────────────
 
 test('ein getimter Termin behält die Zone, in der er importiert wurde', () => {
-  const fields = icsFieldsForEvent({
+  const { fields } = icsFieldsForEvent({
     title: 'X', start_datetime: '2035-03-10T09:00', end_datetime: '2035-03-10T10:00',
     tzid: 'Europe/Berlin', all_day: 0,
   });
@@ -240,26 +240,109 @@ test('ein getimter Termin behält die Zone, in der er importiert wurde', () => {
   assert.deepEqual(fields.DTEND,   { value: '20350310T100000', params: ';TZID=Europe/Berlin' });
 });
 
-test('ein Termin ohne Zone bleibt ohne TZID', () => {
-  const fields = icsFieldsForEvent({
-    title: 'X', start_datetime: '2035-03-10T09:00', end_datetime: null, tzid: null, all_day: 0,
-  });
-  assert.equal(fields.DTSTART.params, '');
-});
-
 test('eine UTC-Zeit bekommt keine zusätzliche TZID aufgesetzt', () => {
-  const fields = icsFieldsForEvent({
+  const { fields, tzid } = icsFieldsForEvent({
     title: 'X', start_datetime: '2035-03-10T09:00:00Z', tzid: 'Europe/Berlin', all_day: 0,
   });
   assert.equal(fields.DTSTART.params, '', 'Wert und Parameter würden sich sonst widersprechen');
+  assert.equal(tzid, null, 'ein UTC-Instant braucht kein VTIMEZONE');
+});
+
+// ── Zeitzone im ausgehenden Objekt (#938) ────────────────────────────────────
+//
+// Ein lokal angelegter Termin hat kein `tzid`: die Zone steht nicht am Event,
+// sondern am Haushalt. Bis #938 fiel er deshalb durch jede Verzweigung hindurch
+// und ging als `DTSTART:20350310T090000` hinaus - "floating time", laut RFC 5545
+// gueltig und genau deshalb heimtueckisch: es heisst "9 Uhr auf der Uhr dessen,
+// der es liest". iOS und eM Client raten die Systemzone und liegen richtig; ein
+// DAViCal-Backend nimmt das Objekt an, gibt es unveraendert zurueck und zeigt es
+// in seiner eigenen Oberflaeche nie an, weil sein Index einen Zeitpunkt braucht.
+//
+// Der Melder hat genau diesen Unterschied gemessen: derselbe Termin, sichtbar im
+// nativen Client, unsichtbar im Web-Frontend desselben Servers.
+
+test('#938: ein lokal angelegter Termin traegt die Zone des Haushalts', () => {
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'X', start_datetime: '2035-03-10T09:00', end_datetime: '2035-03-10T10:00',
+    tzid: null, all_day: 0,
+  }, 'Europe/Berlin');
+  assert.deepEqual(fields.DTSTART, { value: '20350310T090000', params: ';TZID=Europe/Berlin' });
+  assert.deepEqual(fields.DTEND,   { value: '20350310T100000', params: ';TZID=Europe/Berlin' });
+  assert.equal(tzid, 'Europe/Berlin', 'die Zone muss ihr VTIMEZONE bekommen');
+});
+
+test('#938: ohne bekannte Zone wird der Wert UTC - floating bleibt es nie', () => {
+  // Die Ziffern sind dann als UTC gemeint statt als "irgendeine Uhr". Das ist
+  // die schlechtere der beiden richtigen Antworten, aber es ist eine: ein
+  // Zeitpunkt, den jeder Server gleich einordnet.
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'X', start_datetime: '2035-03-10T09:00', end_datetime: null, tzid: null, all_day: 0,
+  }, null);
+  assert.equal(fields.DTSTART.params, '');
+  assert.match(fields.DTSTART.value, /Z$/, 'ohne Z waere es wieder floating time');
+  assert.equal(tzid, null);
+});
+
+test('#938: eine Haushaltszone, die UTC gleicht, ergibt Z statt eines VTIMEZONE', () => {
+  // Ein VTIMEZONE ueber 'Etc/UTC' fuehrt nicht jeder Client als Zone; ein 'Z'
+  // versteht jeder.
+  for (const zone of ['UTC', 'Etc/UTC', 'Etc/GMT']) {
+    const { fields, tzid } = icsFieldsForEvent({
+      title: 'X', start_datetime: '2035-03-10T09:00', tzid: null, all_day: 0,
+    }, zone);
+    assert.equal(fields.DTSTART.params, '', `${zone} sollte kein TZID setzen`);
+    assert.match(fields.DTSTART.value, /Z$/);
+    assert.equal(tzid, null);
+  }
+});
+
+test('#938: die Zone des Termins schlaegt die des Haushalts', () => {
+  // Ein importierter Termin bringt seine eigene mit; sie darf nicht von der
+  // Haushaltszone ueberschrieben werden, nur weil die auch bekannt ist.
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'X', start_datetime: '2035-03-10T09:00', tzid: 'America/New_York', all_day: 0,
+  }, 'Europe/Berlin');
+  assert.equal(fields.DTSTART.params, ';TZID=America/New_York');
+  assert.equal(tzid, 'America/New_York');
+});
+
+test('#938: eine unbekannte Zone ergibt kein TZID, zu dem der Block fehlte', () => {
+  // Ein TZID, fuer das sich kein VTIMEZONE bauen laesst, waere schlechter als
+  // gar keins: ungueltig statt nur unbestimmt.
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'X', start_datetime: '2035-03-10T09:00', tzid: null, all_day: 0,
+  }, 'Nirgendwo/Erfunden');
+  assert.equal(fields.DTSTART.params, '');
+  assert.match(fields.DTSTART.value, /Z$/);
+  assert.equal(tzid, null);
+});
+
+test('#938: eine Serie mit Zone geht als Wanduhrzeit hinaus, nicht als UTC', () => {
+  // Der DST-Punkt (#549, hier fuer den CalDAV-Weg): eine woechentliche Serie,
+  // UTC-verankert, springt am Zeitumstellungswochenende um eine Stunde. Mit
+  // TZID rechnet der Empfaenger jedes Vorkommen selbst.
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'X', start_datetime: '2035-03-10T08:00:00Z', end_datetime: '2035-03-10T09:00:00Z',
+    tzid: 'Europe/Berlin', all_day: 0, recurrence_rule: 'FREQ=WEEKLY',
+  }, 'Europe/Berlin');
+  assert.equal(fields.DTSTART.params, ';TZID=Europe/Berlin');
+  assert.equal(fields.DTSTART.value, '20350310T090000', 'Wanduhrzeit, nicht der UTC-Wert');
+  assert.equal(tzid, 'Europe/Berlin');
 });
 
 test('ein ganztägiger Termin nutzt VALUE=DATE mit exklusivem Ende', () => {
-  const fields = icsFieldsForEvent({
+  const { fields } = icsFieldsForEvent({
     title: 'X', start_datetime: '2035-07-01', end_datetime: '2035-07-03', all_day: 1,
   });
   assert.deepEqual(fields.DTSTART, { value: '20350701', params: ';VALUE=DATE' });
   assert.deepEqual(fields.DTEND,   { value: '20350704', params: ';VALUE=DATE' }, 'RFC 5545: DTEND ist exklusiv');
+});
+
+test('ein ganztägiger Termin braucht kein VTIMEZONE - ein Datum hat keine Zone', () => {
+  const { tzid } = icsFieldsForEvent({
+    title: 'X', start_datetime: '2035-07-01', end_datetime: '2035-07-03', all_day: 1,
+  }, 'Europe/Berlin');
+  assert.equal(tzid, null);
 });
 
 // ── COLOR: die Eigenfarbe erreicht den Anbieter (#897, #899) ──────────────────
@@ -276,7 +359,7 @@ test('ein ganztägiger Termin nutzt VALUE=DATE mit exklusivem Ende', () => {
 // geschwiegen hat.
 
 test('die Eigenfarbe geht als CSS3-Name hinaus, nicht als Hex', () => {
-  const fields = icsFieldsForEvent({
+  const { fields } = icsFieldsForEvent({
     title: 'Zahnarzt', start_datetime: '2035-03-10T09:00', end_datetime: '2035-03-10T10:00',
     color: '#CE5053',
   });
@@ -289,7 +372,7 @@ test('ein Termin, dessen Farbe nie gelernt wurde, gibt COLOR gar nicht erst mit'
   // "Kein Feld" heisst fuer den Patcher "nicht anfassen". Ein null hiesse
   // "entfernen" - und das darf hier nicht stehen, weil eine nie gelernte Farbe
   // nicht dasselbe ist wie eine geleerte. Siehe den Repro-Test weiter unten.
-  const fields = icsFieldsForEvent({
+  const { fields } = icsFieldsForEvent({
     title: 'Zahnarzt', start_datetime: '2035-03-10T09:00', end_datetime: '2035-03-10T10:00',
     color: null, color_modified: 0,
   });
@@ -300,7 +383,7 @@ test('eine GELEERTE Farbe geht als null hinaus und entfernt COLOR (#899)', () =>
   // Die Haelfte, die #898 offenlassen musste: erst `color_modified` macht aus
   // "keine Farbe" eine Aussage. Der Patcher entfernt die Zeile daraufhin - die
   // Faehigkeit dazu steht seit #897 bereit und bekommt hier ihren Aufrufer.
-  const fields = icsFieldsForEvent({
+  const { fields } = icsFieldsForEvent({
     title: 'Zahnarzt', start_datetime: '2035-03-10T09:00', end_datetime: '2035-03-10T10:00',
     color: null, color_modified: 1,
   });
@@ -313,7 +396,7 @@ test('eine nicht abbildbare Farbe laesst die Property des Servers in Ruhe', () =
   // Anbieter dafuer zu loeschen waere ein Datenverlust - auch dann, wenn an
   // diesem Termin schon einmal die Farbe gewaehlt wurde (#899): geleert wurde
   // nichts, der Wert steht, er passt nur in kein CSS3-Wort.
-  const fields = icsFieldsForEvent({
+  const { fields } = icsFieldsForEvent({
     title: 'Zahnarzt', start_datetime: '2035-03-10T09:00', end_datetime: '2035-03-10T10:00',
     color: 'nicht-hex', color_modified: 1,
   });
@@ -413,6 +496,203 @@ test('ohne Eigenfarbe schreiben die Builder gar keine COLOR-Zeile', () => {
   for (const [label, build] of [['CalDAV', caldavSyncTest.buildCalDAVICS], ['Apple', appleSyncTest.buildICS]]) {
     assert.doesNotMatch(build(event), /^COLOR:/m, label);
   }
+});
+
+// ── Das ganze Objekt: was wirklich auf dem Server ankommt (#938) ─────────────
+//
+// Die Feldabbildung oben prueft Werte und Parameter. Diese Tests pruefen das
+// fertige VCALENDAR - die Ebene, auf der der Melder seinen Befund gemessen hat
+// (er hat das Objekt per GET vom Server zurueckgeholt). Beide Builder muessen
+// hier gleich handeln: ein Termin darf nicht davon abhaengen, ueber welchen der
+// zwei Wege er hochgeladen wurde.
+
+const BOTH_BUILDERS = () => [
+  ['CalDAV', caldavSyncTest.buildCalDAVICS],
+  ['Apple', appleSyncTest.buildICS],
+];
+
+// Nur der VEVENT-Teil. Ein VTIMEZONE fuehrt eigene DTSTART-Zeilen (die Onsets
+// seiner DST-Regeln), und die tragen absichtlich keine Zone - sie SIND die Zone.
+// Ein Suchen ueber das ganze Objekt findet seit dem Fix zuerst diese und misst
+// damit die falsche Zeile.
+function veventOf(ics) {
+  const body = unfoldICS(ics);
+  return body.slice(body.indexOf('BEGIN:VEVENT'), body.indexOf('END:VEVENT'));
+}
+
+test('#938: kein Builder gibt einen getimten Termin ohne Zonenangabe hinaus', () => {
+  const event = {
+    id: 983, title: 'Test-Sync-01', description: null, location: null, color: null,
+    start_datetime: '2026-08-30T10:00', end_datetime: '2026-08-30T11:00',
+    all_day: 0, recurrence_rule: null, tzid: null,
+  };
+  for (const [label, build] of BOTH_BUILDERS()) {
+    const dtstart = /^DTSTART.*$/m.exec(veventOf(build(event, 'Europe/Berlin')))?.[0];
+    // Der Befund im Wortlaut: DTSTART ohne TZID, ohne Z, ohne VTIMEZONE.
+    assert.notEqual(dtstart, 'DTSTART:20260830T100000', `${label}: floating time`);
+    assert.ok(/;TZID=|Z$/.test(dtstart), `${label}: ${dtstart} nennt keine Zone`);
+  }
+});
+
+test('#938: zu jedem TZID steht sein VTIMEZONE im selben VCALENDAR', () => {
+  // RFC 5545 §3.2.19. Ohne den Block darf ein strenger Server das Objekt
+  // zurueckweisen - und mit dem Block kann ein Client offene Serien selbst
+  // weiterrechnen, weil die DST-Uebergaenge als RRULE drinstehen.
+  const event = {
+    id: 984, title: 'Serie', description: null, location: null, color: null,
+    start_datetime: '2026-08-30T10:00', end_datetime: '2026-08-30T11:00',
+    all_day: 0, recurrence_rule: null, tzid: null,
+  };
+  for (const [label, build] of BOTH_BUILDERS()) {
+    const ics = unfoldICS(build(event, 'Europe/Berlin'));
+    assert.match(ics, /^BEGIN:VTIMEZONE$/m, `${label}: VTIMEZONE fehlt`);
+    assert.match(ics, /^TZID:Europe\/Berlin$/m, label);
+    assert.match(ics, /^BEGIN:DAYLIGHT$/m, `${label}: ohne DST-Regel ist der Block wertlos`);
+    // Reihenfolge: die Zone muss stehen, bevor ein DTSTART sie benutzt.
+    assert.ok(ics.indexOf('BEGIN:VTIMEZONE') < ics.indexOf('BEGIN:VEVENT'), `${label}: Block steht zu spaet`);
+  }
+});
+
+test('#938: ein ganztaegiger Termin bekommt kein VTIMEZONE angehaengt', () => {
+  const event = {
+    id: 985, title: 'Urlaub', description: null, location: null, color: null,
+    start_datetime: '2026-08-30', end_datetime: '2026-09-01',
+    all_day: 1, recurrence_rule: null, tzid: null,
+  };
+  for (const [label, build] of BOTH_BUILDERS()) {
+    const ics = unfoldICS(build(event, 'Europe/Berlin'));
+    assert.doesNotMatch(ics, /BEGIN:VTIMEZONE/, `${label}: ein Datum hat keine Zone`);
+    assert.match(veventOf(ics), /^DTSTART;VALUE=DATE:20260830$/m, label);
+    assert.match(veventOf(ics), /^DTEND;VALUE=DATE:20260902$/m, `${label}: DTEND ist exklusiv`);
+  }
+});
+
+test('#938: der Patch-Pfad schreibt das VTIMEZONE nach, wenn es fehlt', () => {
+  // Der dritte Weg nach draussen: eine AENDERUNG an einem Objekt, das schon auf
+  // dem Server liegt. Der Patcher tauscht nur Properties - das VTIMEZONE hat
+  // dort nie jemand ergaenzt, obwohl der Serien-Pfad sein TZID seit #549 setzt.
+  const original = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fremd//EN',
+    'BEGIN:VEVENT', 'UID:tz@t', 'DTSTAMP:20260101T000000Z',
+    'SUMMARY:Alt', 'DTSTART:20260830T100000', 'DTEND:20260830T110000',
+    'ATTENDEE;CN=Maria:mailto:maria@example.com',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'Neu', start_datetime: '2026-08-30T10:00', end_datetime: '2026-08-30T11:00',
+    tzid: null, all_day: 0,
+  }, 'Europe/Berlin');
+  const out = unfoldICS(patchICSEvent(original, 'tz@t', fields, { tzid }));
+
+  assert.match(veventOf(out), /^DTSTART;TZID=Europe\/Berlin:20260830T100000$/m);
+  assert.match(out, /^TZID:Europe\/Berlin$/m, 'das VTIMEZONE muss mitkommen');
+  assert.match(out, /ATTENDEE;CN=Maria/, 'und der Rest des fremden Objekts bleibt stehen');
+});
+
+test('#938: das VTIMEZONE-Jahr kommt vom Termin, nicht aus einem fremden Block', () => {
+  // Ein Objekt kann schon ein VTIMEZONE fuer eine ANDERE Zone tragen, und die
+  // sind ueblicherweise auf 1970 datiert. Wer das Jahr aus der ersten
+  // DTSTART-Zeile des Textes liest, trifft dessen Onset - und fuer 1970 kennt
+  // Europe/Berlin keine Sommerzeit. Herausgekommen waere ein fester
+  // +0100-Block, unter dem jeder Sommertermin eine Stunde zu spaet gelesen wird.
+  const foreign = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fremd//EN',
+    'BEGIN:VTIMEZONE', 'TZID:America/New_York',
+    'BEGIN:STANDARD', 'TZOFFSETFROM:-0400', 'TZOFFSETTO:-0500',
+    'DTSTART:19701101T020000', 'END:STANDARD', 'END:VTIMEZONE',
+    'BEGIN:VEVENT', 'UID:yr@t', 'DTSTAMP:20260101T000000Z',
+    'SUMMARY:Alt', 'DTSTART:20350830T100000', 'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'Neu', start_datetime: '2035-08-30T10:00', end_datetime: '2035-08-30T11:00',
+    tzid: null, all_day: 0,
+  }, 'Europe/Berlin');
+  const out = unfoldICS(patchICSEvent(foreign, 'yr@t', fields, { tzid }));
+
+  const berlin = out.split('BEGIN:VTIMEZONE').find((b) => b.includes('TZID:Europe/Berlin'));
+  assert.ok(berlin, 'der Berlin-Block fehlt');
+  assert.match(berlin, /BEGIN:DAYLIGHT/, 'ein Sommerzeit-loser Block heisst: falsches Jahr gerechnet');
+  // 2035 unterscheidet DREI Faelle, die sonst zusammenfallen: das Jahr des
+  // Termins (richtig), 1970 aus dem fremden Block (der Fehler) und das laufende
+  // Jahr (der Rueckfall). Mit einem Termin im laufenden Jahr waere der letzte
+  // vom richtigen nicht zu unterscheiden - und die erste Fassung dieser
+  // Gegenprobe blieb genau deshalb gruen.
+  assert.match(berlin, /DTSTART:2035\d{4}T\d{6}/, 'die Onsets muessen aus dem Jahr des Termins stammen');
+  // Der fremde Block bleibt unangetastet daneben stehen.
+  assert.match(out, /TZID:America\/New_York/);
+});
+
+test('#938: Ausnahmen und Ueberschreibungen bekommen dieselbe Zone wie der Master', () => {
+  // Ein Vorkommen wird ueber seinen ZEITWERT identifiziert. Hebt man nur den
+  // Master von floating auf TZID, zeigen EXDATE und RECURRENCE-ID ins Leere:
+  // der gestrichene Termin taucht wieder auf, der bearbeitete loest sich von
+  // seiner Serie - beides durch eine Aenderung, die mit Serien nichts zu tun hat.
+  const series = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fremd//EN',
+    'BEGIN:VEVENT', 'UID:ser@t', 'DTSTAMP:20260101T000000Z', 'SUMMARY:Alt',
+    'DTSTART:20260830T100000', 'DTEND:20260830T110000', 'RRULE:FREQ=WEEKLY',
+    'EXDATE:20260906T100000', 'END:VEVENT',
+    'BEGIN:VEVENT', 'UID:ser@t', 'RECURRENCE-ID:20260913T100000',
+    'DTSTART:20260913T140000', 'DTEND:20260913T150000', 'SUMMARY:Ausnahme', 'END:VEVENT',
+    'END:VCALENDAR',
+  ].join('\r\n');
+
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'Neu', start_datetime: '2026-08-30T10:00', end_datetime: '2026-08-30T11:00',
+    tzid: null, all_day: 0, recurrence_rule: 'FREQ=WEEKLY',
+  }, 'Europe/Berlin');
+  const out = unfoldICS(patchICSEvent(series, 'ser@t', fields, { tzid }));
+
+  assert.match(out, /^EXDATE;TZID=Europe\/Berlin:20260906T100000$/m);
+  assert.match(out, /^RECURRENCE-ID;TZID=Europe\/Berlin:20260913T100000$/m);
+});
+
+test('#938: was seinen Bezug schon hat, wird nicht angefasst', () => {
+  // Ein EXDATE mit eigenem TZID oder einem Z ist bereits eindeutig. Ein zweiter
+  // Parameter daneben ergaebe eine ungueltige Zeile.
+  const mixed = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fremd//EN',
+    'BEGIN:VEVENT', 'UID:mix@t', 'DTSTAMP:20260101T000000Z', 'SUMMARY:Alt',
+    'DTSTART:20260830T100000', 'RRULE:FREQ=WEEKLY',
+    'EXDATE;TZID=America/New_York:20260906T100000',
+    'EXDATE:20260920T080000Z',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'Neu', start_datetime: '2026-08-30T10:00', tzid: null, all_day: 0,
+    recurrence_rule: 'FREQ=WEEKLY',
+  }, 'Europe/Berlin');
+  const out = unfoldICS(patchICSEvent(mixed, 'mix@t', fields, { tzid }));
+
+  assert.match(out, /^EXDATE;TZID=America\/New_York:20260906T100000$/m, 'fremde Zone ueberschrieben');
+  assert.match(out, /^EXDATE:20260920T080000Z$/m, 'ein UTC-Wert braucht keine Zone');
+  assert.doesNotMatch(out, /TZID=[^:]*TZID=/, 'kein doppelter Parameter');
+});
+
+test('#938: ein vorhandenes VTIMEZONE wird nicht verdoppelt', () => {
+  // Jeder Sync-Lauf patcht dasselbe Objekt erneut. Ein Block je Durchgang waere
+  // ein Wachstum ohne Ende.
+  const withZone = [
+    'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//Fremd//EN',
+    'BEGIN:VTIMEZONE', 'TZID:Europe/Berlin',
+    'BEGIN:STANDARD', 'TZOFFSETFROM:+0200', 'TZOFFSETTO:+0100',
+    'DTSTART:19701025T030000', 'END:STANDARD', 'END:VTIMEZONE',
+    'BEGIN:VEVENT', 'UID:tz2@t', 'DTSTAMP:20260101T000000Z',
+    'SUMMARY:Alt', 'DTSTART;TZID=Europe/Berlin:20260830T100000',
+    'END:VEVENT', 'END:VCALENDAR',
+  ].join('\r\n');
+
+  const { fields, tzid } = icsFieldsForEvent({
+    title: 'Neu', start_datetime: '2026-08-30T10:00', tzid: 'Europe/Berlin', all_day: 0,
+  }, 'Europe/Berlin');
+  const out = unfoldICS(patchICSEvent(withZone, 'tz2@t', fields, { tzid }));
+
+  assert.equal((out.match(/BEGIN:VTIMEZONE/g) || []).length, 1);
+  // Und der fremde Block bleibt der des Servers - nicht durch unseren ersetzt.
+  assert.match(out, /^DTSTART:19701025T030000$/m);
 });
 
 test('filenameFromUrl nimmt den Dateinamen der URL, sonst die UID', () => {
