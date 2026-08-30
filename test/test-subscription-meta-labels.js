@@ -171,6 +171,35 @@ test('Umbenennen loescht den Schluessel, der eigene Name gilt', async () => {
   assert.equal(gleichnamig.body.data.label_key, null);
 });
 
+test('ein Farbwechsel ist keine Umbenennung - der Schluessel bleibt', async () => {
+  // DER VERWALTEN-DIALOG SCHICKT NAME UND FARBE ZUSAMMEN, auch wenn nur die
+  // Farbe angefasst wurde; der Klient reicht dazu den Kanon-Namen unveraendert
+  // zurueck (data-original-name). Ein `label_key = NULL` bei JEDEM Speichern
+  // haette die Seed-Kategorien beim ersten Farbwechsel auf die Sprache dieses
+  // Klienten festgenagelt - derselbe Verlust, den Migration 143 beim Inventar
+  // behoben hat. Der erste Wurf dieses Fixes hatte genau den Fehler.
+  const meta = await req('GET', '/meta');
+  const health = meta.body.data.categories.find((c) => c.name === 'Health');
+  assert.equal(health.label_key, 'budget.subcatSubscriptionHealth');
+
+  const nurFarbe = await req('PUT', `/categories/${health.id}`, { name: 'Health', color: '#123456' });
+  assert.equal(nurFarbe.status, 200);
+  assert.equal(nurFarbe.body.data.color, '#123456');
+  assert.equal(nurFarbe.body.data.label_key, 'budget.subcatSubscriptionHealth',
+    'unveraenderter Name → der Schluessel bleibt, sonst heisst die Kategorie fortan "Health" statt "Gesundheit"');
+
+  // Dieselbe Zusicherung fuer die Zahlungsarten: ein Speichern ohne echte
+  // Aenderung darf nichts kosten.
+  const apple = meta.body.data.payment_methods.find((m) => m.name === 'Apple Pay');
+  const gleich = await req('PUT', `/payment-methods/${apple.id}`, { name: 'Apple Pay' });
+  assert.equal(gleich.status, 200);
+  assert.equal(gleich.body.data.label_key, 'subscriptions.paymentMethodApplePay');
+
+  // Und die Gegenprobe: ein WIRKLICH anderer Name loest den Schluessel weiterhin.
+  const echt = await req('PUT', `/categories/${health.id}`, { name: 'Gesundheitskram', color: '#123456' });
+  assert.equal(echt.body.data.label_key, null);
+});
+
 test.after(async () => {
   await new Promise((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
   db.get().close();

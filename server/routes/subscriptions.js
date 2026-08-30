@@ -372,10 +372,22 @@ router.put('/categories/:id', (req, res) => {
     if (errors.length) return res.status(400).json({ error: errors.join(' '), code: 400 });
     const database = db.get();
     database.transaction(() => {
-      // UMBENENNEN MACHT EINE VORGABE ZUR EIGENEN ZEILE: `label_key` faellt
+      // UMBENENNEN macht eine Vorgabe zur eigenen Zeile: `label_key` faellt
       // weg, damit der eingegebene Name gilt statt weiterhin uebersetzt zu
       // werden. Dasselbe tun tasks.js, contacts.js und inventory/categories.js.
-      database.prepare('UPDATE subscription_categories SET name = ?, color = ?, label_key = NULL WHERE id = ?')
+      //
+      // NUR UMBENENNEN, UND DAS IST DER PUNKT. Der Verwalten-Dialog schickt
+      // Name und Farbe zusammen, auch wenn nur die Farbe angefasst wurde -
+      // ein `label_key = NULL` bei JEDEM Speichern haette die sechs
+      // Seed-Kategorien beim ersten Farbwechsel stillschweigend auf die
+      // Sprache dieses Klienten festgenagelt. Genau der Verlust, den
+      // Migration 143 beim Inventar behoben hat und den der Kommentar in
+      // routes/contacts.js beschreibt. Der Vergleich ist der Kanon-Name, den
+      // der Klient unveraendert zurueckschickt (data-original-name).
+      const categoryRenamed = name.value !== existing.name;
+      database.prepare(`UPDATE subscription_categories
+                        SET name = ?, color = ?${categoryRenamed ? ', label_key = NULL' : ''}
+                        WHERE id = ?`)
         .run(name.value, categoryColor.value, id);
       // Die verknüpfte Budget-Subkategorie führt denselben Namen (POST-Invariante).
       if (existing.budget_subcategory_key) {
@@ -424,8 +436,13 @@ router.put('/payment-methods/:id', (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Payment method not found.', code: 404 });
     const name = str(req.body.name, 'Name', { max: MAX_SHORT });
     if (name.error) return res.status(400).json({ error: name.error, code: 400 });
-    // Wie bei den Kategorien: ein eigener Name schlaegt den uebersetzten.
-    db.get().prepare('UPDATE subscription_payment_methods SET name = ?, label_key = NULL WHERE id = ?').run(name.value, id);
+    // Wie bei den Kategorien: ein eigener Name schlaegt den uebersetzten - aber
+    // erst, wenn er WIRKLICH ein anderer ist. Ein unveraendert
+    // zurueckgeschickter Name ist keine Umbenennung.
+    const renamed = name.value !== existing.name;
+    db.get().prepare(`UPDATE subscription_payment_methods
+                      SET name = ?${renamed ? ', label_key = NULL' : ''}
+                      WHERE id = ?`).run(name.value, id);
     res.json({ data: db.get().prepare('SELECT * FROM subscription_payment_methods WHERE id = ?').get(id) });
   } catch (err) {
     if (String(err.message).includes('UNIQUE')) return res.status(409).json({ error: 'Payment method already exists.', code: 409 });
