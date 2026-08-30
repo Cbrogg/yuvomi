@@ -1,8 +1,12 @@
-<!-- version: 2.54.0 -->
-The Calendar tile on the Overview can now leave birthdays out. If your household keeps the Birthdays tile there as well, every birthday was showing up twice - once under Birthdays, once among the next appointments - and hiding the birthday layer inside the Calendar module did nothing about it. Open Customise on the Overview, press the sliders button on the Calendar tile, and the same "Birthdays" switch you know from the calendar's filter sheet is there. Birthdays stay in unless you take them out, and taking them out fills the freed rows with your next real appointments rather than leaving a shorter list. It is a setting of your own account, so the wall tablet in the kitchen and the phone in your pocket can each show what suits them.
+<!-- version: 2.55.0 -->
+Appointments you create in Yuvomi now carry a time zone when they are pushed to a CalDAV server. Until now they went out as a bare time - "ten o'clock", with nothing saying on whose clock. Apple's Calendar and eM Client fill in the device's own zone and land on the right hour, so most people never noticed; a Synology calendar accepts the same appointment, hands it back when asked, and simply never shows it in its own web interface, because it needs a point in time and was given none. If appointments have been missing from your calendar server's own view, this is why. They correct themselves the next time Yuvomi pushes them.
 
-The Notes tile now shows as many notes as it has room for. It was capped at three regardless of how large you had made it, so at its normal size roughly a third of the card sat empty - and a household with five pinned notes saw three of them, while the figure next to it said five. It now fills the space it has: five notes when the tile is tall, three when it is flat.
+The currency setting is where you would look for it. It used to sit inside the "custom formats" card under Appearance, and that card only appears when your settings do not match a region preset - so on a normal installation the currency was invisible, and it became visible only after you had already changed it. It now sits directly under the region selector. Picking a region still fills it in; you can also just change the currency and leave your date and time formats alone.
+
+Meals planned from one of your own recipes now have a button that opens it. The link was there in the data all along, but only an external web address ever got a button, so a recipe stored in Yuvomi could be attached to a meal and never opened from it.
+
+Two security fixes round this off. Yuvomi follows redirects when it fetches calendar subscriptions, WebDAV storage or a document management system; a server could previously redirect it from an encrypted connection to an unencrypted one, or point it at a different host and receive the account credentials meant for the original. Both are now refused. And uploads - documents, photos, logos - are checked against the actual file rather than the type the browser claims, so a file filed as a PDF is one.
 
 Nothing to do after the update - no migration, and no settings changed.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.54.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.55.0

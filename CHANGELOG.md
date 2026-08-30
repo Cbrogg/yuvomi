@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.55.0] - 2026-08-30
+
 ### Added
 
 - **A planned meal opens the recipe it was planned from.** A meal can be tied to one of the
