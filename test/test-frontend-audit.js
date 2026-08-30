@@ -1245,6 +1245,30 @@ test('#936: ein verknuepftes Rezept hat von der Essenskarte aus einen Ausgang', 
   const handler = meals.slice(handlerAt, handlerAt + 400);
   assert.match(handler, /metaKey \|\| e\.ctrlKey \|\| e\.shiftKey \|\| e\.altKey/);
   assert.match(handler, /navigate\(/, 'ein roher href waere ein Vollreload der PWA');
+
+  // Der Knopf darf keine Ziehgeste ausloesen. Hier standen drei Aktionen
+  // namentlich, und die vierte fehlte prompt: auf Touch startete ihr
+  // `pointerdown` ein Ziehen, das Loslassen verschob das Essen in einen anderen
+  // Slot und verschluckte den Klick. Geprueft wird deshalb die REGEL - der
+  // Aktionscontainer -, nicht eine Aufzaehlung, die den naechsten Knopf wieder
+  // vergisst.
+  assert.match(meals, /closest\('\.meal-card__actions'\)\) return;/,
+    'die Aktionsleiste muss als Ganzes vom Ziehen ausgenommen sein');
+  assert.doesNotMatch(meals, /data-action="delete-meal"\], \[data-action=/,
+    'die alte Aufzaehlung im Drag-Guard ist wieder da');
+
+  // Ein Admin kann Rezepte abschalten und Mahlzeiten anlassen. Bestehende Essen
+  // behalten ihre `recipe_id`, aber `/recipes` leitet dann auf die Startseite -
+  // und weil der interne Knopf dem externen vorgeht, naehme er den noch mit.
+  assert.match(meals, /meal\.recipe_id && recipesReachable\(\)/,
+    'der interne Knopf haengt nicht an der Erreichbarkeit des Rezeptmoduls');
+  assert.match(meals, /isModuleDisabled\?\.\('recipes'\)/);
+
+  // Und der Deep-Link muss an einem stehengebliebenen Filter vorbeikommen:
+  // `state` ueberlebt den Seitenwechsel, und ein Rezept, das die letzte Suche
+  // ausfiltert, waere per `?open=` unerreichbar - wortlos.
+  assert.match(recipes, /has\('open'\)\)\s*\{\s*\n\s*state\.query = '';\s*\n\s*state\.sourceFilter = 'all';/,
+    'ein alter Filter kann das verlangte Rezept verstecken');
 });
 
 test('personal appearance leaf owns theme, locale, and regional preferences', () => {
