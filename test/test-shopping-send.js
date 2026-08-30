@@ -183,9 +183,18 @@ test('Nutzertexte werden fuer den HTML-Teil escaped (#944)', async () => {
   await call('POST', `/${listId}/send`, { userId: OMA });
 
   const { html, subject } = mailer.sent[0];
-  assert.doesNotMatch(html, /<script>/, 'kein durchgereichtes Markup');
-  assert.doesNotMatch(html, /<b>extra<\/b>/);
-  assert.match(html, /&lt;b&gt;extra&lt;\/b&gt;/, 'sondern escaped');
+  // ALS REGEL, NICHT ALS LISTE VON TAGS. Ein `doesNotMatch(html, /<script>/)`
+  // deckt `<SCRIPT>` nicht ab (CodeQL `js/bad-tag-filter` sagt das zu Recht) -
+  // und wichtiger: es fragt nach EINEM Tag, waehrend die Zusicherung lautet,
+  // dass ueberhaupt kein fremdes Markup durchkommt. Erlaubt ist nur, was
+  // shopping-mail.js selbst baut.
+  const OWN_TAGS = new Set(['p', 'strong', 'ul', 'li', 'small']);
+  const foreign = [...new Set(
+    [...html.matchAll(/<\/?([a-zA-Z][a-zA-Z0-9]*)/g)].map((m) => m[1].toLowerCase()),
+  )].filter((tag) => !OWN_TAGS.has(tag));
+  assert.deepEqual(foreign, [], `durchgereichtes Markup: ${foreign.join(', ')}`);
+  assert.match(html, /&lt;b&gt;extra&lt;\/b&gt;/, 'die Nutzertags kommen escaped an');
+  assert.match(html, /&lt;script&gt;/, 'auch der Listenname');
   assert.match(html, /&amp; mehr/);
   assert.ok(subject.includes('<script>'), 'der Betreff ist kein HTML - dort waere Escaping falsch');
 });
