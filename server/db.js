@@ -6774,19 +6774,26 @@ const MIGRATIONS = [
     // Namensuebereinstimmung - und Umbenennen loescht den Schluessel, womit
     // der eigene Name gilt (so machen es die drei Routen oben auch).
     //
-    // ZWEI BEDINGUNGEN BEI DEN KATEGORIEN, NICHT EINE. Der Name allein reicht
-    // nicht: wer eine Vorgabe geloescht und danach eine EIGENE Kategorie
-    // 'Entertainment' angelegt hat, bekaeme sonst einen Schluessel
-    // aufgedrueckt, und sein gewaehlter Name waere still durch Uebersetzungen
-    // ersetzt (gefunden in der PR-Durchsicht). `budget_subcategory_key` ist der
-    // Anker dafuer - Migration 145 hat den Vorgaben feste Schluessel gegeben
+    // SCHLUESSEL UND NAME MUESSEN ZUSAMMENGEHOEREN, nicht bloss je einzeln
+    // vorkommen. Der Name allein reicht nicht: wer eine Vorgabe geloescht und
+    // danach eine EIGENE Kategorie 'Entertainment' angelegt hat, bekaeme sonst
+    // einen Schluessel aufgedrueckt, und sein gewaehlter Name waere still durch
+    // Uebersetzungen ersetzt. `budget_subcategory_key` ist der Anker dafuer -
+    // Migration 145 hat den Vorgaben feste Schluessel gegeben
     // ('subscription_entertainment'), waehrend jede spaeter angelegte Zeile
     // 'subscription_category_<id>' traegt.
     //
-    // Der Schluessel ALLEIN reicht aber auch nicht: er bleibt an der Zeile,
-    // wenn jemand 'Entertainment' in 'Filme' umbenennt - und dann waere ihr
-    // Name genauso weg. Erst beides zusammen trifft genau die unveraenderte
-    // Vorgabe.
+    // Der Schluessel ALLEIN reicht auch nicht: er bleibt an der Zeile, wenn
+    // jemand 'Entertainment' in 'Filme' umbenennt - dann waere ihr Name genauso
+    // weg.
+    //
+    // UND ZWEI GETRENNTE IN-LISTEN REICHEN EBENFALLS NICHT: wer 'Other'
+    // loescht und 'Entertainment' in 'Other' umbenennt, erfuellt beide Listen
+    // und bekaeme die Beschriftung seines ALTEN Schluessels - die Zeile hiesse
+    // fortan "Unterhaltung", obwohl er "Other" geschrieben hat. Beide Befunde
+    // kamen aus der PR-Durchsicht, der zweite erst, nachdem der erste behoben
+    // war. Deshalb steht hier je ein UPDATE pro Vorgabe: die Paarung ist damit
+    // nicht zu uebersehen und nicht versehentlich aufzutrennen.
     //
     // BEI DEN ZAHLUNGSARTEN GIBT ES KEINEN SOLCHEN ANKER, und der Name traegt
     // dort auch allein: die sechs uebrigen Bezeichnungen sind Marken oder
@@ -6800,18 +6807,18 @@ const MIGRATIONS = [
       ALTER TABLE subscription_categories     ADD COLUMN label_key TEXT;
       ALTER TABLE subscription_payment_methods ADD COLUMN label_key TEXT;
 
-      UPDATE subscription_categories SET label_key = CASE budget_subcategory_key
-        WHEN 'subscription_entertainment' THEN 'budget.subcatSubscriptionEntertainment'
-        WHEN 'subscription_productivity'  THEN 'budget.subcatSubscriptionProductivity'
-        WHEN 'subscription_utilities'     THEN 'budget.subcatSubscriptionUtilities'
-        WHEN 'subscription_health'        THEN 'budget.subcatSubscriptionHealth'
-        WHEN 'subscription_education'     THEN 'budget.subcatSubscriptionEducation'
-        WHEN 'subscription_other'         THEN 'budget.subcatSubscriptionOther'
-      END
-      WHERE budget_subcategory_key IN (
-              'subscription_entertainment', 'subscription_productivity', 'subscription_utilities',
-              'subscription_health', 'subscription_education', 'subscription_other')
-        AND name IN ('Entertainment', 'Productivity', 'Utilities', 'Health', 'Education', 'Other');
+      UPDATE subscription_categories SET label_key = 'budget.subcatSubscriptionEntertainment'
+        WHERE budget_subcategory_key = 'subscription_entertainment' AND name = 'Entertainment';
+      UPDATE subscription_categories SET label_key = 'budget.subcatSubscriptionProductivity'
+        WHERE budget_subcategory_key = 'subscription_productivity'  AND name = 'Productivity';
+      UPDATE subscription_categories SET label_key = 'budget.subcatSubscriptionUtilities'
+        WHERE budget_subcategory_key = 'subscription_utilities'     AND name = 'Utilities';
+      UPDATE subscription_categories SET label_key = 'budget.subcatSubscriptionHealth'
+        WHERE budget_subcategory_key = 'subscription_health'        AND name = 'Health';
+      UPDATE subscription_categories SET label_key = 'budget.subcatSubscriptionEducation'
+        WHERE budget_subcategory_key = 'subscription_education'     AND name = 'Education';
+      UPDATE subscription_categories SET label_key = 'budget.subcatSubscriptionOther'
+        WHERE budget_subcategory_key = 'subscription_other'         AND name = 'Other';
 
       UPDATE subscription_payment_methods SET label_key = CASE name
         WHEN 'Credit Card'   THEN 'subscriptions.paymentMethodCreditCard'

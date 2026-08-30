@@ -214,14 +214,23 @@ test('der Backfill trifft nur die UNVERAENDERTE Vorgabe (#950)', () => {
   //       bleibt an der Zeile.
   //
   // Erst BEIDE Bedingungen zusammen treffen genau die unveraenderte Vorgabe.
-  const backfill = () => database.prepare(`
-    UPDATE subscription_categories SET label_key = CASE budget_subcategory_key
-      WHEN 'subscription_education' THEN 'budget.subcatSubscriptionEducation'
-      WHEN 'subscription_other'     THEN 'budget.subcatSubscriptionOther'
-    END
-    WHERE budget_subcategory_key IN ('subscription_education', 'subscription_other')
-      AND name IN ('Education', 'Other')
-  `).run();
+  // Die Migration schreibt je ein UPDATE pro Vorgabe - hier stehen alle sechs,
+  // damit der Test wirklich das nachvollzieht, was laeuft, und nicht einen
+  // Ausschnitt davon.
+  const PAARE = [
+    ['subscription_entertainment', 'Entertainment', 'budget.subcatSubscriptionEntertainment'],
+    ['subscription_productivity',  'Productivity',  'budget.subcatSubscriptionProductivity'],
+    ['subscription_utilities',     'Utilities',     'budget.subcatSubscriptionUtilities'],
+    ['subscription_health',        'Health',        'budget.subcatSubscriptionHealth'],
+    ['subscription_education',     'Education',     'budget.subcatSubscriptionEducation'],
+    ['subscription_other',         'Other',         'budget.subcatSubscriptionOther'],
+  ];
+  const backfill = () => {
+    for (const [key, name, labelKey] of PAARE) {
+      database.prepare('UPDATE subscription_categories SET label_key = ? WHERE budget_subcategory_key = ? AND name = ?')
+        .run(labelKey, key, name);
+    }
+  };
 
   // (1) Vorgabe weg, eigene Zeile mit demselben Namen und eigenem Schluessel.
   database.prepare("DELETE FROM subscription_categories WHERE budget_subcategory_key = 'subscription_education'").run();
@@ -240,6 +249,26 @@ test('der Backfill trifft nur die UNVERAENDERTE Vorgabe (#950)', () => {
     'eine selbst angelegte Kategorie mit einem Vorgabe-NAMEN darf keinen Schluessel bekommen');
   assert.equal(lies(umbenannt).label_key, null,
     'eine umbenannte Vorgabe behaelt ihren Namen - der Schluessel allein darf sie nicht zurueckholen');
+
+  // (3) UND DIE PAARUNG SELBST. Zwei getrennte IN-Listen haetten die beiden
+  // Faelle oben zwar abgefangen, aber nicht diesen: wer eine Vorgabe loescht
+  // und eine ANDERE auf den frei gewordenen Namen umbenennt, erfuellt beide
+  // Listen - und bekaeme die Beschriftung seines ALTEN Schluessels. Die Zeile
+  // hiesse fortan "Produktivitaet", obwohl er "Education" geschrieben hat.
+  // Gefunden in der PR-Durchsicht, erst nachdem (1) und (2) behoben waren.
+  //
+  // 'Education' ist durch (1) frei; 'Productivity' steht noch unveraendert da
+  // und bekommt diesen Namen. Die Zusicherung darf dabei NICHT in einem `if`
+  // stehen: die erste Fassung dieses Falls baute auf einer Zeile auf, die (1)
+  // geloescht hatte - der Block lief nie, und die Gegenprobe blieb gruen.
+  database.prepare('DELETE FROM subscription_categories WHERE id = ?').run(eigene);
+  database.prepare("UPDATE subscription_categories SET name = 'Education', label_key = NULL WHERE budget_subcategory_key = 'subscription_productivity'").run();
+  const gekreuzt = database.prepare("SELECT id FROM subscription_categories WHERE budget_subcategory_key = 'subscription_productivity'").get();
+  assert.ok(gekreuzt, 'ohne diese Zeile prueft die Zusicherung darunter nichts');
+
+  backfill();
+  assert.equal(lies(gekreuzt.id).label_key, null,
+    'ein Schluessel darf nur mit SEINEM eigenen Namen zusammen greifen, nicht mit irgendeinem aus der Liste');
 
   // Gegenprobe: eine unveraenderte Vorgabe traegt ihn weiterhin.
   const echt = database.prepare(
