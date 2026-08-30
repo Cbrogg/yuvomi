@@ -200,6 +200,54 @@ test('ein Farbwechsel ist keine Umbenennung - der Schluessel bleibt', async () =
   assert.equal(echt.body.data.label_key, null);
 });
 
+test('der Backfill trifft nur die UNVERAENDERTE Vorgabe (#950)', () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT. Der erste Wurf glich nur den Namen ab. Zwei
+  // Faelle gehen damit falsch aus, und beide sind still:
+  //
+  //   (1) Wer eine Vorgabe LOESCHT und danach eine eigene Kategorie desselben
+  //       Namens anlegt, bekaeme einen Schluessel aufgedrueckt - sein
+  //       gewaehlter Name waere durch Uebersetzungen ersetzt. (Ohne das
+  //       Loeschen geht es gar nicht: `name` ist UNIQUE COLLATE NOCASE.)
+  //   (2) Wer eine Vorgabe UMBENENNT, behaelt seinen Namen - den trifft der
+  //       Namensabgleich schon nicht. Ein Anker allein ueber
+  //       `budget_subcategory_key` wuerde ihn aber treffen, denn der Schluessel
+  //       bleibt an der Zeile.
+  //
+  // Erst BEIDE Bedingungen zusammen treffen genau die unveraenderte Vorgabe.
+  const backfill = () => database.prepare(`
+    UPDATE subscription_categories SET label_key = CASE budget_subcategory_key
+      WHEN 'subscription_education' THEN 'budget.subcatSubscriptionEducation'
+      WHEN 'subscription_other'     THEN 'budget.subcatSubscriptionOther'
+    END
+    WHERE budget_subcategory_key IN ('subscription_education', 'subscription_other')
+      AND name IN ('Education', 'Other')
+  `).run();
+
+  // (1) Vorgabe weg, eigene Zeile mit demselben Namen und eigenem Schluessel.
+  database.prepare("DELETE FROM subscription_categories WHERE budget_subcategory_key = 'subscription_education'").run();
+  const eigene = database.prepare(
+    "INSERT INTO subscription_categories (name, color, sort_order, budget_subcategory_key) VALUES ('Education', '#D97706', 99, 'subscription_category_99')"
+  ).run().lastInsertRowid;
+
+  // (2) Vorgabe umbenannt - Schluessel bleibt, Name nicht.
+  database.prepare("UPDATE subscription_categories SET name = 'Krimskrams', label_key = NULL WHERE budget_subcategory_key = 'subscription_other'").run();
+  const umbenannt = database.prepare("SELECT id FROM subscription_categories WHERE budget_subcategory_key = 'subscription_other'").get().id;
+
+  backfill();
+
+  const lies = (id) => database.prepare('SELECT name, label_key FROM subscription_categories WHERE id = ?').get(id);
+  assert.equal(lies(eigene).label_key, null,
+    'eine selbst angelegte Kategorie mit einem Vorgabe-NAMEN darf keinen Schluessel bekommen');
+  assert.equal(lies(umbenannt).label_key, null,
+    'eine umbenannte Vorgabe behaelt ihren Namen - der Schluessel allein darf sie nicht zurueckholen');
+
+  // Gegenprobe: eine unveraenderte Vorgabe traegt ihn weiterhin.
+  const echt = database.prepare(
+    "SELECT label_key FROM subscription_categories WHERE budget_subcategory_key = 'subscription_entertainment' AND name = 'Entertainment'"
+  ).get();
+  assert.equal(echt.label_key, 'budget.subcatSubscriptionEntertainment');
+});
+
 test.after(async () => {
   await new Promise((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
   db.get().close();

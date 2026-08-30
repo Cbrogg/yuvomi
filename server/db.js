@@ -6774,24 +6774,44 @@ const MIGRATIONS = [
     // Namensuebereinstimmung - und Umbenennen loescht den Schluessel, womit
     // der eigene Name gilt (so machen es die drei Routen oben auch).
     //
-    // WARUM DER BACKFILL UEBER DEN NAMEN GEHT UND DAS RICHTIG IST: einen
-    // anderen Anker gibt es fuer Bestandszeilen nicht, und er ist genau so
-    // treffsicher wie die Frontend-Karte, die er ersetzt. Wer 'Credit Card'
-    // laengst in 'Kreditkarte' umbenannt hat, wird nicht getroffen und behaelt
-    // seinen Namen - das ist der gewuenschte Ausgang, nicht der verpasste.
+    // ZWEI BEDINGUNGEN BEI DEN KATEGORIEN, NICHT EINE. Der Name allein reicht
+    // nicht: wer eine Vorgabe geloescht und danach eine EIGENE Kategorie
+    // 'Entertainment' angelegt hat, bekaeme sonst einen Schluessel
+    // aufgedrueckt, und sein gewaehlter Name waere still durch Uebersetzungen
+    // ersetzt (gefunden in der PR-Durchsicht). `budget_subcategory_key` ist der
+    // Anker dafuer - Migration 145 hat den Vorgaben feste Schluessel gegeben
+    // ('subscription_entertainment'), waehrend jede spaeter angelegte Zeile
+    // 'subscription_category_<id>' traegt.
+    //
+    // Der Schluessel ALLEIN reicht aber auch nicht: er bleibt an der Zeile,
+    // wenn jemand 'Entertainment' in 'Filme' umbenennt - und dann waere ihr
+    // Name genauso weg. Erst beides zusammen trifft genau die unveraenderte
+    // Vorgabe.
+    //
+    // BEI DEN ZAHLUNGSARTEN GIBT ES KEINEN SOLCHEN ANKER, und der Name traegt
+    // dort auch allein: die sechs uebrigen Bezeichnungen sind Marken oder
+    // feste Begriffe, deren Uebersetzung dasselbe meint ('PayPal' bleibt
+    // 'PayPal', 'Credit Card' wird 'Kreditkarte'). Wer 'Credit Card' laengst
+    // umbenannt hat, wird nicht getroffen und behaelt seinen Namen - das ist
+    // der gewuenschte Ausgang, nicht der verpasste. Eine Annahme ueber die
+    // vergebenen id-Werte waere der scheinbar schaerfere, in Wahrheit
+    // fragilere Anker: sie steht nirgends im Schema.
     up: `
       ALTER TABLE subscription_categories     ADD COLUMN label_key TEXT;
       ALTER TABLE subscription_payment_methods ADD COLUMN label_key TEXT;
 
-      UPDATE subscription_categories SET label_key = CASE name
-        WHEN 'Entertainment' THEN 'budget.subcatSubscriptionEntertainment'
-        WHEN 'Productivity'  THEN 'budget.subcatSubscriptionProductivity'
-        WHEN 'Utilities'     THEN 'budget.subcatSubscriptionUtilities'
-        WHEN 'Health'        THEN 'budget.subcatSubscriptionHealth'
-        WHEN 'Education'     THEN 'budget.subcatSubscriptionEducation'
-        WHEN 'Other'         THEN 'budget.subcatSubscriptionOther'
+      UPDATE subscription_categories SET label_key = CASE budget_subcategory_key
+        WHEN 'subscription_entertainment' THEN 'budget.subcatSubscriptionEntertainment'
+        WHEN 'subscription_productivity'  THEN 'budget.subcatSubscriptionProductivity'
+        WHEN 'subscription_utilities'     THEN 'budget.subcatSubscriptionUtilities'
+        WHEN 'subscription_health'        THEN 'budget.subcatSubscriptionHealth'
+        WHEN 'subscription_education'     THEN 'budget.subcatSubscriptionEducation'
+        WHEN 'subscription_other'         THEN 'budget.subcatSubscriptionOther'
       END
-      WHERE name IN ('Entertainment', 'Productivity', 'Utilities', 'Health', 'Education', 'Other');
+      WHERE budget_subcategory_key IN (
+              'subscription_entertainment', 'subscription_productivity', 'subscription_utilities',
+              'subscription_health', 'subscription_education', 'subscription_other')
+        AND name IN ('Entertainment', 'Productivity', 'Utilities', 'Health', 'Education', 'Other');
 
       UPDATE subscription_payment_methods SET label_key = CASE name
         WHEN 'Credit Card'   THEN 'subscriptions.paymentMethodCreditCard'
