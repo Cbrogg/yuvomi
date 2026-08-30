@@ -12,7 +12,7 @@ export const schemas = {
           description: 'A Gotify or ntfy notification channel. Secrets are write-only and never returned.',
           properties: {
             id: { type: 'integer' },
-            provider: { type: 'string', enum: ['gotify', 'ntfy', 'webhook'] },
+            provider: { type: 'string', enum: ['gotify', 'ntfy', 'webhook', 'email'] },
             name: { type: 'string' },
             enabled: { type: 'boolean' },
             scope: { type: 'string', enum: ['household', 'user'] },
@@ -30,7 +30,7 @@ export const schemas = {
           type: 'object',
           required: ['provider', 'name', 'config'],
           properties: {
-            provider: { type: 'string', enum: ['gotify', 'ntfy', 'webhook'] },
+            provider: { type: 'string', enum: ['gotify', 'ntfy', 'webhook', 'email'] },
             name: { type: 'string' },
             enabled: { type: 'boolean' },
             config: {

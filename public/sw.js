@@ -91,6 +91,10 @@ const APP_SHELL = [
   // Dateisystem; Fetch-Routing für diese Pfade → SHELL_CACHE (isMutableAppResource).
   '/nav-icons.js',
   '/permissions.js',
+  // Der Router laedt ihn als Seiteneffekt (`import '/components/datepicker.js'`),
+  // also gehoert er in die Shell, nicht zu den Seitenmodulen. Der
+  // Precache-Guard sah diese Import-Form bis #944 nicht.
+  '/components/datepicker.js',
   '/components/detail-view.js',
   '/components/document-attach.js',
   '/components/modal.js',
@@ -125,6 +129,7 @@ const APP_SHELL = [
   '/utils/health-vitals.js',
   '/utils/help.js',
   '/utils/household.js',
+  '/utils/html-escape.js',
   '/utils/html.js',
   '/utils/ingredient-row.js',
   '/utils/inventory-warranty.js',
@@ -244,6 +249,10 @@ const PAGE_MODULES = [
   '/vendor/libphonenumber/metadata.min.json',
   '/settings/registry.js',
   '/settings/shell.js',
+  // Die Shell importiert ihn beim Laden. Fehlte er hier, brach die
+  // Einstellungsseite offline komplett - der Precache-Guard sah relative
+  // Specifier bis dahin nicht und blieb dabei gruen.
+  '/settings/dirty-guard.js',
   '/settings/components.js',
   '/settings/module-order.js',
   '/settings/cron-label.js',

@@ -1,7 +1,7 @@
 # Notification webhooks
 
 Yuvomi can deliver every due reminder to a generic HTTP webhook in addition to
-Web Push, Gotify, and ntfy. Webhook channels use the same per-channel delivery
+Web Push, Gotify, ntfy, and email. Webhook channels use the same per-channel delivery
 tracking, retry, and deduplication flow as the other notification providers.
 
 ## Configure a channel

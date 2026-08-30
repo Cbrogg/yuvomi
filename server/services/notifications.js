@@ -10,6 +10,7 @@ import { createNotificationChannelStore } from './notification-channels.js';
 import { gotifyProvider } from './notification-providers/gotify.js';
 import { ntfyProvider } from './notification-providers/ntfy.js';
 import { webhookProvider } from './notification-providers/webhook.js';
+import { emailProvider } from './notification-providers/email.js';
 import { syncAllBirthdayReminders } from './birthdays.js';
 import { resolveHouseholdLocale, translate } from '../utils/i18n.js';
 import { warrantyEndDate } from './inventory-deadlines.js';
@@ -22,12 +23,16 @@ const APP_NAME = 'Yuvomi';
 const FALLBACK_BODY = 'Reminder';
 const RETRY_DELAY_MS = 5 * 60 * 1000;
 const MAX_ATTEMPTS = 3;
-const PROVIDER_TIMEOUT_MS = 8_000;
+// Exportiert, damit die Zeitschranken des Mail-Transports (services/email.js)
+// dagegen gepruefte werden koennen statt gegen eine abgeschriebene Zahl: die
+// Staffelung ist die Zusicherung, nicht der einzelne Wert.
+export const PROVIDER_TIMEOUT_MS = 8_000;
 
 export const defaultProviders = {
   gotify: gotifyProvider,
   ntfy: ntfyProvider,
   webhook: webhookProvider,
+  email: emailProvider,
 };
 
 function iso(value) {
