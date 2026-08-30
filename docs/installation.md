@@ -239,9 +239,9 @@ docker compose up -d
 Docker pulls `ghcr.io/ulsklyc/yuvomi:latest` automatically. No build step, no Node.js installation needed.
 
 > **Pinning a version.** Every release is also published under immutable tags:
-> `2.55.0` (exact version), `2.54` (latest patch of that minor), plus a moving `main`
+> `2.56.0` (exact version), `2.56` (latest patch of that minor), plus a moving `main`
 > tag for the current development state. To pin production to a known-good release,
-> set `image: ghcr.io/ulsklyc/yuvomi:2.55.0` in your compose file and bump it
+> set `image: ghcr.io/ulsklyc/yuvomi:2.56.0` in your compose file and bump it
 > deliberately; `latest` always points at the newest release.
 
 Continue with [Step 4 — Verify](#4-verify-the-container-is-running).
@@ -287,7 +287,7 @@ docker compose logs -f
 You should see output like:
 
 ```
-yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.55.0
+yuvomi  | [Yuvomi] Server running on port 3000 | Version 2.56.0
 yuvomi  | [Yuvomi] Environment: production
 yuvomi  | [Sync] Auto-sync active every 15 minutes.
 ```
@@ -521,9 +521,13 @@ every start, and the test button re-registers and retries once before reporting 
 
 ### Email / SMTP (Optional)
 
-Configuring an outgoing SMTP server enables the self-service **"Forgot password"** flow on the
-login page. Without it, only an admin can reset another user's password. Can also be configured
-in Settings → Administration → Email. Precedence is per field, like WebDAV document storage
+Configuring an outgoing SMTP server enables three things: the self-service **"Forgot password"**
+flow on the login page (without it, only an admin can reset another user's password), **email as a
+household notification channel** next to Gotify, ntfy and webhooks, and **sending a shopping list**
+to whichever household member is doing the run. All three share one SMTP configuration - there is
+no second set of credentials per channel. Set `BASE_URL` as well if you want reminder mails to
+carry a link back into the app; without it they arrive without one rather than with a dead one.
+Can also be configured in Settings → Administration → Email. Precedence is per field, like WebDAV document storage
 below: every non-empty environment value overrides only its corresponding database value and
 makes exactly that field read-only in the settings UI; empty values fall back to the database.
 

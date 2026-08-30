@@ -54,8 +54,9 @@ dedicated `podman-compose.yml` (SELinux `:Z` labels).
        on a fresh install; existing keys are kept, see below)
      - **Weather** — Open-Meteo coordinates (no API key)
      - **Calendar** — Google Calendar and Apple CalDAV
-     - **Email** — SMTP for the "forgot password" flow (`EMAIL_SMTP_*`,
-       `EMAIL_FROM_*`); enables password-reset emails
+     - **Email** — SMTP (`EMAIL_SMTP_*`, `EMAIL_FROM_*`); enables password-reset
+       emails, email as a household notification channel, and sending a shopping
+       list to a member
      - **Storage & backups** — the host data folder (`DATA_DIR`), automatic backups,
        off-site WebDAV backups (`WEBDAV_BACKUP_*`), and local-folder, WebDAV or
        Google Drive document storage. Everything that decides *where data lives*

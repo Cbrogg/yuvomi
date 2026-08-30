@@ -1,12 +1,14 @@
-<!-- version: 2.55.0 -->
-Appointments you create in Yuvomi now carry a time zone when they are pushed to a CalDAV server. Until now they went out as a bare time - "ten o'clock", with nothing saying on whose clock. Apple's Calendar and eM Client fill in the device's own zone and land on the right hour, so most people never noticed; a Synology calendar accepts the same appointment, hands it back when asked, and simply never shows it in its own web interface, because it needs a point in time and was given none. If appointments have been missing from your calendar server's own view, this is why. They correct themselves the next time Yuvomi pushes them.
+<!-- version: 2.56.0 -->
+Reminders can now arrive by email. Until now they reached you through the app, through browser push, or through Gotify, ntfy and webhooks - all of which assume you have set one of those up. Email is a fourth option next to them, and for a household that mostly uses Yuvomi in a mobile browser it is often the only one that needs no extra service. Set it up under Settings, Personal, Notifications, the same place as the others.
 
-The currency setting is where you would look for it. It used to sit inside the "custom formats" card under Appearance, and that card only appears when your settings do not match a region preset - so on a normal installation the currency was invisible, and it became visible only after you had already changed it. It now sits directly under the region selector. Picking a region still fills it in; you can also just change the currency and leave your date and time formats alone.
+A shopping list can be sent to whoever is doing the run. One entry in the list's menu mails its open items to a household member, grouped by aisle in the order the app shows them. It sends the list as it stands rather than a link that stays live, and it says so: the mail names the moment it was taken, because whoever is carrying it around the shop cannot see what is being ticked off at home. Only members who have an email address on their contact can be picked.
 
-Meals planned from one of your own recipes now have a button that opens it. The link was there in the data all along, but only an external web address ever got a button, so a recipe stored in Yuvomi could be attached to a meal and never opened from it.
+Both need an outgoing mail server. If you have already configured SMTP for the "forgot password" function, they work immediately; if not, the settings page will tell you so rather than let a send fail silently. There is one configuration for all of it, not one per channel.
 
-Two security fixes round this off. Yuvomi follows redirects when it fetches calendar subscriptions, WebDAV storage or a document management system; a server could previously redirect it from an encrypted connection to an unencrypted one, or point it at a different host and receive the account credentials meant for the original. Both are now refused. And uploads - documents, photos, logos - are checked against the actual file rather than the type the browser claims, so a file filed as a PDF is one.
+Worth knowing if you track medication: a reminder sent by email carries its subject in the subject line, medication names included, and subject lines stay readable along the way and permanently in the recipient's mailbox. On your own mail server that stays with you. Through a third-party provider it does not.
+
+The settings page also works offline again. One of its parts was missing from the offline cache, and while the network covered for it nobody could tell; without a connection the page failed to open at all.
 
 Nothing to do after the update - no migration, and no settings changed.
 
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.55.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.56.0

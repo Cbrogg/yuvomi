@@ -7,6 +7,8 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [2.56.0] - 2026-08-30
+
 ### Added
 
 - **Reminders can be delivered by email.** Households without a native app fell back to keeping a
