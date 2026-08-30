@@ -193,6 +193,12 @@ function normalizeEmailAddress(value) {
   // einer Adresse zwei Header.
   if (/\s/.test(raw)) throw invalid();
 
+  // nodemailer behandelt `to` als LISTE: "a@example.com,postmaster" waeren zwei
+  // Empfaenger im Umschlag. Das widerspricht der Zusage oben (eine Adresse je
+  // Kanal) und macht die Zustellbuchhaltung falsch - ein Kanal, zwei Ziele, ein
+  // Status. Die Trenner gehoeren deshalb abgelehnt, nicht nur die Zaehlung der @.
+  if (/[,;]/.test(raw)) throw invalid();
+
   const at = raw.indexOf('@');
   if (at <= 0) throw invalid();                       // etwas vor dem @, und ueberhaupt eines
   if (raw.indexOf('@', at + 1) !== -1) throw invalid(); // genau eines

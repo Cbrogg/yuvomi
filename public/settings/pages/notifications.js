@@ -130,6 +130,10 @@ function renderChannelShell(container, user) {
   `);
 }
 
+function providerNotReady(providers, providerId) {
+  return providers.some((p) => p.id === providerId && p.ready === false);
+}
+
 function providerOptions(providers, current) {
   return providers.map((provider) => `
     <option value="${esc(provider.id)}"${selected(current, provider.id)}>${esc(provider.name)}</option>
@@ -154,7 +158,12 @@ function renderChannelList(container, channels, providers = DEFAULT_PROVIDERS) {
     // `ready === false` kommt nur von einem Provider, der eine Voraussetzung
     // ausserhalb seines Kanals hat. Der Hinweis steht am Formular, nicht hinter
     // einem fehlgeschlagenen Testversand - dessen Meldung sagt nur "Fehler".
-    const notReady = providers.some((p) => p.id === channel.provider && p.ready === false);
+    // Nur der Anfangszustand: ein neuer Kanal startet als Gotify, und der
+    // Wechsel auf E-Mail rendert NICHT neu. Wuerde der Absatz hier weggelassen
+    // statt versteckt, koennte updateProviderVisibility() ihn spaeter nicht
+    // einblenden - und der Hinweis erschiene erst nach dem Speichern, also
+    // genau dann nicht, wenn er gebraucht wird.
+    const notReady = providerNotReady(providers, channel.provider);
     list.insertAdjacentHTML('beforeend', `
       <form class="settings-card settings-form notification-channel-form" data-channel-index="${index}" data-channel-id="${esc(channel.id ?? '')}">
         <h3 class="settings-card__title">${esc(channel.name || t('settings.notificationChannelAdd'))}</h3>
@@ -236,7 +245,7 @@ function renderChannelList(container, channels, providers = DEFAULT_PROVIDERS) {
             <input class="form-input" id="notification-email-to-${suffix}" name="emailTo" type="email" autocomplete="email" value="${esc(channel.config.toAddress ?? '')}">
             <p class="form-hint">${t('settings.notificationChannelEmailToHint')}</p>
           </div>
-          ${notReady ? `<p class="form-hint">${t('settings.notificationChannelEmailNotConfigured')}</p>` : ''}
+          <p class="form-hint notification-email-not-ready${notReady ? '' : ' settings-card--hidden'}">${t('settings.notificationChannelEmailNotConfigured')}</p>
         </div>
         <div class="settings-form-actions">
           <button type="submit" class="btn btn--primary">${t('settings.notificationChannelSave')}</button>
@@ -246,6 +255,12 @@ function renderChannelList(container, channels, providers = DEFAULT_PROVIDERS) {
       </form>
     `);
   });
+  // Den Anfangszustand einmal durchziehen: frisch gerenderte Bloecke tragen
+  // zwar ihre Versteckt-Klasse, ihre Felder sind aber noch aktiv - und ein
+  // unsichtbares `type="email"` mit Altwert blockiert das Absenden genauso, ob
+  // es nun durch einen Wechsel oder durch das erste Rendern dorthin kam.
+  list.querySelectorAll('.notification-channel-form')
+    .forEach((form) => updateProviderVisibility(form, providers));
   window.lucide?.createIcons({ el: list });
 }
 
@@ -285,24 +300,51 @@ function readChannelForm(form) {
   return body;
 }
 
-function updateProviderVisibility(form) {
+/**
+ * EIN VERSTECKTES FELD DARF DAS ABSENDEN NICHT BLOCKIEREN, und `display:none`
+ * allein sorgt nicht dafuer: der Browser prueft die Bedingungen eines
+ * unsichtbaren Feldes weiter, kann den Fokus zur Meldung aber nicht dorthin
+ * setzen - der Speichern-Knopf tut dann scheinbar nichts.
+ *
+ * Betroffen ist mehr als `required`. `type="email"` bringt seine eigene
+ * Pruefung mit (`typeMismatch`), die auch ohne `required` greift: wer beim
+ * Anlegen `oma@` tippt und dann auf Gotify zurueckwechselt, hinterlaesst ein
+ * unsichtbares ungueltiges Feld. Genau der Fehler, gegen den die baseUrl-Zeile
+ * hier schon geschuetzt war - nur eben nicht fuer das neue Feld.
+ *
+ * Deshalb als Regel ueber den ganzen Block statt als Aufzaehlung einzelner
+ * Felder: `disabled` nimmt ein Element aus der Pruefung UND aus dem Versand,
+ * und der naechste Provider mit einem eigenen Feld ist damit von selbst
+ * gedeckt. `readChannelForm()` liest ueber `form.elements`, das disabled
+ * Elemente weiterhin herausgibt - die Werte bleiben also erreichbar.
+ */
+function setBlockActive(block, active) {
+  if (!block) return;
+  block.classList.toggle('settings-card--hidden', !active);
+  block.querySelectorAll('input, select, textarea').forEach((field) => { field.disabled = !active; });
+}
+
+function updateProviderVisibility(form, providers = DEFAULT_PROVIDERS) {
   const provider = form.elements.provider.value;
-  form.querySelector('.notification-provider-fields--gotify')?.classList.toggle('settings-card--hidden', provider !== 'gotify');
-  form.querySelector('.notification-provider-fields--ntfy')?.classList.toggle('settings-card--hidden', provider !== 'ntfy');
-  form.querySelector('.notification-provider-fields--webhook')?.classList.toggle('settings-card--hidden', provider !== 'webhook');
-  form.querySelector('.notification-provider-fields--email')?.classList.toggle('settings-card--hidden', provider !== 'email');
-  // EIN VERSTECKTES PFLICHTFELD BLOCKIERT DAS ABSENDEN, OHNE ES ZU ZEIGEN.
-  // `required` muss mit der Sichtbarkeit wandern: sonst lehnt der Browser das
-  // Formular wegen baseUrl ab, kann den Fokus aber nicht auf ein
-  // display:none-Feld setzen - der Speichern-Knopf tut dann scheinbar nichts.
-  const baseUrlField = form.elements.baseUrl;
+  for (const id of ['gotify', 'ntfy', 'webhook', 'email']) {
+    setBlockActive(form.querySelector(`.notification-provider-fields--${id}`), provider === id);
+  }
   const showBaseUrl = usesBaseUrl(provider);
-  form.querySelector('.notification-base-url-field')?.classList.toggle('settings-card--hidden', !showBaseUrl);
-  if (baseUrlField) baseUrlField.required = showBaseUrl;
+  setBlockActive(form.querySelector('.notification-base-url-field'), showBaseUrl);
+  if (form.elements.baseUrl) form.elements.baseUrl.required = showBaseUrl;
+  // Der Hinweis wird immer gerendert und hier nur ein-/ausgeblendet: der
+  // Wechsel des Anbieters rendert die Karte nicht neu, ein erst dann erzeugter
+  // Absatz erschiene nie.
+  form.querySelector('.notification-email-not-ready')
+    ?.classList.toggle('settings-card--hidden', !(provider === 'email' && providerNotReady(providers, 'email')));
+  // Die beiden Auth-Bloecke liegen INNERHALB des ntfy-Blocks, der sie oben
+  // schon aktiviert hat - hier wird nachgeschaerft. Reihenfolge ist deshalb
+  // Absicht: erst der Anbieter, dann die Auth-Art darin.
+  const isNtfy = provider === 'ntfy';
   const auth = form.elements.ntfyAuth?.value || 'none';
-  form.querySelector('.notification-ntfy-token-field')?.classList.toggle('settings-card--hidden', auth !== 'token');
+  setBlockActive(form.querySelector('.notification-ntfy-token-field'), isNtfy && auth === 'token');
   form.querySelectorAll('.notification-ntfy-basic-field').forEach((field) => {
-    field.classList.toggle('settings-card--hidden', auth !== 'basic');
+    setBlockActive(field, isNtfy && auth === 'basic');
   });
 }
 
@@ -334,7 +376,7 @@ async function setupChannelControls(container, user) {
       const index = Number(form.dataset.channelIndex);
       if (!form.dataset.channelId) channels[index] = channelDefaults(event.target.value);
     }
-    updateProviderVisibility(form);
+    updateProviderVisibility(form, providers);
   });
 
   container.addEventListener('submit', async (event) => {
@@ -478,3 +520,9 @@ export async function render(container, { user } = {}) {
     throw error;
   }
 }
+
+// Die Sichtbarkeitslogik ist reine Zustandsarbeit auf einem schmalen
+// DOM-Ausschnitt und damit ohne Browser pruefbar. Sie hat zwei Fehler getragen,
+// die ein Textguard nicht gesehen haette: ein verstecktes `type="email"`, das
+// das Absenden blockiert, und einen Hinweis, der beim Anlegen nie erscheint.
+export const __test = { updateProviderVisibility, setBlockActive, providerNotReady, channelDefaults, usesBaseUrl, readChannelForm };

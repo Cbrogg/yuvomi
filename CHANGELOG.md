@@ -38,11 +38,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Online nobody noticed, because the network filled the gap. Offline the import failed and took the
   whole settings shell with it. The file is precached now.
 
-  The reason it went unnoticed for so long is the more useful half. A guard does check that every
-  module reachable from a precached one is itself precached, and it stayed green throughout: it read
-  only imports written as `from '/absolute/path'`, and the shell writes `from './dirty-guard.js'`.
-  Relative imports were invisible to it, though the browser loads them exactly the same way. The
-  guard now resolves them too, which is how this was found in the first place.
+  The date picker was missing the same way, and it is loaded by the router itself - so a first
+  offline visit could get the HTML fallback instead of the module, on every page with a date field.
+
+  The reason both went unnoticed is the more useful half. A guard does check that every module
+  reachable from a precached one is itself precached, and it stayed green throughout: it read only
+  imports written as `from '/absolute/path'`. The settings shell writes `from './dirty-guard.js'`
+  and the router writes `import '/components/datepicker.js'` - a relative specifier and a
+  side-effect import, both loaded by the browser exactly like any other. The guard now resolves both
+  forms, which is how these were found in the first place.
 
 ## [2.55.0] - 2026-08-30
 
