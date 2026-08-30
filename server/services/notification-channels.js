@@ -171,14 +171,37 @@ function normalizeWebhookSecrets(input = {}) {
  * lehnt am Ende gueltige Adressen ab. Geprueft wird, was hier schadet: leer,
  * mehrfaches @, Leerraum, fehlende Domain - und Zeilenumbrueche, die aus dem
  * Empfaenger-Header weitere Header machen wuerden.
+ *
+ * OHNE ZUSAMMENGESETZTE REGEX, und das ist kein Stilentscheid. Die erste
+ * Fassung pruefte mit `/^[^\s@]+@[^\s@]+\.[^\s@]+$/`, was harmlos aussieht:
+ * die beiden Teile hinter dem @ ueberlappen sich aber, denn `[^\s@]` deckt auch
+ * den Punkt. Bei einer langen Eingabe OHNE Treffer probiert die Engine jede
+ * Aufteilung von "Domain.TLD" durch - quadratischer Aufwand, und Node arbeitet
+ * einaedrig: der ganze Server steht so lange. CodeQL hat das als
+ * `js/polynomial-redos` gemeldet, zu Recht. Die Pruefungen unten sind linear
+ * und sagen dasselbe.
  */
+const MAX_EMAIL_LENGTH = 254; // RFC 5321: laenger ist ohnehin keine Adresse.
+
 function normalizeEmailAddress(value) {
   const raw = String(value ?? '').trim();
+  const invalid = () => new Error('A valid recipient email address is required.');
   if (!raw) throw new Error('A recipient email address is required.');
-  if (/[\r\n]/.test(raw)) throw new Error('A valid recipient email address is required.');
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) {
-    throw new Error('A valid recipient email address is required.');
-  }
+  // Die Laenge zuerst: was hier abprallt, durchlaeuft keine weitere Pruefung.
+  if (raw.length > MAX_EMAIL_LENGTH) throw invalid();
+  // Deckt Zeilenumbrueche mit ab - ein `\n` im Empfaenger-Header machte aus
+  // einer Adresse zwei Header.
+  if (/\s/.test(raw)) throw invalid();
+
+  const at = raw.indexOf('@');
+  if (at <= 0) throw invalid();                       // etwas vor dem @, und ueberhaupt eines
+  if (raw.indexOf('@', at + 1) !== -1) throw invalid(); // genau eines
+
+  const domain = raw.slice(at + 1);
+  const dot = domain.indexOf('.');
+  // Ein Punkt, aber weder am Anfang noch am Ende: `a@.de` und `a@de.` sind so
+  // wenig eine Domain wie `a@de`.
+  if (dot <= 0 || dot === domain.length - 1) throw invalid();
   return raw;
 }
 
