@@ -7,6 +7,20 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Security
+
+- **A redirect can no longer strip TLS or take credentials with it.** Yuvomi's outgoing requests -
+  calendar subscriptions, WebDAV storage, recipe mirrors, document management - carry an SSRF guard
+  that validates every address they connect to, and it followed redirects correctly. Two things,
+  though, are not properties of an address, and both were unchecked. A target server could redirect
+  from `https:` to `http:`, and the follow-up request went out in the clear without the caller ever
+  learning of it. And the request headers travelled unchanged to whatever host the redirect named -
+  for CalDAV, WebDAV and DMS accounts those headers hold a plaintext password, so a hostile or
+  taken-over server could collect a household's credentials with a single 302 to somewhere else.
+  Redirects now have to stay on http/https and may not step down from https; the credential headers
+  are dropped when the origin changes, and only then, so a server sending `/cal` to `/cal/` keeps
+  working. Reported as part of a security audit (#937).
+
 ## [2.54.0] - 2026-08-29
 
 ### Added
