@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **A planned meal opens the recipe it was planned from.** A meal can be tied to one of the
+  household's own recipes - the field is in the form, it is stored, and the shopping-list transfer
+  reads it. The button on the meal card, though, only ever appeared for an external web address, so
+  the internal link had no way out: you could create it and never use it, and anyone cooking from
+  the week plan landed in the edit dialog instead (#936). Meal cards with a linked recipe now carry
+  a second button that opens it, expanded and ready to read rather than open for editing - whoever
+  comes from the meal plan wants to cook. It is a real link, so command-click and "copy link" work
+  the way they should. A meal that has both a recipe and an external address shows the recipe,
+  because that one stays inside the app.
+
 ## [2.54.0] - 2026-08-29
 
 ### Added
