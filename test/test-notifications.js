@@ -1029,7 +1029,14 @@ test('eine Erinnerungsmail escapet die Nutzerdaten, die sie traegt (#944)', asyn
     env: { BASE_URL: 'https://haus.example' },
   });
   const mail = mailer.sent[0];
-  assert.doesNotMatch(mail.html, /<img/, 'kein durchgereichtes Markup');
+  // Als Regel statt als Tag-Name: eine Suche nach `<img` uebersieht `<IMG` und
+  // fragt ohnehin nach dem falschen - die Zusicherung ist, dass NUR die Tags
+  // vorkommen, die der Provider selbst baut.
+  const OWN_TAGS = new Set(['p', 'a']);
+  const foreign = [...new Set(
+    [...mail.html.matchAll(/<\/?([a-zA-Z][a-zA-Z0-9]*)/g)].map((m) => m[1].toLowerCase()),
+  )].filter((tag) => !OWN_TAGS.has(tag));
+  assert.deepEqual(foreign, [], `durchgereichtes Markup: ${foreign.join(', ')}`);
   assert.match(mail.html, /&lt;img src=x onerror=alert\(1\)&gt;/, 'sondern escaped');
   assert.match(mail.html, /&amp; Co/, 'auch das kaufmaennische Und');
   assert.match(mail.text, /Zahnarzt <img src=x onerror=alert\(1\)> & Co/, 'die Textfassung bleibt roh');
