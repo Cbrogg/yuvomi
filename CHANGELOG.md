@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   comes from the meal plan wants to cook. It is a real link, so command-click and "copy link" work
   the way they should. A meal that has both a recipe and an external address shows the recipe,
   because that one stays inside the app.
+
 ### Fixed
 
 - **Events pushed to a CalDAV server carry a time zone.** An event created in Yuvomi went out as
@@ -32,7 +33,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   zone they were imported with, so a weekly appointment does not shift by an hour across a daylight
   saving change. Events already on a server take the corrected value on their next push; where the
   household zone is UTC the value gets a plain `Z` instead.
-### Fixed
 
 - **The currency setting is where you look for it.** It sat inside the format card under Appearance
   → Region / Format, and that card is hidden whenever a region preset matches your settings exactly.
@@ -45,6 +45,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   visible. Picking a region still fills it in - that stays the quick way, it is just no longer the
   only one. A currency is not a format: dates and times say how a value is written and follow a
   place, while a household can keep German formats and an account in dollars.
+
 ### Security
 
 - **A redirect can no longer strip TLS or take credentials with it.** Yuvomi's outgoing requests -
@@ -58,7 +59,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   Redirects now have to stay on http/https and may not step down from https; the credential headers
   are dropped when the origin changes, and only then, so a server sending `/cal` to `/cal/` keeps
   working. Reported as part of a security audit (#937).
-### Security
 
 - **Uploads are checked against their content, not just their declaration.** Every upload arrives as
   a data URL, and the type in its prefix - `data:application/pdf;base64,...` - comes from the
