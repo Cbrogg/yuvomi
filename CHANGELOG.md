@@ -31,6 +31,26 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
   line, medication names included, and subject lines stay readable in transit and permanently in the
   recipient's mailbox. `docs/PRIVACY-FOR-SELFHOSTERS.md` covers what that means.
 
+- **A shopping list can be sent to whoever is doing the run.** The second half of #944. An entry in
+  the list's overflow menu mails its open items to one household member, grouped by aisle in the same
+  order the screen shows them.
+
+  It sends a snapshot, not an access route - no link, no token, nothing that outlives the message.
+  A read-only share URL was the other obvious shape and was deliberately not built: it would have
+  been the first unauthenticated view of household data in Yuvomi, and a leaked link stays leaked.
+  Someone who needs the list continuously is a household member and already has the app. Because a
+  snapshot goes stale the moment someone at home ticks an item off, the mail says which moment it
+  captured rather than pretending to be live.
+
+  The recipient is picked from the household, and only members with an address on their contact
+  appear - the same source password reset mails use. The address is never taken from the request:
+  accepting one would make the instance an open mail relay for anyone with a login. Sending to
+  yourself works too, which is the "get the list onto my phone" case, and then the mail skips the
+  "X sent you this list" line.
+
+  Needs SMTP configured. Three refusals are told apart rather than collapsed into one failure: the
+  member has no address, SMTP is not set up, or nothing on the list is still open.
+
 ### Fixed
 
 - **The settings page works offline again.** Its shell loads `dirty-guard.js` - the part that asks
