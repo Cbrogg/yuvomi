@@ -7,6 +7,21 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Fixed
+
+- **Events pushed to a CalDAV server carry a time zone.** An event created in Yuvomi went out as
+  `DTSTART:20260830T100000` - no zone, no UTC marker, no `VTIMEZONE`. That is "floating time": the
+  standard allows it, and it means "ten o'clock on the clock of whoever reads it". Apple's Calendar
+  and eM Client substitute the device's own zone and land on the right hour; a Synology with a
+  DAViCal backend accepts the event, hands it back unchanged when asked, and never displays it in
+  its own web interface, because its index needs a point in time and was given none. The reporter
+  measured exactly that difference: the same appointment, visible in the native client, missing from
+  the server's own front-end (#938). Times now carry the household's zone, the same way the export
+  feed has since v2.24.3, and a matching `VTIMEZONE` travels with them. Recurring series keep the
+  zone they were imported with, so a weekly appointment does not shift by an hour across a daylight
+  saving change. Events already on a server take the corrected value on their next push; where the
+  household zone is UTC the value gets a plain `Z` instead.
+
 ## [2.54.0] - 2026-08-29
 
 ### Added
