@@ -10,6 +10,7 @@ import { createNotificationChannelStore } from './notification-channels.js';
 import { gotifyProvider } from './notification-providers/gotify.js';
 import { ntfyProvider } from './notification-providers/ntfy.js';
 import { webhookProvider } from './notification-providers/webhook.js';
+import { emailProvider } from './notification-providers/email.js';
 import { syncAllBirthdayReminders } from './birthdays.js';
 import { resolveHouseholdLocale, translate } from '../utils/i18n.js';
 import { warrantyEndDate } from './inventory-deadlines.js';
@@ -28,6 +29,7 @@ export const defaultProviders = {
   gotify: gotifyProvider,
   ntfy: ntfyProvider,
   webhook: webhookProvider,
+  email: emailProvider,
 };
 
 function iso(value) {

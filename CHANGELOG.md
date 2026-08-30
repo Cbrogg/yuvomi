@@ -7,6 +7,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- **Reminders can be delivered by email.** Households without a native app fell back to keeping a
+  browser tab open: reminders reached Web Push, Gotify, ntfy or a webhook, and nothing else (#944).
+  Email is now a fourth channel type next to those three, configured the same way under
+  Settings → Personal → Notifications.
+
+  It deliberately brings no credentials of its own. The SMTP access already configured for password
+  resets and invitations is the one it uses, so a mail server is set up once and not once per
+  channel - a second copy would only be a second place to forget when the server changes. A channel
+  therefore holds just a recipient address; a second recipient is a second channel, which keeps each
+  one separately switchable and separately testable. Who gets a reminder is still decided by the
+  channel's scope, exactly as for the other providers.
+
+  Two details are worth knowing. Web Push splits a reminder across title and body, but an inbox
+  shows only the subject line, so the mail puts both there - "Calendar: Dentist" rather than
+  "Calendar". And the link back into the app needs `BASE_URL`; without it the mail arrives without a
+  link rather than with a dead one. The provider list marks email as not ready while SMTP is
+  unconfigured, so the settings page says so before a test send fails.
+
+  A note for anyone tracking health data: an email channel carries reminder contents in the subject
+  line, medication names included, and subject lines stay readable in transit and permanently in the
+  recipient's mailbox. `docs/PRIVACY-FOR-SELFHOSTERS.md` covers what that means.
+
+### Fixed
+
+- **The settings page works offline again.** Its shell loads `dirty-guard.js` - the part that asks
+  before you discard unsaved edits - and that file was never in the service worker's precache list.
+  Online nobody noticed, because the network filled the gap. Offline the import failed and took the
+  whole settings shell with it. The file is precached now.
+
+  The reason it went unnoticed for so long is the more useful half. A guard does check that every
+  module reachable from a precached one is itself precached, and it stayed green throughout: it read
+  only imports written as `from '/absolute/path'`, and the shell writes `from './dirty-guard.js'`.
+  Relative imports were invisible to it, though the browser loads them exactly the same way. The
+  guard now resolves them too, which is how this was found in the first place.
+
 ## [2.55.0] - 2026-08-30
 
 ### Added

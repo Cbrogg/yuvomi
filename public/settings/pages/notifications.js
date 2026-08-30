@@ -13,7 +13,19 @@ const DEFAULT_PROVIDERS = [
   { id: 'gotify', name: 'Gotify' },
   { id: 'ntfy', name: 'ntfy' },
   { id: 'webhook', name: 'Webhook' },
+  { id: 'email', name: 'Email' },
 ];
+
+/**
+ * Traegt dieser Provider einen eigenen Endpunkt? Beantwortet aus den Defaults
+ * statt aus einer zweiten Liste - sonst driften die beiden auseinander, und
+ * der naechste Provider ohne Endpunkt bekommt still ein Pflichtfeld, das er
+ * nicht fuellen kann. Mail ist der erste solche Fall: sein Zugang steht
+ * app-weit in den E-Mail-Einstellungen, nicht am Kanal.
+ */
+function usesBaseUrl(provider) {
+  return Object.hasOwn(channelDefaults(provider).config, 'baseUrl');
+}
 
 function selected(value, expected) {
   return value === expected ? ' selected' : '';
@@ -38,6 +50,17 @@ function channelDefaults(provider = 'gotify') {
       // (Discord, Slack) tragen hier ihre Form ein, statt einen Adapter je Dienst
       // zu brauchen (#692).
       config: { baseUrl: '', payloadTemplate: '' },
+      secretSet: false,
+    };
+  }
+  if (provider === 'email') {
+    return {
+      provider: 'email',
+      name: '',
+      enabled: false,
+      // Kein baseUrl und keine Geheimnisse: der SMTP-Zugang gilt app-weit
+      // (Einstellungen > E-Mail), der Kanal traegt nur sein Ziel (#944).
+      config: { toAddress: '' },
       secretSet: false,
     };
   }
@@ -126,6 +149,12 @@ function renderChannelList(container, channels, providers = DEFAULT_PROVIDERS) {
     const suffix = channel.id ? `existing-${channel.id}` : `new-${index}`;
     const isNtfy = channel.provider === 'ntfy';
     const isWebhook = channel.provider === 'webhook';
+    const isEmail = channel.provider === 'email';
+    const hasBaseUrl = usesBaseUrl(channel.provider);
+    // `ready === false` kommt nur von einem Provider, der eine Voraussetzung
+    // ausserhalb seines Kanals hat. Der Hinweis steht am Formular, nicht hinter
+    // einem fehlgeschlagenen Testversand - dessen Meldung sagt nur "Fehler".
+    const notReady = providers.some((p) => p.id === channel.provider && p.ready === false);
     list.insertAdjacentHTML('beforeend', `
       <form class="settings-card settings-form notification-channel-form" data-channel-index="${index}" data-channel-id="${esc(channel.id ?? '')}">
         <h3 class="settings-card__title">${esc(channel.name || t('settings.notificationChannelAdd'))}</h3>
@@ -144,9 +173,9 @@ function renderChannelList(container, channels, providers = DEFAULT_PROVIDERS) {
           checked: !!channel.enabled,
           attrs: { name: 'enabled' },
         })}
-        <div class="form-field">
+        <div class="form-field notification-base-url-field${hasBaseUrl ? '' : ' settings-card--hidden'}">
           <label class="form-label" for="notification-base-url-${suffix}">${t('settings.notificationChannelBaseUrl')}</label>
-          <input class="form-input" id="notification-base-url-${suffix}" name="baseUrl" value="${esc(channel.config.baseUrl)}" required>
+          <input class="form-input" id="notification-base-url-${suffix}" name="baseUrl" value="${esc(channel.config.baseUrl ?? '')}"${hasBaseUrl ? ' required' : ''}>
         </div>
         <div class="notification-provider-fields notification-provider-fields--gotify${channel.provider === 'gotify' ? '' : ' settings-card--hidden'}">
           <div class="form-field">
@@ -201,6 +230,14 @@ function renderChannelList(container, channels, providers = DEFAULT_PROVIDERS) {
             <input class="form-input" id="notification-ntfy-password-${suffix}" name="ntfyPassword" type="password" autocomplete="new-password" placeholder="${channel.secretSet ? esc(t('settings.notificationChannelSecretKeep')) : ''}">
           </div>
         </div>
+        <div class="notification-provider-fields notification-provider-fields--email${isEmail ? '' : ' settings-card--hidden'}">
+          <div class="form-field">
+            <label class="form-label" for="notification-email-to-${suffix}">${t('settings.notificationChannelEmailTo')}</label>
+            <input class="form-input" id="notification-email-to-${suffix}" name="emailTo" type="email" autocomplete="email" value="${esc(channel.config.toAddress ?? '')}">
+            <p class="form-hint">${t('settings.notificationChannelEmailToHint')}</p>
+          </div>
+          ${notReady ? `<p class="form-hint">${t('settings.notificationChannelEmailNotConfigured')}</p>` : ''}
+        </div>
         <div class="settings-form-actions">
           <button type="submit" class="btn btn--primary">${t('settings.notificationChannelSave')}</button>
           ${channel.id ? `<button type="button" class="btn btn--secondary" data-action="test">${t('settings.notificationChannelTest')}</button>` : ''}
@@ -218,12 +255,15 @@ function readChannelForm(form) {
     provider,
     name: form.elements.name.value.trim(),
     enabled: form.elements.enabled.checked,
-    config: {
-      baseUrl: form.elements.baseUrl.value.trim(),
-    },
+    config: {},
     secrets: {},
   };
-  if (provider === 'ntfy') {
+  // Nur senden, was der Provider kennt: ein leeres baseUrl an einen
+  // Mail-Kanal wuerde serverseitig als "Basis-URL fehlt" abgelehnt.
+  if (usesBaseUrl(provider)) body.config.baseUrl = form.elements.baseUrl.value.trim();
+  if (provider === 'email') {
+    body.config.toAddress = form.elements.emailTo.value.trim();
+  } else if (provider === 'ntfy') {
     body.config.topic = form.elements.ntfyTopic.value.trim();
     body.config.priority = form.elements.ntfyPriority.value;
     body.config.authType = form.elements.ntfyAuth.value;
@@ -250,6 +290,15 @@ function updateProviderVisibility(form) {
   form.querySelector('.notification-provider-fields--gotify')?.classList.toggle('settings-card--hidden', provider !== 'gotify');
   form.querySelector('.notification-provider-fields--ntfy')?.classList.toggle('settings-card--hidden', provider !== 'ntfy');
   form.querySelector('.notification-provider-fields--webhook')?.classList.toggle('settings-card--hidden', provider !== 'webhook');
+  form.querySelector('.notification-provider-fields--email')?.classList.toggle('settings-card--hidden', provider !== 'email');
+  // EIN VERSTECKTES PFLICHTFELD BLOCKIERT DAS ABSENDEN, OHNE ES ZU ZEIGEN.
+  // `required` muss mit der Sichtbarkeit wandern: sonst lehnt der Browser das
+  // Formular wegen baseUrl ab, kann den Fokus aber nicht auf ein
+  // display:none-Feld setzen - der Speichern-Knopf tut dann scheinbar nichts.
+  const baseUrlField = form.elements.baseUrl;
+  const showBaseUrl = usesBaseUrl(provider);
+  form.querySelector('.notification-base-url-field')?.classList.toggle('settings-card--hidden', !showBaseUrl);
+  if (baseUrlField) baseUrlField.required = showBaseUrl;
   const auth = form.elements.ntfyAuth?.value || 'none';
   form.querySelector('.notification-ntfy-token-field')?.classList.toggle('settings-card--hidden', auth !== 'token');
   form.querySelectorAll('.notification-ntfy-basic-field').forEach((field) => {

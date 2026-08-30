@@ -14,6 +14,7 @@ export const NOTIFICATION_PROVIDERS = [
   { id: 'gotify', name: 'Gotify' },
   { id: 'ntfy', name: 'ntfy' },
   { id: 'webhook', name: 'Webhook' },
+  { id: 'email', name: 'Email' },
 ];
 
 const PROVIDER_IDS = new Set(NOTIFICATION_PROVIDERS.map((p) => p.id));
@@ -159,6 +160,34 @@ function normalizeWebhookSecrets(input = {}) {
   return { token: String(input.token ?? '').trim() };
 }
 
+/**
+ * EINE ADRESSE JE KANAL, keine Liste. Wer zwei Empfaenger will, legt zwei
+ * Kanaele an - dann laesst sich jeder einzeln abschalten und einzeln testen.
+ * Eine Adressliste in einem Feld nimmt genau das weg: ein Testknopf fuer drei
+ * Adressen sagt nicht, welche davon gescheitert ist, und beim Teilversand
+ * muesste der Kanal-Status zwei Wahrheiten gleichzeitig tragen.
+ *
+ * Geprueft wird bewusst nicht gegen RFC 5322 - eine vollstaendige Grammatik
+ * lehnt am Ende gueltige Adressen ab. Geprueft wird, was hier schadet: leer,
+ * mehrfaches @, Leerraum, fehlende Domain - und Zeilenumbrueche, die aus dem
+ * Empfaenger-Header weitere Header machen wuerden.
+ */
+function normalizeEmailAddress(value) {
+  const raw = String(value ?? '').trim();
+  if (!raw) throw new Error('A recipient email address is required.');
+  if (/[\r\n]/.test(raw)) throw new Error('A valid recipient email address is required.');
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(raw)) {
+    throw new Error('A valid recipient email address is required.');
+  }
+  return raw;
+}
+
+function normalizeEmailConfig(input = {}) {
+  // Kein baseUrl: der Kanal bringt keinen Endpunkt mit, der SMTP-Zugang steht
+  // app-weit in services/email.js. Siehe notification-providers/email.js.
+  return { toAddress: normalizeEmailAddress(input.toAddress) };
+}
+
 export function normalizeChannelInput(input = {}, existing = null) {
   const provider = existing?.provider || normalizeProvider(input.provider);
   normalizeProvider(provider);
@@ -179,6 +208,9 @@ export function normalizeChannelInput(input = {}, existing = null) {
     config = normalizeNtfyConfig(mergedConfig);
     secrets = normalizeNtfySecrets(mergedSecrets);
     validateNtfy({ config, secrets, requireSecrets: !existing || input.secrets !== undefined });
+  } else if (provider === 'email') {
+    config = normalizeEmailConfig(mergedConfig);
+    secrets = {};
   } else {
     config = normalizeWebhookConfig(mergedConfig);
     secrets = normalizeWebhookSecrets(mergedSecrets);
