@@ -1,14 +1,12 @@
-<!-- version: 2.56.0 -->
-Reminders can now arrive by email. Until now they reached you through the app, through browser push, or through Gotify, ntfy and webhooks - all of which assume you have set one of those up. Email is a fourth option next to them, and for a household that mostly uses Yuvomi in a mobile browser it is often the only one that needs no extra service. Set it up under Settings, Personal, Notifications, the same place as the others.
+<!-- version: 2.57.0 -->
+Public and school holidays now appear in the language you chose for stored entries, rather than the language of the country you picked. A household in Spain reading Yuvomi in English used to get Spanish holiday names, even though the setting says it applies to synchronisation. After the update Yuvomi fetches the holidays once more on its own to correct the names already stored.
 
-A shopping list can be sent to whoever is doing the run. One entry in the list's menu mails its open items to a household member, grouped by aisle in the order the app shows them. It sends the list as it stands rather than a link that stays live, and it says so: the mail names the moment it was taken, because whoever is carrying it around the shop cannot see what is being ticked off at home. Only members who have an email address on their contact can be picked.
+The same now applies when you change the country, change the region, or switch school holidays back on. Each of those decides what the calendar should show, so each of them refreshes the entries instead of leaving the old ones in place for up to a month.
 
-Both need an outgoing mail server. If you have already configured SMTP for the "forgot password" function, they work immediately; if not, the settings page will tell you so rather than let a send fail silently. There is one configuration for all of it, not one per channel.
+In Budget, subscription categories and payment methods are translated. The dialogue for managing them used to show the categories in your language and the payment methods in English, in the same list. Renaming one still gives you the name you typed: a translated default becomes your own entry the moment you rename it, and changing only its colour leaves the translation alone.
 
-Worth knowing if you track medication: a reminder sent by email carries its subject in the subject line, medication names included, and subject lines stay readable along the way and permanently in the recipient's mailbox. On your own mail server that stays with you. Through a third-party provider it does not.
+In Settings, the kitchen entries were drawn with oversized icons in the module and navigation lists. Both reported places are fixed, along with a third one on the settings overview.
 
-The settings page also works offline again. One of its parts was missing from the offline cache, and while the network covered for it nobody could tell; without a connection the page failed to open at all.
+This update applies a database change to the subscription tables. It runs by itself when Yuvomi starts and needs nothing from you.
 
-Nothing to do after the update - no migration, and no settings changed.
-
-Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.56.0
+Full release notes are available at https://github.com/ulsklyc/yuvomi/releases/tag/v2.57.0
