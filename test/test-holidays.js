@@ -37,6 +37,11 @@ _setTestDatabase(db);
 
 function resetState() {
   db.prepare("DELETE FROM sync_config WHERE key LIKE 'holiday_%'").run();
+  // AUCH DIE DATENSPRACHE, und das ist keine Kosmetik: seit #946 entscheidet
+  // sie, in welcher Sprache die Namen im Cache landen. Bliebe sie zwischen
+  // zwei Tests stehen, haetten die Erwartungen des einen die Voraussetzung des
+  // naechsten gesetzt - der ganze Rest der Suite haenge dann an der Reihenfolge.
+  db.prepare("DELETE FROM sync_config WHERE key IN ('language', 'region')").run();
   db.prepare('DELETE FROM holiday_cache').run();
 }
 
@@ -85,6 +90,36 @@ function makeApiMock() {
     const country = new URL(s).searchParams.get('countryIsoCode');
     if (path === '/PublicHolidays') {
       if (country === 'BR') return okJson([]);
+      // Spanien wie in #946: die Landessprache steht ZUERST im Array, Englisch
+      // weiter hinten - und "Reyes" fuehrt die API nur auf Spanisch und
+      // Katalanisch. So laesst sich beides pruefen: die Wahl der Wunschsprache
+      // und der Rueckfall, wenn es sie nicht gibt.
+      if (country === 'ES') {
+        return okJson([
+          { startDate: '2026-12-25', endDate: '2026-12-25',
+            name: [
+              { language: 'ES', text: 'Navidad' },
+              { language: 'CA', text: 'Nadal' },
+              { language: 'EN', text: 'Christmas Day' },
+              { language: 'DE', text: 'Weihnachtstag' },
+            ] },
+          { startDate: '2026-01-06', endDate: '2026-01-06',
+            name: [
+              { language: 'ES', text: 'Reyes' },
+              { language: 'CA', text: 'Reis' },
+            ] },
+          // Weder Deutsch noch die Landessprache zuerst-genommen: dieser
+          // Eintrag trennt die mittlere Stufe der Kaskade (Englisch) von der
+          // letzten (die erste angebotene). Ohne ihn waeren beide Fassungen
+          // gleich und ein Test darueber bewiese nichts.
+          { startDate: '2026-05-01', endDate: '2026-05-01',
+            name: [
+              { language: 'ES', text: 'Fiesta del Trabajo' },
+              { language: 'CA', text: 'Festa del Treball' },
+              { language: 'EN', text: 'Labour Day' },
+            ] },
+        ]);
+      }
       return okJson([{ startDate: '2026-01-01', endDate: '2026-01-01',
         name: [{ language: 'DE', text: 'Neujahr' }, { language: 'EN', text: "New Year's Day" }] }]);
     }
@@ -340,6 +375,10 @@ test('sync: throttled run → schweigt im Standard-Log-Level', async () => {
   setConfig({
     holiday_country: 'DE', holiday_show_public: '1', holiday_show_school: '0',
     holiday_last_sync: new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString(),
+    // Seit #946 gilt die Sperre nur, solange die Sprache dieselbe ist wie beim
+    // letzten Lauf. Ohne diese Zeile HAETTE der Lauf zu recht gefetcht - der
+    // Cache stuende dann in einer anderen Sprache als der eingestellten.
+    holiday_last_sync_scope: 'EN|DE||P|',
   });
   const lines = await captureConsole(() => sync());
   assert.equal(mock.calls.length, 0, 'throttled run darf nicht fetchen');
@@ -349,7 +388,9 @@ test('sync: throttled run → schweigt im Standard-Log-Level', async () => {
 test('sync: public-only fetches PublicHolidays per year, caches them, sets last_sync', async () => {
   const mock = makeApiMock();
   __setFetchImpl(mock);
-  setConfig({ holiday_country: 'DE', holiday_show_public: '1', holiday_show_school: '0' });
+  // Die Datensprache steht ausdruecklich da: sie - nicht das Land - entscheidet
+  // seit #946, welcher Name im Cache landet.
+  setConfig({ holiday_country: 'DE', holiday_show_public: '1', holiday_show_school: '0', language: 'de' });
 
   const res = await sync(true);
 
@@ -359,7 +400,7 @@ test('sync: public-only fetches PublicHolidays per year, caches them, sets last_
 
   const pub = db.prepare("SELECT COUNT(*) c FROM holiday_cache WHERE type='public'").get().c;
   assert.equal(pub, SYNC_YEAR_SPAN);
-  // German locale name is resolved and stored
+  // Deutsche Datensprache → deutscher Name aus dem name-Array
   assert.equal(db.prepare('SELECT name FROM holiday_cache LIMIT 1').get().name, 'Neujahr');
   // last_sync persisted
   assert.ok(db.prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync'").get()?.value);
@@ -418,24 +459,33 @@ test('sync: drops "Exception"-tagged sub-regional holiday variants – no duplic
   assert.deepEqual(ends, ['2026-08-30']); // nur das reguläre Enddatum, nicht 2026-08-23
 });
 
-test('sync: Brazil public holidays use PT and local fallback when OpenHolidays has no rows', async () => {
+test('sync: Brazil local fallback follows the data language, not the country', async () => {
   const mock = makeApiMock();
   __setFetchImpl(mock);
-  setConfig({ holiday_country: 'BR', holiday_show_public: '1', holiday_show_school: '0' });
+  setConfig({ holiday_country: 'BR', holiday_show_public: '1', holiday_show_school: '0', language: 'pt' });
 
   const res = await sync(true);
 
   assert.equal(res.synced, SYNC_YEAR_SPAN * BRAZIL_PUBLIC_HOLIDAYS_PER_YEAR);
   assert.ok(mock.calls.every((url) => url.includes('countryIsoCode=BR')));
-  assert.ok(mock.calls.every((url) => url.includes('languageIsoCode=PT')));
 
   const currentYear = new Date().getFullYear();
-  const names = db.prepare(
+  const namesOf = () => db.prepare(
     "SELECT name FROM holiday_cache WHERE country='BR' AND type='public' AND year=? ORDER BY start_date"
   ).all(currentYear).map((row) => row.name);
+  let names = namesOf();
   assert.ok(names.includes('Tiradentes'));
   assert.ok(names.includes('Dia Nacional de Zumbi e da Consciência Negra'));
   assert.ok(names.includes('Natal'));
+
+  // Derselbe Haushalt, dieselbe Ortsliste - nur die Datensprache wechselt. Der
+  // Fallback kennt beide Fassungen; vorher entschied das LAND und Englisch war
+  // unerreichbar (#946).
+  setConfig({ language: 'en' });
+  await sync(true);
+  names = namesOf();
+  assert.ok(names.includes('Christmas Day'), `EN-Fassung erwartet, bekam: ${names.join(', ')}`);
+  assert.ok(!names.includes('Natal'));
 });
 
 test('sync: throttles automatic sync if executed within 30 days', async () => {
@@ -458,6 +508,529 @@ test('sync: throttles automatic sync if executed within 30 days', async () => {
   const res3 = await sync(true);
   assert.equal(res3.synced, SYNC_YEAR_SPAN);
   assert.equal(mock.calls.length, firstCallCount * 2); // new API calls made
+});
+
+// ---- Sprache der gespeicherten Eintraege (#946) ------------------------------
+
+test('sync: die Namen folgen der Datensprache, nicht dem Land (#946)', async () => {
+  const mock = makeApiMock();
+  __setFetchImpl(mock);
+  // Der gemeldete Fall: Land Spanien, Region Katalonien, Datensprache Englisch.
+  // Vorher leitete der Dienst die Sprache aus dem LAND ab und speicherte
+  // "Navidad" - auch fuer einen Haushalt, der ausdruecklich Englisch gewaehlt
+  // hatte und dem der Hinweis unter dem Feld Wirkung auf die Synchronisierung
+  // zusagt.
+  setConfig({
+    holiday_country: 'ES', holiday_subdivision: 'ES-CT',
+    holiday_show_public: '1', holiday_show_school: '0', language: 'en',
+  });
+
+  await sync(true);
+
+  const namen = db.prepare("SELECT name FROM holiday_cache WHERE country='ES' AND start_date LIKE '%-12-25'").all().map((r) => r.name);
+  assert.ok(namen.length > 0, 'ohne gespeicherte Zeile prueft die Zusicherung darunter nichts');
+  assert.deepEqual([...new Set(namen)], ['Christmas Day'],
+    'die eingestellte Datensprache entscheidet, nicht das Land');
+});
+
+test('sync: eine deutsche Datensprache bekommt denselben Feiertag auf Deutsch (#946)', async () => {
+  __setFetchImpl(makeApiMock());
+  // Die Gegenprobe zum Test darueber: dasselbe Land, dieselbe Region, nur eine
+  // andere Datensprache. Ohne sie belegte der Test oben genauso gut einen
+  // Dienst, der IMMER Englisch speichert.
+  setConfig({
+    holiday_country: 'ES', holiday_subdivision: 'ES-CT',
+    holiday_show_public: '1', holiday_show_school: '0', language: 'de',
+  });
+
+  await sync(true);
+
+  const namen = db.prepare("SELECT name FROM holiday_cache WHERE country='ES' AND start_date LIKE '%-12-25'").all().map((r) => r.name);
+  assert.deepEqual([...new Set(namen)], ['Weihnachtstag']);
+});
+
+test('sync: fehlt die Wunschsprache, gilt Englisch vor der ersten angebotenen (#946)', async () => {
+  __setFetchImpl(makeApiMock());
+  // Der 1. Mai steht im Mock auf Spanisch, Katalanisch und Englisch - nicht auf
+  // Deutsch. Die alte Kaskade hiess "Wunsch, sonst die ERSTE", und die erste
+  // ist die Landessprache: ein deutscher Haushalt bekam "Fiesta del Trabajo"
+  // untergeschoben, obwohl eine englische Fassung danebenlag. Englisch fuehrt
+  // OpenHolidays fuer nahezu jedes Land mit und ist damit die bessere Auskunft
+  // als "was der Server zufaellig zuerst nennt".
+  setConfig({
+    holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'de',
+  });
+
+  await sync(true);
+
+  const mai = db.prepare("SELECT name FROM holiday_cache WHERE country='ES' AND start_date LIKE '%-05-01'").all().map((r) => r.name);
+  assert.ok(mai.length > 0, 'ohne gespeicherte Zeile prueft die Zusicherung darunter nichts');
+  assert.deepEqual([...new Set(mai)], ['Labour Day'],
+    'keine deutsche Fassung, aber eine englische → Englisch, nicht die Landessprache');
+
+  // Und wo es auch kein Englisch gibt, bleibt die erste angebotene der letzte
+  // Halt - sonst stuende die Zeile leer da.
+  const reyes = db.prepare("SELECT name FROM holiday_cache WHERE country='ES' AND start_date LIKE '%-01-06'").all().map((r) => r.name);
+  assert.deepEqual([...new Set(reyes)], ['Reyes']);
+});
+
+test('sync: fragt ohne languageIsoCode, damit die Wahl hier faellt (#946)', async () => {
+  const mock = makeApiMock();
+  __setFetchImpl(mock);
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'en' });
+
+  await sync(true);
+
+  assert.ok(mock.calls.length > 0, 'ohne Abruf prueft die Zusicherung darunter nichts');
+  const mitFilter = mock.calls.filter((url) => url.includes('languageIsoCode'));
+  assert.deepEqual(mitFilter, [],
+    'Mit languageIsoCode liefert OpenHolidays je Feiertag nur EINEN Namen - und wenn es\n'
+    + 'den in der gefragten Sprache nicht gibt, den der Landessprache. Die Kaskade in\n'
+    + 'resolveName laeuft dann ueber ein einelementiges Array und kann nichts mehr waehlen.');
+});
+
+test('sync: ein Sprachwechsel bricht die 30-Tage-Sperre (#946)', async () => {
+  const mock = makeApiMock();
+  __setFetchImpl(mock);
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'en' });
+
+  await sync(true);
+  const nachErstem = mock.calls.length;
+  assert.ok(nachErstem > 0);
+
+  // Gleiche Sprache: die Sperre greift wie bisher.
+  assert.deepEqual(await sync(false), { synced: 0 });
+  assert.equal(mock.calls.length, nachErstem, 'ohne Sprachwechsel bleibt es beim Bestand');
+
+  // Andere Sprache: die Namen im Cache stehen in der falschen Sprache, also
+  // muss der Lauf durch. Sonst saehe der Haushalt bis zu einen Monat lang
+  // weiter die alten Namen und meldete den Fehler zu recht erneut.
+  setConfig({ language: 'de' });
+  const res = await sync(false);
+  assert.ok(res.synced > 0, 'ein Sprachwechsel muss den Bestand erneuern');
+  assert.ok(mock.calls.length > nachErstem);
+
+  const namen = db.prepare("SELECT name FROM holiday_cache WHERE country='ES' AND start_date LIKE '%-12-25'").all().map((r) => r.name);
+  assert.deepEqual([...new Set(namen)], ['Weihnachtstag']);
+  assert.ok(
+    db.prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync_scope'").get()?.value?.startsWith('DE|ES|'),
+    'der benutzte Scope steht neben dem Zeitstempel, sonst laeuft jeder Lauf erneut durch',
+  );
+});
+
+test('sync: ein gescheiterter Lauf schreibt die Sprache NICHT fest (#946)', async () => {
+  // GEFUNDEN VON CODEX UND claude-review, unabhaengig voneinander. Der
+  // Sprach-Merker stand unbedingt nach der Schleife: schlug auch nur ein Jahr
+  // fehl, blieb dieser Bereich in der alten Sprache - verbucht wurde der Lauf
+  // trotzdem als erledigt, und die 30-Tage-Sperre schrieb den halb
+  // uebersetzten Cache fuer einen Monat fest. Dieselbe Sorte Fehler wie ein
+  // Sync-Cursor, der ueber einen Fehlschlag hinweglaeuft (#839).
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'en' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+  assert.ok(db.prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync_scope'").get()?.value?.startsWith('EN|'));
+
+  // Sprachwechsel, aber die API antwortet nicht mehr.
+  setConfig({ language: 'de' });
+  const kaputt = async () => { throw new Error('network down'); };
+  kaputt.calls = [];
+  __setFetchImpl(kaputt);
+  await captureConsole(() => sync(true));
+
+  assert.equal(
+    db.prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync_scope'").get()?.value,
+    undefined,
+    'ein unvollstaendiger Lauf laesst einen GEMISCHTEN Cache zurueck - kein Scope darf danach als erledigt gelten,\n'
+    + 'sonst waere ein Zurueckwechseln auf den alten "unveraendert" und die 30-Tage-Sperre schriebe die halb\n'
+    + 'umgestellten Bereiche fuer einen Monat fest',
+  );
+
+  // Und der naechste Lauf holt es nach, sobald die API wieder da ist.
+  db.prepare("DELETE FROM sync_config WHERE key='holiday_retry_after'").run();
+  __setFetchImpl(makeApiMock());
+  const res = await sync(false);
+  assert.ok(res.synced > 0, 'der offene Sprachwechsel muss beim naechsten Lauf greifen');
+  assert.ok(db.prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync_scope'").get()?.value?.startsWith('DE|'));
+});
+
+test('sync: nach einem Fehlschlag wird der Nachlauf gebremst, nicht wiederholt gehaemmert (#946)', async () => {
+  // Der Scheduler laeuft alle 15 Minuten (SYNC_INTERVAL_MINUTES). Bliebe der
+  // Sprach-Merker offen UND ungebremst, liefe bei einem Ausfall der Fremd-API
+  // rund um die Uhr alle 15 Minuten ein neuer Anlauf gegen einen kostenlosen
+  // Fremddienst. Gebremst wird NUR der Wiederholungsversuch - ein frischer
+  // Sprachwechsel wirkt weiterhin sofort, sonst waere die Bremse genau die
+  // Verzoegerung, die dieser Nachlauf abschaffen sollte.
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'en' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+
+  setConfig({ language: 'de' });
+  const kaputt = async () => { throw new Error('network down'); };
+  __setFetchImpl(kaputt);
+  await captureConsole(() => sync(true));
+
+  const gebremstBis = db.prepare("SELECT value FROM sync_config WHERE key='holiday_retry_after'").get()?.value;
+  assert.ok(gebremstBis, 'ein Fehlschlag muss eine Wartemarke hinterlassen');
+  assert.ok(new Date(gebremstBis).getTime() > Date.now(), 'die Wartemarke liegt in der Zukunft');
+
+  const mock = makeApiMock();
+  __setFetchImpl(mock);
+  assert.deepEqual(await sync(false), { synced: 0 }, 'solange die Wartemarke gilt, wird nicht erneut gefetcht');
+  assert.equal(mock.calls.length, 0);
+
+  // Von Hand ausgeloest (Knopf "Jetzt synchronisieren") gilt die Bremse nicht.
+  const res = await sync(true);
+  assert.ok(res.synced > 0, 'force muss die Wartemarke uebergehen');
+  assert.equal(db.prepare("SELECT value FROM sync_config WHERE key='holiday_retry_after'").get()?.value, undefined,
+    'ein geglueckter Lauf raeumt die Wartemarke weg');
+});
+
+test('sync: der Brasilien-Ersatz folgt derselben Kaskade wie die API-Namen (#946)', async () => {
+  // Die Ersatzliste kennt nur PT und EN. Ihr Rueckfall stand auf PT - was fuer
+  // einen brasilianischen Haushalt richtig aussieht, aber der Zusage
+  // widerspricht, die dieser PR aufstellt: ein deutscher Haushalt bekam
+  // Portugiesisch, obwohl eine englische Fassung danebenlag.
+  __setFetchImpl(makeApiMock());
+  setConfig({ holiday_country: 'BR', holiday_show_public: '1', holiday_show_school: '0', language: 'de' });
+
+  await sync(true);
+
+  const currentYear = new Date().getFullYear();
+  const namen = db.prepare(
+    "SELECT name FROM holiday_cache WHERE country='BR' AND type='public' AND year=?"
+  ).all(currentYear).map((r) => r.name);
+  assert.ok(namen.length > 0, 'ohne gespeicherte Zeile prueft die Zusicherung darunter nichts');
+  assert.ok(namen.includes('Christmas Day'),
+    `keine deutsche Fassung, aber eine englische → Englisch, nicht Portugiesisch. Bekam: ${namen.join(', ')}`);
+  assert.ok(!namen.includes('Natal'));
+});
+
+test('sync: ein geglueckter LEERER Abruf laesst nichts Altes stehen (#946)', async () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT, als zweite Fassung des Fehlers darueber: die
+  // HTTP-erfolgreiche Leerantwort nimmt einen eigenen Weg, den der Fix fuer den
+  // FEHLER-Fall nicht mit abdeckte. Sie meldete `failed: false`, ohne die alten
+  // Zeilen anzufassen - ausgerechnet dieser Bereich behielt seine
+  // fremdsprachigen Namen, waehrend der Lauf als vollstaendig verbucht wurde.
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'es' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+  const vorher = db.prepare("SELECT COUNT(*) c FROM holiday_cache WHERE country='ES'").get().c;
+  assert.ok(vorher > 0, 'ohne Bestand prueft die Zusicherung darunter nichts');
+
+  // Dieselbe Quelle, aber sie kennt jetzt nichts mehr - mit HTTP 200.
+  const leer = async () => ({ ok: true, json: async () => [] });
+  __setFetchImpl(leer);
+  setConfig({ language: 'de' });
+  const res = await sync(true);
+
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM holiday_cache WHERE country='ES'").get().c, 0,
+    'ein geglueckter leerer Abruf ist eine Auskunft - der Cache spiegelt sie, statt Altes zu behalten');
+  assert.equal(res.incomplete, false, 'eine Leerantwort ist kein Fehlschlag');
+  assert.ok(db.prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync_scope'").get()?.value?.startsWith('DE|'),
+    'und darf deshalb den Merker setzen - es steht ja nichts Fremdsprachiges mehr da');
+});
+
+test('sync: die Wartemarke bremst keinen NEUEN Bereich (#946)', async () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT, nachdem die Marke die Sprache trug: sie
+  // bremste immer noch ein inzwischen anderes LAND aus, dessen Abruf noch nie
+  // versucht worden war. Der Speichern-Weg in den Einstellungen schreibt nur
+  // die neue Auswahl - der naechste Scheduler-Lauf kaeme mit derselben Sprache
+  // und derselben offenen Marke hier an und wartet bis zu einer Stunde auf
+  // etwas, das mit dem Fehlschlag nichts zu tun hat.
+  setConfig({
+    holiday_country: 'ES', holiday_subdivision: 'ES-CT',
+    holiday_show_public: '1', holiday_show_school: '0', language: 'en',
+  });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+
+  // Nachlauf auf DE fuer ES/ES-CT scheitert.
+  setConfig({ language: 'de' });
+  __setFetchImpl(async () => { throw new Error('network down'); });
+  await captureConsole(() => sync(true));
+  const marke = db.prepare("SELECT value FROM sync_config WHERE key='holiday_retry_scope'").get()?.value;
+  assert.ok(marke?.startsWith('DE|ES|ES-CT'), `Marke traegt den gescheiterten Bereich, war: ${marke}`);
+
+  // Derselbe Bereich wird gebremst ...
+  const gleich = makeApiMock();
+  __setFetchImpl(gleich);
+  assert.deepEqual(await sync(false), { synced: 0 });
+  assert.equal(gleich.calls.length, 0);
+
+  // ... ein anderes LAND bei gleicher Sprache nicht.
+  setConfig({ holiday_country: 'DE', holiday_subdivision: 'DE-BY' });
+  const anderes = makeApiMock();
+  __setFetchImpl(anderes);
+  const res = await sync(false);
+  assert.ok(res.synced > 0, 'ein neuer Bereich darf nicht an der Marke des alten haengenbleiben');
+  assert.ok(anderes.calls.some((u) => u.includes('countryIsoCode=DE')));
+});
+
+test('sync: ein unvollstaendiger Lauf meldet sich nicht als "complete" (#946)', async () => {
+  // Genau diese Logzeile hat der Melder von #946 zitiert, um zu zeigen, dass
+  // die Synchronisierung durchgelaufen sei ("Holiday sync complete: 35 entries
+  // for ES/ES-CT"). Eine Erfolgsmeldung ueber einem halb geholten Bestand
+  // haette ihn ein zweites Mal in die Irre gefuehrt - und der Log ist bei einem
+  // selbstgehosteten Server oft die einzige Auskunft.
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'en' });
+  __setFetchImpl(makeApiMock());
+  const gut = await captureConsole(() => sync(true));
+  assert.ok(gut.info.some((l) => /complete/i.test(l)), 'ein geglueckter Lauf meldet sich als complete');
+  assert.ok(!gut.info.some((l) => /INCOMPLETE/.test(l)));
+
+  setConfig({ language: 'de' });
+  __setFetchImpl(async () => { throw new Error('network down'); });
+  const schlecht = await captureConsole(() => sync(true));
+  assert.ok(!schlecht.info.some((l) => /complete/i.test(l)),
+    'ein Lauf mit gescheiterten Abrufen darf sich nicht als complete melden');
+  assert.ok(schlecht.warn.some((l) => /INCOMPLETE/.test(l)),
+    'er muss stattdessen sagen, dass etwas fehlt - sonst sucht der naechste Melder an der falschen Stelle');
+});
+
+test('sync: die Wartemarke bremst nur die Sprache, bei der es schiefging (#946)', async () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT. Die Marke trug zuerst nur einen Zeitpunkt -
+  // und bremste damit auch eine INZWISCHEN ANDERS gewaehlte Sprache aus, obwohl
+  // deren Versuch neu ist und noch nie gescheitert war.
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'en' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+
+  // Nachlauf auf DE scheitert → Marke fuer DE.
+  setConfig({ language: 'de' });
+  __setFetchImpl(async () => { throw new Error('network down'); });
+  await captureConsole(() => sync(true));
+  assert.ok(db.prepare("SELECT value FROM sync_config WHERE key='holiday_retry_scope'").get()?.value?.startsWith('DE|ES|'),
+    'die Marke traegt die volle Identitaet des Versuchs: Sprache, Land, Region, Ebenen');
+
+  // Derselbe Wunsch DE wird gebremst ...
+  const mockDe = makeApiMock();
+  __setFetchImpl(mockDe);
+  assert.deepEqual(await sync(false), { synced: 0 });
+  assert.equal(mockDe.calls.length, 0);
+
+  // ... eine FRISCH gewaehlte Sprache nicht.
+  setConfig({ language: 'es' });
+  const mockEs = makeApiMock();
+  __setFetchImpl(mockEs);
+  const res = await sync(false);
+  assert.ok(res.synced > 0, 'ein neuer Sprachwunsch darf nicht an der Marke der alten haengenbleiben');
+  assert.equal(db.prepare("SELECT value FROM sync_config WHERE key='holiday_retry_scope'").get()?.value, undefined,
+    'ein geglueckter Lauf raeumt die Marke weg');
+});
+
+test('sync: eine abgeschaltete Ebene wird beim Wiedereinschalten nachgeholt (#946)', async () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT. Steht eine Ebene auf aus, holt die Schleife
+  // sie nicht - der Merker wurde trotzdem gesetzt. Schaltet der Haushalt sie
+  // spaeter wieder an (der Speichern-Weg in den Einstellungen ruft den
+  // Sync-Endpunkt NICHT), saehe der Scheduler "unveraendert" und liesse ihre
+  // alten, fremdsprachigen Zeilen stehen. Der Merker traegt deshalb auch die
+  // aktiven Ebenen.
+  setConfig({ holiday_country: 'DE', holiday_show_public: '1', holiday_show_school: '1', language: 'de' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+  assert.ok(db.prepare("SELECT COUNT(*) c FROM holiday_cache WHERE type='school'").get().c > 0);
+
+  // Schulferien aus, Sprache wechselt - nur die Feiertage werden geholt.
+  setConfig({ holiday_show_school: '0', language: 'en' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+
+  // Wieder an, gleiche Sprache: das ist ein NEUER Scope und muss laufen.
+  setConfig({ holiday_show_school: '1' });
+  const mock = makeApiMock();
+  __setFetchImpl(mock);
+  const res = await sync(false);
+  assert.ok(res.synced > 0, 'eine wieder eingeschaltete Ebene muss nachgeholt werden');
+  assert.ok(mock.calls.some((u) => u.includes('/SchoolHolidays')));
+  assert.equal(db.prepare("SELECT name FROM holiday_cache WHERE type='school' LIMIT 1").get()?.name, 'Summer break',
+    'sonst stuenden ihre Namen weiter in der alten Sprache da');
+});
+
+test('sync: ein Zurueckwechseln nach einem Teilfehlschlag repariert den Rest (#946)', async () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT. Nach einem halb geglueckten Wechsel steht
+  // der Cache GEMISCHT da. Bliebe der alte Merker stehen, waere ein
+  // Zurueckwechseln auf ihn "unveraendert", die 30-Tage-Sperre griffe, und die
+  // bereits umgestellten Bereiche behielten ihre neuen Namen fuer einen Monat.
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'en' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+
+  // Wechsel auf DE scheitert.
+  setConfig({ language: 'de' });
+  __setFetchImpl(async () => { throw new Error('network down'); });
+  await captureConsole(() => sync(true));
+  assert.equal(db.prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync_scope'").get()?.value, undefined,
+    'nach einem Teilfehlschlag darf kein Scope als erledigt gelten');
+
+  // Zurueck auf EN - und das muss laufen, obwohl EN der zuletzt vollstaendige war.
+  setConfig({ language: 'en' });
+  const mock = makeApiMock();
+  __setFetchImpl(mock);
+  const res = await sync(false);
+  assert.ok(res.synced > 0, 'ein Zurueckwechseln nach einem Teilfehlschlag muss reparieren, nicht throtteln');
+  assert.ok(mock.calls.length > 0);
+});
+
+test('sync: ein Fehlschlag wird wiederholt, ohne dass der Haushalt etwas aendert (#946)', async () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT. Die Reparatur hing an `languageChanged` -
+  // ein gescheiterter 30-Tage-Refresh in derselben Sprache schrieb einen
+  // frischen Zeitstempel und wurde danach von der 30-Tage-Sperre erwischt: der
+  // fehlgeschlagene Bereich blieb einen weiteren Monat alt.
+  //
+  // Was ihn heute rettet, ist das LOESCHEN des Merkers beim Fehlschlag: danach
+  // gilt jeder Scope als neu, die 30-Tage-Sperre greift nicht mehr, und die
+  // Reparaturmarke bremst nur noch die Wiederholrate. Der Test heisst deshalb
+  // nach dem, was er zusichert - "ohne dass der Haushalt etwas aendert" -, und
+  // nicht nach einer Bedingung im Code: eine Gegenprobe an der Sperrenzeile
+  // blieb gruen, weil das Loeschen des Merkers die Arbeit schon getan hatte.
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'en' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+
+  // Erneuter Lauf in DERSELBEN Sprache scheitert.
+  __setFetchImpl(async () => { throw new Error('network down'); });
+  await captureConsole(() => sync(true));
+  const marke = db.prepare("SELECT value FROM sync_config WHERE key='holiday_retry_after'").get()?.value;
+  assert.ok(marke, 'ein Fehlschlag hinterlaesst eine Reparaturmarke, auch ohne Sprachwechsel');
+
+  // Solange die Marke gilt: keine neuen Abrufe.
+  const gebremst = makeApiMock();
+  __setFetchImpl(gebremst);
+  assert.deepEqual(await sync(false), { synced: 0 });
+  assert.equal(gebremst.calls.length, 0);
+
+  // Marke abgelaufen: der Lauf muss durch, obwohl der Zeitstempel frisch ist
+  // und sich nichts geaendert hat.
+  db.prepare("INSERT INTO sync_config (key, value) VALUES ('holiday_retry_after', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value")
+    .run(new Date(Date.now() - 1000).toISOString());
+  const mock = makeApiMock();
+  __setFetchImpl(mock);
+  const res = await sync(false);
+  assert.ok(res.synced > 0, 'nach Ablauf der Marke muss der gescheiterte Bereich erneut versucht werden');
+  assert.ok(mock.calls.length > 0);
+});
+
+test('sync: ein Sprachwechsel holt auch Jahre ausserhalb des Fensters nach (#946)', async () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT. Das Fenster wandert (currentYear-1 .. +2),
+  // der Cache nicht: eine Installation, die 2025 lief, hat Zeilen fuer 2024
+  // liegen, und die faellt spaeter heraus. `getForRange()` kennt keine
+  // Fenstergrenze und zeigt sie beim Zurueckblaettern weiter - nach einem
+  // Sprachwechsel also unbegrenzt lange in der alten Sprache.
+  //
+  // Sie zu loeschen waere konsistent gewesen, haette aber alte Jahre leer
+  // gelassen. Sie werden stattdessen MITGEHOLT: es sind wenige, sie sind
+  // abrufbar, und der Aufwand faellt nur bei einem echten Wechsel an.
+  const altesJahr = new Date().getFullYear() - 5;
+  setConfig({ holiday_country: 'DE', holiday_show_public: '1', holiday_show_school: '0', language: 'de' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+
+  // Eine Zeile aus einem laengst herausgefallenen Jahr, wie sie ein alter
+  // Betrieb hinterlaesst.
+  seedHoliday({ type: 'public', country: 'DE', start: `${altesJahr}-01-01`, end: `${altesJahr}-01-01`, name: 'Neujahr', year: altesJahr });
+  assert.equal(db.prepare('SELECT COUNT(*) c FROM holiday_cache WHERE year = ?').get(altesJahr).c, 1);
+
+  // Sprachwechsel: das alte Jahr muss mit abgefragt werden.
+  setConfig({ language: 'en' });
+  const mock = makeApiMock();
+  __setFetchImpl(mock);
+  await sync(true);
+
+  assert.ok(mock.calls.some((u) => u.includes(`validFrom=${altesJahr}-01-01`)),
+    `das Jahr ${altesJahr} liegt im Cache und muss beim Wechsel mit abgefragt werden`);
+  const alt = db.prepare('SELECT name FROM holiday_cache WHERE year = ?').all(altesJahr).map((r) => r.name);
+  assert.ok(!alt.includes('Neujahr'),
+    `im Cache stand nach dem Wechsel weiter der deutsche Name: ${alt.join(', ') || '(nichts)'}`);
+
+  // Ohne Wechsel bleibt es beim Fenster - der Zusatzaufwand faellt nur an,
+  // wenn sich wirklich etwas geaendert hat.
+  const ohneWechsel = makeApiMock();
+  __setFetchImpl(ohneWechsel);
+  await sync(true);
+  assert.ok(!ohneWechsel.calls.some((u) => u.includes(`validFrom=${altesJahr}-01-01`)),
+    'ohne Scope-Wechsel wird das Fenster nicht ausgeweitet');
+});
+
+test('sync: eine unerwartete Antwortform raeumt den Cache NICHT (#946)', async () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT, als Folgefehler der Aenderung darueber. Seit
+  // ein geglueckter LEERER Abruf den Bereich raeumt, entscheidet die Form der
+  // Antwort ueber Bestand oder Verlust: ein HTTP 200 mit einem Fehlerobjekt
+  // eines vorgeschalteten Proxys oder einer geaenderten Antwortform haette den
+  // Cache geloescht UND den Scope als vollstaendig verbucht - die Feiertage
+  // waeren 30 Tage lang weg gewesen. Nur ein echtes leeres Array ist eine
+  // Auskunft.
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'es' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+  const vorher = db.prepare("SELECT COUNT(*) c FROM holiday_cache WHERE country='ES'").get().c;
+  assert.ok(vorher > 0, 'ohne Bestand prueft die Zusicherung darunter nichts');
+
+  // HTTP 200, aber kein Array - so sieht ein Proxy-Fehler aus.
+  __setFetchImpl(async () => ({ ok: true, json: async () => ({ error: 'upstream unavailable' }) }));
+  setConfig({ language: 'de' });
+  const res = await captureConsole(() => sync(true));
+
+  assert.equal(db.prepare("SELECT COUNT(*) c FROM holiday_cache WHERE country='ES'").get().c, vorher,
+    'eine unverstandene Antwort darf keinen Bestand loeschen');
+  assert.equal(db.prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync_scope'").get()?.value, undefined,
+    'und sie darf den Lauf nicht als vollstaendig verbuchen');
+  assert.ok(db.prepare("SELECT value FROM sync_config WHERE key='holiday_retry_after'").get()?.value,
+    'stattdessen bleibt eine Reparaturmarke offen');
+  assert.ok(res.warn.some((l) => /unexpected response shape/.test(l)),
+    'und der Log sagt, was er nicht verstanden hat');
+});
+
+test('sync: zwei Laeufe verschraenken sich nicht (#946)', async () => {
+  // GEFUNDEN IN DER PR-DURCHSICHT. Der Scheduler ruft sync() alle
+  // SYNC_INTERVAL_MINUTES, der Knopf "Jetzt synchronisieren" ruft sync(true) -
+  // beide ohne Absprache. Ueber die await-Punkte im Jahres-Loop konnten sie
+  // sich mischen: der aeltere Lauf ueberschreibt Jahre, die der neuere schon
+  // umgestellt hat, und der neuere verbucht am Ende SEINEN Scope als
+  // vollstaendig. Vorher war dasselbe Rennen harmlos - es holte hoechstens ein
+  // Jahr doppelt; erst der Merker macht daraus einen festgeschriebenen
+  // Mischzustand.
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'de' });
+
+  let drin = 0;
+  let maxDrin = 0;
+  const langsam = async (url) => {
+    drin += 1;
+    maxDrin = Math.max(maxDrin, drin);
+    await new Promise((r) => setTimeout(r, 5));
+    drin -= 1;
+    return makeApiMock()(url);
+  };
+  __setFetchImpl(langsam);
+
+  await Promise.all([sync(true), sync(true)]);
+
+  assert.equal(maxDrin, 1,
+    `zwei Laeufe waren gleichzeitig im Abruf (${maxDrin}) - sie koennen sich gegenseitig ueberschreiben`);
+
+  // Und das Ergebnis ist einsprachig, nicht gemischt.
+  const namen = db.prepare("SELECT DISTINCT name FROM holiday_cache WHERE country='ES' AND start_date LIKE '%-12-25'").all().map((r) => r.name);
+  assert.deepEqual(namen, ['Weihnachtstag']);
+});
+
+test('sync: der wartende Lauf sieht den NEUEN Stand, nicht den alten (#946)', async () => {
+  // Der zweite Aufruf bekommt nicht das Ergebnis des ersten gereicht, sondern
+  // laeuft selbst - und liest seine Konfiguration erst, wenn er dran ist. Nur
+  // so kann ein Sprachwechsel, der WAEHREND eines laufenden Syncs gespeichert
+  // wird, ueberhaupt ankommen.
+  setConfig({ holiday_country: 'ES', holiday_show_public: '1', holiday_show_school: '0', language: 'de' });
+  __setFetchImpl(makeApiMock());
+  await sync(true);
+
+  const ersterLauf = sync(true);
+  // Waehrend der erste laeuft, wechselt die Sprache.
+  setConfig({ language: 'en' });
+  const zweiterLauf = sync(true);
+  await Promise.all([ersterLauf, zweiterLauf]);
+
+  const namen = db.prepare("SELECT DISTINCT name FROM holiday_cache WHERE country='ES' AND start_date LIKE '%-12-25'").all().map((r) => r.name);
+  assert.deepEqual(namen, ['Christmas Day'],
+    'der zuletzt gestartete Lauf gibt den Ausschlag, und zwar vollstaendig - nicht halb');
+  assert.ok(db.prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync_scope'").get()?.value?.startsWith('EN|'));
 });
 
 // ---- getCountries / getSubdivisions -----------------------------------------

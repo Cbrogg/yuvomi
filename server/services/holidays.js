@@ -9,6 +9,7 @@
 import nodeFetch from 'node-fetch';
 import { createLogger } from '../logger.js';
 import * as db from '../db.js';
+import { resolveHouseholdLocale } from '../utils/i18n.js';
 
 const log = createLogger('Holidays');
 
@@ -16,6 +17,12 @@ const BASE_URL          = 'https://openholidaysapi.org';
 const FETCH_TIMEOUT_MS  = 15_000;
 const SYNC_YEARS_BACK   = 1;
 const SYNC_YEARS_AHEAD  = 2;
+const THROTTLE_MS       = 30 * 24 * 60 * 60 * 1000;
+// WARTEZEIT NACH EINEM GESCHEITERTEN SPRACH-NACHLAUF. Ein Sprachwechsel wirkt
+// sofort - aber wenn der Abruf scheitert, bleibt der Merker offen, und ohne
+// diese Bremse liefe bei einem Ausfall der Fremd-API alle
+// SYNC_INTERVAL_MINUTES (Voreinstellung 15) ein neuer Anlauf.
+const LANGUAGE_RETRY_MS = 60 * 60 * 1000;
 
 // Injizierbare fetch-Implementierung (Default: node-fetch). Nur Tests
 // überschreiben dies via __setFetchImpl, um die OpenHolidays-API zu mocken.
@@ -92,14 +99,24 @@ async function getGroups(countryIsoCode, subdivisionCode) {
 }
 
 /**
- * Gibt den Anzeigenamen aus dem name-Array zurück (bevorzugt EN, sonst erstes).
+ * Den Anzeigenamen aus dem name-Array waehlen: Wunschsprache, sonst Englisch,
+ * sonst die erste angebotene.
+ *
+ * DIE ZWEITE STUFE IST DER PUNKT. Vorher hiess die Kaskade "Wunsch, sonst die
+ * erste" - und was OpenHolidays als erste liefert, ist die Landessprache. Ein
+ * englischsprachiger Haushalt in Katalonien bekam damit fuer jeden Feiertag,
+ * den die API nicht auf Englisch fuehrt, den spanischen Namen, ohne dass das
+ * irgendwo zu sehen gewesen waere. Englisch ist die Sprache, die OpenHolidays
+ * fuer nahezu jedes Land mitliefert; sie ist die bessere Auskunft als "was der
+ * Server zufaellig zuerst nennt". Die erste bleibt als letzter Halt.
+ *
  * @param {Array<{language, text}>} nameArr
- * @param {string} [preferLang='EN']
+ * @param {string} [preferLang='EN'] Sprachcode in Grossbuchstaben
  */
 function resolveName(nameArr, preferLang = 'EN') {
   if (!Array.isArray(nameArr) || nameArr.length === 0) return '';
-  const preferred = nameArr.find((n) => n.language === preferLang);
-  return (preferred ?? nameArr[0]).text ?? '';
+  const pick = (lang) => nameArr.find((n) => n.language === lang);
+  return (pick(preferLang) ?? pick('EN') ?? nameArr[0]).text ?? '';
 }
 
 function formatIsoDate(date) {
@@ -147,8 +164,14 @@ function localizedBrazilHolidayName(key, langCode) {
     blackConsciousness:   { PT: 'Dia Nacional de Zumbi e da Consciência Negra', EN: 'National Zumbi and Black Consciousness Day' },
     christmas:            { PT: 'Natal', EN: 'Christmas Day' },
   };
+  // DIESELBE KASKADE WIE resolveName: Wunschsprache, sonst Englisch, sonst was
+  // da ist. Der Rueckfall stand auf PT - was fuer einen brasilianischen
+  // Haushalt richtig aussah, aber der Zusage aus #946 widerspricht: ein
+  // deutscher Haushalt bekam Portugiesisch, obwohl eine englische Fassung
+  // danebenlag. Die Ersatzliste kennt nur PT und EN; welche der beiden gilt,
+  // entscheidet damit dieselbe Regel wie bei den Namen aus der API.
   const lang = String(langCode || '').toUpperCase();
-  return names[key]?.[lang] ?? names[key]?.PT ?? key;
+  return names[key]?.[lang] ?? names[key]?.EN ?? names[key]?.PT ?? key;
 }
 
 function brazilPublicHolidays(year, langCode) {
@@ -184,26 +207,83 @@ function localHolidayFallback(country, type, year, langCode) {
 // Sync-Logik
 // --------------------------------------------------------
 
+/**
+ * Ein Bereich, fuer den nichts zu speichern ist - und die beiden Faelle darin
+ * gehen VERSCHIEDEN aus.
+ *
+ * Ein GESCHEITERTER Abruf sagt nichts ueber den Bestand: der bleibt liegen,
+ * dieser Bereich steht danach weiter in der alten Sprache, und `failed` haelt
+ * den Sprach-Merker offen.
+ *
+ * Ein GEGLUECKTER Abruf mit leerem Ergebnis ist dagegen eine Auskunft: hier
+ * gibt es nichts. Dann muss auch nichts liegenbleiben - sonst behielte
+ * ausgerechnet dieser Bereich seine alten, fremdsprachigen Zeilen, waehrend der
+ * Lauf als vollstaendig verbucht wird (gefunden in der PR-Durchsicht: die
+ * HTTP-erfolgreiche Leerantwort nimmt einen eigenen Weg, den der Fix fuer den
+ * Fehlerfall nicht mit abdeckte). Der Cache spiegelt die API, auch wenn sie
+ * "nichts" sagt.
+ */
+function finishEmpty(fetchFailed, country, type, year) {
+  if (fetchFailed) return { count: 0, failed: true };
+  db.get().prepare('DELETE FROM holiday_cache WHERE type = ? AND country = ? AND year = ?')
+    .run(type, country, year);
+  return { count: 0, failed: false };
+}
+
+/**
+ * Ein Jahr eines Typs holen und in den Cache legen.
+ *
+ * @param {string} langCode Sprachcode in GROSSBUCHSTABEN, wie OpenHolidays ihn
+ *   im `name`-Array fuehrt ('ES', 'EN'). Aufrufer normalisieren, nicht diese
+ *   Funktion - sonst stuende dieselbe Umwandlung an zwei Stellen.
+ * @returns {Promise<{count: number, failed: boolean}>} `failed` heisst: der
+ *   Abruf ist GESCHEITERT und kein lokaler Ersatz sprang ein. Das ist etwas
+ *   anderes als `count: 0` - manche Laender fuehren schlicht keine Schulferien,
+ *   und diese beiden Faelle auseinanderzuhalten ist der ganze Punkt: nur der
+ *   erste darf den Sprach-Merker unten zurueckhalten.
+ */
 async function syncYearAndType(country, subdivision, year, type, langCode) {
   const from = `${year}-01-01`;
   const to   = `${year}-12-31`;
   const endpoint = type === 'public' ? 'PublicHolidays' : 'SchoolHolidays';
 
-  let params = `countryIsoCode=${encodeURIComponent(country)}&languageIsoCode=${encodeURIComponent(langCode)}&validFrom=${from}&validTo=${to}`;
+  // OHNE languageIsoCode, UND DAS IST DER FIX ZU #946. Mit dem Parameter
+  // liefert OpenHolidays je Feiertag nur EINEN Namen - und wenn es den in der
+  // gefragten Sprache nicht gibt, den der Landessprache. Die Kaskade in
+  // resolveName (Wunsch, sonst Englisch, sonst die erste) laeuft dann ueber ein
+  // einelementiges Array und kann nichts mehr waehlen: sie bekam "Navidad"
+  // gereicht und hatte keine Alternative danebenliegen. Ohne den Parameter
+  // kommt das vollstaendige name-Array, und die Wahl faellt hier - wo bekannt
+  // ist, welche Sprache der Haushalt lesen will. Der Preis ist eine groessere
+  // Antwort fuer ein paar Dutzend Eintraege im Jahr.
+  let params = `countryIsoCode=${encodeURIComponent(country)}&validFrom=${from}&validTo=${to}`;
   if (subdivision) params += `&subdivisionCode=${encodeURIComponent(subdivision)}`;
 
   let holidays;
+  let fetchFailed = false;
   try {
     holidays = await apiFetch(`/${endpoint}?${params}`);
+    // NUR EIN ECHTES LEERES ARRAY IST EINE AUSKUNFT. Ein HTTP 200 mit einem
+    // anderen Rumpf - ein Fehlerobjekt eines vorgeschalteten Proxys, eine
+    // geaenderte Antwortform - sagt gar nichts, und seit `finishEmpty` einen
+    // leeren Bereich RAEUMT, waere daraus Datenverlust geworden: der Cache
+    // gelöscht, der Scope als vollstaendig verbucht, und die Feiertage 30 Tage
+    // lang weg. Ein Nicht-Array zaehlt deshalb wie ein gescheiterter Abruf
+    // (gefunden in der PR-Durchsicht, als Folgefehler genau dieser Aenderung).
+    if (!Array.isArray(holidays)) {
+      log.warn(`Fetch ${endpoint} ${country}/${subdivision ?? '-'}/${year}: unexpected response shape (${typeof holidays})`);
+      fetchFailed = true;
+    }
   } catch (err) {
     log.warn(`Fetch ${endpoint} ${country}/${subdivision ?? '-'}/${year}: ${err.message}`);
+    fetchFailed = true;
     holidays = localHolidayFallback(country, type, year, langCode);
   }
 
   if (!Array.isArray(holidays) || holidays.length === 0) {
     holidays = localHolidayFallback(country, type, year, langCode);
   }
-  if (!Array.isArray(holidays) || holidays.length === 0) return 0;
+  if (!Array.isArray(holidays) || holidays.length === 0) return finishEmpty(fetchFailed, country, type, year);
 
   // OpenHolidays liefert für Sub-Regionen abweichende Varianten desselben
   // Feiertags/derselben Ferien als eigene, mit "Exception" getaggte Einträge
@@ -214,7 +294,7 @@ async function syncYearAndType(country, subdivision, year, type, langCode) {
   // Für einen Familienkalender ist der reguläre Regions-Eintrag maßgeblich; die
   // Insel-Ausnahmen werden verworfen. (#434)
   holidays = holidays.filter((h) => !(Array.isArray(h.tags) && h.tags.includes('Exception')));
-  if (holidays.length === 0) return 0;
+  if (holidays.length === 0) return finishEmpty(fetchFailed, country, type, year);
 
   const insert = db.get().prepare(`
     INSERT INTO holiday_cache (type, country, subdivision, start_date, end_date, name, year, group_code)
@@ -225,7 +305,7 @@ async function syncYearAndType(country, subdivision, year, type, langCode) {
     for (const h of rows) {
       const name = typeof h.name === 'string'
         ? h.name
-        : resolveName(h.name, langCode.toUpperCase());
+        : resolveName(h.name, langCode);
       // Schulferien-Gruppe (z. B. CH-BE-VS), falls die Subdivision mehrere
       // Regime kennt. Öffentliche Feiertage tragen i. d. R. keine Gruppe → NULL,
       // gilt dann für die gesamte Subdivision. (#434)
@@ -245,14 +325,41 @@ async function syncYearAndType(country, subdivision, year, type, langCode) {
   ).run(type, country, year);
 
   insertAll(holidays);
-  return holidays.length;
+  return { count: holidays.length, failed: false };
 }
 
 /**
  * Sync Feiertage und/oder Schulferien für das konfigurierte Land/Region.
  * Wird vom Auto-Scheduler und manuell aus den Settings aufgerufen.
  */
+/**
+ * ZWEI LAEUFE DUERFEN SICH NICHT VERSCHRAENKEN. Der Scheduler ruft `sync()`
+ * alle SYNC_INTERVAL_MINUTES, der Knopf "Jetzt synchronisieren" ruft
+ * `sync(true)` - beide ohne Absprache. Ueber die await-Punkte im Jahres-Loop
+ * konnten sie sich mischen: der aeltere Lauf (alte Sprache) ueberschreibt
+ * Jahre, die der neuere schon umgestellt hat, und der neuere verbucht am Ende
+ * SEINEN Scope als vollstaendig. Der Cache steht dann zweisprachig da und gilt
+ * fuer 30 Tage als aktuell (gefunden in der PR-Durchsicht).
+ *
+ * Vorher war dasselbe Rennen harmlos - es holte hoechstens ein Jahr doppelt.
+ * Erst der Merker macht daraus einen festgeschriebenen Mischzustand.
+ *
+ * Der zweite Aufruf WARTET und laeuft dann selbst, statt das Ergebnis des
+ * ersten zu bekommen: er liest seine Konfiguration erst, wenn er dran ist,
+ * sieht also den neuen Stand - und stellt fest, dass nichts mehr zu tun ist,
+ * wenn der erste schon alles erledigt hat.
+ */
+let laufenderSync = Promise.resolve();
+
 async function sync(force = false) {
+  const dran = laufenderSync.then(() => syncNow(force), () => syncNow(force));
+  // Der Fehler gehoert dem Aufrufer, nicht der Warteschlange - sonst risse ein
+  // gescheiterter Lauf alle nachfolgenden mit.
+  laufenderSync = dran.then(() => {}, () => {});
+  return dran;
+}
+
+async function syncNow(force = false) {
   const country     = db.get().prepare("SELECT value FROM sync_config WHERE key='holiday_country'").get()?.value;
   const subdivision = db.get().prepare("SELECT value FROM sync_config WHERE key='holiday_subdivision'").get()?.value ?? null;
   const showPublic  = db.get().prepare("SELECT value FROM sync_config WHERE key='holiday_show_public'").get()?.value === '1';
@@ -268,27 +375,63 @@ async function sync(force = false) {
     return { synced: 0 };
   }
 
-  const lastSyncStr = db.get().prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync'").get()?.value;
-  if (!force && lastSyncStr) {
-    const lastSyncDate = new Date(lastSyncStr);
-    if (!Number.isNaN(lastSyncDate.getTime())) {
-      const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-      if (Date.now() - lastSyncDate.getTime() < thirtyDaysMs) {
-        log.debug('Holidays synced recently – skipping automatic sync.');
-        return { synced: 0 };
-      }
+  // DIE SPRACHE KOMMT AUS DER EINSTELLUNG, NICHT AUS DEM LAND. Hier stand eine
+  // Karte von Land auf Sprache: wer Spanien waehlte, bekam spanische Namen -
+  // auch wenn "Sprache gespeicherter Eintraege" auf Englisch stand und der
+  // Hinweis darunter ausdruecklich "Wirkt auf API, Kalender-Feed und
+  // Synchronisierung" verspricht (#946). Feiertage SIND selbst erzeugte
+  // Eintraege; sie fallen unter genau diese Zusage, und `resolveHouseholdLocale`
+  // ist die eine Stelle, die sie beantwortet - dieselbe, aus der Geburtstage,
+  // Darlehensraten und Benachrichtigungen ihre Sprache holen.
+  const langCode = resolveHouseholdLocale(db.get()).toUpperCase();
+
+  // WAS DEN INHALT DES CACHES BESTIMMT, IST MEHR ALS DIE SPRACHE: Sprache,
+  // Land, Region und welche Ebenen ueberhaupt geholt werden. Genau diese vier
+  // bilden den SCOPE, und der steht neben dem Zeitstempel.
+  //
+  // Der Merker trug zuerst nur die Sprache, und daran hingen drei Befunde aus
+  // der PR-Durchsicht, die alle dieselbe Wurzel hatten: eine abgeschaltete
+  // Ebene wurde beim Sprachwechsel nicht mitgeholt, aber als erledigt verbucht
+  // (beim Wiedereinschalten blieben ihre alten Namen stehen); ein Wechsel des
+  // Landes lief in dieselbe Falle; und ein Fehlschlag OHNE Sprachwechsel wurde
+  // gar nicht wiederholt, weil die Reparatur an `languageChanged` hing.
+  const scope = [langCode, country, subdivision ?? '', showPublic ? 'P' : '', showSchool ? 'S' : ''].join('|');
+  const lastScope = db.get().prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync_scope'").get()?.value ?? null;
+  const scopeChanged = lastScope !== scope;
+
+  // EINE OFFENE REPARATUR GILT UNABHAENGIG DAVON, OB SICH ETWAS GEAENDERT HAT.
+  // Sie entsteht nur nach einem gescheiterten Abruf und traegt den Scope, bei
+  // dem es schiefging: derselbe Scope wird eine Stunde lang nicht erneut
+  // versucht (der Scheduler laeuft alle SYNC_INTERVAL_MINUTES, Voreinstellung
+  // 15 - ein Ausfall der Fremd-API darf keine Dauerschleife werden), danach
+  // schon, und zwar OHNE auf die 30-Tage-Sperre zu warten.
+  const retryAfterStr = db.get().prepare("SELECT value FROM sync_config WHERE key='holiday_retry_after'").get()?.value;
+  const retryScope    = db.get().prepare("SELECT value FROM sync_config WHERE key='holiday_retry_scope'").get()?.value;
+  const repairOpen    = Boolean(retryAfterStr) && retryScope === scope;
+  if (!force && repairOpen) {
+    const retryAfter = new Date(retryAfterStr);
+    if (!Number.isNaN(retryAfter.getTime()) && Date.now() < retryAfter.getTime()) {
+      log.debug('Holiday repair is still on hold – skipping automatic sync.');
+      return { synced: 0 };
     }
   }
 
-  // Sprache aus Land ableiten (Fallback EN)
-  const langMap = {
-    BR: 'PT',
-    DE: 'DE', AT: 'DE', CH: 'DE', FR: 'FR', ES: 'ES', IT: 'IT',
-    NL: 'NL', PL: 'PL', PT: 'PT', RU: 'RU', TR: 'TR', CZ: 'CS',
-    SE: 'SV', NO: 'NO', DK: 'DA', FI: 'FI', HU: 'HU', RO: 'RO',
-    GR: 'EL', SK: 'SK', HR: 'HR', BG: 'BG', RS: 'SR', SI: 'SL',
-  };
-  const langCode = langMap[country] ?? 'EN';
+  // Der normale Auffrischungstakt gilt nur, wenn nichts Neues gewaehlt wurde.
+  //
+  // EINE OFFENE REPARATUR MUSS HIER NICHT NOCHMAL GEPRUEFT WERDEN, und das ist
+  // kein Zufall, sondern der Grund, warum ein Fehlschlag den Merker LOESCHT
+  // statt ihn nur nicht zu setzen: danach gilt jeder Scope als neu, also ist
+  // `scopeChanged` ohnehin wahr. Eine zusaetzliche `!repairOpen`-Bedingung stand
+  // hier kurz und war toter Code - sie sah aus wie ein Schutz und konnte nie
+  // greifen, weil Merker und Reparaturmarke sich gegenseitig ausschliessen.
+  const lastSyncStr = db.get().prepare("SELECT value FROM sync_config WHERE key='holiday_last_sync'").get()?.value;
+  if (!force && !scopeChanged && lastSyncStr) {
+    const lastSyncDate = new Date(lastSyncStr);
+    if (!Number.isNaN(lastSyncDate.getTime()) && Date.now() - lastSyncDate.getTime() < THROTTLE_MS) {
+      log.debug('Holidays synced recently – skipping automatic sync.');
+      return { synced: 0 };
+    }
+  }
 
   const currentYear = new Date().getFullYear();
   const years = [];
@@ -296,22 +439,76 @@ async function sync(force = false) {
     years.push(y);
   }
 
+  // JAHRE, DIE NUR NOCH IM CACHE LIEGEN, KOMMEN BEI EINEM SCOPE-WECHSEL MIT.
+  // Das Fenster wandert (currentYear-1 .. +2), der Cache nicht: eine
+  // Installation, die 2025 lief, hat Zeilen fuer 2024 liegen, und die faellt
+  // 2027 aus dem Fenster. `getForRange()` kennt keine Fenstergrenze und zeigt
+  // sie beim Zurueckblaettern weiter - nach einem Sprachwechsel also in der
+  // alten Sprache, unbegrenzt lange (gefunden in der PR-Durchsicht).
+  //
+  // Sie zu loeschen waere konsistent gewesen, haette aber alte Jahre leer
+  // gelassen; sie stehen zu lassen heisst, dass der Kalender zwei Sprachen
+  // zeigt. Beides unnoetig: es sind wenige Jahre, sie sind bei OpenHolidays
+  // abrufbar, und der Zusatzaufwand faellt nur an, wenn sich wirklich etwas
+  // geaendert hat. Liefert die Quelle fuer so ein Jahr nichts mehr, raeumt
+  // `finishEmpty` es weg - auch dann bleibt nichts Fremdsprachiges stehen.
+  if (scopeChanged) {
+    const imCache = db.get().prepare('SELECT DISTINCT year FROM holiday_cache WHERE country = ? ORDER BY year').all(country);
+    for (const { year } of imCache) {
+      if (!years.includes(year)) years.push(year);
+    }
+  }
+
   let total = 0;
+  let anyFailed = false;
   for (const year of years) {
-    if (showPublic) total += await syncYearAndType(country, subdivision, year, 'public', langCode);
-    if (showSchool) total += await syncYearAndType(country, subdivision, year, 'school', langCode);
+    for (const type of [showPublic && 'public', showSchool && 'school'].filter(Boolean)) {
+      const res = await syncYearAndType(country, subdivision, year, type, langCode);
+      total += res.count;
+      anyFailed ||= res.failed;
+    }
   }
 
   const now = new Date().toISOString();
-  db.get().prepare(`
+  const remember = db.get().prepare(`
     INSERT INTO sync_config (key, value)
-    VALUES ('holiday_last_sync', ?)
+    VALUES (?, ?)
     ON CONFLICT(key) DO UPDATE SET value = excluded.value,
                                    updated_at = strftime('%Y-%m-%dT%H:%M:%SZ', 'now')
-  `).run(now);
+  `);
+  remember.run('holiday_last_sync', now);
+  // DER SPRACH-MERKER ERST NACH EINEM VOLLSTAENDIGEN LAUF. Scheitert auch nur
+  // ein Jahr, steht dieser Bereich weiter in der alten Sprache - ihn trotzdem
+  // als erledigt zu verbuchen hiesse, einen halb uebersetzten Cache fuer die
+  // naechsten 30 Tage festzuschreiben. Genau die Sorte Fehler, bei der ein
+  // Cursor ueber einen Fehlschlag hinweglaeuft und die Luecke nie wieder
+  // zugeht (#839).
+  const forget = db.get().prepare('DELETE FROM sync_config WHERE key = ?');
+  if (anyFailed) {
+    // DER MERKER WIRD GELOESCHT, NICHT BLOSS NICHT GESETZT. Nach einem
+    // Teilfehlschlag steht der Cache GEMISCHT da - einige Bereiche neu, andere
+    // alt. Bliebe der alte Scope stehen, waere ein Zurueckwechseln auf ihn
+    // "unveraendert", die 30-Tage-Sperre griffe, und die bereits umgestellten
+    // Bereiche behielten ihre neuen Namen fuer einen Monat. Ohne Merker gilt
+    // jeder Scope als neu, bis einer vollstaendig durchgelaufen ist; gegen die
+    // Dauerschleife steht die Reparaturmarke.
+    forget.run('holiday_last_sync_scope');
+    remember.run('holiday_retry_after', new Date(Date.now() + LANGUAGE_RETRY_MS).toISOString());
+    remember.run('holiday_retry_scope', scope);
+  } else {
+    remember.run('holiday_last_sync_scope', scope);
+    forget.run('holiday_retry_after');
+    forget.run('holiday_retry_scope');
+  }
 
-  log.info(`Holiday sync complete: ${total} entries for ${country}${subdivision ? '/' + subdivision : ''}`);
-  return { synced: total, lastSync: now };
+  // "complete" nur, wenn es das war. Genau diese Zeile hat der Melder von #946
+  // zitiert, um zu zeigen, dass die Synchronisierung durchgelaufen sei - eine
+  // Erfolgsmeldung ueber einem halb geholten Bestand haette ihn ein zweites Mal
+  // in die Irre gefuehrt.
+  const wo = `${country}${subdivision ? '/' + subdivision : ''}`;
+  if (anyFailed) log.warn(`Holiday sync INCOMPLETE: ${total} entries for ${wo} - some requests failed, the next run retries`);
+  else log.info(`Holiday sync complete: ${total} entries for ${wo}`);
+  return { synced: total, lastSync: now, incomplete: anyFailed };
 }
 
 /**

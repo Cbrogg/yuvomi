@@ -666,9 +666,15 @@ Display metadata (name, color) for synced Google/CalDAV calendars. Populated aut
 ### Holiday Cache
 Cached public holidays and school holidays from the free [OpenHolidays API](https://openholidaysapi.org)
 (no API key). Populated by an admin-configured country/subdivision in Settings → Modules → Calendar and refreshed
-by the auto-sync scheduler (covers previous, current, and next two years). Displayed as a read-only
+by the auto-sync scheduler (covers previous, current, and next two years - plus, whenever the scope changes, any further year still sitting in the cache from an earlier run, since `getForRange()` has no window and would otherwise keep showing those in the old language forever). Displayed as a read-only
 overlay in the calendar; layer visibility is toggled client-side. Outbound requests carry only the
 country/subdivision code — no household data leaves the server.
+
+**Names follow the data language, not the country (v2.57.0, #946).** A holiday is content Yuvomi stores itself, so it falls under the "language of stored entries" setting (`resolveHouseholdLocale`) - the same source birthdays, loan instalments and notifications use. Previously the service derived the language from the *country*: picking Spain stored "Navidad" even for a household that had explicitly chosen English, while the hint under the setting promises it affects "the API, calendar feed and synchronisation". The request deliberately omits `languageIsoCode`: with it, OpenHolidays returns exactly one name per holiday and falls back to the country language when the requested one is missing, leaving nothing to choose from. Without it the full `name` array arrives and the cascade runs here - requested language, else English (which OpenHolidays carries for nearly every country), else the first offered. `sync_config.holiday_last_sync_scope` records what the last **complete** run covered, and the scope is the full identity of that run: **language, country, subdivision and the enabled layers**. Change any one of them and the next scheduler pass syncs, because each of the four decides what ends up in the cache - the marker held only the language at first, which left a re-enabled layer and a changed country showing their old names. The cache stores translated names rather than keys, so without this a change would otherwise keep the old wording for up to 30 days.
+
+A run that fails any fetch **deletes** the marker rather than leaving the old one: a partial run leaves the cache *mixed*, and keeping the previous scope would make switching back to it look unchanged, freezing the already-converted parts for a month. With no marker every scope counts as new until one run completes. Against a runaway loop, a failed run writes `holiday_retry_after` (one hour out) with `holiday_retry_scope`, which throttles **only that exact attempt** - any other scope proceeds immediately, and the scheduler runs every `SYNC_INTERVAL_MINUTES` (15 by default), so an outage of the free upstream API must not trigger a fresh attempt each pass.
+
+Syncs are **serialized** inside the service: the scheduler and the manual "sync now" route both call in without coordination, and across the await points of the year loop an older run could overwrite years a newer one had already converted while the newer one recorded its scope as complete - a two-language cache treated as current for 30 days. A second caller waits and then runs itself rather than receiving the first one's result, so it reads its configuration when its turn comes and sees the current selection.
 
 Some multilingual subdivisions (e.g. the Swiss canton `CH-BE`) run more than one school-holiday
 regime with differing dates, distinguished only by an OpenHolidays *group* (`CH-BE-VS` German-speaking
@@ -690,7 +696,7 @@ the calendar shows the correct dates instead of the union of both.
 
 Indexes: `idx_holiday_cache_dates (start_date, end_date)`, `idx_holiday_cache_lookup (type, country, subdivision, year)`.
 Configuration lives in `sync_config`: `holiday_country`, `holiday_subdivision`, `holiday_group`, `holiday_show_public`,
-`holiday_show_school`, `holiday_public_color`, `holiday_school_color`, `holiday_last_sync` (all admin-only).
+`holiday_show_school`, `holiday_public_color`, `holiday_school_color`, `holiday_last_sync`, `holiday_last_sync_scope`, `holiday_retry_after`, `holiday_retry_scope` (all admin-only).
 
 ### CalDAV Accounts
 Multi-account CalDAV integration. Stores credentials for CalDAV servers (iCloud, Nextcloud, Radicale, Baikal, etc.).
